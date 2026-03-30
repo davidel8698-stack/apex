@@ -1,0 +1,986 @@
+# APEX Research Brief — Round 2: Cross-Model Synthesis
+# Context Engineering for LLM Coding Agents — State of the Art
+### Synthesized from 5 Deep Research Models | March 30, 2026
+
+---
+
+## Methodology Note
+
+This document synthesizes findings from 5 independent deep-research model runs (Claude Opus 4.6, GPT-5.4, Gemini 2.5 Pro, and two additional frontier models). Where multiple models converge on a finding, confidence is marked **HIGH**. Where only one model reports a finding without corroboration, it is marked with its source and flagged for verification. Contradictions between models are explicitly noted. Numbers are cross-referenced across models; when disagreements exist, the most conservative (evidence-backed) figure is used.
+
+---
+
+## 1. Executive Summary
+
+### The 7 Most Important Findings for APEX
+
+**1. Context degradation is a physics constraint, not a bug — and it's universal.**
+All 5 models converge on this as finding #1. Chroma's July 2025 study tested 18 frontier models and found **every single one degrades** as input grows. Du et al. (EMNLP 2025) proved that **even with 100% perfect retrieval and zero distractors**, performance degrades 13.9%–85% purely from positional distance — whitespace padding alone causes measurable harm. A March 2026 theory paper (Chowdhury et al.) proved the U-shaped attention curve is a geometric inevitability of causal masking, not a training artifact. For coding specifically, LongCodeBench showed Claude 3.5 Sonnet collapsing from 29% to 3% accuracy as context grew. **Implication for APEX: context is a finite, depreciating resource — every token must earn its place.**
+*[Confidence: HIGH — unanimous across all 5 models, multiple independent sources]*
+
+**2. Effective context capacity is 10–30% of theoretical capacity for reasoning tasks, with coding at the lower end.**
+BABILong (NeurIPS 2024): models effectively use only 10–20% of context for reasoning. MRCR v2 data across providers shows steep degradation beyond 256K tokens. Paulsen (January 2026) found some models fell short by >99% on certain tasks. The "256K effective out of 1M" claim is **directionally supported but task-dependent** — for complex multi-file coding, effective capacity may be well below 256K. Claude Code users report degradation starting at ~20% of the 1M window. **Implication: design for ~100–160K working set per orchestrator, not 256K.**
+*[Confidence: HIGH for the principle; MEDIUM for specific numbers]*
+
+**3. Observation masking beats LLM summarization for coding agents.**
+JetBrains' "Complexity Trap" study (NeurIPS DL4C 2025) demonstrated that simply deleting old tool outputs (observation masking) **matches or exceeds** LLM summarization quality at zero compute cost, while cutting token costs by 50%+. LLM summarization actually made agents run ~15% longer because smoothed summaries "hide failing patterns." Factory.ai found extractive compression improved accuracy by +7.89 F1 while abstractive lost -4.69 F1. **Implication: APEX should default to observation masking, reserving LLM summarization only for phase-boundary transitions.**
+*[Confidence: HIGH — 4 of 5 models cite this; rigorous empirical data]*
+
+**4. Fresh context per subagent is the architecturally correct pattern — the problem is orchestrator drift.**
+All 5 models agree. Anthropic's multi-agent research showed Opus 4 lead + Sonnet 4 workers outperformed single-agent Opus 4 by 90.2%. LangChain measured 67% fewer tokens with the subagent pattern. Chroma showed adding full conversation history (~113K tokens) drops accuracy by ~30% vs. a focused 300-token version. APEX's Task() architecture is correct. The unsolved problem is **orchestrator degradation** over long projects — the orchestrator itself accumulates state and degrades. **Implication: rotate orchestrator context aggressively; keep orchestrator at 10–15% context usage.**
+*[Confidence: HIGH — unanimous]*
+
+**5. Context retrieval architecture matters more than model choice.**
+Augment Code's SWE-bench Pro results showed a 6-point accuracy spread from identical models based solely on retrieval strategy. Anthropic's BrowseComp found token usage alone explains 80% of performance variance. The multi-agent Claude code assistant case study showed 80% success vs 40% for single-agent. IBM Zurich's cognitive tools raised GPT-4.1 AIME scores from 26.7% to 43.3% through context engineering alone. **Implication: invest engineering effort in context architecture, not model upgrades.**
+*[Confidence: HIGH — multiple independent measurements]*
+
+**6. Verification agents must be architecturally isolated to be effective.**
+A 2026 study found adversarial PR metadata framing succeeded in 88.2% of cases at fooling LLM reviewers. Redacting PR description alone recovered 68.75% of missed detections. Adding explicit debiasing instructions raised detection to 93.75–94%. The adversarial code review pattern dropped overconfident failures from 72% to 45%. BMJ Digital Health found that reasoning did not reduce bias vulnerability — in some models it amplified it. **Implication: APEX verification must be clean-room with no access to implementer reasoning.**
+*[Confidence: HIGH for isolation principle; MEDIUM-HIGH for specific numbers (some from single sources)]*
+
+**7. Context engineering is now a recognized discipline with converging best practices.**
+Karpathy, Lütke, Anthropic, LangChain, and Mei et al.'s 165-page survey (1,400+ papers) all converge: context engineering = "designing and managing the complete information payload at inference time." It subsumes prompt engineering. LangChain distills it to four strategies: Write (save externally), Select (retrieve relevant), Compress (retain essential), Isolate (partition across agents). **Implication: APEX should be built as a context engineering framework; every design decision evaluated through "how does this affect what the LLM sees?"**
+*[Confidence: HIGH — unanimous]*
+
+---
+
+## 2. The Physics of Context
+
+### A1. Attention and Positional Bias
+
+#### The U-Shaped Attention Curve
+
+| Finding | Source | Models Citing | Confidence |
+|---------|--------|---------------|------------|
+| U-shaped primacy-recency bias with 30%+ drop in middle | Liu et al. (TACL 2024) | All 5 | HIGH |
+| U-shape is geometric property at initialization, not learned | Chowdhury et al. (March 2026) | Models 3, 4, 5 | HIGH |
+| U-shape persists only below ~50% context fill; above, recency dominates | Veseli et al. (2025) | Model 5 only | MEDIUM — needs verification |
+| Attention sinks emerge during 1K–2K pre-training steps | ICLR 2025 Spotlight | Models 2, 5 | HIGH |
+| Causal masking creates logarithmic primacy divergence | Chowdhury et al. (2026) | Models 4, 5 | HIGH |
+
+**Cross-model synthesis:** The U-shaped attention distribution is the most robustly confirmed finding in long-context research. All 5 models cite it independently with consistent numbers. The 2026 theory work elevates it from empirical observation to mathematical inevitability. The Veseli finding (U-shape only below 50% fill) is important if confirmed — it means APEX's attention management strategy should shift as context fills.
+
+#### Model-Specific Behavior Under Long Context
+
+| Model | Behavior When Confused | Source |
+|-------|----------------------|--------|
+| Claude models | Conservative abstention (refuses at 2.89% rate) | Chroma study; Models 1, 4, 5 |
+| GPT models | Confident hallucination (2.55% hallucination rate under distractors) | Chroma study; Models 4, 5 |
+| Gemini models | Early errors with wild variations | Chroma study; Models 1, 5 |
+
+**No apples-to-apples positional bias comparison exists** for Claude 4.6 Opus, GPT-5.4, and Gemini 2.5 Pro on coding tasks specifically. This is a gap noted by 4 of 5 models.
+
+#### Coding-Specific Degradation
+
+The evidence for coding-specific degradation comes from multiple benchmarks:
+
+- **LongCodeBench**: Claude 3.5 Sonnet 29% → 3% accuracy (32K → 256K) [Models 2, 5]
+- **LONGCODEU**: Performance "drops dramatically" beyond 32K tokens for inter-unit reasoning [Model 2]
+- **Du et al. (EMNLP 2025)**: HumanEval accuracy dropped 50% at 30K tokens on Llama-3 even with zero distractors [Model 5]
+- **LoCoBench**: All frontier models showed substantial gaps across 8,000 scenarios [Model 5]
+- **Self-conditioning effect**: Past errors increase future error probability; scaling model size doesn't fix this [Model 5]
+
+**Critical gap:** These benchmarks test older model versions (Claude 3.5, GPT-4, etc.), not current frontier models (Claude 4.6 Opus, GPT-5.4). No published coding-specific degradation curves exist for current models. [Noted by 4 of 5 models]
+
+#### Mitigation Techniques (Application-Level)
+
+All models converge on the same practical mitigations:
+1. Place critical instructions at **start** of context (system prompt) — leverages primacy bias
+2. Place current task and recent state at **end** — leverages recency bias
+3. Structure middle content with XML tags/headers — creates parsing boundaries
+4. Use reranking to position most relevant retrieved content at edges
+5. Keep context below 50% utilization for complex reasoning tasks
+6. Qwen's sigmoid gating (NeurIPS 2025 Best Paper) reduces sinks — but requires model-level changes [Model 5]
+
+### A2. Effective vs. Theoretical Context Capacity
+
+#### Cross-Provider MRCR v2 Data (Cross-Referenced Across Models)
+
+| Model | 4K-8K | 32K-64K | 128K-256K | 256K-512K | 512K-1M | 1M (8-needle) | Source Models |
+|-------|-------|---------|-----------|-----------|---------|---------------|---------------|
+| Claude Opus 4.6 | — | — | ~93% | — | — | 76-78.3% | 1, 3, 4, 5 |
+| GPT-5.2 | 98.2% | — | 77% | — | — | — | 3, 5 |
+| GPT-5.4 | — | 90.5% | 79.3% | 57.5% | 36.6% | — | 1, 3 |
+| Gemini 2.5 Pro | — | — | 58% (≤128K) | — | — | 16.4% | 3 |
+| Gemini 3 Pro | — | — | 77% | — | — | 26.3% | 5 |
+
+**Note on discrepancy:** Model 1 reports Opus 4.6 at "~93% at 256K, ~78.3% at 1M" while Model 5 reports "76% at 1M." The difference (76% vs 78.3%) likely reflects different reporting of the same benchmark with minor rounding. Models 3's Gemini numbers (58% at ≤128K, 16.4% at 1M) are significantly lower than other reports, possibly reflecting different MRCR configurations.
+
+**Model 4's claim that Gemini 2.5 Pro has ~1.2M effective capacity is an outlier** — no other model supports this, and Gemini's own benchmark data shows severe 1M degradation. This claim should be treated with skepticism.
+
+#### The "256K Effective" Claim: Cross-Model Assessment
+
+| Model | Verdict on "256K effective from 1M" |
+|-------|-------------------------------------|
+| Model 1 | "Roughly supported by multiple independent sources" |
+| Model 2 | "Reasonable as a conservative upper bound, not empirically validated constant" |
+| Model 3 | "Supported directionally but no formal verification; more like a risk zone than hard limit" |
+| Model 4 | "Strongly supported by empirical evidence" |
+| Model 5 | "Directionally consistent but task-dependent; for complex coding may be well below 256K" |
+
+**Synthesis:** The 256K figure is a useful planning heuristic but not a hard number. For complex multi-file coding tasks, the effective ceiling may be lower. The more actionable framing from Models 2 and 3: **aim for 64–160K working set, treat 256K as the outer bound, and never plan to fill it.**
+
+#### Task-Type Variation
+
+All models agree on the hierarchy of degradation severity:
+1. **Factual retrieval** (needle-in-a-haystack) — most resilient, scales nearly linearly
+2. **Multi-hop reasoning** — degrades steeply, effective at ~5-10% of window [Model 5]
+3. **Instruction following** — degrades significantly in long sessions [Models 1, 5]
+4. **Code generation quality** — insufficient measured data but community reports consistent degradation
+5. **Inter-unit code reasoning** (cross-file dependencies) — deteriorates first [Model 2]
+
+The ~2% loss per 100K tokens rule of thumb [Model 1] is a useful approximation but likely **underestimates degradation for coding** and **overestimates for retrieval**.
+
+### A3. Compaction and Summarization
+
+#### What Survives vs. What Dies in Compaction
+
+| Survives Well | Lost or Degraded | Source |
+|---------------|-----------------|--------|
+| File names, paths, identifiers | Exact code snippets and variable names | All models |
+| High-level architectural decisions | Nuanced reasoning chains | Models 1, 4, 5 |
+| Task completion status | Precise error messages, stack traces | Models 1, 4, 5 |
+| Structured data (JSON, explicit decisions) | Debugging context from early session | Models 1, 2 |
+| Key decisions (if stated explicitly) | Rejected alternatives and rationale | Models 3, 5 |
+| CLAUDE.md content (re-read from disk) | Conversation history | Model 5 |
+
+#### Observation Masking vs. LLM Summarization (Key Empirical Finding)
+
+| Approach | Cost Reduction | Quality Impact | Compute Cost | Source |
+|----------|---------------|----------------|-------------|--------|
+| Observation masking | ~50% | Matches or +2.6% vs summarization | Zero | JetBrains (4 of 5 models cite) |
+| LLM summarization | ~50% | Baseline or slightly worse; +15% longer runs | High (extra LLM call) | JetBrains |
+| Extractive compression | 4.5× | +7.89 F1 points (noise filtering) | Low | Factory.ai (Model 5) |
+| Abstractive compression | Similar ratio | -4.69 F1 points | Medium | Factory.ai (Model 5) |
+| OpenHands condenser | ~2× per-turn | 54% vs 53% baseline (neutral) | Medium | OpenHands (Models 2, 3) |
+
+**Cross-model consensus:** For coding agents, **delete old tool outputs (observation masking) first**, reserve LLM summarization for phase boundaries. 4 of 5 models independently arrive at this recommendation.
+
+#### Compaction Best Practices
+
+| Practice | Source Models | Confidence |
+|----------|-------------|------------|
+| Compact at 50-60% capacity, not 80-95% | Models 3, 5 | HIGH |
+| Use `/compact` with explicit preservation instructions | Models 1, 3 | HIGH |
+| Structured notes (DECISIONS.md) survive multiple compactions | All models | HIGH |
+| Always re-read files from disk after compaction | Models 1, 2, 3 | HIGH |
+| Morph prevention-first: reduce search/write waste by 80-90% | Model 5 | MEDIUM |
+| Fresh context + state files often beats compaction for complex tasks | Models 1, 3, 5 | HIGH |
+
+### A4. Context Window Scaling Laws
+
+**All 5 models agree: scaling is sublinear.** Key evidence:
+
+- Gemini 1.5 technical report: NLL follows **power-law** relationship with context length [Model 5]
+- 100K tokens = 10 billion pairwise relationships for softmax [Model 5]
+- BABILong: standard LLMs effectively use only 10-20% at millions of tokens [Models 2, 3]
+- LongCodeBench: increasing from 32K to 256K **hurts** success rate for repo-level bug fixing [Model 2]
+- No evidence that moving from 1M to 10M would help coding tasks [All models]
+
+**Bottom line for APEX:** Don't count on larger windows solving the problem. Design for ~100-200K effective capacity regardless of theoretical limits. A 1M window is not 5× as useful as a 200K window — it provides headroom before compaction, not more usable capacity.
+
+**"Infinite context" architectures** (ring attention, Infini-attention, StreamingLLM) are model-level research, not application-level solutions. Timeline: 1-3 years to production. They reduce compute cost but don't fix attention dilution. [All models agree]
+
+---
+
+## 3. Techniques That Work (Evidence-Based)
+
+### B1. Context Budgeting and Allocation
+
+#### The Highest-Leverage Architectural Decision
+
+Model 5 provides the strongest framing: Anthropic's BrowseComp evaluation found that **token usage alone explains 80% of performance variance**. The TALE framework demonstrated 68.9% output cost reduction with <5% accuracy loss through explicit per-problem budgeting.
+
+**No published system with formal per-component token budgets was found** [Model 1]. APEX's CONTEXT_BUDGET.json approach appears novel. However, multiple frameworks implement implicit budgeting:
+
+| System | Budgeting Approach | Source |
+|--------|-------------------|--------|
+| GSD | Orchestrator at 10-15%, workers get full fresh windows | Model 5 |
+| Aider | Repo map at ~1-4K tokens (adjustable), dynamic expansion | All models |
+| SWE-Agent | Last 5 observation-action pairs (sliding window) | Models 2, 5 |
+| Manus AI | KV-cache hit rate as primary metric; 100:1 input-to-output ratio | Model 5 |
+| TALE | Dynamic per-problem budget estimation | Model 5 |
+
+#### Synthesized Budget Allocation for APEX (~200K Window, ~100K Target Working Set)
+
+Drawing from all 5 models' recommendations (with discrepancies noted):
+
+| Component | Tokens | % of 200K | Zone | Notes |
+|-----------|--------|-----------|------|-------|
+| System prompt + agent role | 3-8K | 1.5-4% | Stable (cached) | Models converge on ~5K; Model 5 says 100-1K for system alone |
+| CLAUDE.md / project constitution | 2-4K | 1-2% | Stable (cached) | Model 5: <200 lines for 92% rule application |
+| Repo map (Aider-style) | 1-4K | 0.5-2% | Stable (cached) | Model 4 says 4K hard; Model 1 says 1K default |
+| Task spec + acceptance criteria | 3-8K | 1.5-4% | Per-task | Extract only relevant SPEC sections |
+| Active decisions/conventions | 2-5K | 1-2.5% | Per-phase | From DECISIONS.md, relevant subset only |
+| Active code files | 20-60K | 10-30% | Per-task (JIT) | Only files being modified, loaded on demand |
+| Interface/dependency context | 5-10K | 2.5-5% | Per-task | Signatures only, not full implementations |
+| Test files + results | 5-15K | 2.5-7.5% | Per-task | Current failing tests + relevant passing tests |
+| Tool results (recent) | 10-30K | 5-15% | Rolling | Subject to observation masking |
+| **Generation reserve** | **40-80K** | **20-40%** | **Reserved** | **Never consumed by input** |
+
+**Critical constraint (all models agree):** Reserve at least 20-40% for generation. When context fills past 60-75%, quality degrades for complex coding output.
+
+**Discrepancy:** Models disagree on how aggressive to be:
+- Model 3: orchestrator steady state 120-160K
+- Model 5: hard budget 50% of window (100K for 200K window), pre-rot threshold at 60K
+- Model 1: reserve 25% for generation, compact at 75%
+- Model 4: hard rotation at 50% (~128K)
+
+**Recommendation:** Follow the more conservative Models 3/5. Target 100K working set, compact at 50-60% utilization, hard rotate at 70%.
+
+### B2. Structured Context Injection
+
+#### Format Choice: XML vs JSON vs YAML vs Markdown
+
+| Finding | Source | Models |
+|---------|--------|--------|
+| XML tags help Claude parse complex prompts unambiguously | Anthropic docs | All models |
+| XML produces better coding results than JSON (reduces cognitive overhead) | Morph | Model 1 |
+| Format choice itself almost doesn't matter for strong models | Structured Context Engineering paper (2026) | Model 3 |
+| Format restrictions decline reasoning ability ("Let Me Speak Freely?") | Tam et al. 2024 | Model 5 |
+| Consistent schema matters more than specific syntax | Cross-model consensus | Models 2, 3 |
+| Structure has greater influence on determinism than LLM choice | March 2026 study | Model 5 |
+
+**Synthesis:** Use XML-like tags for **input structuring** (creating parsing boundaries between sections), but don't constrain **output format** during reasoning. The specific format (XML vs YAML vs Markdown) matters less than consistency. For APEX's inter-agent typed interfaces, use structured JSON for machine readability, XML tags for context injection to Claude.
+
+#### Recommended Context Ordering (Primacy-Recency Optimized)
+
+All models converge on this pattern:
+1. **Start (primacy zone):** System instructions, constraints, role definition
+2. **Early:** Project context, architecture rules, conventions
+3. **Middle (danger zone):** Retrieved code/docs — structure with XML tags to create parsing boundaries
+4. **Late:** Recent tool results, accumulated evidence
+5. **End (recency zone):** Current task definition, acceptance criteria, latest state
+
+This ordering exploits the U-shaped attention curve to protect critical instructions (start) and current task focus (end).
+
+### B3. Retrieval-Augmented Context (RAG for Code)
+
+#### Aider's Repository Map: The Reference Implementation
+
+All 5 models independently identify the repo map pattern as the gold standard. Key specs:
+
+| Aspect | Detail | Source |
+|--------|--------|--------|
+| Parsing | tree-sitter for AST extraction | Models 1, 2, 5 |
+| Graph | Directed graph: files as nodes, dependencies as edges | Models 1, 5 |
+| Ranking | PageRank biased 50× toward active files | Model 1 |
+| Budget | ~1K default, expandable to 8K | Model 1 |
+| Efficiency | 4.3–6.5% context utilization (highest measured) | Model 5 |
+| Comparison | vs Cursor 14.7%, Cline 17.5% | Model 5 |
+| Content | Class signatures, function headers, exports — not implementations | All models |
+
+#### Vector Embeddings vs. Structural Retrieval
+
+| Approach | Effectiveness | When to Use |
+|----------|-------------|-------------|
+| Structural/graph-based (Aider repo map) | Best for navigation and architecture | Always — as baseline codebase awareness |
+| Code-specialized embeddings (Nomic, Voyage) | Better than general-purpose for semantic search | Cross-project retrieval, cold artifacts |
+| General-purpose embeddings (MiniLM) | Surprisingly competitive (80.1% MRR) | When code-specific not available |
+| GrepRAG (lexical intent-aware) | Matches semantic for many tasks, sub-500ms | Quick lookups, completion tasks |
+| SemanticForge (dual knowledge graphs) | 73% precision vs 51% traditional | Complex dependency resolution |
+
+**Model 4's strong stance against vector DB for code is partially supported** — vector search has real failure modes (stale embeddings, semantic vs. structural mismatch). But Models 2 and 5 show it has a place as a secondary retrieval layer, not primary.
+
+#### The Hybrid Pattern (Consensus)
+
+All models converge on a hybrid approach:
+1. **Always present:** Compressed repo map (1-4K tokens)
+2. **On-demand via tools:** Full file reads (grep, glob, read_file)
+3. **Optional secondary:** Vector/semantic search for cold/cross-project retrieval
+4. **Never:** Pre-stuffing all potentially relevant files
+
+CodeRAG-Bench showed canonical docs improved SWE-Bench by 27.4% for GPT-4o with 200-800 token chunks as the optimal range [Model 3].
+
+### B4. External Memory Systems
+
+#### Memory Tier Architecture (Cross-Model Synthesis)
+
+| Tier | What | Storage | Loaded When | Models Recommending |
+|------|------|---------|-------------|-------------------|
+| Tier 1: Always-loaded | CLAUDE.md, project constitution | Markdown files | Every invocation | All 5 |
+| Tier 2: Per-phase state | STATE.json, DECISIONS.md, PLAN_META | Structured files | Phase boundaries | All 5 |
+| Tier 3: On-demand | Full file contents, test results | Filesystem | Tool invocation | All 5 |
+| Tier 4: Cold storage | Cross-project patterns, prior experiences | SQLite / Vector DB | Explicit retrieval | Models 3, 5 |
+
+#### CLAUDE.md Effectiveness Data
+
+Model 5 provides unique quantitative data:
+- Files under 200 lines: **92% rule application rate**
+- Files beyond 400 lines: **71% rule application rate**
+- Well-written CLAUDE.md reduces manual corrections by **40%** on 50K-line TypeScript projects
+- CLAUDE.md **survives compaction** (re-read from disk), conversation history does not
+
+#### MemGPT/Letta Evolution
+
+| System | Approach | Key Finding | Source |
+|--------|----------|-------------|--------|
+| MemGPT (2023) | Virtual context: core + archival memory | Enabled document analysis beyond context window | All models |
+| Letta (2024+) | Git-backed MemFS, filesystem-native memory | 74% on LoCoMo vs Mem0's 68.5% | Models 1, 2 |
+| Letta Code | Context Repositories (git worktrees for parallel memory) | Agents read/write memory via normal tools | Models 2, 3 |
+| Letta insight | "Filesystem operations beat specialized memory tools" | Agents work best with familiar tools | Models 1, 2 |
+
+#### Staleness and Poisoning
+
+**Staleness:** No automated detection system exists in any framework [All models agree]. Solutions: decay by age, invalidate on file hash mismatch, always prefer fresh file reads over remembered content.
+
+**Memory poisoning (critical emerging threat):**
+- MINJA attack: >95% injection success, 70% attack success through query-only interaction [Model 5]
+- Microsoft Security: 50 real-world attempts across 31 companies in 60 days [Model 5]
+- OWASP recognizes memory poisoning as top agentic risk for 2026 [Model 5]
+- Agent defends the poison — constructs rationales from corrupted context [Model 5]
+
+**APEX must implement:** Provenance tracking (who wrote what, when, why), temporal decay, validated backup snapshots, and periodic memory auditing by a dedicated synthesis agent.
+
+### B5. Context Rotation and Session Management
+
+#### Fresh Context vs. Continued Session: The Evidence
+
+| Evidence | Finding | Source |
+|----------|---------|--------|
+| Chroma study | +113K conversation history drops accuracy ~30% vs focused 300 tokens | Model 5 |
+| Laban et al. (2025) | 39% average degradation in multi-turn; lost models don't recover | Model 5 |
+| Community consensus | ~20-30 messages as practical quality horizon | Model 5 |
+| JetBrains | Agent contexts grow expensive without better performance | Model 5 |
+| All models | Fresh context + state files > compacted long session for complex tasks | All 5 |
+
+#### When to Rotate (Synthesized Triggers)
+
+| Trigger Type | Threshold | Source Models |
+|-------------|-----------|---------------|
+| Token threshold (hard) | 70% of effective capacity | Models 1, 2, 3 |
+| Token threshold (soft/proactive) | 50-60% of effective capacity | Models 3, 4, 5 |
+| Phase boundary | Between planning → implementation → verification | All 5 |
+| Task completion | Every 5-8 tasks for orchestrator | Model 1 |
+| Time-based | Every 30-45 minutes of active work | Model 5 |
+| Quality signals | Repeated errors, forgotten instructions, generic responses | Models 1, 3, 5 |
+| Stale state | STATE.json vs worktree mismatch | Model 3 |
+| Recovery density spike | Same test run repeatedly | Models 4, 5 |
+
+#### Cost of Rotation with Prompt Caching
+
+Model 5 provides the clearest economics:
+
+| Provider | Cache Read Cost | Latency Reduction | Break-Even |
+|----------|----------------|-------------------|------------|
+| Anthropic (5-min TTL) | 10% of input price | Up to 85% | 2 cache hits |
+| Anthropic (1-hr TTL) | 10% of input price | Up to 85% | ~2 hits (higher write) |
+| Google Gemini | 10% of input price | Significant | Automatic |
+| OpenAI | ~50% of input price | Substantial | Automatic |
+
+**With caching, the stable prefix (system + CLAUDE.md + repo map + skills) costs near-zero after the first call.** This makes context rotation economically cheap — the primary cost is re-reading active files, which is necessary anyway to avoid stale references.
+
+### B6. Prompt Compression and Distillation
+
+#### Key Compression Technologies
+
+| Technology | Compression | Quality Impact | Code-Safe? | Source |
+|-----------|------------|----------------|-----------|--------|
+| LLMLingua-2 | 2-5× | 1.6-2.9× latency reduction, comparable quality | Caution: can corrupt syntax | Models 2, 5 |
+| 500xCompressor | Up to 500× | Retains 70-84% F1/EM | Not for code | Model 2 |
+| EHPC (evaluator heads) | SOTA on benchmarks | Identifies important tokens via attention | Research | Model 2 |
+| Prompt caching (Anthropic) | 90% cost, 85% latency | Zero quality impact (exact prefix reuse) | Yes | All models |
+| Token-efficient tool use | 14% average reduction | Minimal | Yes | Model 1 |
+| Context editing (Anthropic) | 84% in 100-turn eval | +39% with memory tool | Yes | Model 1 |
+
+#### AGENTS.md Eval Finding (Model 3 Unique)
+
+Large, always-on repo context files **decrease success rates and increase cost by 20%+**. This directly argues against monolithic system prompts or always-loaded project documentation. **Load skills and documentation on demand, not by default.**
+
+---
+
+## 4. Multi-Agent Context Architecture
+
+### C1. Orchestration Patterns
+
+#### Pattern Comparison (Cross-Model Synthesis)
+
+| Pattern | Token Efficiency | Quality | Best For | Source |
+|---------|-----------------|---------|----------|--------|
+| **Coordinator + Workers** | Best (67% fewer tokens) | Highest for coding | APEX's architecture | All 5 models |
+| Hierarchical | Good | Good with clear layers | Very large projects | Models 1, 2 |
+| Peer-to-peer | Worst (message overhead) | Variable | Open-ended exploration | Models 1, 4 |
+| Blackboard/shared-state | Poor | Race conditions, contamination | Not recommended for code | Models 2, 4 |
+| Event-sourced (OpenHands) | Good with condensation | High (54% SWE-bench) | Reproducible workflows | Models 2, 5 |
+
+**All 5 models recommend Coordinator + Fresh Workers for APEX.** The coordinator should be a thin planning/routing layer (10-15% context usage), not a memory store.
+
+#### Measured Multi-Agent Results
+
+| System | Result | Key Metric | Source |
+|--------|--------|-----------|--------|
+| Opus 4 lead + Sonnet 4 workers | 90.2% improvement over single Opus 4 | Research tasks | Anthropic (Models 1, 5) |
+| Multi-agent Claude code assistant | 80% success vs 40% single-agent | 5 coding tasks (180K-line repo) | Case study (Models 2, 3) |
+| MyAntFarm.ai trials (348 experiments) | 100% actionable vs 1.7% single-agent | Recommendation quality | Model 5 |
+| Subagent pattern (LangChain) | 67% fewer tokens than skills pattern | Token consumption | Model 5 |
+| Multi-agent cost | 3-15× more tokens total | Token usage | Models 1, 2 |
+
+### C2. Information Flow Between Agents
+
+#### Downstream (Orchestrator → Worker)
+
+All models converge on a minimal typed packet:
+- Task objective (what to do)
+- Relevant SPEC section (extracted, not full spec)
+- File paths to work on
+- Relevant decisions/conventions
+- Acceptance criteria
+- Constraints
+
+#### Upstream (Worker → Orchestrator)
+
+All models converge on structured JSON results:
+
+```json
+{
+  "status": "success|failure|partial",
+  "files_modified": ["path/to/file.ts"],
+  "files_read": ["path/to/dep.ts"],
+  "tests_run": [{"name": "test_x", "result": "pass|fail", "output": "..."}],
+  "decisions_made": ["Used X pattern because Y"],
+  "issues_found": ["Test Z fails due to..."],
+  "unresolved_risks": ["Potential edge case with..."],
+  "verification_needed": true,
+  "summary": "Implemented feature X by..."
+}
+```
+
+**Critical rule:** Workers write artifacts (code, tests, configs) to disk — artifacts bypass the summarization bottleneck. The orchestrator verifies artifacts directly rather than trusting summaries.
+
+### C3. Shared State vs. Message Passing
+
+**Consensus:** Use filesystem + Git as shared artifact state, typed messages for coordination only.
+
+| For | Use | Not |
+|-----|-----|-----|
+| Code artifacts | Git + filesystem | In-context state |
+| Architectural decisions | DECISIONS.md (versioned) | Conversation memory |
+| Task coordination | Typed JSON packets | Free-text messages |
+| Concurrent work | Git worktrees/branches | Shared mutable state |
+| Rollback | Git hard reset | Text-based reversal |
+
+**SWE-Adept pattern** [Model 4]: Every agent attempt creates a dedicated Git branch. On failure, hard reset and fresh worker. Guarantees environmental consistency.
+
+**Letta Context Repositories** [Models 2, 3]: Memory as Git-backed filesystem. Subagents use worktrees for parallel memory modification with merge semantics.
+
+### C4. Context Isolation and Contamination
+
+#### The Evidence for Verification Contamination
+
+| Finding | Number | Source |
+|---------|--------|--------|
+| Adversarial PR metadata fools LLM reviewers | 88.2% success | Model 5 |
+| Redacting PR description recovers detections | 68.75% | Model 5 |
+| Adding debiasing instructions improves to | 93.75-94% | Model 5 |
+| Adversarial code review drops overconfident failure | 72% → 45% | Model 4 |
+| Reasoning doesn't reduce bias (BMJ 2026) | Amplifies in some models | Model 5 |
+
+**Clean-Room Verification Protocol (Consensus):**
+
+- **Pass 1 (clean room):** Verifier receives ONLY: spec, diff, touched files, test results, debiasing instructions. NO implementer reasoning, failed attempts, or rationale.
+- **Pass 2 (conditional):** Only on disagreement, reveal limited implementer context [Model 3].
+- **Model diversity:** Use different model or temperature for verification vs. implementation [Model 5].
+- **Google ADK technique:** Relabel prior assistant messages as third-party context ("narrative casting") to prevent identity confusion [Model 5].
+
+---
+
+## 5. Applied Patterns for Coding Tasks
+
+### D1. Code-Specific Context Patterns
+
+#### What a Coding Agent Needs in Context (Consensus)
+
+| Component | Priority | Token Budget | Notes |
+|-----------|---------|-------------|-------|
+| Task description + acceptance criteria | Required | 1-5K | Specific, not full spec |
+| Active code files (being modified) | Required | 20-60K | Full content of target files |
+| Interface/type context (signatures) | Required | 1-4K | Via repo map, not full files |
+| Test files (relevant) | Required | 5-15K | Establishes behavioral contract |
+| Project conventions | Required | 1-3K | From CLAUDE.md |
+| Error context (when debugging) | Conditional | 2-10K | Stack traces, test failures |
+| Dependency chain | Conditional | 3-10K | Only immediate dependencies |
+
+#### The "Less is More" Evidence
+
+- Aider: Adding irrelevant files "will often distract or confuse the LLM" [All models]
+- SWE-Pruner: 23-38% token reduction **improved** success rates [Models 3, 5]
+- LongCodeBench: More context **hurt** accuracy for repo-level bug fixing [Model 2]
+- AGENTS.md eval: Broad context files decreased success by 20%+ [Model 3]
+- CodeScout: Enhanced problem statements reduced agent steps from 21 to 6 [Model 5]
+
+### D2. Context for Different Task Types
+
+| Task Type | Primary Context | Secondary Context | What to Minimize |
+|-----------|----------------|-------------------|-----------------|
+| **New code** | Architecture docs, interfaces, style rules, examples | Repo map, existing patterns | Full existing implementations |
+| **Bug fixing** | Failing tests, stack traces, execution path | Minimal dependency chain | Broad architecture docs |
+| **Code review** | Spec/contract, diff, test results | Surrounding functions | Implementer reasoning (withheld) |
+| **Refactoring** | Dependency graph, what depends on changed code | Current tests | Unrelated modules |
+| **Test writing** | Implementation contracts, test conventions, existing tests | Coverage info | Broad system architecture |
+| **Frontend** | Design context (Figma/MCP), component hierarchy | Style guide | Backend internals |
+
+**APEX should encode task-adaptive context profiles** in CONTEXT_BUDGET.json — different budget allocations per task type.
+
+### D3. Stateful Development Sessions
+
+#### What Persists vs. What Refreshes
+
+| Persist Across Sessions | Always Refresh From Source |
+|------------------------|--------------------------|
+| Architecture decisions | File contents (re-read from disk) |
+| Naming/coding conventions | Test results (re-run) |
+| Task state and progress | Dependency information |
+| Known issues / deferred items | Build/lint output |
+| Rejected approaches (and why) | Repository structure |
+
+#### Stale Reference Problem
+
+**Major failure mode** cited by 4 of 5 models: agent works with cached file content that's been modified by a previous agent or step.
+
+**Solutions:**
+- Always re-read files from disk, never trust in-context copies [All models]
+- Git-backed state with explicit commit hashes [Models 3, 4, 5]
+- Hook-based repo map regeneration on file change [Model 5]
+- Invalidate memory entries on file hash mismatch [Model 3]
+
+#### Checkpoint/Restore Pattern
+
+| Tool | Mechanism | Source |
+|------|-----------|--------|
+| APEX (current) | STATE.json + PLAN_META.json + git commit | Existing |
+| Git Context Controller | Git-like operations (COMMIT, BRANCH, MERGE) — 48% SWE-bench Lite | Model 5 |
+| LangGraph | MemorySaver with thread_id | Model 2 |
+| Letta Code | Git worktrees for parallel memory branches | Models 2, 3 |
+| SWE-ContextBench | Summarized experience reuse across issues | Model 2 |
+
+### D4. Verification Context
+
+All models converge — see Section C4 above. Additional coding-specific findings:
+
+- **TiCoder (UPenn):** Test-driven verification achieves 45.73% absolute improvement in pass@1 within 5 interactions [Model 5]
+- **AgentCoder:** Separate test designer + executor alongside programmer — tests first, then validate [Model 5]
+- **CodeRabbit pattern:** Incremental reviews focused on changed files, not full history [Models 3, 5]
+- **Semi-formal reasoning:** Structured prompting with execution traces improved verification 78% → 88%, to 93% with test specs [Model 5]
+
+---
+
+## 6. Emerging Approaches
+
+### E1. Context Engineering as a Discipline
+
+**Current state (March 2026):** Fully established.
+
+| Source | Framing |
+|--------|---------|
+| Karpathy (June 2025) | "LLM = CPU, context window = RAM, developer = OS" |
+| Lütke (2025) | "The most important skill for building with LLMs" |
+| Anthropic (Sep 2025) | "Designing and optimizing the complete information payload at inference time" |
+| LangChain (2025) | Write, Select, Compress, Isolate |
+| Mei et al. survey (2025) | 165 pages, 1,400+ papers, formal taxonomy |
+| ACE framework (Oct 2025) | Evolving playbooks: +10.6% on agent benchmarks |
+| IBM Zurich | Cognitive tools: GPT-4.1 AIME 26.7% → 43.3% through context engineering alone |
+
+**Context engineering subsumes prompt engineering.** Prompts are one component alongside tools, memory, state, retrieved data, and conversation history.
+
+### E2. Novel Architectures
+
+| Architecture | Status | Timeline | Relevance to APEX |
+|-------------|--------|----------|-------------------|
+| Prompt caching (Anthropic, Google, OpenAI) | **Production-ready** | Now | Critical — adopt immediately |
+| Context editing (Anthropic Sep 2025) | **Production-ready** | Now | High — 84% token reduction |
+| Sigmoid gating attention (Qwen, NeurIPS Best Paper) | Research | 6-12 months | Model-level; watch |
+| LaMPE (positional encoding improvement) | Research | 6-12 months | +37.8 points KV retrieval |
+| Ring Attention (UC Berkeley) | Research | 1-3 years | Requires ~512 GPUs for 1M |
+| Infini-attention (Google) | Research | 1-3 years | 114× compression but reproduction issues |
+| StreamingLLM (MIT) | Research | Available | 22.2× speedup but doesn't extend understanding |
+
+**For APEX now:** Adopt prompt caching and context editing. Everything else is model-level and out of scope for application architecture.
+
+### E3. Predictive and Adaptive Context
+
+- Models can self-assess context needs via tool use (ask to see files) [All models]
+- CodeRAG uses log probabilities to predict needed chunks [Model 2]
+- Aider dynamically adjusts repo map size based on need [Models 1, 2]
+- CodeScout: Pre-exploration converts vague requests to comprehensive problem statements, reducing steps from 21 to 6 [Model 5]
+- **Opportunity for APEX:** Orchestrator should plan *which context to fetch* before dispatching workers, not just what code to write [Model 2]
+
+### E4. Evaluation and Measurement
+
+#### Available Benchmarks
+
+| Benchmark | What It Tests | Key Finding | Source |
+|-----------|-------------|-------------|--------|
+| MRCR v2 | Multi-round coreference at 1M | Best discriminator of real-world utilization | All models |
+| RULER | Multi-hop tracing, aggregation at long context | Half of 32K+ models fail on demanding tasks | Models 2, 3, 5 |
+| BABILong | Reasoning at extreme lengths | 10-20% effective utilization | Models 2, 3, 5 |
+| LongCodeBench | Coding at 32K-1M | Most-cited coding degradation curve | Models 2, 5 |
+| LONGCODEU | Long code understanding | Performance drops dramatically >32K | Model 2 |
+| SWE-ContextBench | Gold contexts for coding issues | Measures retrieval quality, not just recall | Models 2, 3 |
+| ContextBench | Explored vs utilized context gap | Agents explore too much, utilize too little | Model 3 |
+| NoLiMa | Long-context reasoning | 11/12 models below 50% at 32K | Model 5 |
+| HELM Long Context | Computational tasks at scale | Highest MRCR accuracy only 0.256 at 128K | Model 5 |
+
+#### Proposed Metrics for APEX (Cross-Model Synthesis)
+
+| Metric | What It Measures | Source Models |
+|--------|-----------------|--------------|
+| Token utilization per zone per agent | Budget compliance | All 5 |
+| Context composition breakdown | System/code/history/tools ratios | Models 1, 3, 5 |
+| Task success rate by context fill % | Quality vs utilization correlation | Models 1, 3, 5 |
+| Retrieval precision | Files accessed vs files actually needed | Models 2, 3, 5 |
+| Compaction/rotation frequency | Session health | Models 1, 3, 5 |
+| State file consistency | STATE.json vs actual disk state | Models 1, 3 |
+| Recovery action density | Repeated same actions (degradation signal) | Models 4, 5 |
+| Stale reference rate | Using outdated file content | Model 3 |
+| Verifier disagreement rate | Catching real issues | Model 3 |
+| Cache hit rate | Cost efficiency | Model 5 |
+| Task #N quality vs Task #1 quality | The ultimate APEX metric | Model 5 |
+
+---
+
+## 7. Anti-Patterns and Failure Modes
+
+### F1. Context Anti-Patterns (Ranked by Severity)
+
+| Anti-Pattern | Why It Fails | Evidence | Severity |
+|-------------|-------------|----------|----------|
+| **Context stuffing** | Attention dilution, lost-in-the-middle, distractor interference | All 5 models; NoLiMa: 11/12 models <50% at 32K; shuffled docs outperform structured (!) | CRITICAL |
+| **LLM self-summarization as default** | Loses stack traces, file paths, failed attempts; causes loops | JetBrains; 4 of 5 models | HIGH |
+| **Monolithic CLAUDE.md / repo context files** | "Fading memory" — can't find relevant info; 20%+ cost increase | Models 1, 3; AGENTS.md eval | HIGH |
+| **Needle-in-a-haystack optimism** | Near-perfect NIAH ≠ real-world capability | RULER, BABILong, LongBench v2 | HIGH |
+| **Summarizing into prose only** | Loses provenance, causality, exact paths, open risks | Models 3, 4 | MEDIUM-HIGH |
+| **Ignoring context rot** | Operating as if context is simple storage | All 5 models | MEDIUM-HIGH |
+| **Over-compaction** | Loses subtle but critical context | Anthropic warning; Models 1, 5 | MEDIUM |
+
+### F2. Multi-Agent Context Failures
+
+| Failure Mode | Manifestation | Source |
+|-------------|---------------|--------|
+| Orchestrator bottleneck | Ingests full worker output, exceeds 256K, plan degrades | All 5 models |
+| Verification contamination | Reviewer sees implementer reasoning, rubber-stamps errors | Models 3, 4, 5 |
+| Too much shared context | Inherited biases, circular reasoning, false convergence | Models 2, 3, 5 |
+| Too little shared context | Inconsistent changes, duplicated work, missed dependencies | Models 2, 3 |
+| Trajectory elongation | Smoothed summaries hide failure signals, agent loops longer | Models 2, 5 |
+| Free-text agent communication | Token bloat, circular disagreements | Models 4, 5 |
+| Coordination plateau | Beyond 4 agents, coordination latency grows superlinearly | Model 5 |
+| Error compounding | 99% per-step × 10 steps = only 90.4% system reliability | Model 5 |
+
+**MAST taxonomy (UC Berkeley):** From 1,642 traces across 7 frameworks: 41-86.7% failure rates. System design issues (41.76%), inter-agent misalignment (36.94%), task verification breakdowns (21.30%) — **all context-related** [Model 5].
+
+### F3. Memory and State Failures
+
+| Failure | Cause | Mitigation |
+|---------|-------|------------|
+| State desynchronization | STATE.json claims don't match actual files | Always derive from disk; verify before acting |
+| Memory poisoning | Wrong info persisted, repeatedly retrieved | Provenance tracking, temporal decay, validated backups |
+| MINJA attack | Query-only memory injection, 95%+ success | Security: treat memory as untrusted input |
+| Stale embeddings | Code changed without re-indexing | Use git-backed state; prefer file reads over embeddings |
+| Multiple writers | Race conditions corrupt shared state | Sequential execution or Git worktrees/branches |
+| Agent defends poison | Constructs rationales from corrupted context | Periodic memory audit by independent agent |
+
+---
+
+## 8. Architectural Recommendations for APEX
+
+### 8.1 Context Budget Architecture
+
+**Hard Budget: 50-60% of effective capacity per task phase.**
+
+For a 200K standard Claude Code window (noting 1M is available but with severe degradation):
+
+| Zone | Tokens | % | Policy |
+|------|--------|---|--------|
+| Zone 1: Stable Prefix (cached) | 5-10K | 2.5-5% | System prompt + CLAUDE.md (<200 lines) + repo map skeleton. Cached via prompt caching for 90% cost reduction. |
+| Zone 2: Task Context (JIT-loaded) | 30-60K | 15-30% | Active files, dependency interfaces, test specs. Loaded on-demand via tools. |
+| Zone 3: Working Memory (masked) | 20-40K | 10-20% | Tool outputs, intermediate results. Subject to observation masking — delete old tool outputs. |
+| Zone 4: Generation Reserve | 30-50K | 15-25% | Reserved for model output including extended thinking. **Never consumed by input.** |
+| **Target max utilization** | **100-120K** | **50-60%** | **Compact proactively before hitting this.** |
+
+**Orchestrator-specific budget:** 10-15% context usage maximum. Passes file paths and typed task specs, not file contents. Reads subagent results from structured JSON files, not conversation history.
+
+**Ordering within context:**
+```
+1. <system_instructions>     — agent role, constraints, behavior (PRIMACY ZONE)
+2. <project_context>         — CLAUDE.md excerpt, repo map, conventions
+3. <task_spec>               — SPEC excerpt, acceptance criteria
+4. <prior_decisions>         — relevant DECISIONS.md entries
+5. <context_files>           — typed file listings (PRIMARY/DEPENDENCY/TEST)
+6. <recent_evidence>         — latest tool results, test output
+7. <current_task>            — what to do RIGHT NOW (RECENCY ZONE)
+```
+
+**Always in context:** System prompt, CLAUDE.md (<200 lines), repo map skeleton, current task + acceptance criteria, budget telemetry.
+
+**On-demand via tools:** Full file contents, old test results, historical decisions, external docs, dependency details.
+
+### 8.2 Multi-Agent Context Flow
+
+**Pattern: Coordinator + Fresh Workers + Isolated Verifiers + Filesystem State**
+
+```
+Orchestrator (thin: 10-15% context, compacts at 50%)
+  ├── Worker A (fresh context, returns typed JSON + writes artifacts to disk)
+  ├── Worker B (fresh context, same pattern)
+  ├── Worker C (fresh context, same pattern)
+  └── Verifier (fresh context, CLEAN ROOM: spec + diff + tests only, NO worker reasoning)
+```
+
+**Worker → Orchestrator structured result:**
+```json
+{
+  "task_id": "TASK-003",
+  "status": "success|failure|partial",
+  "files_read": ["src/auth/middleware.ts", "src/types/user.ts"],
+  "files_modified": ["src/auth/middleware.ts"],
+  "tests_run": [{"name": "auth.test.ts", "passed": 14, "failed": 0}],
+  "decisions_made": [{"decision": "Used JWT refresh token rotation", "rationale": "Spec requirement S3.2"}],
+  "issues_found": [],
+  "unresolved_risks": ["Rate limiting not addressed yet"],
+  "confidence": "high",
+  "summary": "Added token refresh logic to auth middleware per spec S3.2"
+}
+```
+
+**Isolation guarantees:**
+- Workers never see each other's conversation history
+- Verification agents never see implementation reasoning (Pass 1)
+- Orchestrator sees typed summaries, not raw worker output
+- Different model/temperature for verification vs implementation when possible
+- Explicit debiasing instructions in verifier system prompt
+
+**State flow:** Artifacts through filesystem/git → structured summaries through typed packets → long-term memory through versioned .apex/ files. **Never through accumulated conversation.**
+
+### 8.3 Session Management
+
+**Proactive rotation with multiple trigger types:**
+
+| Trigger | Threshold | Action |
+|---------|-----------|--------|
+| Soft token threshold | 50-60% of effective budget | Proactive compact + state write |
+| Hard token threshold | 70% of effective budget | Force rotation: write state, new session |
+| Phase boundary | Planning → impl → verification | Natural rotation point: checkpoint + fresh context |
+| Task batch completion | Every 5-8 orchestrator tasks | Rotate orchestrator: write state, read back |
+| Time-based | 30-45 minutes active work | Check for degradation signals |
+| Quality signal | Repeated errors, forgotten instructions | Immediate rotation |
+| Recovery density spike | Same test/action 3+ times | Force rotation: session likely compromised |
+
+**State preservation protocol (before rotation):**
+1. Write STATE.json (current progress, active task, file status)
+2. Write/update DECISIONS.md (all decisions with timestamps and agent attribution)
+3. Commit code to git with tagged checkpoint
+4. Write phase summary focusing on: what's done, what's next, what issues exist
+
+**State restoration protocol (after rotation):**
+1. Load CLAUDE.md (from disk, survives compaction)
+2. Load STATE.json + PLAN_META.json (machine-readable state)
+3. Load relevant DECISIONS.md sections
+4. Re-generate repo map (ensure freshness)
+5. Re-read relevant files from disk (never trust cached content)
+6. **Do NOT** load old conversation history or prose summaries
+
+### 8.4 Verification Context
+
+**Clean-Room Protocol:**
+
+| Included | Excluded |
+|----------|----------|
+| Task specification from PLAN_META | Implementer's reasoning/CoT |
+| Acceptance criteria | Failed attempts and backtracking |
+| File diff (unified format) | Implementer's confidence assessment |
+| Surrounding code context (file slices) | Orchestrator's internal narrative |
+| Test results (stdout/stderr) | Prior verifier opinions (Pass 1) |
+| Relevant conventions from DECISIONS.md | Time pressure or quality concerns |
+| Explicit debiasing instructions | Worker conversation history |
+
+**Two-pass protocol:**
+- **Pass 1:** Clean-room verdict. Verifier evaluates independently.
+- **Pass 2:** Only on disagreement — reveal limited implementer summary (factual, not rationale) and prior verifier findings.
+
+**Verification enhancement techniques:**
+- Semi-formal reasoning (structured prompts + execution traces): 78% → 88% → 93% with test specs [Model 5]
+- Model diversity: different model or temperature than implementation
+- Parallel personas (security, architecture, performance critics) with moderator synthesis [Model 4]
+- Test-driven verification: write tests first, validate against them [Model 5]
+
+### 8.5 Memory Architecture
+
+**Three-tier system:**
+
+| Tier | Storage | Content | Loaded When | Size Limit |
+|------|---------|---------|-------------|-----------|
+| **Tier 1: Always-loaded** | .apex/CLAUDE.md | Project constitution, architecture decisions, conventions, build commands | Every invocation (cached) | <200 lines (for 92% rule application) |
+| **Tier 2: Session state** | .apex/STATE.json, PLAN_META.json, DECISIONS.md, tasks/*.json | Progress, decisions, task results | Phase boundaries | Structured, versioned |
+| **Tier 3: Indexed retrieval** | SQLite + repo map | Task history, cross-project patterns, semantic code search | Explicit retrieval via tools | Queryable |
+
+**Why files + Git + SQLite (not vector DB for primary state):**
+- Files: Human-readable, auditable, editable, Git-compatible
+- Git: Versioning, branching, rollback, diff, "free" coordination
+- SQLite: Zero-ops ACID, FTS5 search, provenance tracking, temporal queries
+- Vector DB: Only for Tier 3 cold/semantic retrieval, not source of truth
+
+**Memory integrity measures:**
+- Every memory record: source agent, timestamp, confidence, scope, invalidation path
+- Speculative observations quarantined until verified
+- Decay by age; invalidate on file hash mismatch
+- Periodic memory audit by dedicated synthesis agent
+- Validated snapshots for rollback (defend against MINJA-style attacks)
+- Cap tool results in context; use memory pointers (file paths, stored queries) instead
+- Changes to .apex/ files treated like code: controlled, auditable
+
+### 8.6 Measurement and Observability
+
+**Context Health Dashboard:**
+
+| Metric Category | Specific Metrics | Alert Threshold |
+|----------------|-----------------|-----------------|
+| **Budget compliance** | Tokens per zone per agent; zone overflow events | Zone exceeds 120% allocation |
+| **Utilization quality** | Retrieval precision (files accessed vs needed); context ROI | Precision < 50% |
+| **Degradation signals** | Repeated action rate; instruction compliance over session; response specificity trend | Recovery density > 3 same actions; compliance drop > 15% |
+| **Session health** | Time since rotation; context fill %; compaction events | Fill > 60%; time > 45 min without rotation |
+| **Cache efficiency** | Prompt cache hit rate; cache invalidation events | Hit rate < 80% |
+| **State consistency** | STATE.json vs actual disk state; decision conflicts | Any mismatch |
+| **Memory quality** | Stale reference rate; memory age distribution; poisoning indicators | Stale rate > 10% |
+| **Quality over time** | Task #N success rate vs Task #1; verifier disagreement rate | >5% variance between early and late tasks |
+
+**User-facing indicators:**
+- Context fill gauge: 🟢 green (<50%), 🟡 yellow (50-60%), 🔴 red (>60%)
+- Last rotation timestamp
+- Stale-state warnings
+- Memory freshness indicator
+- Verification confidence for last completed task
+
+**The ultimate APEX metric:** Task #50 should be statistically indistinguishable from Task #1 in quality. The evidence says this is achievable only through context rotation + isolation, not through larger context windows.
+
+---
+
+## 9. Sources
+
+### Cross-Referenced High-Confidence Sources (Cited by 3+ Models)
+
+1. **Chroma Research** (July 2025). "Context Rot: How Increasing Input Tokens Impacts LLM Performance." 18 frontier models tested. [All 5 models]
+2. **Liu et al.** (TACL 2024). "Lost in the Middle: How Language Models Use Long Contexts." U-shaped attention curve. [All 5 models]
+3. **Anthropic** (Sep 2025). "Effective context engineering for AI agents." Definitive industry guide. [All 5 models]
+4. **Aider documentation**. Repository map pattern. tree-sitter, PageRank ranking. [All 5 models]
+5. **BABILong** (NeurIPS 2024). "Testing the Limits of LLMs." 10-20% effective utilization. [Models 2, 3, 5]
+6. **RULER** (NVIDIA, COLM 2024). Long-context benchmark. [Models 2, 3, 5]
+7. **JetBrains/Complexity Trap** (Dec 2025). Observation masking vs summarization. [Models 2, 4, 5]
+8. **OpenHands** context condensation. Event-sourced state, 54% SWE-bench. [Models 2, 3, 5]
+9. **MemGPT/Letta**. Virtual context management, filesystem memory. [All 5 models]
+10. **Anthropic** MRCR v2 numbers. Claude 4.6 Opus long-context performance. [Models 1, 3, 4, 5]
+11. **Karpathy** (June 2025). Context engineering terminology. [All 5 models]
+12. **LangChain/LangGraph**. Multi-agent context patterns, memory architecture. [Models 2, 3, 5]
+13. **SWE-ContextBench** (2026). Gold contexts, retrieval quality measurement. [Models 2, 3]
+14. **LongCodeBench**. Claude 3.5 Sonnet 29% → 3% degradation. [Models 2, 5]
+15. **Claude Code Issue #35296**. "256K effective" community report. [Models 1, 4, 5]
+
+### Notable Single-Model Sources (High Value, Needs Verification)
+
+16. **Du et al.** (EMNLP 2025). "Context Length Alone Hurts." 13.9-85% degradation with perfect retrieval. [Model 5]
+17. **Chowdhury et al.** (March 2026). Exact theory of position bias as geometric inevitability. [Models 4, 5]
+18. **SWE-Pruner** (ByteDance, Jan 2026). 23-38% token reduction improves success rates. [Models 3, 5]
+19. **AGENTS.md eval** (2026). Broad repo context files decrease success 20%+. [Model 3]
+20. **Factory.ai**. Extractive: +7.89 F1; abstractive: -4.69 F1 at similar compression. [Model 5]
+21. **Morph prevention-first**. 3-4× session extension through waste prevention. [Model 5]
+22. **BrowseComp** (Anthropic). Token usage = 80% of performance variance. [Model 5]
+23. **TALE framework** (ACL Findings 2025). 68.9% cost reduction with <5% accuracy loss. [Model 5]
+24. **MAST taxonomy** (UC Berkeley). 1,642 traces, 41-86.7% failure rates. [Model 5]
+25. **MyAntFarm.ai** (Nov 2025). 100% actionable vs 1.7% single-agent in 348 experiments. [Model 5]
+26. **Augment Code SWE-bench Pro**. 6-point spread from context retrieval alone. [Model 5]
+27. **MINJA attack** (Dong et al., 2025). >95% injection, 70% attack success. [Model 5]
+28. **TiCoder** (UPenn). +45.73% pass@1 from test-driven generation. [Model 5]
+29. **CAT framework** (Dec 2025). 57.6% SWE-Bench-Verified. [Model 5]
+30. **Git Context Controller**. 48% SWE-bench Lite. [Model 5]
+31. **Paulsen** (Jan 2026). Maximum Effective Context Window — >99% shortfall on some tasks. [Model 5]
+32. **Veseli et al.** (2025). U-shape only below 50% fill. [Model 5]
+33. **NoLiMa**. 11/12 models <50% at 32K. [Model 5]
+34. **CodeRAG-Bench**. +27.4% SWE-Bench with canonical docs. [Model 3]
+35. **Adversarial Code Review** pattern. 88.2% bias, 72→45% overconfident failure. [Models 4, 5]
+36. **IBM Zurich cognitive tools**. GPT-4.1 AIME 26.7% → 43.3%. [Model 5]
+37. **COLLAPSE.md specification**. Concrete degradation thresholds. [Model 5]
+
+### Academic Papers
+
+38. LONGCODEU (ACL 2025). Long code understanding benchmark.
+39. LLMLingua-2 (Microsoft). Prompt compression 2-5×.
+40. 500xCompressor. Extreme prompt compression.
+41. EHPC. Evaluator head-based prompt compression.
+42. InfiniteBench (ACL 2024). 100K+ token benchmark.
+43. LongBench v2 (ACL 2025). Realistic long-context tasks.
+44. Mei et al. (July 2025). 165-page context engineering survey, 1,400+ papers.
+45. ACE framework (Oct 2025). Evolving playbooks.
+46. Ring Attention (UC Berkeley, NeurIPS 2024).
+47. Infini-attention (Google, April 2024).
+48. StreamingLLM (MIT). Attention sinks for streaming.
+49. SWE-Agent (NeurIPS 2024). Agent-computer interfaces.
+50. SWE-Adept. Git-based agentic issue resolution.
+51. CodeRAG / CodeScout. Retrieval-augmented code generation.
+
+### Industry & Provider Documentation
+
+52. Anthropic: Context windows docs, compaction docs, Claude Code memory, sub-agents docs.
+53. OpenAI: GPT-5.2, GPT-5.4 launch pages, MRCR v2, context engineering cookbook.
+54. Google: Gemini 2.5 technical report, long-context docs, context caching.
+55. Prompt caching evaluation (Don't Break the Cache, 2025).
+56. CodeRabbit: PR review documentation.
+57. GitHub: PR review guidance.
+
+### Framework & Practitioner Sources
+
+58. LangChain/LangGraph multi-agent and memory documentation.
+59. Aider repo map and ctags documentation.
+60. OpenHands context condensation blog.
+61. Letta/MemGPT memory blocks, context repositories.
+62. Simon Willison: Context engineering terminology and patterns.
+63. GSD framework documentation.
+
+---
+
+## Research Limitations & Gaps
+
+### Gaps Identified Across All 5 Models
+
+1. **No published coding-specific degradation curves for current frontier models** (Claude 4.6 Opus, GPT-5.4, Gemini 2.5 Pro). All coding benchmarks test older model versions.
+
+2. **No published study directly comparing "task N with fresh context vs task N in a long session"** for coding tasks quantitatively. The evidence is convergent but indirect.
+
+3. **Context budget allocation ratios are synthesized, not measured.** No study provides optimal per-component token percentages for coding agents.
+
+4. **Self-reported benchmarks dominate.** Anthropic, OpenAI, and Google all report their own MRCR numbers. Independent verification is sparse.
+
+5. **Multi-agent coding overhead lacks rigorous quantification.** "15×" and "3-5×" token cost figures exist but aren't from controlled experiments.
+
+6. **Verifier contamination in coding lacks a quantified study.** Strong indirect evidence but no direct measurement of "with vs without implementer rationale" for AI code review.
+
+7. **Memory poisoning for coding agents is poorly studied.** MINJA attacks were demonstrated on general assistants, not coding-specific workflows.
+
+8. **The field moves faster than publication.** Anthropic's features (context editing Sep 2025, 1M GA March 2026) may already have changed the landscape since sources were written.
+
+### Where Models Disagree
+
+| Topic | Range of Recommendations | Resolution |
+|-------|-------------------------|------------|
+| Effective working set size | 64-128K (Model 2) to 256K (Model 1) | Use conservative 100-160K for orchestrator, 64-128K for workers |
+| Rotation threshold | 50% (Models 4,5) to 85% (APEX v5) | 50-60% proactive, 70% hard limit |
+| Repo map budget | 1K (Model 1) to 4K (Model 4) | 1-4K adaptive (Aider's approach) |
+| Gemini effective capacity | 1.2M (Model 4) vs 16.4% at 1M (Model 3) | Model 4 outlier; use conservative estimates |
+| LLM summarization | "Never for coding" (Model 4) vs "Useful at phase boundaries" (Models 1,2,3) | Use for phase boundaries only; default to observation masking |
+| Vector DB for code | "Anti-pattern" (Model 4) vs "Useful secondary layer" (Models 2,3,5) | Tier 3 only, never primary state |
+
+---
+
+## Conclusion: The One Thing APEX Must Get Right
+
+Every technique reviewed — from Aider's 4.3% context efficiency to SWE-Pruner's quality-improving token reduction to JetBrains' observation masking to Anthropic's multi-agent research showing 90.2% improvement — points to the same conclusion:
+
+**Less context, better chosen, always beats more context, naively stuffed.**
+
+APEX's architecture (orchestrator + fresh subagents + file-based state + git) is aligned with state-of-the-art best practices. The missing pieces are:
+
+1. **Observability** — measuring context health in real-time, not just estimating
+2. **Proactive rotation** — compacting at 50-60%, not 85%
+3. **Observation masking** — deleting old tool outputs instead of summarizing
+4. **Clean-room verification** — architecturally isolating verifiers
+5. **Task-adaptive loading** — different context profiles per task type
+6. **Memory integrity** — provenance, decay, and poisoning protection
+
+With these additions, APEX can credibly target the ultimate goal: **task #50 statistically indistinguishable from task #1 in quality.**

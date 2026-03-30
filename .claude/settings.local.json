@@ -11,7 +11,13 @@
       "Read(//c/Users/דודאלמועלם/OneDrive - Tiva 13 Engineers/שולחן העבודה/APEX/**)",
       "Bash(done)",
       "Bash(chmod +x ~/.claude/hooks/post-write.sh ~/.claude/hooks/subagent-stop.sh ~/.claude/hooks/pre-compact.sh ~/.claude/hooks/context-monitor.sh ~/.claude/hooks/verify-learnings.sh)",
-      "Bash(chmod +x ~/.claude/hooks/generate-task-map.sh ~/.claude/hooks/phantom-check.sh ~/.claude/hooks/tdad-index.sh ~/.claude/hooks/cross-phase-audit.sh ~/.claude/hooks/phase-tag.sh)"
+      "Bash(chmod +x ~/.claude/hooks/generate-task-map.sh ~/.claude/hooks/phantom-check.sh ~/.claude/hooks/tdad-index.sh ~/.claude/hooks/cross-phase-audit.sh ~/.claude/hooks/phase-tag.sh)",
+      "Bash(ls -la ~/.claude/hooks/*.sh)",
+      "Read(//c/Users/דודאלמועלם/.claude/commands/apex/**)",
+      "Read(//c/Users/דודאלמועלם/.claude/**)",
+      "Bash(find 'c:/Users/דודאלמועלם/OneDrive - Tiva 13 Engineers/שולחן העבודה/APEX' -type f \\\\\\(-name *.txt -o -name *.doc -o -name *.odt \\\\\\))",
+      "Bash(wc -l ~/.claude/agents/*.md)",
+      "Bash(wc -l ~/.claude/commands/apex/*.md)"
     ]
   }
 }
