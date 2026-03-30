@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/דודאלמועלם/.claude/agents/**)",
+      "Read(//c/Users/דודאלמועלם/.claude/agents/specialist/**)",
+      "Read(//c/Users/דודאלמועלם/.claude/hooks/**)",
+      "Read(//c/Users/דודאלמועלם/.claude/apex-skills/**)",
+      "Bash(chmod +x ~/.claude/hooks/destructive-guard.sh ~/.claude/hooks/pre-task-snapshot.sh ~/.claude/hooks/circuit-breaker.sh)",
+      "Bash(for f:*)",
+      "Bash(do echo:*)",
+      "Read(//c/Users/דודאלמועלם/OneDrive - Tiva 13 Engineers/שולחן העבודה/APEX/**)",
+      "Bash(done)",
+      "Bash(chmod +x ~/.claude/hooks/post-write.sh ~/.claude/hooks/subagent-stop.sh ~/.claude/hooks/pre-compact.sh ~/.claude/hooks/context-monitor.sh ~/.claude/hooks/verify-learnings.sh)",
+      "Bash(chmod +x ~/.claude/hooks/generate-task-map.sh ~/.claude/hooks/phantom-check.sh ~/.claude/hooks/tdad-index.sh ~/.claude/hooks/cross-phase-audit.sh ~/.claude/hooks/phase-tag.sh)"
+    ]
+  }
+}
