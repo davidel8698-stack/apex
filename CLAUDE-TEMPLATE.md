@@ -7,6 +7,14 @@ Level [N] — [NAME]
 ## Stack
 [stack list]
 
+## User Profile
+- Technical level: [non-programmer / junior / senior / architect]
+- Language: [Hebrew + English tech terms / English / other]
+- Communication: report in [language], no jargon. Only ask about WHAT gets built, never HOW.
+- Autonomy: work start-to-finish. Fix errors yourself. Only stop if blocked after 3 attempts.
+- When asking (D-level or blocked), use this format:
+  "What I want to do: [simple explanation] | Why: [reason] | Risk: [what could go wrong]"
+
 ## Conventions
 [coding conventions — be specific, be brief]
 
