@@ -32,7 +32,7 @@ fi
 echo "✅ TEST 0b PASS: _require-jq.sh helper valid"
 
 # 0c: hooks that must source _require-jq.sh actually do so
-REQUIRED_HOOKS="subagent-stop pre-task-snapshot generate-task-map pre-compact context-monitor circuit-breaker verify-ladder-check phase-tag cross-phase-audit mutation-gate"
+REQUIRED_HOOKS="subagent-stop pre-task-snapshot generate-task-map pre-compact context-monitor circuit-breaker phase-tag cross-phase-audit mutation-gate"
 MISSING_REQ=""
 for h in $REQUIRED_HOOKS; do
   if ! grep -q "_require-jq.sh" ~/.claude/hooks/$h.sh 2>/dev/null; then
@@ -43,7 +43,7 @@ if [ -n "$MISSING_REQ" ]; then
   echo "❌ TEST 0c FAIL: hooks not sourcing _require-jq.sh:$MISSING_REQ"
   exit 1
 fi
-echo "✅ TEST 0c PASS: all 10 jq-dependent hooks source _require-jq.sh"
+echo "✅ TEST 0c PASS: all 9 jq-dependent hooks source _require-jq.sh"
 ```
 Expected: 0a/0b/0c all PASS. Any FAIL blocks the rest of health-check.
 

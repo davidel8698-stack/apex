@@ -62,7 +62,7 @@ below baseline (22.22% vs 26.26%). Failure knowledge is +14.3% more valuable.
 - **Citations:** framework/agents/executor.md:3, framework/commands/apex/health-check.md:71
 
 ### [DEFERRED-002] The Silent Install Failure anti-pattern (Round 2)
-- **Status:** DEFERRED for inclusion in anti-pattern catalog 2b (anti-pattern #8)
+- **Status:** DEFERRED
 - **Severity:** P2
 - **Decay:** framework
 - **Seen in:** apex-framework-build (Round 2 jq installation, 2026-04-09)

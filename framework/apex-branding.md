@@ -637,14 +637,6 @@ Render standalone or inside a Mission Briefing (Section 10-B).
 └──────────────────────────────────────────────────────────────────┘
 ```
 
-### RESEARCHER
-```
-┌──────────────────────────────────────────────────────────────────┐
-│  ◎  RESEARCHER     technical research · writes research notes    │
-│     ─────          model: sonnet · scope: per-topic              │
-└──────────────────────────────────────────────────────────────────┘
-```
-
 ### SECURITY SPECIALIST
 ```
 ┌──────────────────────────────────────────────────────────────────┐
