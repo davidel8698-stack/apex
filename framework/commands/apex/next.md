@@ -231,6 +231,13 @@ If TOTAL_TOKENS > MAX: reduce per CONTEXT_BUDGET.json priority:
 
 ## STEP F: Pre-Task Snapshot
 bash ~/.claude/hooks/pre-task-snapshot.sh [task_id]
+If hook exit code == 2: snapshot verification failed (filesystem-level).
+  STATE.snapshots.pre_task_stash is null. Prompt user:
+  "🚫 Pre-task snapshot could not be verified — no rollback available.
+   (1) Abort task   (2) Proceed without snapshot (risk: no rollback)"
+  If (1): STATE.status = "pending_approval", STOP.
+  If (2): log warning to SESSION-LOG.md, continue.
+Else (exit 0): proceed.
 Update STATE: snapshots, circuit_breaker.total_tool_calls_this_task = 0
 
 ## STEP G: Autonomy Check + Execute

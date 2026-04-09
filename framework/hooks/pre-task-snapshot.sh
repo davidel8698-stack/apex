@@ -1,43 +1,65 @@
 #!/bin/bash
-# Creates git stash snapshot before task execution for per-task rollback
+# Creates a git stash snapshot before task execution for per-task rollback.
+# Uses `git stash create` + `git stash store` so the working tree is NOT
+# modified (unlike `git stash push`), and the named stash remains in
+# `git stash list` for real rollback later.
+#
+# Filesystem-level verification: after store, greps `git stash list` for
+# the expected message. If verification fails, exits 2 (fail-loud) so
+# /apex:next can decide whether to proceed without a snapshot.
+#
 # Usage: bash pre-task-snapshot.sh [task_id]
+
+source "$(dirname "$0")/_require-jq.sh"
+require_jq
 
 TASK_ID=${1:-"unknown"}
 TIMESTAMP=$(date +%s)
 STASH_MSG="apex-snapshot-${TASK_ID}-${TIMESTAMP}"
 
-# Check if there's anything to stash
-if git diff --quiet HEAD 2>/dev/null && git diff --cached --quiet HEAD 2>/dev/null; then
-  # Clean working tree — create empty stash marker
-  echo "✅ PRE-TASK SNAPSHOT: Working tree clean (no stash needed)"
-
-  # Update STATE.json
-  if [ -f .apex/STATE.json ] && command -v jq &>/dev/null; then
-    jq --arg task "$TASK_ID" --arg stash "clean-${TIMESTAMP}" \
+update_state_stash() {
+  local stash_value="$1"
+  if [ -f .apex/STATE.json ]; then
+    jq --arg task "$TASK_ID" --arg stash "$stash_value" \
        '.snapshots.pre_task_stash = $stash | .snapshots.last_snapshot_task = $task' \
        .apex/STATE.json > /tmp/state_snap.json && mv /tmp/state_snap.json .apex/STATE.json
   fi
+}
+
+update_state_stash_null() {
+  if [ -f .apex/STATE.json ]; then
+    jq --arg task "$TASK_ID" \
+       '.snapshots.pre_task_stash = null | .snapshots.last_snapshot_task = $task' \
+       .apex/STATE.json > /tmp/state_snap.json && mv /tmp/state_snap.json .apex/STATE.json
+  fi
+}
+
+# Create a stash object WITHOUT touching the working tree.
+# -u includes untracked files (matching previous --include-untracked semantic).
+STASH_SHA=$(git stash create -u "$STASH_MSG" 2>/dev/null)
+
+if [ -z "$STASH_SHA" ]; then
+  # Clean working tree — nothing to snapshot
+  echo "✅ PRE-TASK SNAPSHOT: Working tree clean (no stash needed)"
+  update_state_stash "clean-${TIMESTAMP}"
   exit 0
 fi
 
-# Stash current changes
-git stash push -m "$STASH_MSG" --include-untracked 2>/dev/null
+# Store the stash object in the stash list with a named message
+git stash store -m "$STASH_MSG" "$STASH_SHA" 2>/dev/null
 
-if [ $? -eq 0 ]; then
-  # Immediately pop to restore working state — the stash remains in reflog
-  git stash pop 2>/dev/null
-
-  # Update STATE.json
-  if [ -f .apex/STATE.json ] && command -v jq &>/dev/null; then
-    jq --arg task "$TASK_ID" --arg stash "$STASH_MSG" \
-       '.snapshots.pre_task_stash = $stash | .snapshots.last_snapshot_task = $task' \
-       .apex/STATE.json > /tmp/state_snap.json && mv /tmp/state_snap.json .apex/STATE.json
-  fi
-
+# FILESYSTEM-LEVEL VERIFICATION — matches critic.md rule.
+# Don't trust $? alone; confirm the stash is actually in the list.
+if git stash list | grep -qF "$STASH_MSG"; then
+  update_state_stash "$STASH_MSG"
   echo "✅ PRE-TASK SNAPSHOT: Saved for task $TASK_ID"
-  echo "   Rollback: git stash list | grep '$STASH_MSG'"
+  echo "   Rollback: git reset --hard HEAD && git stash apply \"stash^{/$STASH_MSG}\""
+  exit 0
 else
-  echo "⚠️ PRE-TASK SNAPSHOT: git stash failed — continuing without snapshot"
+  # The stash did not land — fail loud so the caller can decide.
+  update_state_stash_null
+  echo "🚫 PRE-TASK SNAPSHOT: stash creation unverified at filesystem level" >&2
+  echo "   task=$TASK_ID msg=$STASH_MSG sha=$STASH_SHA" >&2
+  echo "   Aborting task to preserve data integrity." >&2
+  exit 2
 fi
-
-exit 0
