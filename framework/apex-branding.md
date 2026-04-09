@@ -1158,8 +1158,8 @@ Exception: dashboard dual-bars can be 20 (Productive) and 20 (Overhead) to align
 - PRISM (◆◈◇) for quality moments (verdicts, advisor, ceremonies)
 Never mix more than 2 motifs in a single output.
 
-### R12  Hebrew text allowed inside frames
-RTL text renders correctly inside monospace frames. Keep structural labels in English, use Hebrew for user-facing prose.
+### R12  Hebrew text placement
+Hebrew text is permitted in prose sections between frames, never inside frames or mixed with LTR paths/identifiers.
 
 ### R13  Every Task() invocation is wrapped in Briefing and Recorder
 Every `Task(...)` call in next.md MUST be preceded by Section 10-B (Mission Briefing) and followed by Section 10-C (Flight Recorder). The agent is never a black box — the user always sees who is about to work, and what they did.
