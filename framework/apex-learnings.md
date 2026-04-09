@@ -53,6 +53,14 @@ below baseline (22.22% vs 26.26%). Failure knowledge is +14.3% more valuable.
 - **Citation:** project-A/supabase/migrations/20260330_create_users.sql:1
 -->
 
+### [DEFERRED-001] Name Drift candidates in framework/ (Round 1.5)
+- **Status:** DEFERRED from Round 1.5 on scope grounds
+- **Context:** Sweep of "Named Failure" references across framework/ found 8 instances in 5 textual forms. One clear typo was fixed in micro.md ("Named Failure Prohibitions" → "Named Failure Mode Prohibitions", commit c4a20ea). Two borderline cases were deferred:
+  - **Form B** — `framework/agents/executor.md:3` YAML description: `Named failure prohibitions` (lowercase, 3 words). Judged as prose, not lookup-intent.
+  - **Form D** — `framework/commands/apex/health-check.md:71` test label: `Named Failure Mode [שיפור 12]` (3 words, omits "Prohibitions"). Judged as human-readable label, not lookup key.
+- **Reason for deferral:** Both raise unresolved conceptual questions — does YAML frontmatter description count as a lookup-intent reference? Should test labels match reference names byte-for-byte? These should be decided deliberately, not during an in-flight refactor. The Name Drift anti-pattern definition was updated during Round 1.5 to exclude prose, YAML metadata, and test labels explicitly, which places these two forms outside the strict scope. Documented here so the finding is not lost.
+- **Citations:** framework/agents/executor.md:3, framework/commands/apex/health-check.md:71
+
 ---
 
 ## COLD (archive — never auto-loaded)
