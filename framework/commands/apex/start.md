@@ -9,6 +9,18 @@ Read ~/.claude/apex-branding.md before producing any output.
 Opening banner: render Section 5 (Project Init Banner) verbatim — substitute placeholders.
 Signature line appears at the bottom. Never skip a frame.
 
+## ENVIRONMENT PRECHECK — runs FIRST, before any other step
+MISSING_TOOLS=""
+command -v jq &>/dev/null || MISSING_TOOLS="$MISSING_TOOLS jq"
+command -v git &>/dev/null || MISSING_TOOLS="$MISSING_TOOLS git"
+command -v rg &>/dev/null || MISSING_TOOLS="$MISSING_TOOLS ripgrep(rg)"
+if [ -n "$MISSING_TOOLS" ]; then
+  echo "🚫 APEX PRECHECK FAILED — missing required tool(s):$MISSING_TOOLS"
+  echo "   APEX hooks depend on these. Install them and restart your shell, then retry /apex:start."
+  echo "   Run /apex:health-check for environment diagnostics."
+  STOP.
+fi
+
 Check .apex/STATE.json. If exists: "Project in progress. /apex:next or /apex:resume." Stop.
 
 If no:

@@ -5,6 +5,48 @@ description: Poison Pill validation — checks all agent prompts using real git 
 <context>
 "🧪 Running APEX Agent Health Check (Real Environment)..."
 
+## TEST 0 — Environment Precheck [Round 2]
+Verifies required CLI tools and that jq-dependent hooks fail loud on missing jq.
+```bash
+# 0a: required tools present
+MISSING=""
+command -v jq &>/dev/null || MISSING="$MISSING jq"
+command -v git &>/dev/null || MISSING="$MISSING git"
+command -v rg &>/dev/null || MISSING="$MISSING rg"
+if [ -n "$MISSING" ]; then
+  echo "❌ TEST 0a FAIL: missing tools:$MISSING"
+  exit 1
+fi
+echo "✅ TEST 0a PASS: jq, git, rg available"
+
+# 0b: _require-jq.sh helper exists and sources cleanly
+if [ ! -f ~/.claude/hooks/_require-jq.sh ]; then
+  echo "❌ TEST 0b FAIL: _require-jq.sh helper missing"
+  exit 1
+fi
+source ~/.claude/hooks/_require-jq.sh
+if ! declare -F require_jq >/dev/null; then
+  echo "❌ TEST 0b FAIL: require_jq function not defined"
+  exit 1
+fi
+echo "✅ TEST 0b PASS: _require-jq.sh helper valid"
+
+# 0c: hooks that must source _require-jq.sh actually do so
+REQUIRED_HOOKS="subagent-stop pre-task-snapshot generate-task-map pre-compact context-monitor circuit-breaker verify-ladder-check phase-tag cross-phase-audit mutation-gate"
+MISSING_REQ=""
+for h in $REQUIRED_HOOKS; do
+  if ! grep -q "_require-jq.sh" ~/.claude/hooks/$h.sh 2>/dev/null; then
+    MISSING_REQ="$MISSING_REQ $h"
+  fi
+done
+if [ -n "$MISSING_REQ" ]; then
+  echo "❌ TEST 0c FAIL: hooks not sourcing _require-jq.sh:$MISSING_REQ"
+  exit 1
+fi
+echo "✅ TEST 0c PASS: all 10 jq-dependent hooks source _require-jq.sh"
+```
+Expected: 0a/0b/0c all PASS. Any FAIL blocks the rest of health-check.
+
 ## SETUP: Create temp test environment [שיפור 26]
 ```bash
 HEALTH_DIR=$(mktemp -d)
@@ -108,5 +150,5 @@ If any failures:
 Failed: [list with test IDs]
 Fix: update failing agent's system prompt, re-run /apex:health-check"
 
-If all pass: "✅ All agents healthy (9/9 tests passed)"
+If all pass: "✅ All agents healthy (10/10 tests passed — TEST 0 environment + 9 agent tests)"
 </context>
