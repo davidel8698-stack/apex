@@ -61,6 +61,16 @@ below baseline (22.22% vs 26.26%). Failure knowledge is +14.3% more valuable.
 - **Reason for deferral:** Both raise unresolved conceptual questions — does YAML frontmatter description count as a lookup-intent reference? Should test labels match reference names byte-for-byte? These should be decided deliberately, not during an in-flight refactor. The Name Drift anti-pattern definition was updated during Round 1.5 to exclude prose, YAML metadata, and test labels explicitly, which places these two forms outside the strict scope. Documented here so the finding is not lost.
 - **Citations:** framework/agents/executor.md:3, framework/commands/apex/health-check.md:71
 
+### [DEFERRED-002] The Silent Install Failure anti-pattern (Round 2)
+- **Status:** DEFERRED for inclusion in anti-pattern catalog 2b (anti-pattern #8)
+- **Severity:** P2
+- **Decay:** framework
+- **Seen in:** apex-framework-build (Round 2 jq installation, 2026-04-09)
+- **Pattern:** A package manager reports "Successfully installed" but fails to complete all post-install steps (PATH updates, shortcut creation, symlink generation). The binary exists on disk but is not discoverable through standard lookup mechanisms. More dangerous when the install path is platform-specific and not directly on PATH by default.
+- **Observed in:** `winget install jqlang.jq` on Windows — binary installed at `%LOCALAPPDATA%/Microsoft/WinGet/Packages/jqlang.jq_Microsoft.Winget.Source_8wekyb3d8bbwe/jq.exe` but `Links/` directory left empty, preventing PATH discovery. `jq --version` failed with `command not found` despite winget reporting "Successfully installed" and "Path environment variable modified".
+- **Mitigation:** Post-install verification must include a functional test (`jq --version`), not just a success message from the installer. If functional test fails but binary exists on disk, manual copy to a known PATH directory is the fallback. For APEX specifically: the `/apex:start` ENVIRONMENT PRECHECK added in Round 2 will catch this class of failure on next startup by testing `command -v jq` before proceeding.
+- **Citations:** Round 2 jq installation (2026-04-09); manual fallback copy to `/c/Users/[user]/bin/jq.exe`
+
 ---
 
 ## COLD (archive — never auto-loaded)
