@@ -1,0 +1,94 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "apex/schemas/CONTEXT_BUDGET.schema.json",
+  "title": "APEX CONTEXT_BUDGET.json (v6, REDESIGNED)",
+  "description": "Per-zone token budgets, utilization thresholds, rotation triggers, and per-agent input limits. v6 design target: 50-60% utilization. [שיפור 19]",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "design_principle",
+    "zones",
+    "thresholds",
+    "rotation_triggers",
+    "per_agent_limits",
+    "context_reduction_priority"
+  ],
+  "properties": {
+    "version": { "type": "string", "const": "v6" },
+    "design_principle": { "type": "string" },
+    "zones": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stable_prefix", "task_context", "working_memory", "generation_reserve"],
+      "properties": {
+        "stable_prefix": { "$ref": "#/definitions/zone" },
+        "task_context": { "$ref": "#/definitions/zone" },
+        "working_memory": { "$ref": "#/definitions/zone" },
+        "generation_reserve": { "$ref": "#/definitions/zone" }
+      }
+    },
+    "thresholds": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "target_utilization_pct",
+        "proactive_compact_pct",
+        "hard_rotate_pct",
+        "never_exceed_pct"
+      ],
+      "properties": {
+        "target_utilization_pct": { "type": "number", "minimum": 0, "maximum": 100 },
+        "proactive_compact_pct": { "type": "number", "minimum": 0, "maximum": 100 },
+        "hard_rotate_pct": { "type": "number", "minimum": 0, "maximum": 100 },
+        "never_exceed_pct": { "type": "number", "minimum": 0, "maximum": 100 },
+        "notes": { "type": "string" }
+      }
+    },
+    "rotation_triggers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type", "action"],
+        "properties": {
+          "type": { "type": "string" },
+          "value": { "type": ["number", "integer"] },
+          "action": { "type": "string" },
+          "pattern": { "type": "string" },
+          "notes": { "type": "string" }
+        }
+      }
+    },
+    "per_agent_limits": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["max_input", "target_input"],
+        "properties": {
+          "max_input": { "type": "integer", "minimum": 0 },
+          "target_input": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "context_reduction_priority": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "definitions": {
+    "zone": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["budget_tokens", "contents", "policy"],
+      "properties": {
+        "budget_tokens": { "type": "integer", "minimum": 0 },
+        "contents": { "type": "array", "items": { "type": "string" } },
+        "policy": { "type": "string" },
+        "notes": { "type": "string" },
+        "masking_rule": { "type": "string" }
+      }
+    }
+  }
+}

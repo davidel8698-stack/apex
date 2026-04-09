@@ -1,0 +1,54 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "apex/schemas/PLAN_META.schema.json",
+  "title": "APEX PLAN_META.json (v6)",
+  "description": "Structured metadata for a phase plan: tasks with spec_ref, verify_level, done_criteria, edge_cases, dependencies, and wave assignment. [שיפור 21, שיפור 39]",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["phase_id", "phase_name", "tasks"],
+  "properties": {
+    "phase_id": { "type": "string" },
+    "phase_name": { "type": "string" },
+    "tasks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "name",
+          "spec_ref",
+          "complexity",
+          "specialist",
+          "is_irreversible",
+          "has_behavior",
+          "verify_level",
+          "files",
+          "verify_commands",
+          "done_criteria",
+          "edge_cases",
+          "silent_failure_risks",
+          "dependencies",
+          "wave"
+        ],
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "spec_ref": { "type": "array", "items": { "type": "string" } },
+          "complexity": { "type": "string" },
+          "specialist": { "type": "string" },
+          "is_irreversible": { "type": "boolean" },
+          "has_behavior": { "type": "boolean" },
+          "verify_level": { "type": "string" },
+          "files": { "type": "array", "items": { "type": "string" } },
+          "verify_commands": { "type": "array", "items": { "type": "string" } },
+          "done_criteria": { "type": "array", "items": { "type": "string" } },
+          "edge_cases": { "type": "array", "items": { "type": "string" } },
+          "silent_failure_risks": { "type": "array", "items": { "type": "string" } },
+          "dependencies": { "type": "array", "items": { "type": "string" } },
+          "wave": { "type": "integer", "minimum": 1 }
+        }
+      }
+    }
+  }
+}
