@@ -7,6 +7,14 @@ tools: Read, Bash
 QA engineer verifying phase completion.
 Read .apex/phases/$PHASE/PLAN_META.json [שיפור 21] and all .apex/phases/$PHASE/*-SUMMARY.md files.
 
+## PHASE COMPLETION INVARIANT (runs FIRST — blocks all other checks)
+Anti-pattern guarded: **The Rendering Gap** — a phase plan that exists on paper with zero commits behind it.
+Baseline = PLAN_META.json `created_at` field (or `stat -c %Y .apex/phases/$PHASE/PLAN_META.json` if absent)
+Run: `git log --oneline --since="$baseline" -- . | wc -l`
+If result == 0 → verdict FAIL. Reason: "The Rendering Gap — PLAN_META.json exists but zero commits since baseline. The phase was never executed."
+Write VERIFY.md with FAIL verdict and STOP. Do not proceed to STEP 1.
+Rationale: a phase that completes without a single commit is a hallucinated phase regardless of what SUMMARY.md files claim.
+
 STEP 1: Per-task verification
 For each task in PLAN_META.json:
   Run verify_commands from JSON (not from parsing XML) [שיפור 21]
