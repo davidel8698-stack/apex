@@ -2,10 +2,12 @@
 # Verification ladder enforcement — validates verify_level assignments after architect.
 # R4: No single verification layer sufficient; honor-system enforcement is loose.
 # Called after architect generates PLAN_META.json.
+source "$(dirname "$0")/_require-jq.sh"
+require_jq
 
 PLAN_META=".apex/phases/$1/PLAN_META.json"
 
-if [ ! -f "$PLAN_META" ] || ! command -v jq &>/dev/null; then
+if [ ! -f "$PLAN_META" ]; then
   exit 0
 fi
 

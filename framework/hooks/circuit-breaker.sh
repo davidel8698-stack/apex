@@ -3,10 +3,12 @@
 # R1: GSD Issue #456 (infinite loops), Superpowers recursive subagent
 # R7: Retry limited to 3 (diminishing returns). Failed trajectories cost 4x+ tokens.
 # Called after each tool use by executor
+source "$(dirname "$0")/_require-jq.sh"
+require_jq
 
 STATE_FILE=".apex/STATE.json"
 
-if [ ! -f "$STATE_FILE" ] || ! command -v jq &>/dev/null; then
+if [ ! -f "$STATE_FILE" ]; then
   exit 0
 fi
 

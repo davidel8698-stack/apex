@@ -2,6 +2,8 @@
 # Mutation testing gate — runs AFTER critic PASS for verify_level C/D tasks only.
 # Critic judges correctness; this hook measures test quality.
 # R4: 93% line coverage → only 59% mutation kill rate (34-point gap).
+source "$(dirname "$0")/_require-jq.sh"
+require_jq
 
 STATE_FILE=".apex/STATE.json"
 TASK_ID="$1"
@@ -61,7 +63,7 @@ if [ "$VERIFY_LEVEL" = "D" ]; then
 fi
 
 # Update STATE.json with mutation score
-if command -v jq &>/dev/null && [ -f "$STATE_FILE" ]; then
+if [ -f "$STATE_FILE" ]; then
   jq --arg task "$TASK_ID" --argjson score "${KILL_RATE:-0}" \
     '.mutation_scores[$task] = $score' \
     "$STATE_FILE" > /tmp/state_mut.json && mv /tmp/state_mut.json "$STATE_FILE"

@@ -1,6 +1,8 @@
 #!/bin/bash
 # Creates git tag for completed phase, enabling rollback
 # Usage: bash phase-tag.sh [phase_id]
+source "$(dirname "$0")/_require-jq.sh"
+require_jq
 
 PHASE_ID=${1:-"unknown"}
 TAG_NAME="apex/phase-${PHASE_ID}-complete"
@@ -16,7 +18,7 @@ git tag -a "$TAG_NAME" -m "APEX: Phase $PHASE_ID verified and complete ($(date -
 
 if [ $? -eq 0 ]; then
   # Update STATE.json
-  if [ -f .apex/STATE.json ] && command -v jq &>/dev/null; then
+  if [ -f .apex/STATE.json ]; then
     jq --arg phase "$PHASE_ID" --arg tag "$TAG_NAME" \
        '.phase_tags[$phase] = $tag' \
        .apex/STATE.json > /tmp/state_tag.json && mv /tmp/state_tag.json .apex/STATE.json

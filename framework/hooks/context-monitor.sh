@@ -2,16 +2,14 @@
 # v7: Real token counting from STATE.json instead of heuristic [R2]
 # R2: compact at 50-60%, hard rotate at 70%, never exceed 75%
 # v6 bug: used AGENT_CALLS * 15000 heuristic — wildly inaccurate
+source "$(dirname "$0")/_require-jq.sh"
+require_jq
 
 STATE_FILE=".apex/STATE.json"
 BUDGET_FILE=".apex/CONTEXT_BUDGET.json"
 
 if [ ! -f "$STATE_FILE" ]; then
   echo "✅ CONTEXT: No state file — fresh session"
-  exit 0
-fi
-
-if ! command -v jq &>/dev/null; then
   exit 0
 fi
 

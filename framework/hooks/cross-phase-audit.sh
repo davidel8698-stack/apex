@@ -2,6 +2,8 @@
 # Runs all tests from previous phases to detect regressions before advancing
 # Usage: bash cross-phase-audit.sh [current_phase_number]
 # [שיפור 21] Now reads verify_commands from PLAN_META.json instead of regex
+source "$(dirname "$0")/_require-jq.sh"
+require_jq
 
 CURRENT_PHASE=${1:-1}
 echo "🔍 APEX Cross-Phase Regression Audit (checking Phases 1 to $((CURRENT_PHASE-1)))..."
@@ -21,12 +23,12 @@ for phase_dir in .apex/phases/*/; do
   if [ "$PHASE_NUM" -lt "$CURRENT_PHASE" ] 2>/dev/null; then
     META_FILE="${phase_dir}PLAN_META.json"
 
-    if [ -f "$META_FILE" ] && command -v jq &>/dev/null; then
+    if [ -f "$META_FILE" ]; then
       # [שיפור 21] Read verify_commands from structured JSON
       VERIFY_CMDS=$(jq -r '.tasks[].verify_commands[]' "$META_FILE" 2>/dev/null | \
         grep -E "^(npm|npx|node|curl)" | sort -u | head -10)
     else
-      # Fallback: old regex method
+      # Fallback for projects without PLAN_META.json (pre-v6 layout)
       VERIFY_CMDS=$(grep -h "<verify>" "${phase_dir}"*.md 2>/dev/null | \
         grep -v "^<verify>" | sed 's|.*<verify>||;s|</verify>.*||' | \
         grep -E "^(npm|npx|node|curl)" | sort -u | head -10)
@@ -62,7 +64,7 @@ for phase_dir in .apex/phases/*/; do
 done
 
 # Update EvoScore in STATE.json
-if [ -f .apex/STATE.json ] && command -v jq &>/dev/null; then
+if [ -f .apex/STATE.json ]; then
   REGRESSION_RATE=0
   [ "$TOTAL_TESTS" -gt 0 ] && REGRESSION_RATE=$(echo "scale=2; $FAILURES * 100 / $TOTAL_TESTS" | bc 2>/dev/null || echo "0")
 
