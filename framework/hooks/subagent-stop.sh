@@ -1,4 +1,7 @@
 #!/bin/bash
+source "$(dirname "$0")/_require-jq.sh"
+require_jq
+
 INPUT=$(cat)
 AGENT=$(echo "$INPUT" | jq -r '.agent_name // empty')
 

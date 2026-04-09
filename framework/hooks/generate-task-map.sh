@@ -1,28 +1,43 @@
 #!/bin/bash
+source "$(dirname "$0")/_require-jq.sh"
+require_jq
+
 TASK_ID=${1:-"current"}
 PHASE=$(cat .apex/STATE.json 2>/dev/null | jq -r '.current_phase // empty')
-META_FILE=".apex/phases/$PHASE/PLAN_META.json"
 
-cat > .apex/TASK_MAP.md << MAPHEADER
+if [ -z "$PHASE" ]; then
+  echo "⚠️  TASK MAP: no current phase in STATE.json — skipping map generation" >&2
+  exit 0
+fi
+
+META_FILE=".apex/phases/$PHASE/PLAN_META.json"
+OUT_FILE=".apex/TASK_MAP.md"
+
+cat > "$OUT_FILE" << MAPHEADER
 # Task-Specific Repository Map: $TASK_ID
 Generated: $(date)
 
 ## Explicitly Required Files
 MAPHEADER
 
+CONTENT_WRITTEN=0
+
 # [שיפור 21] Read files from PLAN_META.json instead of regex parsing
-if [ -f "$META_FILE" ] && command -v jq &>/dev/null; then
+if [ -f "$META_FILE" ]; then
   EXPLICIT_FILES=$(jq -r ".tasks[] | select(.id == \"$TASK_ID\") | .files[]" "$META_FILE" 2>/dev/null)
 
-  for file in $EXPLICIT_FILES; do
-    if [ -f "$file" ]; then
-      echo "- $file ✅" >> .apex/TASK_MAP.md
-      grep -E "^(export )?(async )?(function|const|class)" "$file" 2>/dev/null | \
-        head -4 | sed 's/^/  → /' >> .apex/TASK_MAP.md
-    else
-      echo "- $file ⬜ (to be created)" >> .apex/TASK_MAP.md
-    fi
-  done
+  if [ -n "$EXPLICIT_FILES" ]; then
+    CONTENT_WRITTEN=1
+    for file in $EXPLICIT_FILES; do
+      if [ -f "$file" ]; then
+        echo "- $file ✅" >> "$OUT_FILE"
+        grep -E "^(export )?(async )?(function|const|class)" "$file" 2>/dev/null | \
+          head -4 | sed 's/^/  → /' >> "$OUT_FILE"
+      else
+        echo "- $file ⬜ (to be created)" >> "$OUT_FILE"
+      fi
+    done
+  fi
 
   # Get task name for keyword search
   TASK_NAME=$(jq -r ".tasks[] | select(.id == \"$TASK_ID\") | .name" "$META_FILE" 2>/dev/null)
@@ -30,33 +45,46 @@ if [ -f "$META_FILE" ] && command -v jq &>/dev/null; then
     sort -u | head -6 | tr '\n' '|' | sed 's/|$//')
 
   if [ -n "$KEYWORDS" ]; then
-    echo "" >> .apex/TASK_MAP.md
-    echo "## Related Files (keyword search)" >> .apex/TASK_MAP.md
-    rg -l "$KEYWORDS" src/ lib/ app/ 2>/dev/null | \
-      grep -v "node_modules\|.next\|.git" | head -6 | \
-      while read -r f; do
-        echo "- $f" >> .apex/TASK_MAP.md
-        grep -n "$KEYWORDS" "$f" 2>/dev/null | head -2 | sed 's/^/  → /' >> .apex/TASK_MAP.md
+    RELATED=$(rg -l "$KEYWORDS" src/ lib/ app/ 2>/dev/null | \
+      grep -v "node_modules\|.next\|.git" | head -6)
+    if [ -n "$RELATED" ]; then
+      CONTENT_WRITTEN=1
+      echo "" >> "$OUT_FILE"
+      echo "## Related Files (keyword search)" >> "$OUT_FILE"
+      echo "$RELATED" | while read -r f; do
+        echo "- $f" >> "$OUT_FILE"
+        grep -n "$KEYWORDS" "$f" 2>/dev/null | head -2 | sed 's/^/  → /' >> "$OUT_FILE"
       done
+    fi
   fi
 else
   # Fallback: old regex method if PLAN_META.json doesn't exist
   PLAN_FILE=".apex/phases/$PHASE/PLAN.md"
   if [ -f "$PLAN_FILE" ]; then
-    grep -A30 "id=\"$TASK_ID\"" "$PLAN_FILE" 2>/dev/null | \
-      grep -E "src/|lib/|app/|api/" | sed 's/<[^>]*>//g' | tr -d ' ' | grep -v "^$" | \
-      while read -r file; do
+    FALLBACK_FILES=$(grep -A30 "id=\"$TASK_ID\"" "$PLAN_FILE" 2>/dev/null | \
+      grep -E "src/|lib/|app/|api/" | sed 's/<[^>]*>//g' | tr -d ' ' | grep -v "^$")
+    if [ -n "$FALLBACK_FILES" ]; then
+      CONTENT_WRITTEN=1
+      echo "$FALLBACK_FILES" | while read -r file; do
         if [ -f "$file" ]; then
-          echo "- $file ✅" >> .apex/TASK_MAP.md
+          echo "- $file ✅" >> "$OUT_FILE"
         else
-          echo "- $file ⬜ (to be created)" >> .apex/TASK_MAP.md
+          echo "- $file ⬜ (to be created)" >> "$OUT_FILE"
         fi
       done
+    fi
   fi
 fi
 
-echo "" >> .apex/TASK_MAP.md
-echo "## Note: Verify file existence before using. Map may be slightly stale." >> .apex/TASK_MAP.md
-echo "✅ Task map generated: .apex/TASK_MAP.md"
+echo "" >> "$OUT_FILE"
+echo "## Note: Verify file existence before using. Map may be slightly stale." >> "$OUT_FILE"
 
-exit 0
+if [ "$CONTENT_WRITTEN" -eq 1 ]; then
+  echo "✅ Task map generated: $OUT_FILE"
+  exit 0
+else
+  echo "⚠️  TASK MAP: no files resolved for task '$TASK_ID'" >&2
+  echo "   Reason: PLAN_META.json missing, task not found, or no explicit files" >&2
+  echo "   Output contains header + trailer only: $OUT_FILE" >&2
+  exit 0
+fi
