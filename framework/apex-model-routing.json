@@ -1,0 +1,40 @@
+{
+  "_comment": "v7 Model Routing Configuration [R7]. Sonnet achieves 98% of Opus at 1/5 cost. Haiku ~90% of Sonnet at 1/3.",
+  "routing": {
+    "diagnostician": {
+      "default": "haiku",
+      "escalate_to": "sonnet"
+    },
+    "interviewer": {
+      "default": "haiku",
+      "escalate_to": "sonnet"
+    },
+    "architect": {
+      "default": "sonnet",
+      "escalate_on_level": {
+        "3": "opus",
+        "4": "opus"
+      }
+    },
+    "executor": {
+      "default": "sonnet",
+      "downgrade_on_verify_level": { "A": "haiku" },
+      "escalate_on_level": {
+        "4": "opus"
+      },
+      "escalate_on_retry": "opus"
+    },
+    "critic": {
+      "default": "sonnet"
+    },
+    "verifier": {
+      "default": "sonnet"
+    },
+    "specialists": {
+      "default": "sonnet",
+      "escalate_on_level": {
+        "4": "opus"
+      }
+    }
+  }
+}
