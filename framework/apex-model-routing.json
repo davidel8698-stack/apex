@@ -1,13 +1,8 @@
 {
-  "_comment": "v7 Model Routing Configuration [R7]. Sonnet achieves 98% of Opus at 1/5 cost. Haiku ~90% of Sonnet at 1/3.",
+  "_comment": "v7 Model Routing Configuration [R7]. Sonnet achieves 98% of Opus at 1/5 cost. Haiku ~90% of Sonnet at 1/3. resolve_model() in next.md uses exact-name lookup: routing[agent_type].default. Security-specialist is the only agent that defaults to opus (threat-model reasoning requires adversarial depth).",
   "routing": {
-    "diagnostician": {
-      "default": "haiku",
-      "escalate_to": "sonnet"
-    },
-    "interviewer": {
-      "default": "haiku",
-      "escalate_to": "sonnet"
+    "planner": {
+      "default": "sonnet"
     },
     "architect": {
       "default": "sonnet",
@@ -30,7 +25,22 @@
     "verifier": {
       "default": "sonnet"
     },
-    "specialists": {
+    "integration-specialist": {
+      "default": "sonnet",
+      "escalate_on_level": {
+        "4": "opus"
+      }
+    },
+    "security-specialist": {
+      "default": "opus"
+    },
+    "data-specialist": {
+      "default": "sonnet",
+      "escalate_on_level": {
+        "4": "opus"
+      }
+    },
+    "frontend-specialist": {
       "default": "sonnet",
       "escalate_on_level": {
         "4": "opus"

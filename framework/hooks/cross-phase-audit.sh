@@ -28,7 +28,7 @@ for phase_dir in .apex/phases/*/; do
       VERIFY_CMDS=$(jq -r '.tasks[].verify_commands[]' "$META_FILE" 2>/dev/null | \
         grep -E "^(npm|npx|node|curl)" | sort -u | head -10)
     else
-      # Fallback for projects without PLAN_META.json (pre-v6 layout)
+      # Fallback for projects without PLAN_META.json (legacy layout)
       VERIFY_CMDS=$(grep -h "<verify>" "${phase_dir}"*.md 2>/dev/null | \
         grep -v "^<verify>" | sed 's|.*<verify>||;s|</verify>.*||' | \
         grep -E "^(npm|npx|node|curl)" | sort -u | head -10)

@@ -1,7 +1,7 @@
 #!/bin/bash
 # v7: Real token counting from STATE.json instead of heuristic [R2]
 # R2: compact at 50-60%, hard rotate at 70%, never exceed 75%
-# v6 bug: used AGENT_CALLS * 15000 heuristic — wildly inaccurate
+# Previous heuristic: AGENT_CALLS * 15000 — wildly inaccurate
 source "$(dirname "$0")/_require-jq.sh"
 require_jq
 
@@ -31,7 +31,7 @@ else
   # Fallback: count agent calls if token data not yet populated
   AGENT_CALLS=$(jq -r '
     [.tokens.by_agent | to_entries[]? | .value.calls] | add // 0' "$STATE_FILE" 2>/dev/null || echo 0)
-  # Conservative heuristic: 20K per call (higher than v6's 15K to be safe)
+  # Conservative heuristic: 20K per call (higher than the earlier 15K to be safe)
   ESTIMATED_USAGE=$((AGENT_CALLS * 20000))
   ESTIMATED_PCT=$((ESTIMATED_USAGE * 100 / EFFECTIVE_CAPACITY))
 fi

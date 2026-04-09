@@ -609,7 +609,7 @@ Render standalone or inside a Mission Briefing (Section 10-B).
 ```
 ┌──────────────────────────────────────────────────────────────────┐
 │  ◆  ARCHITECT      phase plans · waves · verify levels           │
-│     ─────          model: opus · reads: HOT + WARM learnings     │
+│     ─────          model: sonnet · L3+: opus · reads HOT+WARM    │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
@@ -625,7 +625,7 @@ Render standalone or inside a Mission Briefing (Section 10-B).
 ```
 ┌──────────────────────────────────────────────────────────────────┐
 │  ◈  CRITIC         clean-room review · diff vs spec              │
-│     ─────          model: opus · NEVER sees SUMMARY.md           │
+│     ─────          model: sonnet · NEVER sees SUMMARY.md         │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
@@ -633,7 +633,7 @@ Render standalone or inside a Mission Briefing (Section 10-B).
 ```
 ┌──────────────────────────────────────────────────────────────────┐
 │  ◇  VERIFIER       phase-level audit · cross-phase regression    │
-│     ─────          model: opus · complexity >= 3                 │
+│     ─────          model: sonnet · complexity >= 3               │
 └──────────────────────────────────────────────────────────────────┘
 ```
 

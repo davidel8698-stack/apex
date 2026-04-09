@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "apex/schemas/PLAN_META.schema.json",
-  "title": "APEX PLAN_META.json (v6)",
+  "title": "APEX PLAN_META.json (v7)",
   "description": "Structured metadata for a phase plan: tasks with spec_ref, verify_level, done_criteria, edge_cases, dependencies, and wave assignment. [שיפור 21, שיפור 39]",
   "type": "object",
   "additionalProperties": false,

@@ -1,8 +1,8 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "apex/schemas/CONTEXT_BUDGET.schema.json",
-  "title": "APEX CONTEXT_BUDGET.json (v6, REDESIGNED)",
-  "description": "Per-zone token budgets, utilization thresholds, rotation triggers, and per-agent input limits. v6 design target: 50-60% utilization. [שיפור 19]",
+  "title": "APEX CONTEXT_BUDGET.json (v7)",
+  "description": "Per-zone token budgets, utilization thresholds, rotation triggers, and per-agent input limits. v7 design target: 50-60% utilization. [שיפור 19]",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -15,7 +15,7 @@
     "context_reduction_priority"
   ],
   "properties": {
-    "version": { "type": "string", "const": "v6" },
+    "version": { "type": "string", "const": "v7" },
     "design_principle": { "type": "string" },
     "zones": {
       "type": "object",

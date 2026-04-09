@@ -150,7 +150,7 @@ CRITICAL: done_criteria_checked MUST list ALL criteria from <done> in task XML.
 Mark verified=false for any criterion you did not actually test with a command.
 This is the HONEST UNCERTAINTY mechanism [שיפור 37]. Never mark verified=true without evidence.
 
-confidence rules [v8, R3]:
+confidence rules [v7, R3]:
 - "high" — all verify_commands passed, all tests green, no assumptions made
 - "medium" — verify_commands passed but some edge cases not testable
 - "low" — partial implementation, known gaps, or working around unclear spec

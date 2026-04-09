@@ -82,7 +82,7 @@ If no:
          reflexion_total_attempts: 0, low_confidence_results: 0
        }
      }
-  4. Create .apex/CONTEXT_BUDGET.json with default budgets (copy from ~/.claude reference or use v6 defaults)
+  4. Create .apex/CONTEXT_BUDGET.json with default budgets (copy from ~/.claude reference or use v7 defaults)
   5. bash ~/.claude/hooks/session-log.sh "resume" "סשן התחיל — [project name]"
   6. Task("planner", "Classify this project, capture requirements, and generate pre-build checklist if Level 3+.")
   7. After planner:

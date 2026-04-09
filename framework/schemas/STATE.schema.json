@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "apex/schemas/STATE.schema.json",
-  "title": "APEX STATE.json (v6)",
+  "title": "APEX STATE.json (v7)",
   "description": "Machine state for an APEX project: pipeline stage, phase/task progress, context tracking, circuit breaker, token usage, and session metadata.",
   "type": "object",
   "additionalProperties": false,
@@ -42,7 +42,7 @@
     "complexity_level": { "type": "integer", "minimum": 0, "maximum": 4 },
     "complexity_name": { "type": "string" },
     "pipeline": { "type": "array", "items": { "type": "string" } },
-    "apex_version": { "type": "string", "const": "v6" },
+    "apex_version": { "type": "string", "enum": ["v7"] },
     "current_stage": { "type": "string" },
     "pre_build_complete": { "type": "boolean" },
     "current_phase": { "type": ["string", "null"] },

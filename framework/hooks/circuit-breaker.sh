@@ -12,7 +12,7 @@ if [ ! -f "$STATE_FILE" ]; then
   exit 0
 fi
 
-# === CHECK 1: Consecutive no-change actions (v6, kept) ===
+# === CHECK 1: Consecutive no-change actions ===
 CURRENT_HASH=$(git diff HEAD --stat 2>/dev/null | md5sum | cut -d' ' -f1)
 LAST_HASH=$(jq -r '.circuit_breaker.last_file_hash // ""' "$STATE_FILE" 2>/dev/null)
 MAX_NO_CHANGE=$(jq -r '.circuit_breaker.max_allowed // 3' "$STATE_FILE" 2>/dev/null)

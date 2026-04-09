@@ -1,5 +1,5 @@
 #!/bin/bash
-# v8: Tiered enforcement + type-specific decay + write gates [R6]
+# v7: Tiered enforcement + type-specific decay + write gates [R6]
 # Validates citations, enforces HOT tier ceiling, decay-class-aware staleness
 
 LEARNINGS=~/.claude/apex-learnings.md
@@ -14,7 +14,7 @@ NOW_EPOCH=$(date +%s)
 
 [ ! -f "$LEARNINGS" ] && exit 0
 
-# v8 [R6]: Map decay class to max days
+# v7 [R6]: Map decay class to max days
 decay_max_days() {
   case "$1" in
     safety)        echo 999999 ;;
@@ -48,12 +48,12 @@ while IFS= read -r line; do
     esac
   fi
 
-  # v8 [R6]: Read decay class from entry
+  # v7 [R6]: Read decay class from entry
   if [[ "$line" =~ \*\*Decay:\*\*[[:space:]]*([a-z]+) ]]; then
     CURRENT_DECAY="${BASH_REMATCH[1]}"
   fi
 
-  # v8 [R6]: Check date-based staleness with decay-class-aware thresholds
+  # v7 [R6]: Check date-based staleness with decay-class-aware thresholds
   if [[ "$line" =~ \*\*Verified:\*\*[[:space:]]*([0-9]{4}-[0-9]{2}-[0-9]{2}) ]] || \
      [[ "$line" =~ \*\*Citation:\*\*.*([0-9]{4}-[0-9]{2}-[0-9]{2}) ]]; then
     ENTRY_DATE="${BASH_REMATCH[1]}"

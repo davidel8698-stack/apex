@@ -51,7 +51,7 @@ Reference the research round (R1-R8) for full evidence.
 - AI tests cheat: hard-coded returns, self-mocking, vacuous assertions (R1, R4)
 - Naive TDD prompting increases regressions from 6.08% to 9.94% (R4: TDAD paper)
 
-## v8 Changes (research-validated only)
+## Recent additions (v7)
 - Security persona for D-level critic: <1% → 93.7% vuln detection (R4: persona swing study)
 - Haiku routing for A-level tasks: ~90% quality at 1/3 cost (R7: model comparison)
 - confidence + attempt_number in RESULT.json: enables routing decisions (R3: typed artifacts)

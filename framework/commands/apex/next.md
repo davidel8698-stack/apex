@@ -281,7 +281,7 @@ CRITIC_CONTEXT = {
 }
 Verify tokens < CONTEXT_BUDGET.per_agent_limits.critic.max_input
 
-## [v8, R4] SECURITY PERSONA — activates for D-level and security tasks
+## [v7, R4] SECURITY PERSONA — activates for D-level and security tasks
 If task verify_level == "D" OR task.specialist == "security":
   CRITIC_CONTEXT += {
     security_persona: "You are a RED TEAM security reviewer.
