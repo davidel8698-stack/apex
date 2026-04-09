@@ -29,7 +29,7 @@ Rationale: /apex:micro has no critic downstream. Ambiguous input here has no saf
 3. Execute directly:
    Task("executor", "Execute this micro-task: [$ARGUMENTS].
    No formal planning. No RESULT.json needed. Just do it and commit.
-   Follow CLAUDE.md conventions. Follow Named Failure Prohibitions.")
+   Follow CLAUDE.md conventions. Follow Named Failure Mode Prohibitions.")
 
 4. Verify: git diff HEAD~1 --stat
    If zero changes → "⚠️ Nothing changed. Was this the right command?"
