@@ -12,6 +12,7 @@
 
 source "$(dirname "$0")/_require-jq.sh"
 require_jq
+source "$(dirname "$0")/_state-update.sh"
 
 # Validate STATE.json against schema before snapshot (soft mode — warn, don't block)
 if [ -f .apex/STATE.json ] && [ -f ~/.claude/schemas/STATE.schema.json ] && [ -f ~/.claude/scripts/validate-state.sh ]; then
@@ -25,17 +26,15 @@ STASH_MSG="apex-snapshot-${TASK_ID}-${TIMESTAMP}"
 update_state_stash() {
   local stash_value="$1"
   if [ -f .apex/STATE.json ]; then
-    jq --arg task "$TASK_ID" --arg stash "$stash_value" \
-       '.snapshots.pre_task_stash = $stash | .snapshots.last_snapshot_task = $task' \
-       .apex/STATE.json > /tmp/state_snap.json && mv /tmp/state_snap.json .apex/STATE.json
+    _state_update --arg task "$TASK_ID" --arg stash "$stash_value" \
+       '.snapshots.pre_task_stash = $stash | .snapshots.last_snapshot_task = $task'
   fi
 }
 
 update_state_stash_null() {
   if [ -f .apex/STATE.json ]; then
-    jq --arg task "$TASK_ID" \
-       '.snapshots.pre_task_stash = null | .snapshots.last_snapshot_task = $task' \
-       .apex/STATE.json > /tmp/state_snap.json && mv /tmp/state_snap.json .apex/STATE.json
+    _state_update --arg task "$TASK_ID" \
+       '.snapshots.pre_task_stash = null | .snapshots.last_snapshot_task = $task'
   fi
 }
 

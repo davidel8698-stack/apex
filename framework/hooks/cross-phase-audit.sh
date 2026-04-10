@@ -5,6 +5,7 @@
 source "$(dirname "$0")/_require-jq.sh"
 require_jq
 source "$(dirname "$0")/_require-git.sh"
+source "$(dirname "$0")/_state-update.sh"
 
 CURRENT_PHASE=${1:-1}
 echo "🔍 APEX Cross-Phase Regression Audit (checking Phases 1 to $((CURRENT_PHASE-1)))..."
@@ -74,13 +75,12 @@ if [ -f .apex/STATE.json ]; then
   REGRESSION_RATE=0
   [ "$TOTAL_TESTS" -gt 0 ] && REGRESSION_RATE=$((FAILURES * 100 / TOTAL_TESTS))
 
-  jq --argjson rate "$REGRESSION_RATE" \
+  _state_update --argjson rate "$REGRESSION_RATE" \
      --argjson total "$TOTAL_TESTS" \
      --arg date "$(date -I)" \
      '.evoscore.regression_rate = $rate |
       .evoscore.total_cross_phase_tests = $total |
-      .evoscore.last_full_audit = $date' \
-     .apex/STATE.json > /tmp/state_tmp.json && mv /tmp/state_tmp.json .apex/STATE.json
+      .evoscore.last_full_audit = $date'
 fi
 
 echo ""

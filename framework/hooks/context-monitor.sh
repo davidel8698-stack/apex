@@ -4,6 +4,7 @@
 # Previous heuristic: AGENT_CALLS * 15000 — wildly inaccurate
 source "$(dirname "$0")/_require-jq.sh"
 require_jq
+source "$(dirname "$0")/_state-update.sh"
 
 STATE_FILE=".apex/STATE.json"
 BUDGET_FILE=".apex/CONTEXT_BUDGET.json"
@@ -37,9 +38,8 @@ else
 fi
 
 # Update STATE.json with current estimate
-jq --argjson pct "$ESTIMATED_PCT" \
-   '.context.estimated_context_usage_pct = $pct' \
-   "$STATE_FILE" > /tmp/state_ctx.json && mv /tmp/state_ctx.json "$STATE_FILE"
+_state_update --argjson pct "$ESTIMATED_PCT" \
+   '.context.estimated_context_usage_pct = $pct' "$STATE_FILE"
 
 if [ "$ESTIMATED_PCT" -ge "$CRITICAL_PCT" ]; then
   echo "CRITICAL_OVERFLOW"

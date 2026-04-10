@@ -10,9 +10,22 @@ COMMAND="$1"
 check_segment() {
   local SEGMENT="$1"
 
+  # v7.1 [B-7]: Strip quoted strings only from known-safe (read-only) commands.
+  # This prevents false positives on echo "rm -rf /" or grep "DROP TABLE"
+  # while preserving detection of psql -c "DROP TABLE users" (execution command).
+  local STRIPPED="$SEGMENT"
+  local FIRST_WORD
+  FIRST_WORD=$(echo "$SEGMENT" | sed 's/^ *//' | cut -d' ' -f1)
+  case "$FIRST_WORD" in
+    echo|printf|grep|egrep|fgrep|rg|sed|awk|cat|head|tail|wc|sort|uniq|diff|test|\[)
+      # Read-only commands: quoted args are data, not execution — safe to strip
+      STRIPPED=$(echo "$SEGMENT" | sed 's/"[^"]*"//g; s/'"'"'[^'"'"']*'"'"'//g')
+      ;;
+  esac
+
   # Normalize: collapse whitespace, lowercase for matching
   local NORMALIZED
-  NORMALIZED=$(echo "$SEGMENT" | tr -s ' ' | sed 's/^ *//;s/ *$//')
+  NORMALIZED=$(echo "$STRIPPED" | tr -s ' ' | sed 's/^ *//;s/ *$//')
 
   # === DENY PATTERNS (exact and regex) ===
 
@@ -100,21 +113,65 @@ block() {
 # v7: Split on && and ; — check each segment independently
 # This prevents bypass via: innocent_cmd && rm -rf /
 # Note: pipes (|) are data flow, not command chains — not split
-IFS_BACKUP="$IFS"
+#
+# v7.1 [B-7]: Quote-aware splitting. Naive sed split on && and ; breaks
+# inside quoted strings (e.g., echo "a && b" would be split incorrectly).
+# Solution: pure-bash state machine that tracks single/double quote context.
 BLOCKED=0
 
-# Replace chain operators with newlines for splitting
-SEGMENTS=$(echo "$COMMAND" | sed 's/&&/\n/g; s/;/\n/g')
+# Quote-aware command splitter: splits on unquoted && and ;
+_split_commands() {
+  local cmd="$1"
+  local len=${#cmd}
+  local i=0
+  local in_single=0
+  local in_double=0
+  local current=""
 
-while IFS= read -r segment; do
+  while [ $i -lt $len ]; do
+    local c="${cmd:$i:1}"
+    local next="${cmd:$((i+1)):1}"
+
+    if [ "$c" = "'" ] && [ $in_double -eq 0 ]; then
+      in_single=$(( 1 - in_single ))
+      current+="$c"
+    elif [ "$c" = '"' ] && [ $in_single -eq 0 ]; then
+      in_double=$(( 1 - in_double ))
+      current+="$c"
+    elif [ "$c" = "\\" ] && [ $in_single -eq 0 ] && [ $((i+1)) -lt $len ]; then
+      # Escaped character — skip next char
+      current+="$c$next"
+      i=$((i+1))
+    elif [ $in_single -eq 0 ] && [ $in_double -eq 0 ]; then
+      if [ "$c" = ";" ]; then
+        echo "$current"
+        current=""
+      elif [ "$c" = "&" ] && [ "$next" = "&" ]; then
+        echo "$current"
+        current=""
+        i=$((i+1))  # skip second &
+      else
+        current+="$c"
+      fi
+    else
+      current+="$c"
+    fi
+    i=$((i+1))
+  done
+  # Emit last segment
+  [ -n "$current" ] && echo "$current"
+}
+
+mapfile -t SEGMENT_ARRAY < <(_split_commands "$COMMAND")
+
+for segment in "${SEGMENT_ARRAY[@]}"; do
+  segment=$(echo "$segment" | sed 's/^ *//;s/ *$//')
   [ -z "$segment" ] && continue
   if ! check_segment "$segment"; then
     BLOCKED=1
     break
   fi
-done <<< "$SEGMENTS"
-
-IFS="$IFS_BACKUP"
+done
 
 if [ "$BLOCKED" -eq 1 ]; then
   exit 2

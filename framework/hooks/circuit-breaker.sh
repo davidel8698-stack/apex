@@ -6,6 +6,7 @@
 source "$(dirname "$0")/_require-jq.sh"
 require_jq
 source "$(dirname "$0")/_require-git.sh"
+source "$(dirname "$0")/_state-update.sh"
 
 STATE_FILE=".apex/STATE.json"
 
@@ -27,9 +28,8 @@ if [ "$CURRENT_HASH" = "$LAST_HASH" ] && [ -n "$LAST_HASH" ]; then
   COUNT=$(jq -r '.circuit_breaker.consecutive_no_change_actions // 0' "$STATE_FILE" 2>/dev/null)
   COUNT=$((COUNT + 1))
 
-  jq --argjson count "$COUNT" \
-     '.circuit_breaker.consecutive_no_change_actions = $count' \
-     "$STATE_FILE" > /tmp/state_cb.json && mv /tmp/state_cb.json "$STATE_FILE"
+  _state_update --argjson count "$COUNT" \
+     '.circuit_breaker.consecutive_no_change_actions = $count' "$STATE_FILE"
 
   if [ "$COUNT" -ge "$MAX_NO_CHANGE" ]; then
     echo "🛑 CIRCUIT BREAKER: NO-CHANGE LOOP"
@@ -41,15 +41,13 @@ if [ "$CURRENT_HASH" = "$LAST_HASH" ] && [ -n "$LAST_HASH" ]; then
     echo "   2. Report: '⚠️ Blocked — need guidance'"
     echo "   3. /apex:recover to reset"
 
-    jq '.circuit_breaker.triggered = true | .circuit_breaker.trigger_reason = "no_change_loop"' \
-       "$STATE_FILE" > /tmp/state_cb.json && mv /tmp/state_cb.json "$STATE_FILE"
+    _state_update '.circuit_breaker.triggered = true | .circuit_breaker.trigger_reason = "no_change_loop"' "$STATE_FILE"
     exit 2
   fi
 else
   # Files changed — reset no-change counter
-  jq --arg hash "$CURRENT_HASH" \
-     '.circuit_breaker.consecutive_no_change_actions = 0 | .circuit_breaker.last_file_hash = $hash | .circuit_breaker.triggered = false' \
-     "$STATE_FILE" > /tmp/state_cb.json && mv /tmp/state_cb.json "$STATE_FILE"
+  _state_update --arg hash "$CURRENT_HASH" \
+     '.circuit_breaker.consecutive_no_change_actions = 0 | .circuit_breaker.last_file_hash = $hash | .circuit_breaker.triggered = false' "$STATE_FILE"
 fi
 
 # === CHECK 2: v7 — Total tool calls per task (prevents token spirals) ===
@@ -58,9 +56,8 @@ MAX_TOOL_CALLS=$(jq -r '.circuit_breaker.max_tool_calls_per_task // 80' "$STATE_
 TOOL_CALLS=$(jq -r '.circuit_breaker.total_tool_calls_this_task // 0' "$STATE_FILE" 2>/dev/null)
 TOOL_CALLS=$((TOOL_CALLS + 1))
 
-jq --argjson calls "$TOOL_CALLS" \
-   '.circuit_breaker.total_tool_calls_this_task = $calls' \
-   "$STATE_FILE" > /tmp/state_cb.json && mv /tmp/state_cb.json "$STATE_FILE"
+_state_update --argjson calls "$TOOL_CALLS" \
+   '.circuit_breaker.total_tool_calls_this_task = $calls' "$STATE_FILE"
 
 if [ "$TOOL_CALLS" -ge "$MAX_TOOL_CALLS" ]; then
   echo "🛑 CIRCUIT BREAKER: TOOL-CALL CAP REACHED"
@@ -72,8 +69,7 @@ if [ "$TOOL_CALLS" -ge "$MAX_TOOL_CALLS" ]; then
   echo "   1. Report: '⚠️ Blocked — need manual intervention'"
   echo "   2. /apex:recover to reset and re-plan"
 
-  jq '.circuit_breaker.triggered = true | .circuit_breaker.trigger_reason = "tool_call_cap"' \
-     "$STATE_FILE" > /tmp/state_cb.json && mv /tmp/state_cb.json "$STATE_FILE"
+  _state_update '.circuit_breaker.triggered = true | .circuit_breaker.trigger_reason = "tool_call_cap"' "$STATE_FILE"
   exit 2
 fi
 

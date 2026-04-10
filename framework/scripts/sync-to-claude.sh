@@ -9,9 +9,11 @@
 # Usage
 #   bash framework/scripts/sync-to-claude.sh            # perform sync
 #   bash framework/scripts/sync-to-claude.sh --dry-run  # preview only
+#   bash framework/scripts/sync-to-claude.sh --clean    # detect orphaned APEX files in ~/.claude/
 #
 # Safety guarantees
-#   - Additive only — never deletes files from ~/.claude/
+#   - Additive only by default — never deletes files from ~/.claude/
+#   - --clean mode detects orphans but only deletes with user confirmation
 #   - Scoped to APEX — non-APEX files (GSD agents, user hooks,
 #     settings.json) are never touched
 #   - Only copies files that exist under framework/
@@ -24,8 +26,11 @@ FRAMEWORK_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 CLAUDE_ROOT="$HOME/.claude"
 
 DRY_RUN=0
+CLEAN_MODE=0
 if [[ "${1:-}" == "--dry-run" ]]; then
   DRY_RUN=1
+elif [[ "${1:-}" == "--clean" ]]; then
+  CLEAN_MODE=1
 fi
 
 log() { printf '[sync] %s\n' "$*"; }
@@ -87,3 +92,69 @@ copy_file "$FRAMEWORK_ROOT/../CLAUDE-TEMPLATE.md"   "$CLAUDE_ROOT/CLAUDE-TEMPLAT
 
 echo
 log "done"
+
+# --- Clean mode: detect orphaned APEX files in ~/.claude/ ---
+if [[ $CLEAN_MODE -eq 1 ]]; then
+  echo
+  log "=== CLEAN MODE: scanning for orphaned APEX files ==="
+  echo
+
+  # Build list of all files that SHOULD exist (from framework source)
+  EXPECTED_FILES=$(mktemp)
+  # Directory trees
+  for dir in agents commands/apex hooks apex-skills schemas tests test-fixtures; do
+    if [ -d "$FRAMEWORK_ROOT/$dir" ]; then
+      find "$FRAMEWORK_ROOT/$dir" -type f -print0 | while IFS= read -r -d '' f; do
+        echo "${f#$FRAMEWORK_ROOT/}" >> "$EXPECTED_FILES"
+      done
+    fi
+  done
+  # Top-level files
+  echo "apex-branding.md" >> "$EXPECTED_FILES"
+  echo "apex-design-notes.md" >> "$EXPECTED_FILES"
+  echo "apex-learnings.md" >> "$EXPECTED_FILES"
+  echo "apex-model-routing.json" >> "$EXPECTED_FILES"
+  echo "scripts/self-test.sh" >> "$EXPECTED_FILES"
+  echo "scripts/validate-state.sh" >> "$EXPECTED_FILES"
+  echo "CLAUDE-TEMPLATE.md" >> "$EXPECTED_FILES"
+
+  # Scan deployed APEX directories for files NOT in the expected list
+  ORPHANS=()
+  for dir in agents/architect.md agents/critic.md agents/executor.md agents/planner.md agents/verifier.md \
+             agents/specialist commands/apex hooks apex-skills schemas tests test-fixtures scripts; do
+    deployed_dir="$CLAUDE_ROOT/$dir"
+    [ -d "$deployed_dir" ] || continue
+    while IFS= read -r -d '' deployed_file; do
+      rel="${deployed_file#$CLAUDE_ROOT/}"
+      if ! grep -qF "$rel" "$EXPECTED_FILES" 2>/dev/null; then
+        # Skip non-APEX files (GSD agents, user hooks, etc.)
+        case "$rel" in
+          agents/gsd-*|hooks/gsd-*) continue ;;
+        esac
+        ORPHANS+=("$rel")
+      fi
+    done < <(find "$deployed_dir" -maxdepth 1 -type f -print0 2>/dev/null)
+  done
+
+  rm -f "$EXPECTED_FILES"
+
+  if [ ${#ORPHANS[@]} -eq 0 ]; then
+    log "No orphaned APEX files found. ~/.claude/ is clean."
+  else
+    log "Found ${#ORPHANS[@]} orphaned APEX file(s):"
+    for orphan in "${ORPHANS[@]}"; do
+      echo "  🗑️  $CLAUDE_ROOT/$orphan"
+    done
+    echo
+    read -p "[clean] Delete these files? (y/N) " confirm
+    if [[ "$confirm" == [yY] ]]; then
+      for orphan in "${ORPHANS[@]}"; do
+        rm -f "$CLAUDE_ROOT/$orphan"
+        log "deleted: $orphan"
+      done
+      log "cleanup complete"
+    else
+      log "cleanup skipped (no files deleted)"
+    fi
+  fi
+fi

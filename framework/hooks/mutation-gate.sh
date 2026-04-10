@@ -4,6 +4,7 @@
 # R4: 93% line coverage → only 59% mutation kill rate (34-point gap).
 source "$(dirname "$0")/_require-jq.sh"
 require_jq
+source "$(dirname "$0")/_state-update.sh"
 
 STATE_FILE=".apex/STATE.json"
 TASK_ID="$1"
@@ -64,9 +65,8 @@ fi
 
 # Update STATE.json with mutation score
 if [ -f "$STATE_FILE" ]; then
-  jq --arg task "$TASK_ID" --argjson score "${KILL_RATE:-0}" \
-    '.mutation_scores[$task] = $score' \
-    "$STATE_FILE" > /tmp/state_mut.json && mv /tmp/state_mut.json "$STATE_FILE"
+  _state_update --arg task "$TASK_ID" --argjson score "${KILL_RATE:-0}" \
+    '.mutation_scores[$task] = $score' "$STATE_FILE"
 fi
 
 echo "Mutation kill rate: ${KILL_RATE:-0}% (threshold: ${THRESHOLD}%)"
