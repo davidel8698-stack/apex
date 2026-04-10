@@ -1,4 +1,5 @@
 #!/bin/bash
+set -u
 # APEX Session Guardian — session-log.sh
 # Usage: bash ~/.claude/hooks/session-log.sh <event_type> <hebrew_message>
 # Appends a single line to .apex/SESSION-LOG.md
@@ -40,6 +41,7 @@ case "$EVENT_TYPE" in
   wave_complete)   ICON="🌊" ;;
   phase_complete)  ICON="🏁" ;;
   coherence_fail)  ICON="💥" ;;
+  phantom_fail)    ICON="👻" ;;
   resume)          ICON="▶️" ;;
   bypass)          ICON="⏩" ;;
   *)               ICON="📝" ;;

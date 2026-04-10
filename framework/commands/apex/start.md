@@ -38,18 +38,29 @@ If no:
      Write answers into CLAUDE.md ## User Profile section (from CLAUDE-TEMPLATE.md).
      USER_LANG = captured language preference.
 
-  ## ⚠️ CANONICAL STATE SHAPE — single source of truth. Also update STATE.schema.json and status.md on changes.
+  ## STATE INITIALIZATION — fields are progressively populated by planner/architect stages.
+  ## Also update STATE.schema.json, status.md, and test fixtures on changes.
   3. Create STATE.json with:
      apex_version: "v7"
-     reflexion: {current_unit_attempts: 0, max_attempts: 3}
-     evoscore: {regression_rate: 0.0, phases_with_regressions: [], total_cross_phase_tests: 0}
-     comprehension_gates: {}
-     tdad: {index_built: false}
-     context: {current_session_phase: null, estimated_context_usage_pct: 0, rotation_history: [], observation_masking_active: true}
-     tokens: {total_input: 0, total_output: 0, framework_overhead: 0, overhead_pct: 0, by_phase: {}, by_agent: {}, by_task: {}}
+     pre_build_complete: false
+     lock: null
+     created_at: now
+     updated_at: now
+     phases_total: 0
+     phases_completed: 0
+     units_total: 0
+     units_completed: 0
+     pending_notifications: []
+     health_check: {last_run: null, all_passed: true, failed_agents: [], test_count: 0}
+     reflexion: {current_unit_attempts: 0, max_attempts: 3, last_reflexion_summary: null}
+     evoscore: {regression_rate: 0.0, phases_with_regressions: [], total_cross_phase_tests: 0, last_full_audit: null}
+     comprehension_gates: {current_gate_required: null}
+     tdad: {index_built: false, last_indexed: null, total_nodes: 0}
+     context: {current_session_phase: null, session_start_time: now, estimated_context_usage_pct: 0, last_compact: null, rotation_history: [], observation_masking_active: true}
+     tokens: {total_input: 0, total_output: 0, framework_overhead: 0, overhead_pct: 0, productive: 0, by_phase: {}, by_agent: {}, by_task: {}}
      phase_tags: {}
      stack_skills: []
-     circuit_breaker: {consecutive_no_change_actions: 0, max_allowed: 3, total_tool_calls_this_task: 0, max_tool_calls_per_task: 80, last_file_hash: null, triggered: false}
+     circuit_breaker: {consecutive_no_change_actions: 0, max_allowed: 3, total_tool_calls_this_task: 0, max_tool_calls_per_task: 80, last_file_hash: null, triggered: false, trigger_reason: null}
      snapshots: {pre_task_stash: null, last_snapshot_task: null}
      autopilot: {
        enabled: false,

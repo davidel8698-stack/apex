@@ -1,4 +1,5 @@
 #!/bin/bash
+set -uo pipefail
 # Builds code-test dependency graph for TDAD impact analysis
 # Run once after architect creates plans, before Phase 01 execution
 
@@ -11,7 +12,7 @@ echo "🔬 TDAD: Building code-test dependency graph..."
 
 if ! command -v python3 &>/dev/null; then
   echo "⚠️ TDAD: python3 not found — skipping dependency indexing"
-  exit 0
+  exit 1
 fi
 
 # Find all test files
@@ -57,7 +58,7 @@ for tf in test_files:
                         break
         if src_files:
             test_map[tf.lstrip('./')] = src_files
-    except:
+    except Exception:
         pass
 
 # Write the map: src_file -> [test_files]

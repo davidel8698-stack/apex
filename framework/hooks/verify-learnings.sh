@@ -1,4 +1,5 @@
 #!/bin/bash
+set -u
 # v7: Tiered enforcement + type-specific decay + write gates [R6]
 # Validates citations, enforces HOT tier ceiling, decay-class-aware staleness
 

@@ -35,6 +35,7 @@
     "phases_completed",
     "units_total",
     "units_completed",
+    "pending_notifications",
     "lock",
     "created_at",
     "updated_at"
@@ -156,7 +157,8 @@
         "overhead_pct",
         "by_phase",
         "by_agent",
-        "by_task"
+        "by_task",
+        "productive"
       ],
       "properties": {
         "total_input": { "type": "integer", "minimum": 0 },
@@ -165,13 +167,15 @@
         "overhead_pct": { "type": "number", "minimum": 0 },
         "by_phase": { "type": "object" },
         "by_agent": { "type": "object" },
-        "by_task": { "type": "object" }
+        "by_task": { "type": "object" },
+        "productive": { "type": "integer", "minimum": 0 }
       }
     },
     "phase_tags": {
       "type": "object",
       "additionalProperties": { "type": "string" }
     },
+    "pending_notifications": { "type": "array", "items": { "type": "string" } },
     "stack_skills": { "type": "array", "items": { "type": "string" } },
     "circuit_breaker": {
       "type": "object",
@@ -182,7 +186,8 @@
         "total_tool_calls_this_task",
         "max_tool_calls_per_task",
         "last_file_hash",
-        "triggered"
+        "triggered",
+        "trigger_reason"
       ],
       "properties": {
         "consecutive_no_change_actions": { "type": "integer", "minimum": 0 },
@@ -190,7 +195,8 @@
         "total_tool_calls_this_task": { "type": "integer", "minimum": 0 },
         "max_tool_calls_per_task": { "type": "integer", "minimum": 1 },
         "last_file_hash": { "type": ["string", "null"] },
-        "triggered": { "type": "boolean" }
+        "triggered": { "type": "boolean" },
+        "trigger_reason": { "type": ["string", "null"] }
       }
     },
     "snapshots": {

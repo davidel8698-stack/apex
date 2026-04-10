@@ -1,4 +1,5 @@
 #!/bin/bash
+set -u
 source "$(dirname "$0")/_require-jq.sh"
 require_jq
 

@@ -143,10 +143,11 @@ Task("architect", ARCHITECT_CONTEXT + "Create full plan with PLAN_META.json and 
 ##   Body: "PLAN SUMMARY" — tasks planned, waves built, debates triggered (from PLAN_META.json)
 
 bash ~/.claude/hooks/tdad-index.sh
+TDAD_EXIT=$?
 Update STATE: {
   current_stage: "build", current_phase: "01", current_wave: 1,
   status: "pending_approval",
-  tdad: {index_built: true, last_indexed: now},
+  tdad: {index_built: (TDAD_EXIT == 0), last_indexed: (if TDAD_EXIT == 0 then now else null)},
   ## PHASE DIRECTORY ENFORCEMENT: always create as .apex/phases/${PHASE_NUMBER}/
   ## Pattern: nested under phases/ with zero-padded phase number (e.g., .apex/phases/01/, .apex/phases/02/)
   ## NEVER use flat naming like .apex/phase-01/ or .apex/phases-01/
@@ -168,6 +169,10 @@ If STATE.context.current_session_phase != current_phase AND current_session_phas
   "🔄 New phase. Run /apex:resume for clean context, or 'continue'."
   If 'continue': /compact, update current_session_phase. Else: STOP.
 
+## ARCHITECT OUTPUT VALIDATION
+Before proceeding: verify .apex/phases/${current_phase}/PLAN_META.json and WAVE_MAP.json exist.
+If either is missing: STOP. "🚫 Architect output incomplete — PLAN_META.json or WAVE_MAP.json missing. Re-run /apex:next."
+
 ## STEP A: Read Wave Map
 CURRENT_WAVE = STATE.current_wave
 WAVE_TASKS = WAVE_MAP.waves[CURRENT_WAVE].tasks
@@ -183,8 +188,12 @@ If all tasks in CURRENT_WAVE complete:
       Attempt to fix regression before advancing. If unfixable → treat as FAIL.
     Else:
       bash ~/.claude/hooks/session-log.sh "wave_complete" "גל ${CURRENT_WAVE} הושלם — ${N} משימות"
-    git tag "apex/wave-${current_phase}-${CURRENT_WAVE}-complete" -m "Wave ${CURRENT_WAVE} coherence checked" 2>/dev/null
-    STATE.session.last_wave_tag = "apex/wave-${current_phase}-${CURRENT_WAVE}-complete"
+    WAVE_TAG="apex/wave-${current_phase}-${CURRENT_WAVE}-complete"
+    git tag -a "$WAVE_TAG" -m "Wave ${CURRENT_WAVE} coherence checked"
+    If git tag succeeded:
+      STATE.session.last_wave_tag = WAVE_TAG
+    Else:
+      bash ~/.claude/hooks/session-log.sh "warning" "git tag failed for wave ${CURRENT_WAVE}"
   Advance wave.
 If all waves complete → STATE.status = "verify_needed"
 
@@ -306,6 +315,10 @@ If PHANTOM_EXIT == 2: phantom language detected in SUMMARY.md.
     ## Verdict: FAIL
     Phantom verification is treated as a critical failure. Rewrite SUMMARY.md
     with concrete command outputs and retry."
+  # Log phantom failure to session log (DD-002 fix)
+  bash ~/.claude/hooks/session-log.sh "phantom_fail" "זיהוי שפת פנטום ב-SUMMARY.md של ${NEXT_UNIT}"
+  # Track phantom-check overhead in framework tokens (DD-004 fix)
+  STATE.tokens.framework_overhead += 500
   # Skip the CLEAN-ROOM CRITIC dispatch below. Verdict handler will see FAIL.
   PHANTOM_SKIP_CRITIC = true
 
@@ -369,13 +382,15 @@ PASS:
   ## SESSION CHECKPOINT
   If STATE.session exists:
     TASK_TAG="apex/task-${current_phase}-${NEXT_UNIT}-complete"
-    git tag -a "$TASK_TAG" -m "APEX checkpoint: task ${NEXT_UNIT} passed critic" 2>/dev/null
+    git tag -a "$TASK_TAG" -m "APEX checkpoint: task ${NEXT_UNIT} passed critic"
+    If git tag succeeded:
+      Update STATE.session: last_checkpoint_tag = TASK_TAG, last_checkpoint_at = now
+    Else:
+      bash ~/.claude/hooks/session-log.sh "warning" "git tag failed for checkpoint ${NEXT_UNIT}"
     Update STATE.session:
       tasks_completed++
       consecutive_failures = 0
       consecutive_partials = 0
-      last_checkpoint_tag = TASK_TAG
-      last_checkpoint_at = now
     bash ~/.claude/hooks/session-log.sh "checkpoint" "משימה ${NEXT_UNIT} הושלמה ✅"
 
   ## MUTATION GATE (C/D tasks only)
@@ -457,9 +472,10 @@ FAIL:
     "🔄 Reflexion brief written. Retrying ([ATTEMPTS]/3)..."
     STATE.status = "pending_approval"
     ## PIPELINE BYPASS LOGGING [AP-005]
-    ## If you fix the issue directly (without re-dispatching executor), log the bypass:
-    bash ~/.claude/hooks/session-log.sh "bypass" "pipeline-bypass: direct fix for ${NEXT_UNIT} instead of reflexion→retry"
-    ## This creates measurement data for AP-005 (Pipeline Bypass via Orchestrator Convenience).
+    ## MANDATORY: If you (the orchestrator) applied code changes directly instead of
+    ## re-dispatching executor through reflexion→retry, you MUST log this bypass:
+    If orchestrator_applied_direct_fix (you wrote code instead of dispatching executor):
+      bash ~/.claude/hooks/session-log.sh "bypass" "pipeline-bypass: direct fix for ${NEXT_UNIT} instead of reflexion→retry"
 
 ## LEARNING EXTRACTION (on FAIL/PARTIAL only)
 If verdict is FAIL or PARTIAL with notable pattern (phantom, test fraud, silent failure):
@@ -517,6 +533,7 @@ PASS:
       STATE.autopilot.enabled = false
       STATE.autopilot.was_autopilot = true
       STATE.autopilot.paused_reason = "Phase drift: " + (UNVERIFIED_RATIO * 100) + "% criteria unverified (threshold: 20%)"
+      STATE.session.drift_indicators.spec_drift_count++
       "⏸️ Autopilot paused: too many unverified criteria at phase boundary. Manual review needed."
 
   ## RENDER: PHASE COMPLETE CINEMA

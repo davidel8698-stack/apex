@@ -1,4 +1,5 @@
 #!/bin/bash
+set -u
 # Creates git tag for completed phase, enabling rollback
 # Usage: bash phase-tag.sh [phase_id]
 source "$(dirname "$0")/_require-jq.sh"

@@ -1,4 +1,5 @@
 #!/bin/bash
+set -uo pipefail
 # Runs all tests from previous phases to detect regressions before advancing
 # Usage: bash cross-phase-audit.sh [current_phase_number]
 # [שיפור 21] Now reads verify_commands from PLAN_META.json instead of regex
@@ -76,7 +77,7 @@ done
 # Update EvoScore in STATE.json
 if [ -f .apex/STATE.json ]; then
   REGRESSION_RATE=0
-  [ "$TOTAL_TESTS" -gt 0 ] && REGRESSION_RATE=$((FAILURES * 100 / TOTAL_TESTS))
+  [ "$TOTAL_TESTS" -gt 0 ] && REGRESSION_RATE=$(awk "BEGIN {printf \"%.4f\", $FAILURES / $TOTAL_TESTS}")
 
   _state_update --argjson rate "$REGRESSION_RATE" \
      --argjson total "$TOTAL_TESTS" \
@@ -91,7 +92,7 @@ echo "Cross-Phase Audit Complete:"
 echo "  Phases checked: $TESTED_PHASES"
 echo "  Tests run: $TOTAL_TESTS"
 echo "  Failures: $FAILURES"
-echo "  EvoScore regression rate: ${REGRESSION_RATE:-0}%"
+echo "  EvoScore regression rate: $(awk "BEGIN {printf \"%.1f\", ${REGRESSION_RATE:-0} * 100}")%"
 
 if [ "$FAILURES" -gt 0 ]; then
   echo ""

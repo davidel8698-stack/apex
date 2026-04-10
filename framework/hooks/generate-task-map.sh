@@ -1,4 +1,5 @@
 #!/bin/bash
+set -uo pipefail
 source "$(dirname "$0")/_require-jq.sh"
 require_jq
 source "$(dirname "$0")/_require-git.sh"

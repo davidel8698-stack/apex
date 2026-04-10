@@ -29,7 +29,8 @@
     "total_tool_calls_this_task": 0,
     "max_tool_calls_per_task": 80,
     "last_file_hash": null,
-    "triggered": false
+    "triggered": false,
+    "trigger_reason": null
   },
   "snapshots": {
     "pre_task_stash": null,
@@ -42,7 +43,8 @@
     "overhead_pct": 0,
     "by_phase": {},
     "by_agent": {},
-    "by_task": {}
+    "by_task": {},
+    "productive": 0
   },
   "health_check": {
     "last_run": null,
@@ -65,6 +67,7 @@
     "total_nodes": 0
   },
   "phase_tags": {},
+  "pending_notifications": [],
   "stack_skills": [],
   "autonomy": {
     "by_verify_level": {

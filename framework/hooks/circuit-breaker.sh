@@ -1,4 +1,5 @@
 #!/bin/bash
+set -u
 # v7: Added total tool-call cap per task + enhanced loop detection [R1, R7]
 # R1: GSD Issue #456 (infinite loops), Superpowers recursive subagent
 # R7: Retry limited to 3 (diminishing returns). Failed trajectories cost 4x+ tokens.

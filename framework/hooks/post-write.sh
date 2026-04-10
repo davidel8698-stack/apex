@@ -1,5 +1,6 @@
 #!/bin/bash
-FILE="$1"
+set -u
+FILE="${1:-}"
 
 if [[ "$FILE" == *.ts ]] || [[ "$FILE" == *.tsx ]]; then
   # BLOCKING: TypeScript type check (only if project has tsconfig.json)

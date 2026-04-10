@@ -1,4 +1,5 @@
 #!/bin/bash
+set -u
 # v7: Real token counting from STATE.json instead of heuristic [R2]
 # R2: compact at 50-60%, hard rotate at 70%, never exceed 75%
 # Previous heuristic: AGENT_CALLS * 15000 — wildly inaccurate
@@ -22,10 +23,10 @@ CRITICAL_PCT=$(jq -r '.thresholds.hard_rotate_pct // 70' "$BUDGET_FILE" 2>/dev/n
 TOTAL_INPUT=$(jq -r '.tokens.total_input // 0' "$STATE_FILE" 2>/dev/null || echo 0)
 TOTAL_OUTPUT=$(jq -r '.tokens.total_output // 0' "$STATE_FILE" 2>/dev/null || echo 0)
 
-# Effective capacity is 200K (R2: design for 100-160K working set within 200K window)
-EFFECTIVE_CAPACITY=200000
+# Effective capacity from CONTEXT_BUDGET.json (default 200K per R2 design)
+EFFECTIVE_CAPACITY=$(jq -r '.capacity_tokens // 200000' "$BUDGET_FILE" 2>/dev/null || echo 200000)
 
-if [ "$TOTAL_INPUT" -gt 0 ] 2>/dev/null; then
+if [ "$TOTAL_INPUT" -gt 0 ]; then
   # Real token data available — use it
   ESTIMATED_PCT=$((TOTAL_INPUT * 100 / EFFECTIVE_CAPACITY))
 else

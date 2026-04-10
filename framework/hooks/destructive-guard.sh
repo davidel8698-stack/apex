@@ -1,9 +1,10 @@
 #!/bin/bash
+set -u
 # v7: Hardened against bypass — normalized matching, chained command splitting [R1]
 # R1: 10 documented destructive incidents, 0 vendor postmortems
 # Hook type: PreToolUse (Bash)
 
-COMMAND="$1"
+COMMAND="${1:-}"
 
 # v7: Split chained commands and check each segment
 # Handles: cmd1 && cmd2, cmd1 ; cmd2

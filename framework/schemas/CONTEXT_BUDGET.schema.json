@@ -75,6 +75,12 @@
     "context_reduction_priority": {
       "type": "array",
       "items": { "type": "string" }
+    },
+    "capacity_tokens": {
+      "type": "integer",
+      "minimum": 100000,
+      "maximum": 1000000,
+      "description": "Effective context window capacity in tokens. Default 200000."
     }
   },
   "definitions": {

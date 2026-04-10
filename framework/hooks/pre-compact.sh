@@ -1,4 +1,5 @@
 #!/bin/bash
+set -u
 # v7: Added observation masking tracking [R2]
 # R2: Simple deletion of old tool outputs gives 50% cost reduction at neutral/positive quality
 source "$(dirname "$0")/_require-jq.sh"
@@ -16,13 +17,6 @@ if [ -f .apex/STATE.json ]; then
   fi
 else
   BACKUP_OK=false
-fi
-
-if [ -f .apex/AUTONOMY.json ]; then
-  if ! cp .apex/AUTONOMY.json ".apex/backups/AUTONOMY_$TIMESTAMP.json" 2>/dev/null; then
-    echo "⚠️ Failed to back up AUTONOMY.json" >&2
-    BACKUP_OK=false
-  fi
 fi
 
 PHASE=$(jq -r '.current_phase // empty' .apex/STATE.json 2>/dev/null)
@@ -44,4 +38,4 @@ else
   echo "⚠️ APEX: Backup incomplete $TIMESTAMP — some files could not be copied" >&2
 fi
 
-exit 0
+if [ "$BACKUP_OK" = true ]; then exit 0; else exit 1; fi

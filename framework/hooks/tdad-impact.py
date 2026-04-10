@@ -21,8 +21,8 @@ def get_impacted_tests(changed_files_str, map_file='.apex/TEST_MAP.txt'):
                         for t in tests_str.split(','):
                             if t.strip():
                                 impacted.add(t.strip())
-    except:
-        pass
+    except Exception as e:
+        print(f"⚠️ TDAD: Error reading {map_file}: {e}", file=sys.stderr)
 
     return sorted(impacted)
 

@@ -46,7 +46,7 @@ Update STATE.context:
   current_session_phase = STATE.current_phase
   session_start_time = now
   estimated_context_usage_pct = 5
-  append to rotation_history: {phase, session_started, reason: "manual_resume"}
+  append to rotation_history: {phase, session_ended: now, reason: "manual_resume"}
 
 ## DISPLAY (render from ~/.claude/apex-branding.md)
 1. Render Section 8.C — Context Rotation transition

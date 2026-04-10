@@ -1,4 +1,5 @@
 #!/bin/bash
+set -u
 # Creates a git stash snapshot before task execution for per-task rollback.
 # Uses `git stash create` + `git stash store` so the working tree is NOT
 # modified (unlike `git stash push`), and the named stash remains in

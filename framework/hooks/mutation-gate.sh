@@ -1,4 +1,5 @@
 #!/bin/bash
+set -u
 # Mutation testing gate — runs AFTER critic PASS for verify_level C/D tasks only.
 # Critic judges correctness; this hook measures test quality.
 # R4: 93% line coverage → only 59% mutation kill rate (34-point gap).
@@ -7,8 +8,8 @@ require_jq
 source "$(dirname "$0")/_state-update.sh"
 
 STATE_FILE=".apex/STATE.json"
-TASK_ID="$1"
-VERIFY_LEVEL="$2"
+TASK_ID="${1:-}"
+VERIFY_LEVEL="${2:-}"
 
 # Only run for C/D tasks
 if [ "$VERIFY_LEVEL" != "C" ] && [ "$VERIFY_LEVEL" != "D" ]; then

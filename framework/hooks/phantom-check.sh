@@ -1,4 +1,5 @@
 #!/bin/bash
+set -u
 # Blocks advancement if SUMMARY.md uses uncertainty language
 # Usage: bash phantom-check.sh [path-to-summary.md]
 

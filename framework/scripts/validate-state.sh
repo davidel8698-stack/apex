@@ -179,6 +179,27 @@ for entry in "${NESTED_ENTRIES[@]}"; do
   done
 done
 
+# --- Inline validation for autonomy.by_verify_level ($ref resolution gap) ---
+if jq -e '.autonomy.by_verify_level' "$STATE_FILE" >/dev/null 2>&1; then
+  for vl in A B C D; do
+    if jq -e --arg vl "$vl" '.autonomy.by_verify_level | has($vl)' "$STATE_FILE" >/dev/null 2>&1; then
+      for field in level consecutive_successes; do
+        if ! jq -e --arg vl "$vl" --arg f "$field" '.autonomy.by_verify_level[$vl] | has($f)' "$STATE_FILE" >/dev/null 2>&1; then
+          report ERROR "Missing required field: 'autonomy.by_verify_level.$vl.$field'"
+        fi
+      done
+      LEVEL_VAL=$(jq -r --arg vl "$vl" '.autonomy.by_verify_level[$vl].level' "$STATE_FILE" 2>/dev/null | tr -d '\r')
+      if [ "$LEVEL_VAL" != "null" ] && [ -n "$LEVEL_VAL" ]; then
+        if [ "$LEVEL_VAL" -lt 0 ] 2>/dev/null || [ "$LEVEL_VAL" -gt 3 ] 2>/dev/null; then
+          report ERROR "autonomy.by_verify_level.$vl.level out of range [0,3]: $LEVEL_VAL"
+        fi
+      fi
+    else
+      report ERROR "Missing required field: 'autonomy.by_verify_level.$vl'"
+    fi
+  done
+fi
+
 # --- Check apex_version / version match ---
 SCHEMA_VERSION=$(jq -r '.properties.apex_version.enum[0] // .properties.version.const // empty' "$SCHEMA" 2>/dev/null | tr -d '\r')
 if [ -n "$SCHEMA_VERSION" ]; then
