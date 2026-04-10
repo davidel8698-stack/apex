@@ -21,6 +21,10 @@ if [ -n "$MISSING_TOOLS" ]; then
   STOP.
 fi
 
+## INFRASTRUCTURE SELF-TEST
+bash ~/.claude/scripts/self-test.sh 2>&1
+If exit code > 0: "⚠️ APEX infrastructure degraded — $EXIT test(s) failed. Run /apex:health-check."
+
 Check .apex/STATE.json. If exists: "Project in progress. /apex:next or /apex:resume." Stop.
 
 If no:

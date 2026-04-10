@@ -51,6 +51,18 @@ echo "✅ TEST 0c PASS: all required hooks present (9 jq-dependent + tdad-impact
 ```
 Expected: 0a/0b/0c all PASS. Any FAIL blocks the rest of health-check.
 
+### TEST 0e: Framework Self-Test
+```bash
+bash ~/.claude/scripts/self-test.sh 2>&1
+SELFTEST_EXIT=$?
+if [ "$SELFTEST_EXIT" -gt 0 ]; then
+  echo "❌ TEST 0e FAIL: $SELFTEST_EXIT infrastructure test(s) failed"
+  echo "   Run 'bash ~/.claude/scripts/self-test.sh' for details"
+else
+  echo "✅ TEST 0e PASS: all infrastructure mechanisms verified"
+fi
+```
+
 ## SETUP: Create temp test environment [שיפור 26]
 ```bash
 HEALTH_DIR=$(mktemp -d)
