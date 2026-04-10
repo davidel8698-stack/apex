@@ -29,7 +29,7 @@ Check .apex/STATE.json. If exists: "Project in progress. /apex:next or /apex:res
 
 If no:
   0. Render Section 5 banner with [●] for completed steps, [◐] for active, [○] for pending.
-  1. mkdir -p .apex/{pre-build,phases,research,backups,debate-log,comprehension-gates}
+  1. mkdir -p .apex/{pre-build,phases,backups,debate-log,comprehension-gates}
 
   ## USER PROFILE CAPTURE
   2. Ask user (in detected language or default English):

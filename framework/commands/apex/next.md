@@ -456,6 +456,10 @@ FAIL:
     If CRITICAL: STATE.autonomy.by_verify_level[verify_level].level = 0
     "🔄 Reflexion brief written. Retrying ([ATTEMPTS]/3)..."
     STATE.status = "pending_approval"
+    ## PIPELINE BYPASS LOGGING [AP-005]
+    ## If you fix the issue directly (without re-dispatching executor), log the bypass:
+    bash ~/.claude/hooks/session-log.sh "info" "pipeline-bypass: direct fix for ${NEXT_UNIT} instead of reflexion→retry"
+    ## This creates measurement data for AP-005 (Pipeline Bypass via Orchestrator Convenience).
 
 ## LEARNING EXTRACTION (on FAIL/PARTIAL only)
 If verdict is FAIL or PARTIAL with notable pattern (phantom, test fraud, silent failure):

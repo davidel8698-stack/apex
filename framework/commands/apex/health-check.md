@@ -63,6 +63,28 @@ else
 fi
 ```
 
+### TEST 0f: Schema Validation [Round 3.4 — D-1 to D-5]
+Verify the state file validator works against test fixtures.
+```bash
+VALIDATOR=~/.claude/scripts/validate-state.sh
+SCHEMA=~/.claude/schemas/STATE.schema.json
+if [ -f "$VALIDATOR" ] && [ -f "$SCHEMA" ]; then
+  # Good fixture should pass
+  bash "$VALIDATOR" "$SCHEMA" ~/.claude/test-fixtures/STATE-good.json 2>/dev/null
+  GOOD_EXIT=$?
+  # Bad fixture (missing previous_* fields) should fail
+  bash "$VALIDATOR" "$SCHEMA" ~/.claude/test-fixtures/STATE-missing-required.json 2>/dev/null
+  BAD_EXIT=$?
+  if [ "$GOOD_EXIT" -eq 0 ] && [ "$BAD_EXIT" -eq 2 ]; then
+    echo "✅ TEST 0f PASS: schema validator correctly accepts valid and rejects invalid state"
+  else
+    echo "❌ TEST 0f FAIL: validator results unexpected (good=$GOOD_EXIT, bad=$BAD_EXIT)"
+  fi
+else
+  echo "⚠️ TEST 0f SKIP: validator or schema not deployed (run sync-to-claude.sh)"
+fi
+```
+
 ## SETUP: Create temp test environment [שיפור 26]
 ```bash
 HEALTH_DIR=$(mktemp -d)
@@ -152,6 +174,7 @@ Task("critic", CONTEXT_B + "Review this task.")
 → Check if critic evaluates independently based on spec → CLEAN
 
 PASS if: clean-room verdict differs from contaminated verdict OR clean-room findings count >= contaminated findings count.
+PASS threshold: clean-room must find at least as many issues as contaminated (ratio >= 1.0). A clean-room that finds MORE issues than contaminated is the ideal outcome — proves the clean-room constraint helps rather than hinders.
 
 ## CLEANUP
 ```bash
@@ -165,5 +188,5 @@ If any failures:
 Failed: [list with test IDs]
 Fix: update failing agent's system prompt, re-run /apex:health-check"
 
-If all pass: "✅ All agents healthy (10/10 tests passed — TEST 0 environment + 9 agent tests)"
+If all pass: "✅ All agents healthy (11/11 tests passed — TEST 0 environment + schema validation + 9 agent tests)"
 </context>

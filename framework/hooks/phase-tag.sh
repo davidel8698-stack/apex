@@ -9,7 +9,7 @@ PHASE_ID=${1:-"unknown"}
 TAG_NAME="apex/phase-${PHASE_ID}-complete"
 
 # Check if tag already exists
-if git tag -l "$TAG_NAME" | grep -q "$TAG_NAME"; then
+if git tag -l "$TAG_NAME" | grep -qF "$TAG_NAME"; then
   echo "⚠️ Tag $TAG_NAME already exists — skipping"
   exit 0
 fi

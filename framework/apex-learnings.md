@@ -71,6 +71,56 @@ below baseline (22.22% vs 26.26%). Failure knowledge is +14.3% more valuable.
 - **Mitigation:** Post-install verification must include a functional test (`jq --version`), not just a success message from the installer. If functional test fails but binary exists on disk, manual copy to a known PATH directory is the fallback. For APEX specifically: the `/apex:start` ENVIRONMENT PRECHECK added in Round 2 will catch this class of failure on next startup by testing `command -v jq` before proceeding.
 - **Citations:** Round 2 jq installation (2026-04-09); manual fallback copy to `/c/Users/[user]/bin/jq.exe`
 
+### [AP-002] Pattern-Echo Hallucination
+- **Status:** ACTIVE
+- **Severity:** P2
+- **Decay:** framework
+- **Seen in:** apex-framework-build (Round 3.2 Cluster 2 Discovery, 2026-04-10)
+- **Pattern:** When working on a series of similar fixes, an agent develops a mental template and applies it without checking whether the target file already had the fix from an earlier round. Results in duplicate fixes, false-positive findings, or bugs from double-application.
+- **Detection:** Compare proposed changes against current file content before applying. If the fix is already present, mark the gap as closed.
+- **Prevention:** "Read before edit" as an invariant. Every discovery pass must re-read the file and confirm the gap still exists in current code, not just in audit notes.
+- **Citation:** Round 3.2 Cluster 2 — proposed adding `_require-jq.sh` to phase-tag.sh when it was already present from Round 2.
+
+### [AP-003] Implicit Write Chain
+- **Status:** ACTIVE
+- **Severity:** P2
+- **Decay:** architectural
+- **Seen in:** apex-framework-build (Round 3.2 C-3 implementation, 2026-04-10)
+- **Pattern:** A multi-step pipeline has implicit dependencies where Step N writes a file that Step N+1 expects. When a fix bypasses Step N, the file isn't written and Step N+1 fails far from the cause.
+- **Detection:** Audit pipeline steps for file-write side effects. Trace what each bypass skips.
+- **Prevention:** Document write chains explicitly. When designing a bypass, audit what side-effects are being skipped. Synthesize required files in the bypass block.
+- **Citation:** Round 3.2 C-3 — critic.md:74 writes REFLEXION.md on FAIL. Bypassing critic for phantom detection would skip this write, breaking the FAIL handler downstream.
+
+### [AP-004] Schema-by-Memory Reconstruction
+- **Status:** ACTIVE
+- **Severity:** P1
+- **Decay:** framework
+- **Seen in:** apex-framework-build (Checkpoint 2026-04-10, task 07-10)
+- **Pattern:** When a state file is missing or corrupt, an agent reconstructs it from trained memory instead of consulting the authoritative template or schema. The reconstruction omits fields added in recent rounds.
+- **Detection:** Compare reconstructed state files against `start.md` init template or JSON schema. Run validate-state.sh after any state reconstruction.
+- **Prevention:** Schema enforcement (validate-state.sh). Authoritative templates must be discoverable and consulted during reconstruction.
+- **Citation:** Checkpoint 2026-04-10 — Shield STATE.json rebuilt without `previous_last_completed_task` and `previous_tasks_completed_in_autopilot` from Round 3.2 A-5.
+
+### [AP-005] Pipeline Bypass via Orchestrator Convenience
+- **Status:** ACTIVE
+- **Severity:** P3
+- **Decay:** architectural
+- **Seen in:** apex-framework-build (Checkpoint 2026-04-10, task 07-10 critic FAIL)
+- **Pattern:** A self-healing pipeline is built for fault tolerance. At runtime, the orchestrator encounters a simple instance and fixes directly instead of invoking the pipeline. The pipeline lies dormant despite being needed in principle.
+- **Detection:** Log pipeline bypass events in SESSION-LOG.md. Check bypass rate over time.
+- **Prevention:** Validate pipelines in synthetic tests (health-check), not production exercise. Accept bypass as an optimization when the outcome is correct.
+- **Citation:** Checkpoint 2026-04-10 — C-3 reflexion/retry pipeline not invoked during task 07-10 critic FAIL; orchestrator fixed the stale-closure bug directly.
+
+### [AP-006] The Unchecked Audit
+- **Status:** ACTIVE
+- **Severity:** P2
+- **Decay:** framework
+- **Seen in:** apex-framework-build (Round 3.1 and Round 3.2, 2026-04-09/10)
+- **Pattern:** A static analysis pass produces findings treated as authoritative. Subsequent work uses audit claims without re-verifying against current code. When the audit is wrong, all downstream work inherits the error.
+- **Detection:** Re-read the file and confirm the finding before acting on any audit entry.
+- **Prevention:** Treat audits as hypotheses, not facts. Every gap entry's "How to verify" section must include a re-read step.
+- **Citation:** AUDIT-2026-04-09 claimed critic and verifier were missing from apex-model-routing.json. Round 3.1 discovered they were present. The audit was wrong by static analysis error.
+
 ---
 
 ## COLD (archive — never auto-loaded)

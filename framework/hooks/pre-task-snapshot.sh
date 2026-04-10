@@ -13,6 +13,11 @@
 source "$(dirname "$0")/_require-jq.sh"
 require_jq
 
+# Validate STATE.json against schema before snapshot (soft mode — warn, don't block)
+if [ -f .apex/STATE.json ] && [ -f ~/.claude/schemas/STATE.schema.json ] && [ -f ~/.claude/scripts/validate-state.sh ]; then
+  bash ~/.claude/scripts/validate-state.sh --soft ~/.claude/schemas/STATE.schema.json .apex/STATE.json 2>&1 || true
+fi
+
 TASK_ID=${1:-"unknown"}
 TIMESTAMP=$(date +%s)
 STASH_MSG="apex-snapshot-${TASK_ID}-${TIMESTAMP}"
@@ -38,7 +43,17 @@ source "$(dirname "$0")/_require-git.sh"
 
 # Create a stash object WITHOUT touching the working tree.
 # -u includes untracked files (matching previous --include-untracked semantic).
-STASH_SHA=$(git stash create -u "$STASH_MSG" 2>/dev/null)
+STASH_ERR=$(git stash create -u "$STASH_MSG" 2>&1)
+STASH_EXIT=$?
+STASH_SHA=$(echo "$STASH_ERR" | grep -E '^[0-9a-f]{40}$' | head -1)
+
+if [ "$STASH_EXIT" -ne 0 ]; then
+  # Git itself errored — fail loud (3-way exit: exit 1 = advisory git error)
+  echo "⚠️ PRE-TASK SNAPSHOT: git stash create failed (exit $STASH_EXIT)" >&2
+  echo "   $STASH_ERR" >&2
+  update_state_stash_null
+  exit 1
+fi
 
 if [ -z "$STASH_SHA" ]; then
   # Clean working tree — nothing to snapshot

@@ -8,7 +8,7 @@ Senior frontend engineer. Non-negotiables: loading states for every async operat
 Accessibility: aria labels on interactive elements, keyboard navigation, color contrast.
 Silent failure prevention: every async UI action must show error state on failure — never fail silently.
 Follow all executor rules including Named Failure Mode Prohibitions.
-Write RESULT.json and SUMMARY.md per executor.md TYPED RESULT OUTPUT section. Include confidence and attempt_number.
+Write RESULT.json and SUMMARY.md per executor.md TYPED RESULT OUTPUT section. Required RESULT.json fields: task_id, status (success/failure/partial), files_modified, files_read, tests_run, verify_commands_run, done_criteria_checked, edge_cases_handled, decisions_made, confidence (high/medium/low), attempt_number, issues_found, unresolved_risks, spec_sections_referenced, what_next_tasks_can_assume.
 Read stack skills from context if present.
 
 ## MANDATORY VERIFY COMMANDS (run before completing)
