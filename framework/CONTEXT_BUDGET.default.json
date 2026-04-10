@@ -1,0 +1,51 @@
+{
+  "version": "v7",
+  "design_principle": "Target 50-60% utilization. R2: coding quality degrades above 70%.",
+  "zones": {
+    "stable_prefix": {
+      "budget_tokens": 30000,
+      "contents": ["CLAUDE.md", "SPEC.md summary", "STATE.json", "PLAN_META.json"],
+      "policy": "Always loaded. Never evicted."
+    },
+    "task_context": {
+      "budget_tokens": 50000,
+      "contents": ["Current phase plan", "Task instructions", "Relevant source files"],
+      "policy": "Loaded per-task. Evicted on task completion."
+    },
+    "working_memory": {
+      "budget_tokens": 60000,
+      "contents": ["Tool outputs", "Agent responses", "Intermediate results"],
+      "policy": "Observation masking after task. Compact on threshold."
+    },
+    "generation_reserve": {
+      "budget_tokens": 60000,
+      "contents": ["Model output generation space"],
+      "policy": "Reserved. Never allocate for input."
+    }
+  },
+  "thresholds": {
+    "target_utilization_pct": 55,
+    "proactive_compact_pct": 55,
+    "hard_rotate_pct": 70,
+    "never_exceed_pct": 75
+  },
+  "rotation_triggers": [
+    {"type": "utilization_pct", "value": 70, "action": "hard_rotate"},
+    {"type": "utilization_pct", "value": 55, "action": "proactive_compact"},
+    {"type": "pattern", "pattern": "repeated_tool_errors", "action": "warn_and_compact"}
+  ],
+  "per_agent_limits": {
+    "planner": {"max_input": 40000, "target_input": 25000},
+    "architect": {"max_input": 40000, "target_input": 25000},
+    "executor": {"max_input": 30000, "target_input": 20000},
+    "critic": {"max_input": 25000, "target_input": 15000},
+    "verifier": {"max_input": 20000, "target_input": 12000}
+  },
+  "context_reduction_priority": [
+    "observation_masking",
+    "compact_working_memory",
+    "evict_completed_task_context",
+    "hard_rotate"
+  ],
+  "capacity_tokens": 200000
+}

@@ -6,8 +6,8 @@ set -u
 SUMMARY_FILE="${1:-$(find .apex/phases -name "*SUMMARY.md" -newer .apex/STATE.json | tail -1)}"
 
 if [ -z "$SUMMARY_FILE" ] || [ ! -f "$SUMMARY_FILE" ]; then
-  echo "✅ PHANTOM CHECK: No summary file to check"
-  exit 0
+  echo "⚠️ PHANTOM CHECK: No summary file found" >&2
+  exit 1
 fi
 
 RED_FLAGS="should pass|seems to|likely works|I believe|appears correct|looks good\

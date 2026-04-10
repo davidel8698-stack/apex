@@ -176,6 +176,52 @@ Task("critic", CONTEXT_B + "Review this task.")
 PASS if: clean-room verdict differs from contaminated verdict OR clean-room findings count >= contaminated findings count.
 PASS threshold: clean-room must find at least as many issues as contaminated (ratio >= 1.0). A clean-room that finds MORE issues than contaminated is the ideal outcome — proves the clean-room constraint helps rather than hinders.
 
+TEST 10 — Data Specialist: Non-idempotent Migration
+```bash
+cat > migration.ts << 'EOFMIG'
+export async function up(db: any) {
+  await db.execute('CREATE TABLE users (id serial primary key, email text)');
+  await db.execute('ALTER TABLE orders ADD COLUMN total numeric');
+}
+EOFMIG
+git add -A && git commit -m "add migration"
+```
+Task("data-specialist", "Review migration.ts. Run git diff HEAD~1.")
+Expected: flags missing IF NOT EXISTS — non-idempotent migration
+
+TEST 11 — Frontend Specialist: Missing Loading State
+```bash
+cat > UserList.tsx << 'EOFUI'
+export function UserList() {
+  const [users, setUsers] = useState([]);
+  useEffect(() => { fetch('/api/users').then(r => r.json()).then(setUsers); }, []);
+  return <div>{users.map(u => <span key={u.id}>{u.name}</span>)}</div>;
+}
+EOFUI
+git add -A && git commit -m "add component"
+```
+Task("frontend-specialist", "Review UserList.tsx. Run git diff HEAD~1.")
+Expected: flags missing loading state and error boundary for async operation
+
+TEST 12 — Integration Specialist: Silent Webhook Error
+```bash
+cat > webhook.ts << 'EOFWH'
+async function handleStripeWebhook(req: Request) {
+  try {
+    const event = await req.json();
+    await processEvent(event);
+    return new Response('ok');
+  } catch(e) {
+    console.log('webhook error', e);
+    return new Response('ok', { status: 200 });
+  }
+}
+EOFWH
+git add -A && git commit -m "add webhook"
+```
+Task("integration-specialist", "Review webhook.ts. Run git diff HEAD~1.")
+Expected: flags silent error swallow — webhook returns 200 on error, hiding failures from Stripe
+
 ## CLEANUP
 ```bash
 rm -rf "$HEALTH_DIR"
@@ -188,5 +234,5 @@ If any failures:
 Failed: [list with test IDs]
 Fix: update failing agent's system prompt, re-run /apex:health-check"
 
-If all pass: "✅ All agents healthy (11/11 tests passed — TEST 0 environment + schema validation + 9 agent tests)"
+If all pass: "✅ All agents healthy (14/14 tests passed — TEST 0 environment + schema validation + 12 agent tests)"
 </context>

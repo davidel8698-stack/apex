@@ -78,6 +78,23 @@ APEX files should show zero differences. Differences in non-APEX files
 (e.g. GSD subagents) are expected and fine — the script never touches
 them.
 
+## Hook shell conventions
+
+All hooks use explicit error handling instead of `set -e`:
+
+- **`set -u`** — mandatory in all hooks. Catches undefined variable bugs.
+- **`set -e`** — deliberately NOT used. `set -e` has known footguns
+  (breaks `if cmd; then` constructs, interacts badly with `$?` capture).
+  All hooks use explicit `|| exit 2` or `$?` checks instead.
+- **`set -o pipefail`** — used in hooks with pipelines
+  (`cross-phase-audit.sh`, `generate-task-map.sh`). Add it to any new
+  hook that uses pipes.
+
+Exit code convention (3-tier, all hooks):
+- `0` = success
+- `1` = advisory (non-blocking warning)
+- `2` = blocking (halt execution)
+
 ## If a sync looks wrong
 
 Stop. Do not re-run. Open a Claude Code session with the framework/

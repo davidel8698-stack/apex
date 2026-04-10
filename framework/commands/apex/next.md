@@ -376,6 +376,7 @@ Read task verify_level. On any verdict:
 PASS:
   Reset reflexion attempts to 0. Remove lock.
   STATE.autonomy.by_verify_level[verify_level].consecutive_successes++
+  # D-level: consecutive_successes tracked for telemetry only (cap=0, no promotion effect by design)
   If consecutive_successes >= 5: level++ (up to cap), reset counter.
     Append P3 notification: "Autonomy escalated for [level]"
 
@@ -550,6 +551,7 @@ PASS:
     bash ~/.claude/hooks/session-log.sh "phase_complete" "שלב ${current_phase} הושלם — ${N} משימות, ${STATE.session.tasks_failed} כישלונות"
 
   ## COMPREHENSION GATE
+  STATE.comprehension_gates.current_gate_required = "phase_" + current_phase
   LARGEST_DIFFS = top 3 changed files by diff size since phase start
   Render soft frame (Section 3.C) with:
     "▽  COMPREHENSION GATE — Phase [N]
@@ -561,6 +563,13 @@ PASS:
 
   'y' → record, mark passed. 'explain' → user writes understanding, record (deep mode).
   'skip' → record, mark skipped. P2: "Cognitive debt risk." NOT available for verify_level D.
+
+  ## COMPREHENSION GATE STATE PERSISTENCE
+  If response == 'y' or 'explain':
+    STATE.comprehension_gates["phase_" + current_phase] = true
+  If response == 'skip':
+    STATE.comprehension_gates["phase_" + current_phase] = false
+  STATE.comprehension_gates.current_gate_required = null
 
   "🔄 RECOMMENDED: /apex:resume for fresh context. Or 'continue'."
   'continue' → /compact, advance phase.

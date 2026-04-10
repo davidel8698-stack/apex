@@ -49,12 +49,13 @@ Else:
   If critic verdict is FAIL:
     Read REFLEXION.md from critic output.
     STATE.reflexion.current_unit_attempts++
-    If STATE.reflexion.current_unit_attempts < 2:
-      "🔄 Quick task reflexion. Retrying (attempt ${STATE.reflexion.current_unit_attempts}/2)..."
+    QUICK_MAX = min(STATE.reflexion.max_attempts, 2)
+    If STATE.reflexion.current_unit_attempts < QUICK_MAX:
+      "🔄 Quick task reflexion. Retrying (attempt ${STATE.reflexion.current_unit_attempts}/${QUICK_MAX})..."
       Re-invoke executor with REFLEXION.md in context.
       Re-invoke critic.
     Else:
-      "❌ Quick task failed after 2 attempts."
+      "❌ Quick task failed after ${QUICK_MAX} attempts."
       STOP.
   If critic verdict is PASS:
     STATE.reflexion.current_unit_attempts = 0

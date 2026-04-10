@@ -109,4 +109,5 @@ else
   echo "✅ All citations valid | HOT: $HOT_COUNT/30 | WARM: $WARM_COUNT/100"
 fi
 
+if [ "$ISSUES" -gt 0 ] || [ "$HOT_COUNT" -gt 30 ] || [ "$WARM_COUNT" -gt 100 ]; then exit 1; fi
 exit 0

@@ -36,6 +36,12 @@ If STATE.session exists AND STATE.session.auto_paused == true:
     consecutive_failures = 0
     consecutive_partials = 0
     health_status = "green"
+    drift_indicators = {
+      spec_drift_count: 0,
+      circuit_breaker_triggers: 0,
+      reflexion_total_attempts: 0,
+      low_confidence_results: 0
+    }
 
 ## SESSION UPDATE
 If STATE.session exists:

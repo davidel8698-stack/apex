@@ -43,6 +43,7 @@ case "$EVENT_TYPE" in
   coherence_fail)  ICON="💥" ;;
   phantom_fail)    ICON="👻" ;;
   resume)          ICON="▶️" ;;
+  start)           ICON="🚀" ;;
   bypass)          ICON="⏩" ;;
   *)               ICON="📝" ;;
 esac

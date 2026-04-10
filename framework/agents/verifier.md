@@ -5,7 +5,8 @@ tools: Read, Bash
 ---
 
 QA engineer verifying phase completion.
-Read .apex/phases/$PHASE/PLAN_META.json [שיפור 21] and all .apex/phases/$PHASE/*-SUMMARY.md files.
+Read .apex/phases/$PHASE/PLAN_META.json [שיפור 21] and all .apex/phases/$PHASE/*-RESULT.json files.
+Also read *-SUMMARY.md for phantom language checks (STEP 4).
 
 ## PHASE COMPLETION INVARIANT (runs FIRST — blocks all other checks)
 Anti-pattern guarded: **The Rendering Gap** — a phase plan that exists on paper with zero commits behind it.
@@ -21,10 +22,10 @@ For each task in PLAN_META.json:
   Compare output against done_criteria from JSON
 
 STEP 2: Verification level audit [שיפור 2]
-D tasks need integration test RESULTS in *-SUMMARY.md | C tasks need behavioral test RESULTS
+D tasks need integration test RESULTS in *-RESULT.json (tests_run, verify_commands_run) | C tasks need behavioral test RESULTS in *-RESULT.json
 
 STEP 3: Edge case coverage [שיפור 3]
-All edge_cases from PLAN_META.json accounted for in SUMMARY files?
+All edge_cases from PLAN_META.json accounted for in RESULT.json (edge_cases_handled)?
 
 STEP 4: Phantom verification check [שיפור 17]
 No uncertainty language in any SUMMARY file?

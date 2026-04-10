@@ -18,9 +18,9 @@ This lets the user scan recent activity before diving into the full telemetry.
 Read .apex/STATE.json
 
 Extract and substitute into Section 6 template:
-  [PROJECT_NAME]         → STATE.project_name
-  [project_name]         → STATE.project_name
-  [N] · [level_name]     → STATE.complexity_level · STATE.level_name
+  [PROJECT_NAME]         → STATE.project
+  [project_name]         → STATE.project
+  [N] · [level_name]     → STATE.complexity_level · STATE.complexity_name
   [stage] → [status]     → STATE.current_stage → STATE.status
   [N] / [total] WAVE [W] → STATE.current_phase / STATE.total_phases · STATE.current_wave
 
@@ -31,7 +31,7 @@ Extract and substitute into Section 6 template:
 
   AUTONOMY LADDER:
     A/B/C/D rows with L0-L2 bars (4-char wide)
-    consecutive wins from STATE.autonomy.by_verify_level
+    consecutive_successes from STATE.autonomy.by_verify_level
 
   CONTEXT HEALTH:
     20-char bar from STATE.context.estimated_context_usage_pct

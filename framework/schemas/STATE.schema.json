@@ -73,10 +73,42 @@
           "required": ["A", "B", "C", "D"],
           "additionalProperties": false,
           "properties": {
-            "A": { "$ref": "#/definitions/autonomy_level" },
-            "B": { "$ref": "#/definitions/autonomy_level" },
-            "C": { "$ref": "#/definitions/autonomy_level" },
-            "D": { "$ref": "#/definitions/autonomy_level" }
+            "A": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["level", "consecutive_successes"],
+              "properties": {
+                "level": { "type": "integer", "minimum": 0, "maximum": 3 },
+                "consecutive_successes": { "type": "integer", "minimum": 0 }
+              }
+            },
+            "B": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["level", "consecutive_successes"],
+              "properties": {
+                "level": { "type": "integer", "minimum": 0, "maximum": 3 },
+                "consecutive_successes": { "type": "integer", "minimum": 0 }
+              }
+            },
+            "C": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["level", "consecutive_successes"],
+              "properties": {
+                "level": { "type": "integer", "minimum": 0, "maximum": 3 },
+                "consecutive_successes": { "type": "integer", "minimum": 0 }
+              }
+            },
+            "D": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["level", "consecutive_successes"],
+              "properties": {
+                "level": { "type": "integer", "minimum": 0, "maximum": 3 },
+                "consecutive_successes": { "type": "integer", "minimum": 0 }
+              }
+            }
           }
         }
       }
@@ -341,16 +373,5 @@
     "lock": { "type": ["string", "null"] },
     "created_at": { "type": "string", "format": "date-time" },
     "updated_at": { "type": "string", "format": "date-time" }
-  },
-  "definitions": {
-    "autonomy_level": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["level", "consecutive_successes"],
-      "properties": {
-        "level": { "type": "integer", "minimum": 0, "maximum": 3 },
-        "consecutive_successes": { "type": "integer", "minimum": 0 }
-      }
-    }
   }
 }

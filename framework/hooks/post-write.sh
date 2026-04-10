@@ -2,6 +2,12 @@
 set -u
 FILE="${1:-}"
 
+# BLOCKING: secret detection (all source files — not gated on file type)
+if grep -E "(password|secret|token|key|api_key)\s*=\s*['\"][a-zA-Z0-9_-]{8,}" "$FILE" 2>/dev/null; then
+  echo "🚫 BLOCKED: Potential hardcoded secret in $FILE"
+  exit 2
+fi
+
 if [[ "$FILE" == *.ts ]] || [[ "$FILE" == *.tsx ]]; then
   # BLOCKING: TypeScript type check (only if project has tsconfig.json)
   if [ -f tsconfig.json ] && command -v npx &>/dev/null; then
@@ -12,12 +18,6 @@ if [[ "$FILE" == *.ts ]] || [[ "$FILE" == *.tsx ]]; then
       echo "🚫 BLOCKED: TypeScript errors detected (exit code $TSC_EXIT)"
       exit 2
     fi
-  fi
-
-  # BLOCKING: secret detection
-  if grep -E "(password|secret|token|key|api_key)\s*=\s*['\"][a-zA-Z0-9_-]{8,}" "$FILE" 2>/dev/null; then
-    echo "🚫 BLOCKED: Potential hardcoded secret in $FILE"
-    exit 2
   fi
 
   # ADVISORY: multi-tenant leak risk

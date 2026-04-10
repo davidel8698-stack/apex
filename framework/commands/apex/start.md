@@ -41,8 +41,17 @@ If no:
   ## STATE INITIALIZATION — fields are progressively populated by planner/architect stages.
   ## Also update STATE.schema.json, status.md, and test fixtures on changes.
   3. Create STATE.json with:
+     project: ""
+     complexity_level: 0
+     complexity_name: ""
+     pipeline: []
      apex_version: "v7"
+     current_stage: "init"
      pre_build_complete: false
+     current_phase: null
+     current_unit: null
+     current_wave: null
+     status: "initializing"
      lock: null
      created_at: now
      updated_at: now
@@ -60,6 +69,15 @@ If no:
      tokens: {total_input: 0, total_output: 0, framework_overhead: 0, overhead_pct: 0, productive: 0, by_phase: {}, by_agent: {}, by_task: {}}
      phase_tags: {}
      stack_skills: []
+     mutation_scores: {}
+     autonomy: {
+       by_verify_level: {
+         A: {level: 0, consecutive_successes: 0},
+         B: {level: 0, consecutive_successes: 0},
+         C: {level: 0, consecutive_successes: 0},
+         D: {level: 0, consecutive_successes: 0}
+       }
+     }
      circuit_breaker: {consecutive_no_change_actions: 0, max_allowed: 3, total_tool_calls_this_task: 0, max_tool_calls_per_task: 80, last_file_hash: null, triggered: false, trigger_reason: null}
      snapshots: {pre_task_stash: null, last_snapshot_task: null}
      autopilot: {
@@ -100,8 +118,9 @@ If no:
          reflexion_total_attempts: 0, low_confidence_results: 0
        }
      }
-  4. Create .apex/CONTEXT_BUDGET.json with default budgets (copy from ~/.claude reference or use v7 defaults)
-  5. bash ~/.claude/hooks/session-log.sh "resume" "סשן התחיל — [project name]"
+  4. If .apex/CONTEXT_BUDGET.json does not exist:
+       Copy ~/.claude/CONTEXT_BUDGET.default.json to .apex/CONTEXT_BUDGET.json
+  5. bash ~/.claude/hooks/session-log.sh "start" "סשן התחיל — [project name]"
   6. Task("planner", "Classify this project, capture requirements, and generate pre-build checklist if Level 3+.")
   7. After planner:
      Level 3+: Update STATE: {current_stage: "pre-build", status: "blocking"}
