@@ -3,6 +3,9 @@ source "$(dirname "$0")/_require-jq.sh"
 require_jq
 source "$(dirname "$0")/_require-git.sh"
 
+# G-2: Ensure CWD is project root so .apex/ paths resolve
+cd "$(git rev-parse --show-toplevel)" || exit 2
+
 TASK_ID=${1:-"current"}
 PHASE=$(cat .apex/STATE.json 2>/dev/null | jq -r '.current_phase // empty')
 
@@ -60,6 +63,8 @@ if [ -f "$META_FILE" ]; then
   fi
 else
   # Fallback: old regex method if PLAN_META.json doesn't exist
+  # NOTE: For quick tasks (quick-* IDs from /apex:quick), PLAN_META.json won't exist.
+  # Header-only output with exit 1 is expected and non-fatal in that context.
   PLAN_FILE=".apex/phases/$PHASE/PLAN.md"
   if [ -f "$PLAN_FILE" ]; then
     FALLBACK_FILES=$(grep -A30 "id=\"$TASK_ID\"" "$PLAN_FILE" 2>/dev/null | \

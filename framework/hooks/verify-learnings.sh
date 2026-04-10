@@ -68,15 +68,23 @@ while IFS= read -r line; do
     fi
   fi
 
-  # Check citations
+  # Check citations — extract file:line patterns from citation text
   if [[ "$line" =~ \*\*Citation:\*\*[[:space:]]*([^:]+):([0-9]+) ]]; then
-    FILE="${BASH_REMATCH[1]}"
+    RAW_REF="${BASH_REMATCH[1]}"
+    # Extract just the filename: last space-separated token that looks like a path
+    # Handles "Round 3.2 C-3 — critic.md" → "critic.md"
+    FILE=$(echo "$RAW_REF" | grep -oE '[^ ]*\.[a-zA-Z]+$' || echo "$RAW_REF")
     # Skip template/example citations (contain placeholder text)
     if [[ "$FILE" == *"project-"* ]] || [[ "$FILE" == *"["*"]"* ]]; then
       continue
     fi
-    if [ ! -f "$FILE" ] && [ ! -f "src/$FILE" ] && [ ! -f "./$FILE" ]; then
-      echo "⚠️ STALE CITATION: $FILE (file not found)"
+    # Resolve paths: check relative, src/, project, and framework (~/.claude/) locations
+    EXPANDED_FILE="${FILE/#\~/$HOME}"
+    if [ ! -f "$FILE" ] && [ ! -f "src/$FILE" ] && [ ! -f "./$FILE" ] \
+       && [ ! -f "$EXPANDED_FILE" ] \
+       && [ ! -f "$HOME/.claude/agents/$FILE" ] \
+       && [ ! -f "$HOME/.claude/commands/apex/$FILE" ]; then
+      echo "⚠️ STALE CITATION: $CURRENT_ENTRY — $FILE (file not found)"
       STALE=$((STALE + 1))
     fi
   fi

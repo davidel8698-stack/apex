@@ -41,6 +41,7 @@ case "$EVENT_TYPE" in
   phase_complete)  ICON="🏁" ;;
   coherence_fail)  ICON="💥" ;;
   resume)          ICON="▶️" ;;
+  bypass)          ICON="⏩" ;;
   *)               ICON="📝" ;;
 esac
 

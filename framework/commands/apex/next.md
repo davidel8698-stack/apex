@@ -458,7 +458,7 @@ FAIL:
     STATE.status = "pending_approval"
     ## PIPELINE BYPASS LOGGING [AP-005]
     ## If you fix the issue directly (without re-dispatching executor), log the bypass:
-    bash ~/.claude/hooks/session-log.sh "info" "pipeline-bypass: direct fix for ${NEXT_UNIT} instead of reflexion→retry"
+    bash ~/.claude/hooks/session-log.sh "bypass" "pipeline-bypass: direct fix for ${NEXT_UNIT} instead of reflexion→retry"
     ## This creates measurement data for AP-005 (Pipeline Bypass via Orchestrator Convenience).
 
 ## LEARNING EXTRACTION (on FAIL/PARTIAL only)

@@ -92,7 +92,8 @@ If STATE.autopilot.enabled == true:
   # Null guard: skip mode-specific breakers if autopilot not configured through advisor
   If STATE.autopilot.mode == null: skip mode-specific breakers (autopilot not configured through advisor)
 
-  # Breaker 4: Mode-specific conditions
+  # Breaker 4: Mode-specific conditions (4 sub-conditions: until, range, after, smart)
+  # Total pause conditions: Breakers 1-3 (fixed) + null guard + Breaker 4a-4d (mode-specific) = 7 checks
   If STATE.autopilot.mode == "until" AND next_task == STATE.autopilot.stop_at_task:
     PAUSE_AUTOPILOT = true
     REASON = STATE.autopilot.stop_at_task + " — " + (STATE.autopilot.paused_reason or "reached stop point")

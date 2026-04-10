@@ -7,6 +7,9 @@ require_jq
 source "$(dirname "$0")/_require-git.sh"
 source "$(dirname "$0")/_state-update.sh"
 
+# G-2: Ensure CWD is project root so .apex/ paths resolve
+cd "$(git rev-parse --show-toplevel)" || exit 2
+
 CURRENT_PHASE=${1:-1}
 echo "🔍 APEX Cross-Phase Regression Audit (checking Phases 1 to $((CURRENT_PHASE-1)))..."
 
@@ -77,7 +80,7 @@ if [ -f .apex/STATE.json ]; then
 
   _state_update --argjson rate "$REGRESSION_RATE" \
      --argjson total "$TOTAL_TESTS" \
-     --arg date "$(date -I)" \
+     --arg date "$(date +%Y-%m-%d)" \
      '.evoscore.regression_rate = $rate |
       .evoscore.total_cross_phase_tests = $total |
       .evoscore.last_full_audit = $date'

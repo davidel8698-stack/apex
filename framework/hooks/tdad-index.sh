@@ -4,6 +4,9 @@
 
 source "$(dirname "$0")/_require-git.sh"
 
+# G-2: Ensure CWD is project root so .apex/ paths resolve
+cd "$(git rev-parse --show-toplevel)" || exit 2
+
 echo "🔬 TDAD: Building code-test dependency graph..."
 
 if ! command -v python3 &>/dev/null; then

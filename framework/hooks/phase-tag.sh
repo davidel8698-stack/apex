@@ -6,6 +6,9 @@ require_jq
 source "$(dirname "$0")/_require-git.sh"
 source "$(dirname "$0")/_state-update.sh"
 
+# G-2: Ensure CWD is project root so .apex/ paths resolve
+cd "$(git rev-parse --show-toplevel)" || exit 2
+
 PHASE_ID=${1:-"unknown"}
 TAG_NAME="apex/phase-${PHASE_ID}-complete"
 
@@ -16,7 +19,7 @@ if git tag -l "$TAG_NAME" | grep -qF "$TAG_NAME"; then
 fi
 
 # Create annotated tag — capture stderr + exit code for diagnostics on failure
-TAG_OUTPUT=$(git tag -a "$TAG_NAME" -m "APEX: Phase $PHASE_ID verified and complete ($(date -I))" 2>&1)
+TAG_OUTPUT=$(git tag -a "$TAG_NAME" -m "APEX: Phase $PHASE_ID verified and complete ($(date +%Y-%m-%d))" 2>&1)
 TAG_EXIT=$?
 
 # FILESYSTEM-LEVEL VERIFICATION — matches pre-task-snapshot.sh doctrine.

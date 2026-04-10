@@ -8,6 +8,9 @@ require_jq
 source "$(dirname "$0")/_require-git.sh"
 source "$(dirname "$0")/_state-update.sh"
 
+# G-2: Ensure CWD is project root so .apex/ paths resolve
+cd "$(git rev-parse --show-toplevel)" || exit 2
+
 STATE_FILE=".apex/STATE.json"
 
 if [ ! -f "$STATE_FILE" ]; then
