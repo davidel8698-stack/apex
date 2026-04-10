@@ -147,6 +147,10 @@ Update STATE: {
   current_stage: "build", current_phase: "01", current_wave: 1,
   status: "pending_approval",
   tdad: {index_built: true, last_indexed: now},
+  ## PHASE DIRECTORY ENFORCEMENT: always create as .apex/phases/${PHASE_NUMBER}/
+  ## Pattern: nested under phases/ with zero-padded phase number (e.g., .apex/phases/01/, .apex/phases/02/)
+  ## NEVER use flat naming like .apex/phase-01/ or .apex/phases-01/
+  mkdir -p .apex/phases/${current_phase}/
   autonomy: { by_verify_level: {
     A: {level:0, consecutive_successes:0}, B: {level:0, consecutive_successes:0},
     C: {level:0, consecutive_successes:0}, D: {level:0, consecutive_successes:0}
@@ -374,6 +378,15 @@ PASS:
       last_checkpoint_at = now
     bash ~/.claude/hooks/session-log.sh "checkpoint" "משימה ${NEXT_UNIT} הושלמה ✅"
 
+  ## MUTATION GATE (C/D tasks only)
+  Read task verify_level from PLAN_META.json for NEXT_UNIT.
+  If verify_level in ["C", "D"]:
+    bash ~/.claude/hooks/mutation-gate.sh ${NEXT_UNIT} ${verify_level}
+    If exit 2 (below threshold):
+      Treat as PARTIAL — task correctness confirmed by critic, but test quality insufficient.
+      "⚠️ Mutation kill rate below threshold. Tests need strengthening."
+      Log to DECISIONS.md: "Mutation gate: ${NEXT_UNIT} passed critic but below mutation threshold"
+
   ## AUTOPILOT STATE UPDATE (on PASS)
   If STATE.autopilot.enabled:
     STATE.autopilot.tasks_completed_in_autopilot++
@@ -383,7 +396,7 @@ PASS:
 
     # Mini cross-phase audit every 5 autopilot tasks
     If STATE.autopilot.tasks_completed_in_autopilot % 5 == 0:
-      bash ~/.claude/hooks/cross-phase-audit.sh
+      bash ~/.claude/hooks/cross-phase-audit.sh ${STATE.current_phase}
       If regressions found: 
         STATE.autopilot.enabled = false
         STATE.autopilot.was_autopilot = true
@@ -459,7 +472,7 @@ STATE: current_stage=build, status=verify_needed
 COMPLEXITY = STATE.complexity_level
 
 If COMPLEXITY <= 2:
-  bash ~/.claude/hooks/cross-phase-audit.sh
+  bash ~/.claude/hooks/cross-phase-audit.sh ${STATE.current_phase}
   PHASE_CRITIC_CONTEXT = {
     phase_spec: .apex/phases/${current_phase}/PLAN_META.json, task_results: all .apex/phases/${current_phase}/*-RESULT.json (status/files/tests only),
     cross_phase_audit: output, diff: "$(git diff apex/phase-[N-1]-complete..HEAD)"

@@ -1,4 +1,4 @@
-# [Project Name] — APEX v6 Project
+# [Project Name] — APEX v7 Project
 <!-- CRITICAL: Keep this file under 200 lines. R2: 92% rule application at <200, drops to 71% at 400+ -->
 
 ## Complexity

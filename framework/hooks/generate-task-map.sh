@@ -1,6 +1,7 @@
 #!/bin/bash
 source "$(dirname "$0")/_require-jq.sh"
 require_jq
+source "$(dirname "$0")/_require-git.sh"
 
 TASK_ID=${1:-"current"}
 PHASE=$(cat .apex/STATE.json 2>/dev/null | jq -r '.current_phase // empty')
@@ -44,7 +45,7 @@ if [ -f "$META_FILE" ]; then
   KEYWORDS=$(echo "$TASK_NAME" | tr ' ' '\n' | grep -E "^[A-Za-z]{5,}" | \
     sort -u | head -6 | tr '\n' '|' | sed 's/|$//')
 
-  if [ -n "$KEYWORDS" ]; then
+  if [ -n "$KEYWORDS" ] && command -v rg &>/dev/null; then
     RELATED=$(rg -l "$KEYWORDS" src/ lib/ app/ 2>/dev/null | \
       grep -v "node_modules\|.next\|.git" | head -6)
     if [ -n "$RELATED" ]; then
@@ -86,5 +87,5 @@ else
   echo "⚠️  TASK MAP: no files resolved for task '$TASK_ID'" >&2
   echo "   Reason: PLAN_META.json missing, task not found, or no explicit files" >&2
   echo "   Output contains header + trailer only: $OUT_FILE" >&2
-  exit 0
+  exit 1
 fi

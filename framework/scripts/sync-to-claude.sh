@@ -79,6 +79,7 @@ copy_file "$FRAMEWORK_ROOT/apex-branding.md"        "$CLAUDE_ROOT/apex-branding.
 copy_file "$FRAMEWORK_ROOT/apex-design-notes.md"    "$CLAUDE_ROOT/apex-design-notes.md"
 copy_file "$FRAMEWORK_ROOT/apex-learnings.md"       "$CLAUDE_ROOT/apex-learnings.md"
 copy_file "$FRAMEWORK_ROOT/apex-model-routing.json" "$CLAUDE_ROOT/apex-model-routing.json"
+copy_file "$FRAMEWORK_ROOT/../CLAUDE-TEMPLATE.md"   "$CLAUDE_ROOT/CLAUDE-TEMPLATE.md"
 
 echo
 log "done"

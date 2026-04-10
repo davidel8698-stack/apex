@@ -72,7 +72,7 @@ while IFS= read -r line; do
   if [[ "$line" =~ \*\*Citation:\*\*[[:space:]]*([^:]+):([0-9]+) ]]; then
     FILE="${BASH_REMATCH[1]}"
     # Skip template/example citations (contain placeholder text)
-    if [[ "$FILE" == *"project-"* ]] || [[ "$FILE" == *"[" ]]; then
+    if [[ "$FILE" == *"project-"* ]] || [[ "$FILE" == *"["*"]"* ]]; then
       continue
     fi
     if [ ! -f "$FILE" ] && [ ! -f "src/$FILE" ] && [ ! -f "./$FILE" ]; then

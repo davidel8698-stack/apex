@@ -7,6 +7,7 @@ description: Architecture debate protocol for irreversible decisions. Sourced by
 Write .apex/debate-log/[decision]-brief-A.md
 Write .apex/debate-log/[decision]-brief-B.md
 
+## RENDER: Mission Briefing (Section 10-B abbreviated — agent card + task goal only)
 Task("architect", "You are ADVOCATE A. Read .apex/debate-log/[decision]-brief-A.md and SPEC.md.
 Write argument to .apex/debate-log/[decision]-advocate-A.md.
 Do NOT read any other debate files. Argue FOR your option only.
@@ -18,12 +19,16 @@ STRUCTURE:
 ### Implementation Path
 ### Acknowledged Downsides
 ### Reversibility Assessment")
+## RENDER: Flight Recorder (Section 10-C abbreviated — agent + verdict)
 
+## RENDER: Mission Briefing (Section 10-B abbreviated — agent card + task goal only)
 Task("architect", "You are ADVOCATE B. Read .apex/debate-log/[decision]-brief-B.md and SPEC.md.
 Write argument to .apex/debate-log/[decision]-advocate-B.md.
 Do NOT read advocate-A.md. Argue FOR your option only.
 [Same structure]")
+## RENDER: Flight Recorder (Section 10-C abbreviated — agent + verdict)
 
+## RENDER: Mission Briefing (Section 10-B abbreviated — agent card + task goal only)
 Task("architect", "You are JUDGE. Read BOTH:
 .apex/debate-log/[decision]-advocate-A.md
 .apex/debate-log/[decision]-advocate-B.md
@@ -38,3 +43,4 @@ WRITE to .apex/DECISIONS.md:
 ### How Other Advocate's Arguments Were Weighted
 ### Reversibility Note
 ### Arguments Preserved: [file paths]")
+## RENDER: Flight Recorder (Section 10-C abbreviated — agent + verdict)

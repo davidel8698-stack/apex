@@ -34,6 +34,7 @@ If no:
      Write answers into CLAUDE.md ## User Profile section (from CLAUDE-TEMPLATE.md).
      USER_LANG = captured language preference.
 
+  ## ⚠️ CANONICAL STATE SHAPE — single source of truth. Also update STATE.schema.json and status.md on changes.
   3. Create STATE.json with:
      apex_version: "v7"
      reflexion: {current_unit_attempts: 0, max_attempts: 3}

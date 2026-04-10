@@ -723,7 +723,7 @@ Tells the user who is about to work and what they're going to do.
 | DONE WHEN | task XML → done_criteria list |
 | Tokens est | CONTEXT_BUDGET.json → per-task estimate |
 | Tokens cap | CONTEXT_BUDGET.json → per-task max |
-| Turns 0/40 | executor.md max_turns |
+| Turns 0/40 | executor.md maxTurns |
 
 ### Variants
 - **Architect briefing**: replace "Task" with "Phase", drop "Done When" (architect writes plans), add "Reads" (HOT/WARM learnings count)
@@ -1120,6 +1120,8 @@ Place the active/paused badge from section 9 at the top of the output, below the
 `✓` is PASS. Not `✔`, not `✅`, not `done`.
 `▲` is APEX. Not `△`, not `▴`.
 `◐` is PARTIAL. Not `◑`, not `half`.
+R5 applies to framed output in commands (Sections 7-10). Hooks use emoji (✅/❌) in plain-echo context for session-log readability. This is intentional.
+Note: Hooks output plain echo (machine/log context). Commands render branding frames (user-facing). This is intentional, not drift.
 
 ### R6  Frame widths are fixed
 - MEGA    = 78 chars total
@@ -1152,6 +1154,7 @@ Never mix more than 2 motifs in a single output.
 
 ### R12  Hebrew text placement
 Hebrew text is permitted in prose sections between frames, never inside frames or mixed with LTR paths/identifiers.
+Exception: Live Ticker (Section 10-E) renders SESSION-LOG.md content which uses Hebrew by design. This is user-facing prose displayed in a soft frame, not structural frame content.
 
 ### R13  Every Task() invocation is wrapped in Briefing and Recorder
 Every `Task(...)` call in next.md MUST be preceded by Section 10-B (Mission Briefing) and followed by Section 10-C (Flight Recorder). The agent is never a black box — the user always sees who is about to work, and what they did.

@@ -5,6 +5,7 @@
 # Called after each tool use by executor
 source "$(dirname "$0")/_require-jq.sh"
 require_jq
+source "$(dirname "$0")/_require-git.sh"
 
 STATE_FILE=".apex/STATE.json"
 
@@ -13,7 +14,12 @@ if [ ! -f "$STATE_FILE" ]; then
 fi
 
 # === CHECK 1: Consecutive no-change actions ===
-CURRENT_HASH=$(git diff HEAD --stat 2>/dev/null | md5sum | cut -d' ' -f1)
+GIT_DIFF_OUTPUT=$(git diff HEAD --stat 2>/dev/null)
+if [ -z "$GIT_DIFF_OUTPUT" ]; then
+  CURRENT_HASH="empty_$(date +%s%N)"
+else
+  CURRENT_HASH=$(echo "$GIT_DIFF_OUTPUT" | md5sum | cut -d' ' -f1)
+fi
 LAST_HASH=$(jq -r '.circuit_breaker.last_file_hash // ""' "$STATE_FILE" 2>/dev/null)
 MAX_NO_CHANGE=$(jq -r '.circuit_breaker.max_allowed // 3' "$STATE_FILE" 2>/dev/null)
 

@@ -8,6 +8,7 @@ Senior integration engineer. Non-negotiables: no plaintext tokens, verify webhoo
 Reliability: try/catch all external calls, return 200 from webhooks, idempotency, exponential backoff.
 Silent failure prevention: NEVER catch(e) { console.log(e) } — every external call returns {data, error}.
 Follow all executor rules including Named Failure Mode Prohibitions.
+Write RESULT.json and SUMMARY.md per executor.md TYPED RESULT OUTPUT section. Include confidence and attempt_number.
 Read stack skills from context if present.
 
 ## MANDATORY VERIFY COMMANDS (run before completing)

@@ -4,6 +4,7 @@
 # [שיפור 21] Now reads verify_commands from PLAN_META.json instead of regex
 source "$(dirname "$0")/_require-jq.sh"
 require_jq
+source "$(dirname "$0")/_require-git.sh"
 
 CURRENT_PHASE=${1:-1}
 echo "🔍 APEX Cross-Phase Regression Audit (checking Phases 1 to $((CURRENT_PHASE-1)))..."
@@ -46,6 +47,11 @@ for phase_dir in .apex/phases/*/; do
           npm|npx|node|python|python3|pytest|vitest|jest|curl|grep|bash) ;;
           *) echo "  ⚠️ SKIPPED (not in allowlist): $cmd"; continue ;;
         esac
+        # B-6: reject commands with shell metacharacters to prevent injection
+        if echo "$cmd" | grep -qE '[;\x60]|\$\(|&&|\|\|'; then
+          echo "  ⚠️ SKIPPED (shell metacharacters): $cmd"
+          continue
+        fi
         TOTAL_TESTS=$((TOTAL_TESTS + 1))
         OUTPUT=$(bash -c "$cmd" 2>&1)
         EXIT_CODE=$?
@@ -66,7 +72,7 @@ done
 # Update EvoScore in STATE.json
 if [ -f .apex/STATE.json ]; then
   REGRESSION_RATE=0
-  [ "$TOTAL_TESTS" -gt 0 ] && REGRESSION_RATE=$(echo "scale=2; $FAILURES * 100 / $TOTAL_TESTS" | bc 2>/dev/null || echo "0")
+  [ "$TOTAL_TESTS" -gt 0 ] && REGRESSION_RATE=$((FAILURES * 100 / TOTAL_TESTS))
 
   jq --argjson rate "$REGRESSION_RATE" \
      --argjson total "$TOTAL_TESTS" \

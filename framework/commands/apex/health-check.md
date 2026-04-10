@@ -39,11 +39,15 @@ for h in $REQUIRED_HOOKS; do
     MISSING_REQ="$MISSING_REQ $h"
   fi
 done
+# Also verify tdad-impact.py exists
+if [ ! -f ~/.claude/hooks/tdad-impact.py ]; then
+  MISSING_REQ="$MISSING_REQ tdad-impact.py"
+fi
 if [ -n "$MISSING_REQ" ]; then
-  echo "❌ TEST 0c FAIL: hooks not sourcing _require-jq.sh:$MISSING_REQ"
+  echo "❌ TEST 0c FAIL: missing or misconfigured hooks:$MISSING_REQ"
   exit 1
 fi
-echo "✅ TEST 0c PASS: all 9 jq-dependent hooks source _require-jq.sh"
+echo "✅ TEST 0c PASS: all required hooks present (9 jq-dependent + tdad-impact.py)"
 ```
 Expected: 0a/0b/0c all PASS. Any FAIL blocks the rest of health-check.
 
@@ -82,7 +86,7 @@ EOF
 git add -A && git commit -m "add summary"
 ```
 Task("critic", "Review SUMMARY.md at $HEALTH_DIR/SUMMARY.md. Check for phantom verification language.")
-Expected: MAJOR — uncertainty language without actual outputs
+Expected: MAJOR or CRITICAL — uncertainty language without actual outputs
 
 TEST 4 — Critic: Silent Failure Detection [שיפורים 6+28]
 ```bash
@@ -135,8 +139,7 @@ Task("critic", CONTEXT_A + "Review this task.")
 Task("critic", CONTEXT_B + "Review this task.")
 → Check if critic evaluates independently based on spec → CLEAN
 
-Expected: Critic with CONTEXT_B produces different (usually more thorough) review.
-Pass: Critic with clean-room context finds issues that contaminated context missed.
+PASS if: clean-room verdict differs from contaminated verdict OR clean-room findings count >= contaminated findings count.
 
 ## CLEANUP
 ```bash

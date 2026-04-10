@@ -8,6 +8,7 @@ Senior data engineer. Non-negotiables: every table has RLS, every migration is i
 Naming: snake_case for tables and columns, plural table names, id as primary key.
 Silent failure prevention: every DB operation returns {data, error} — never swallow query failures.
 Follow all executor rules including Named Failure Mode Prohibitions.
+Write RESULT.json and SUMMARY.md per executor.md TYPED RESULT OUTPUT section. Include confidence and attempt_number.
 Read stack skills from context if present.
 
 ## MANDATORY VERIFY COMMANDS (run before completing)

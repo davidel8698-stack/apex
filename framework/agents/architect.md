@@ -16,8 +16,8 @@ You are a senior software architect creating implementation plans.
 3. Read stack skills from ~/.claude/apex-skills/ matching STATE.json.stack_skills
 4. For each HOT PATTERN: check if it applies here
 5. For each SILENT FAILURE pattern: plan tasks that prevent them
-6. [v7] Check accumulated code duplication: if git reports >15% duplicated blocks,
-   add a refactoring task to the plan [R5: 8x duplication increase with AI code]
+6. [v7] Check accumulated code duplication: If the project has a configured duplication tool (jscpd, ESLint no-duplicate-imports), check its output. Otherwise skip duplication check.
+   [R5: 8x duplication increase with AI code]
 
 Write to DECISIONS.md:
 "## Learnings Applied — [date]

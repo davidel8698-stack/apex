@@ -6,7 +6,7 @@
 COMMAND="$1"
 
 # v7: Split chained commands and check each segment
-# Handles: cmd1 && cmd2, cmd1 ; cmd2, cmd1 | cmd2
+# Handles: cmd1 && cmd2, cmd1 ; cmd2
 check_segment() {
   local SEGMENT="$1"
 
@@ -97,13 +97,14 @@ block() {
   echo "If you believe this is a false positive, use the manual terminal."
 }
 
-# v7: Split on &&, ;, and | — check each segment independently
+# v7: Split on && and ; — check each segment independently
 # This prevents bypass via: innocent_cmd && rm -rf /
+# Note: pipes (|) are data flow, not command chains — not split
 IFS_BACKUP="$IFS"
 BLOCKED=0
 
 # Replace chain operators with newlines for splitting
-SEGMENTS=$(echo "$COMMAND" | sed 's/&&/\n/g; s/;/\n/g; s/|/\n/g')
+SEGMENTS=$(echo "$COMMAND" | sed 's/&&/\n/g; s/;/\n/g')
 
 while IFS= read -r segment; do
   [ -z "$segment" ] && continue

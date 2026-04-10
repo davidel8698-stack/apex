@@ -39,8 +39,26 @@ Else:
 4. Read SPEC.md, DECISIONS.md, TASK_MAP.md
 5. Determine specialist needed
 6. Build context using CONTEXT_BUDGET.json limits [שיפור 19]
-7. Task("[agent]", "Execute: [$ARGUMENTS]. Context in SPEC, DECISIONS, TASK_MAP.")
-8. Task("critic", "Review: [$ARGUMENTS]. Read git diff HEAD~1. Diff-based review.") [שיפור 25]
+7. ## RENDER: Mission Briefing (Section 10-B abbreviated — agent card + task goal only)
+   Task("[agent]", "Execute: [$ARGUMENTS]. Context in SPEC, DECISIONS, TASK_MAP.")
+   ## RENDER: Flight Recorder (Section 10-C abbreviated — agent + verdict)
+8. ## RENDER: Mission Briefing (Section 10-B abbreviated — agent card + task goal only)
+   Task("critic", "Review: [$ARGUMENTS]. Read git diff HEAD~1. Diff-based review.") [שיפור 25]
+   ## RENDER: Flight Recorder (Section 10-C abbreviated — agent + verdict)
+
+  If critic verdict is FAIL:
+    Read REFLEXION.md from critic output.
+    STATE.reflexion.current_unit_attempts++
+    If STATE.reflexion.current_unit_attempts < 2:
+      "🔄 Quick task reflexion. Retrying (attempt ${STATE.reflexion.current_unit_attempts}/2)..."
+      Re-invoke executor with REFLEXION.md in context.
+      Re-invoke critic.
+    Else:
+      "❌ Quick task failed after 2 attempts."
+      STOP.
+  If critic verdict is PASS:
+    STATE.reflexion.current_unit_attempts = 0
+
 9. bash ~/.claude/hooks/phantom-check.sh .apex/phases/quick/${TASK_ID}-SUMMARY.md [שיפור 17]
 10. Update learnings if notable
 11. Update STATE.json.tokens [שיפור 20]

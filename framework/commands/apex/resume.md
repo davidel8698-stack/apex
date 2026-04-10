@@ -89,6 +89,9 @@ If STATE.autopilot.enabled == true:
     PAUSE_AUTOPILOT = true
     REASON = "Mandatory human checkpoint after 3 autopilot phases"
 
+  # Null guard: skip mode-specific breakers if autopilot not configured through advisor
+  If STATE.autopilot.mode == null: skip mode-specific breakers (autopilot not configured through advisor)
+
   # Breaker 4: Mode-specific conditions
   If STATE.autopilot.mode == "until" AND next_task == STATE.autopilot.stop_at_task:
     PAUSE_AUTOPILOT = true

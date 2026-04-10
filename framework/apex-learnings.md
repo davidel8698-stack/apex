@@ -106,5 +106,5 @@ below baseline (22.22% vs 26.26%). Failure knowledge is +14.3% more valuable.
 
 ---
 
-*Citation check: run verify-learnings.sh daily*
+*Citation check: run verify-learnings.sh on session start (via settings.json SessionStart hook)*
 *v7: Tier enforcement + staleness detection + write gates active*

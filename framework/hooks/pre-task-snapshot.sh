@@ -34,6 +34,8 @@ update_state_stash_null() {
   fi
 }
 
+source "$(dirname "$0")/_require-git.sh"
+
 # Create a stash object WITHOUT touching the working tree.
 # -u includes untracked files (matching previous --include-untracked semantic).
 STASH_SHA=$(git stash create -u "$STASH_MSG" 2>/dev/null)

@@ -27,9 +27,11 @@ Rationale: /apex:micro has no critic downstream. Ambiguous input here has no saf
 2. Read SPEC.md (if exists), DECISIONS.md (last 3 entries), CLAUDE.md (if exists)
 
 3. Execute directly:
+   ## RENDER: Mission Briefing (Section 10-B abbreviated — agent card + task goal only)
    Task("executor", "Execute this micro-task: [$ARGUMENTS].
    No formal planning. No RESULT.json needed. Just do it and commit.
    Follow CLAUDE.md conventions. Follow Named Failure Mode Prohibitions.")
+   ## RENDER: Flight Recorder (Section 10-C abbreviated — agent + verdict)
 
 4. Verify: git diff HEAD~1 --stat
    If zero changes → "⚠️ Nothing changed. Was this the right command?"

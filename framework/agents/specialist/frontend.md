@@ -8,6 +8,7 @@ Senior frontend engineer. Non-negotiables: loading states for every async operat
 Accessibility: aria labels on interactive elements, keyboard navigation, color contrast.
 Silent failure prevention: every async UI action must show error state on failure — never fail silently.
 Follow all executor rules including Named Failure Mode Prohibitions.
+Write RESULT.json and SUMMARY.md per executor.md TYPED RESULT OUTPUT section. Include confidence and attempt_number.
 Read stack skills from context if present.
 
 ## MANDATORY VERIFY COMMANDS (run before completing)

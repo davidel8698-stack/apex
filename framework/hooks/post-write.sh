@@ -2,7 +2,16 @@
 FILE="$1"
 
 if [[ "$FILE" == *.ts ]] || [[ "$FILE" == *.tsx ]]; then
-  npx tsc --noEmit --skipLibCheck 2>&1 | head -5
+  # BLOCKING: TypeScript type check (only if project has tsconfig.json)
+  if [ -f tsconfig.json ] && command -v npx &>/dev/null; then
+    TSC_OUTPUT=$(npx tsc --noEmit --skipLibCheck 2>&1)
+    TSC_EXIT=$?
+    if [ "$TSC_EXIT" -ne 0 ]; then
+      echo "$TSC_OUTPUT" | head -10
+      echo "🚫 BLOCKED: TypeScript errors detected (exit code $TSC_EXIT)"
+      exit 2
+    fi
+  fi
 
   # BLOCKING: secret detection
   if grep -E "(password|secret|token|key|api_key)\s*=\s*['\"][a-zA-Z0-9_-]{8,}" "$FILE" 2>/dev/null; then

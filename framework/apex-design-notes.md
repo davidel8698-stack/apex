@@ -56,3 +56,37 @@ Reference the research round (R1-R8) for full evidence.
 - Haiku routing for A-level tasks: ~90% quality at 1/3 cost (R7: model comparison)
 - confidence + attempt_number in RESULT.json: enables routing decisions (R3: typed artifacts)
 - Type-specific decay for learnings: safety=∞, framework=3mo, project=30d (R6: knowledge half-lives)
+
+## Environment Note: OneDrive
+OneDrive real-time sync can corrupt `.apex/` state files during writes (observed: STATE.json zeroed, write conflicts on concurrent access). Mitigation: exclude `.apex/` from OneDrive sync via Settings → Choose folders, or relocate project outside OneDrive.
+
+## Improvement Index
+
+Known שיפור (improvement) numbers referenced across the framework:
+
+| # | Description | Primary location |
+|---|---|---|
+| 2 | Verification ladder per verify_level | architect.md |
+| 3 | Edge case handling requirements | architect.md, executor.md |
+| 6 | Silent catch detection in post-write.sh | post-write.sh, executor.md |
+| 7 | Reflexion mode for retries | executor.md |
+| 11 | TASK_MAP.md repository map generation | executor.md, generate-task-map.sh, quick.md |
+| 12 | Named Failure Mode Prohibitions | executor.md, health-check.md |
+| 13 | Trajectory self-monitoring | executor.md |
+| 14 | TDAD impact-aware testing | executor.md |
+| 16 | Cross-phase regression check | verifier.md |
+| 17 | Phantom verification detection | quick.md, verifier.md |
+| 19 | Context budget per-agent limits | executor.md, CONTEXT_BUDGET.schema.json |
+| 20 | Token accounting in STATE.json | quick.md |
+| 21 | PLAN_META.json structured reading (replacing regex) | architect.md, verifier.md, cross-phase-audit.sh, generate-task-map.sh |
+| 22 | WAVE_MAP.json generation | architect.md |
+| 23 | Phase tagging on pass + rollback | verifier.md, recover.md |
+| 24 | Stack-specific skill files | executor.md |
+| 25 | Diff-based critic review | quick.md |
+| 26 | Enhanced phantom detection with real files | health-check.md |
+| 32 | Clean-room critic compliance | health-check.md |
+| 33 | Typed RESULT.json output | executor.md, RESULT.schema.json |
+| 37 | Honest uncertainty mechanism | executor.md |
+| 39 | spec_ref links per task | architect.md, executor.md, PLAN_META.schema.json |
+| 40 | Anti-rationalization table | executor.md |
+| 41 | Circuit breaker awareness | executor.md |

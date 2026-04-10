@@ -3,6 +3,7 @@
 # Usage: bash phase-tag.sh [phase_id]
 source "$(dirname "$0")/_require-jq.sh"
 require_jq
+source "$(dirname "$0")/_require-git.sh"
 
 PHASE_ID=${1:-"unknown"}
 TAG_NAME="apex/phase-${PHASE_ID}-complete"

@@ -75,8 +75,7 @@ if [ -n "$KILL_RATE" ] && [ "$KILL_RATE" -ge "$THRESHOLD" ]; then
   echo "PASS: mutation kill rate ${KILL_RATE}% meets threshold"
   exit 0
 else
-  echo "ADVISORY: mutation kill rate ${KILL_RATE:-0}% below threshold ${THRESHOLD}%"
-  echo "Top surviving mutants indicate weak test areas. Consider strengthening tests."
-  # Advisory, not blocking — exit 0 to not halt pipeline
-  exit 0
+  echo "BELOW THRESHOLD: mutation kill rate ${KILL_RATE:-0}% below ${THRESHOLD}% minimum"
+  echo "Top surviving mutants indicate weak test areas."
+  exit 2
 fi

@@ -47,7 +47,7 @@ Extract and substitute into Section 6 template:
   QUALITY METRICS:
     EvoScore regression from STATE.evoscore.regression_rate
     Comprehension gates N/total
-    Mutation kill rate (if available)
+    Mutation kill rate from STATE.mutation_scores (show "N/A" if no scores exist)
 
   SESSION HEALTH:
     Completed/Failed/Partial from STATE.session
@@ -58,6 +58,9 @@ Extract and substitute into Section 6 template:
     State: ENABLED/DISABLED/PAUSED from STATE.autopilot.enabled and paused_reason
     Mode from STATE.autopilot.mode
     Tasks/phases in autopilot
+    Consecutive sessions from STATE.autopilot.consecutive_sessions
+    Previous last completed task from STATE.autopilot.previous_last_completed_task
+    Previous tasks completed in autopilot from STATE.autopilot.previous_tasks_completed_in_autopilot
     Advisor risk score from STATE.autopilot.advisor_risk_score
 
   LEARNINGS:

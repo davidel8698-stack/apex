@@ -96,7 +96,7 @@ If you need data from an earlier read, re-read the file — do not assume cached
 Before committing, check if IMPACTED_TESTS.txt exists in context.
 If yes: run ONLY those tests (not all tests — not guessing).
 ```
-npm test -- --testPathPattern="$(cat .apex/IMPACTED_TESTS.txt)"
+npm test -- --testPathPattern="$(cat .apex/IMPACTED_TESTS.txt | tr '\n' '|' | sed 's/|$//')"
 ```
 If any impacted test fails → fix before committing.
 If IMPACTED_TESTS.txt is absent → run standard verify commands from <verify>.

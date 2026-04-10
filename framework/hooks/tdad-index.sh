@@ -2,6 +2,8 @@
 # Builds code-test dependency graph for TDAD impact analysis
 # Run once after architect creates plans, before Phase 01 execution
 
+source "$(dirname "$0")/_require-git.sh"
+
 echo "🔬 TDAD: Building code-test dependency graph..."
 
 if ! command -v python3 &>/dev/null; then
