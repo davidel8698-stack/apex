@@ -61,8 +61,10 @@ If no:
        was_autopilot: false,
        consecutive_sessions: 0,
        tasks_completed_in_autopilot: 0,
+       previous_tasks_completed_in_autopilot: 0,
        phases_completed_in_autopilot: 0,
        last_completed_task: null,
+       previous_last_completed_task: null,
        last_healthy_tag: null,
        advisor_last_run: null,
        advisor_risk_score: null

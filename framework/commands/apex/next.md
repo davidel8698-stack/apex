@@ -271,7 +271,56 @@ Update STATE: {status: "critic_needed"}
 STATE: current_stage=build, status=critic_needed
 ─────────────────────────────────────────────────────────
 
+## PHANTOM CHECK — second defense layer before clean-room critic
+## Rationale: critic never sees SUMMARY.md (clean-room), so SUMMARY phantom language
+## is invisible to critic. The phantom-check hook greps SUMMARY.md for uncertainty
+## phrases ("should", "seems", "I believe", etc.) and fails fast before critic runs.
+bash ~/.claude/hooks/phantom-check.sh .apex/phases/${current_phase}/${NEXT_UNIT}-SUMMARY.md
+PHANTOM_EXIT=$?
+
+If PHANTOM_EXIT == 2: phantom language detected in SUMMARY.md.
+  # Synthesize REFLEXION.md (normally written by critic on FAIL)
+  Write .apex/phases/${current_phase}/${NEXT_UNIT}-REFLEXION.md:
+    "# Phantom Verification Failure
+    ## What Failed
+    SUMMARY.md contained uncertainty language (should/seems/I believe/probably/...)
+    The phantom-check hook blocked advancement before clean-room critic ran.
+    ## For Next Attempt
+    1. Rewrite SUMMARY.md with concrete command outputs only.
+    2. Replace every 'should pass' / 'seems to work' with actual pasted test output.
+    3. If you cannot produce concrete evidence for a claim, mark the criterion
+       verified=false in RESULT.json and explain why in 'issues_found'.
+    ## What NOT to Do Again
+    Never write 'I believe' or 'appears to' in SUMMARY.md — those are phantom verification."
+  # Synthesize CRITIC.md with FAIL verdict — verdict handler reads this
+  Write .apex/phases/${current_phase}/${NEXT_UNIT}-CRITIC.md:
+    "# Clean-Room Review: ${NEXT_UNIT}
+    ## Confidence: 0/0 criteria verified | N/A unverified | N/A missing
+    ## Phantom Verification Failure
+    SUMMARY.md contained uncertainty language. Detected by phantom-check hook
+    before clean-room critic dispatch. Critic did not run.
+    ## Verdict: FAIL
+    Phantom verification is treated as a critical failure. Rewrite SUMMARY.md
+    with concrete command outputs and retry."
+  # Skip the CLEAN-ROOM CRITIC dispatch below. Verdict handler will see FAIL.
+  PHANTOM_SKIP_CRITIC = true
+
+Else if PHANTOM_EXIT == 1:
+  # Advisory: phantom hook couldn't find SUMMARY.md file. Log warning, continue to critic.
+  bash ~/.claude/hooks/session-log.sh "warning" "phantom-check could not locate SUMMARY.md for ${NEXT_UNIT}"
+  PHANTOM_SKIP_CRITIC = false
+
+Else (PHANTOM_EXIT == 0):
+  # SUMMARY uses concrete language — proceed to clean-room critic normally.
+  PHANTOM_SKIP_CRITIC = false
+
 ## CLEAN-ROOM CRITIC
+## GUARD: If PHANTOM_SKIP_CRITIC == true, skip this ENTIRE section (CRITIC_CONTEXT,
+## security persona, Mission Briefing, Task("critic"), Flight Recorder, framework_overhead
+## update) and proceed directly to PROCESS VERDICT + AUTONOMY UPDATE below. The verdict
+## handler will read the synthetic CRITIC.md written by phantom-check and run its FAIL path.
+If PHANTOM_SKIP_CRITIC: skip to PROCESS VERDICT section below.
+
 CRITIC_CONTEXT = {
   task_spec: from PLAN_META.json (done_criteria, edge_cases, spec_ref),
   diff: "$(git diff HEAD~1)",

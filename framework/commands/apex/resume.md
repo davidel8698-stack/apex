@@ -71,14 +71,15 @@ If STATE.autopilot.enabled == true:
   PAUSE_AUTOPILOT = false
 
   # Breaker 1: Session loop — same task across multiple resumes
-  If STATE.autopilot.last_completed_task == previous session's last_completed_task
+  If STATE.autopilot.last_completed_task != null
+     AND STATE.autopilot.last_completed_task == STATE.autopilot.previous_last_completed_task
      AND STATE.autopilot.consecutive_sessions >= 2:
     PAUSE_AUTOPILOT = true
     REASON = "Stuck: same task across 2+ sessions — possible infinite loop"
 
   # Breaker 2: Phase stall — no progress across 3 sessions
   If STATE.autopilot.consecutive_sessions >= 3
-     AND tasks_completed_in_autopilot unchanged across sessions:
+     AND STATE.autopilot.tasks_completed_in_autopilot == STATE.autopilot.previous_tasks_completed_in_autopilot:
     PAUSE_AUTOPILOT = true
     REASON = "No progress across 3 consecutive sessions"
 
@@ -115,6 +116,20 @@ If STATE.autopilot.enabled == true:
     Display: "⏸️ Autopilot paused: " + REASON
     Display: "/apex:next to continue manually."
     STOP.
+
+  # After breakers: refresh "previous_" snapshot fields for next session's comparison.
+  # CRITICAL ORDERING: This MUST run only in the success path (no breaker tripped).
+  # If a breaker tripped above, control already hit STOP inside the PAUSE block and
+  # never reaches here — leaving previous_ fields unchanged.
+  #
+  # WHY this matters: If session X's breaker fires and the user force-resumes to
+  # session X+1, the breaker MUST fire again because the underlying problem isn't
+  # solved. Updating previous_ fields on the pause path would silently reset the
+  # comparison baseline, hiding the stuck state from the next session's check.
+  # The STOP above + this guard together enforce "pause path = no refresh".
+  If PAUSE_AUTOPILOT == false:
+    STATE.autopilot.previous_last_completed_task = STATE.autopilot.last_completed_task
+    STATE.autopilot.previous_tasks_completed_in_autopilot = STATE.autopilot.tasks_completed_in_autopilot
 
   # All clear — auto-continue
   Display: "🤖 Autopilot: Phase [current_phase], Task [next_task] → continuing. (Stop: set autopilot.enabled=false in STATE.json)"

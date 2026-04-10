@@ -15,7 +15,20 @@ if echo "$EXECUTOR_AGENTS" | grep -qw "$AGENT"; then
     exit 2
   fi
 
-  DIFF=$(git diff HEAD --stat 2>/dev/null)
+  # Capture stderr and exit code separately so we can distinguish:
+  #   exit 2 = git works, zero changes → real hallucination suspicion
+  #   exit 1 = git error → advisory, cannot verify (NOT a hallucination verdict)
+  #   exit 0 = git works, changes present → validated
+  DIFF=$(git diff HEAD --stat 2>&1)
+  GIT_EXIT=$?
+
+  if [ $GIT_EXIT -ne 0 ]; then
+    echo "⚠️ APEX GUARD: git error after $AGENT — cannot verify agent activity" >&2
+    echo "   git exit code: $GIT_EXIT" >&2
+    echo "   git stderr: $DIFF" >&2
+    exit 1
+  fi
+
   if [ -z "$DIFF" ]; then
     echo "❌ APEX GUARD: No git changes after $AGENT — possible hallucination"
     exit 2

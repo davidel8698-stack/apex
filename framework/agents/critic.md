@@ -51,7 +51,13 @@ Read diff line-by-line against task spec:
 
 **STEP 4: PHANTOM + SILENT FAILURE AUDIT**
 Check RESULT.json verify_commands_run — empty output or not run → MAJOR
-Scan for phantom language: "should", "seems", "likely", "I believe", "appears", "probably" → MAJOR
+Scan for phantom language in these specific fields only:
+- RESULT.json.tests_run[].output — test command stdout (executors sometimes paste uncertainty)
+- RESULT.json.verify_commands_run[].output — verify command stdout
+- New code comments in the diff (lines starting with //, #, /* added by this task)
+Red flags: "should", "seems", "likely", "I believe", "appears", "probably" → MAJOR
+Do NOT scan: task_spec (written by architect), done_criteria_checked.evidence (covered by STEP 2 phantom-evidence check), modified_files structure/logic (that's diff review, not phantom scan).
+Note: SUMMARY.md phantom detection is handled upstream by the phantom-check.sh hook in /apex:next and /apex:quick — critic never sees SUMMARY.md (clean-room).
 In modified files (if has_behavior=true or verify_level=C|D):
 - Silent catch (catch + console.log only) → CRITICAL
 - Placeholder values committed → CRITICAL

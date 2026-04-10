@@ -13,20 +13,27 @@ if git tag -l "$TAG_NAME" | grep -q "$TAG_NAME"; then
   exit 0
 fi
 
-# Create annotated tag
-git tag -a "$TAG_NAME" -m "APEX: Phase $PHASE_ID verified and complete ($(date -I))" 2>/dev/null
+# Create annotated tag — capture stderr + exit code for diagnostics on failure
+TAG_OUTPUT=$(git tag -a "$TAG_NAME" -m "APEX: Phase $PHASE_ID verified and complete ($(date -I))" 2>&1)
+TAG_EXIT=$?
 
-if [ $? -eq 0 ]; then
-  # Update STATE.json
+# FILESYSTEM-LEVEL VERIFICATION — matches pre-task-snapshot.sh doctrine.
+# Don't trust $? alone; confirm the tag is actually in git tag -l.
+if git tag -l "$TAG_NAME" | grep -qF "$TAG_NAME"; then
+  # Update STATE.json only after filesystem confirms the tag exists
   if [ -f .apex/STATE.json ]; then
     jq --arg phase "$PHASE_ID" --arg tag "$TAG_NAME" \
        '.phase_tags[$phase] = $tag' \
        .apex/STATE.json > /tmp/state_tag.json && mv /tmp/state_tag.json .apex/STATE.json
   fi
-  echo "✅ Phase tag created: $TAG_NAME"
+  echo "✅ Phase tag verified: $TAG_NAME"
   echo "   Rollback available: git revert --no-commit HEAD..$TAG_NAME"
+  exit 0
 else
-  echo "⚠️ Failed to create tag $TAG_NAME (not in git repo?)"
+  # Tag creation did not land — fail loud so the caller can decide.
+  echo "🚫 PHASE TAG: creation unverified at filesystem level" >&2
+  echo "   tag=$TAG_NAME phase=$PHASE_ID" >&2
+  echo "   git exit code: $TAG_EXIT" >&2
+  echo "   git stderr: $TAG_OUTPUT" >&2
+  exit 2
 fi
-
-exit 0
