@@ -31,6 +31,39 @@ if git tag -l "$TAG_NAME" | grep -qF "$TAG_NAME"; then
     _state_update --arg phase "$PHASE_ID" --arg tag "$TAG_NAME" \
        '.phase_tags[$phase] = $tag'
   fi
+  # DORA metric collection: lead_time + deployment_freq
+  if [ -f .apex/STATE.json ]; then
+    # Lead time: hours from phase PLAN_META created_at to now
+    PLAN_META=".apex/phases/${PHASE_ID}/PLAN_META.json"
+    if [ -f "$PLAN_META" ]; then
+      CREATED_AT=$(jq -r '.created_at // empty' "$PLAN_META" 2>/dev/null)
+      if [ -n "$CREATED_AT" ]; then
+        CREATED_TS=$(date -d "$CREATED_AT" +%s 2>/dev/null || date -j -f "%Y-%m-%dT%H:%M:%S" "${CREATED_AT%%.*}" +%s 2>/dev/null || echo "")
+        NOW_TS=$(date +%s)
+        if [ -n "$CREATED_TS" ]; then
+          LEAD_HOURS=$(awk "BEGIN {printf \"%.1f\", ($NOW_TS - $CREATED_TS) / 3600}")
+          # Update rolling average lead_time
+          _state_update --argjson hours "$LEAD_HOURS" \
+            --arg now "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            'if .dora.lead_time_avg == null then .dora.lead_time_avg = $hours
+             else .dora.lead_time_avg = ((.dora.lead_time_avg + $hours) / 2)
+             end | .dora.last_updated = $now'
+        fi
+      fi
+    fi
+    # Deployment freq: phases_completed / days since project created
+    CREATED_AT_PROJ=$(jq -r '.created_at // empty' .apex/STATE.json 2>/dev/null)
+    PHASES_DONE=$(jq -r '.phases_completed // 0' .apex/STATE.json 2>/dev/null)
+    if [ -n "$CREATED_AT_PROJ" ] && [ "$PHASES_DONE" -gt 0 ] 2>/dev/null; then
+      PROJ_TS=$(date -d "$CREATED_AT_PROJ" +%s 2>/dev/null || date -j -f "%Y-%m-%dT%H:%M:%S" "${CREATED_AT_PROJ%%.*}" +%s 2>/dev/null || echo "")
+      NOW_TS=$(date +%s)
+      if [ -n "$PROJ_TS" ]; then
+        DAYS_ELAPSED=$(awk "BEGIN {d=($NOW_TS - $PROJ_TS) / 86400; if(d<1) d=1; printf \"%.2f\", $PHASES_DONE / d}")
+        _state_update --argjson freq "$DAYS_ELAPSED" \
+          '.dora.deployment_freq = $freq'
+      fi
+    fi
+  fi
   echo "✅ Phase tag verified: $TAG_NAME"
   echo "   Rollback available: git revert --no-commit HEAD..$TAG_NAME"
   exit 0

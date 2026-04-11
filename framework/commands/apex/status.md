@@ -49,6 +49,13 @@ Extract and substitute into Section 6 template:
     Comprehension gates N/total
     Mutation kill rate from STATE.mutation_scores (show "N/A" if no scores exist)
 
+  DORA METRICS:
+    Lead Time: STATE.dora.lead_time_avg hours (avg phase completion time) or "N/A" if null
+    Deploy Freq: STATE.dora.deployment_freq phases/day or "N/A" if null
+    Change Fail Rate: STATE.dora.change_failure_rate as percentage or "N/A" if null
+    Recovery Time: STATE.dora.recovery_time_avg hours or "N/A" if null
+    Last Updated: STATE.dora.last_updated or "never"
+
   SESSION HEALTH:
     Completed/Failed/Partial from STATE.session
     Consecutive failures, rotations

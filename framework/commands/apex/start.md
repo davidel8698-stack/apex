@@ -76,6 +76,7 @@ If no:
      tokens: {total_input: 0, total_output: 0, framework_overhead: 0, overhead_pct: 0, productive: 0, by_phase: {}, by_agent: {}, by_task: {}}
      phase_tags: {}
      stack_skills: []
+     dora: {lead_time_avg: null, deployment_freq: null, change_failure_rate: null, recovery_time_avg: null, last_updated: null}
      mutation_scores: {}
      autonomy: {
        by_verify_level: {

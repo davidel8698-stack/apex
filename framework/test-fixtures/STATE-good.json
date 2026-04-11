@@ -66,6 +66,13 @@
     "last_indexed": null,
     "total_nodes": 0
   },
+  "dora": {
+    "lead_time_avg": null,
+    "deployment_freq": null,
+    "change_failure_rate": null,
+    "recovery_time_avg": null,
+    "last_updated": null
+  },
   "mutation_scores": {},
   "phase_tags": {},
   "pending_notifications": [],

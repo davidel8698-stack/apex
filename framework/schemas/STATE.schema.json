@@ -36,6 +36,7 @@
     "units_total",
     "units_completed",
     "pending_notifications",
+    "dora",
     "lock",
     "spec_version",
     "strict_mode",
@@ -389,6 +390,19 @@
         "all_passed": { "type": "boolean" },
         "failed_agents": { "type": "array", "items": { "type": "string" } },
         "test_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "dora": {
+      "type": "object",
+      "description": "DORA self-monitoring metrics for engineering delivery tracking",
+      "additionalProperties": false,
+      "required": ["lead_time_avg", "deployment_freq", "change_failure_rate", "recovery_time_avg", "last_updated"],
+      "properties": {
+        "lead_time_avg": { "type": ["number", "null"], "description": "Average lead time in hours from phase start to phase completion" },
+        "deployment_freq": { "type": ["number", "null"], "description": "Phases completed per day (rolling average)" },
+        "change_failure_rate": { "type": ["number", "null"], "minimum": 0, "maximum": 1, "description": "Fraction of phases that required revert or re-execution" },
+        "recovery_time_avg": { "type": ["number", "null"], "description": "Average hours from failure detection to recovery" },
+        "last_updated": { "type": ["string", "null"], "format": "date-time" }
       }
     },
     "mutation_scores": {
