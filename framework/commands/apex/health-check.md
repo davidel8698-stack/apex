@@ -113,6 +113,38 @@ else
 fi
 ```
 
+### TEST 0g: Structural Contract Validation [R-022]
+Verify `.apex/` directory structure against DIRECTORY-CONTRACT.md.
+```bash
+CONTRACT="$HOME/.claude/schemas/DIRECTORY-CONTRACT.md"
+if [ -f "$CONTRACT" ]; then
+  if [ -d ".apex" ]; then
+    MISSING_DIRS=""
+    for dir in pre-build phases backups debate-log comprehension-gates todos threads seeds backlog; do
+      [ -d ".apex/$dir" ] || MISSING_DIRS="$MISSING_DIRS $dir"
+    done
+    if [ -z "$MISSING_DIRS" ]; then
+      echo "✅ TEST 0g PASS: all contract directories present"
+    else
+      echo "❌ TEST 0g FAIL: missing directories:$MISSING_DIRS"
+    fi
+    MISSING_FILES=""
+    for f in STATE.json SPEC.md COMPLEXITY.md; do
+      [ -f ".apex/$f" ] || MISSING_FILES="$MISSING_FILES $f"
+    done
+    if [ -z "$MISSING_FILES" ]; then
+      echo "✅ TEST 0g PASS: required files present"
+    else
+      echo "⚠️ TEST 0g WARN: missing files:$MISSING_FILES (may be pre-planning)"
+    fi
+  else
+    echo "⚠️ TEST 0g SKIP: no .apex/ directory (not an APEX project)"
+  fi
+else
+  echo "❌ TEST 0g FAIL: DIRECTORY-CONTRACT.md not found at $CONTRACT"
+fi
+```
+
 ## SETUP: Create temp test environment [שיפור 26]
 ```bash
 HEALTH_DIR=$(mktemp -d)
