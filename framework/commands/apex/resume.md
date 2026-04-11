@@ -22,6 +22,16 @@ Every output ends with the signature line.
 3. Read .apex/SPEC.md summary (first 3 sections only)
 4. Read latest DECISIONS.md entries (last 10)
 
+## MEMORY RELOAD
+If .apex/todos/ OR .apex/threads/ OR .apex/seeds/ OR .apex/backlog/ exist:
+  5. Read .apex/todos/ — list pending action items (filename + first line)
+  6. Read .apex/threads/ — list active threads (exclude .archived files)
+  7. Read .apex/seeds/ — list seeds (filename + first line)
+  8. Read .apex/backlog/ — count deferred items
+  9. Display memory summary in resume output (inside soft frame):
+     "📋 Memory: [N] todos · [M] threads · [K] seeds · [J] backlog"
+  10. If .apex/memory-synthesis-log.md exists, show last dream-cycle timestamp.
+
 ## AUTO-PAUSE RECOVERY
 If STATE.session exists AND STATE.session.auto_paused == true:
   Display in user's configured language (from CLAUDE.md User Profile):
