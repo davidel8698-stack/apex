@@ -1167,6 +1167,28 @@ Section 10-A Identity Cards are rendered inside Mission Briefings (as the "Agent
 
 ---
 
+## 17. APEXSkin — Configurable Template Variables
+
+APEXSkin v1: generation via variable substitution. Projects and users can override
+these variables to produce customized visual output. Default values preserve the
+canonical Peak Protocol appearance.
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `{{project_name}}` | string | `"APEX"` | Project name rendered in banners, headers, and ceremony outputs |
+| `{{theme_color}}` | enum | `"summit"` | Visual motif preference: `"summit"` (▲), `"nexus"` (●━●), or `"prism"` (◆◈◇) |
+| `{{sigil_variant}}` | enum | `"stacked"` | Sigil style in headers: `"minimal"` (▲), `"stacked"` (▲/▲▲▲), `"triad"` (▲▲▲), `"ascending"` (▲△▲) |
+| `{{frame_style}}` | enum | `"standard"` | Frame preference: `"mega"` (78 chars), `"standard"` (68 chars), `"soft"` (no box-drawing) |
+| `{{version_tag}}` | string | `"v7"` | Version string in signature lines and headers |
+| `{{signature_line}}` | boolean | `true` | Whether to render the closing signature line |
+
+**Resolution order:** PROJECT-APEX.md overrides → APEX.md defaults → built-in defaults above.
+
+**Constraint:** Variable substitution MUST NOT alter frame widths or character counts
+within fixed-width frames. Variables resolve before rendering, never mid-frame.
+
+---
+
 ## FINAL
 
 APEX is the first CLI framework with a cinematic visual identity.
