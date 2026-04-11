@@ -53,6 +53,7 @@ If no:
      current_wave: null
      status: "initializing"
      lock: null
+     spec_version: ""
      created_at: now
      updated_at: now
      phases_total: 0

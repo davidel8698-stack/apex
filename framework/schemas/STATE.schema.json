@@ -37,6 +37,7 @@
     "units_completed",
     "pending_notifications",
     "lock",
+    "spec_version",
     "created_at",
     "updated_at"
   ],
@@ -197,9 +198,36 @@
         "total_output": { "type": "integer", "minimum": 0 },
         "framework_overhead": { "type": "integer", "minimum": 0 },
         "overhead_pct": { "type": "number", "minimum": 0 },
-        "by_phase": { "type": "object" },
-        "by_agent": { "type": "object" },
-        "by_task": { "type": "object" },
+        "by_phase": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "calls": { "type": "integer", "minimum": 0 },
+              "tokens": { "type": "integer", "minimum": 0 }
+            }
+          }
+        },
+        "by_agent": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "calls": { "type": "integer", "minimum": 0 },
+              "tokens": { "type": "integer", "minimum": 0 }
+            }
+          }
+        },
+        "by_task": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "calls": { "type": "integer", "minimum": 0 },
+              "tokens": { "type": "integer", "minimum": 0 }
+            }
+          }
+        },
         "productive": { "type": "integer", "minimum": 0 }
       }
     },
@@ -371,6 +399,7 @@
     "units_total": { "type": "integer", "minimum": 0 },
     "units_completed": { "type": "integer", "minimum": 0 },
     "lock": { "type": ["string", "null"] },
+    "spec_version": { "type": "string", "description": "SHA256 hash of SPEC.md content for drift detection" },
     "created_at": { "type": "string", "format": "date-time" },
     "updated_at": { "type": "string", "format": "date-time" }
   }
