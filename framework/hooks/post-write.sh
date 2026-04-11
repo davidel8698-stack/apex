@@ -3,7 +3,7 @@ set -u
 FILE="${1:-}"
 
 # BLOCKING: secret detection (all source files — not gated on file type)
-if grep -E "(password|secret|token|key|api_key)\s*=\s*['\"][a-zA-Z0-9_-]{8,}" "$FILE" 2>/dev/null; then
+if grep -E "(password|secret|token|key|api_key|credential|private_key|bearer)\s*[:=]\s*['\"][a-zA-Z0-9_/+=-]{8,}" "$FILE" 2>/dev/null; then
   echo "🚫 BLOCKED: Potential hardcoded secret in $FILE"
   exit 2
 fi
@@ -30,6 +30,17 @@ if [[ "$FILE" == *.ts ]] || [[ "$FILE" == *.tsx ]]; then
   if grep -A2 "catch" "$FILE" 2>/dev/null | grep -q "console\." && \
      ! grep -A3 "catch" "$FILE" 2>/dev/null | grep -q "setError\|toast\|alert\|throw\|return.*error"; then
     echo "⚠️ WARNING: Potential silent catch in $FILE — errors must reach the user"
+  fi
+fi
+
+# ADVISORY: conventional commit format validation [R-027]
+# Detects commit message files (COMMIT_EDITMSG, .commit-msg) and validates format
+if [[ "$FILE" == *COMMIT_EDITMSG ]] || [[ "$FILE" == *.commit-msg ]] || [[ "$FILE" == *commit-message* ]]; then
+  FIRST_LINE=$(head -1 "$FILE" 2>/dev/null | tr -d '\r')
+  if [ -n "$FIRST_LINE" ] && [[ ! "$FIRST_LINE" =~ ^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\(.+\))?!?:[[:space:]].+ ]]; then
+    echo "⚠️ WARNING: Commit message does not follow conventional format: type(scope): description"
+    echo "   Valid types: feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert"
+    echo "   Got: $FIRST_LINE"
   fi
 fi
 
