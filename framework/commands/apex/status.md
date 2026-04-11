@@ -31,6 +31,11 @@ Extract and substitute into Section 6 template:
   [stage] → [status]     → STATE.current_stage → STATE.status
   [N] / [total] WAVE [W] → STATE.current_phase / STATE.total_phases · STATE.current_wave
 
+  ELAPSED TIME:
+    Compute elapsed = now - STATE.created_at
+    Format as "[N]d [N]h" (e.g., "3d 14h")
+    If created_at missing or null: show "N/A"
+
   TASK PROGRESS:
     nodal bar: build with ●/◐/○ based on completed/active/pending
     percentage: (tasks_done / total_tasks) * 100

@@ -211,6 +211,7 @@ The information cockpit. Full project telemetry in a single view.
 ║    ◉  LEVEL           [N] · [level_name]                                   ║
 ║    ◉  STAGE           [stage] → [status]                                   ║
 ║    ◉  PHASE           [N] / [total]         WAVE  [W]                      ║
+║    ◉  ELAPSED         [N]d [N]h                                            ║
 ║                                                                            ║
 ╠════════════════════════════════════════════════════════════════════════════╣
 ║                                                                            ║
