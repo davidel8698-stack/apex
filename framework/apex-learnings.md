@@ -7,6 +7,7 @@
 - **COLD** (archive): Entries >90 days without re-confirmation. Never auto-loaded.
 - **Write gates**: Failure-derived → WARM immediately. Success-derived → require 2-project threshold.
 - **Confidence lifecycle**: CANDIDATE (1 project) → VALIDATED (2+ projects) → ESTABLISHED (5+ projects)
+- **Evidence counter**: Each entry carries `Evidence count: N` — the number of times this pattern has been independently confirmed across projects. Incremented by critic on re-confirmation. Drives confidence promotion.
 
 R6 evidence: Sharp ceiling at 40-60 heuristics. Unfiltered experience DROPS performance
 below baseline (22.22% vs 26.26%). Failure knowledge is +14.3% more valuable.
@@ -16,17 +17,18 @@ below baseline (22.22% vs 26.26%). Failure knowledge is +14.3% more valuable.
 ## HOT (max 30 — always loaded into architect context)
 
 <!-- Entries here must have: Seen in: 2+ projects, Status: ACTIVE, Confidence: VALIDATED+
-     v8 format [R6]:
+     v7 format [R6]:
 
 ### [PATTERN-001] Missing error handling in API routes
 - **Severity:** P1
 - **Decay:** safety
+- **Evidence count:** 3
 - **Seen in:** project-A, project-B, project-C
 - **Detection:** `grep -r "export async function" src/app/api | wc -l` vs `grep -r "try {" src/app/api | wc -l`
 - **Prevention:** Every API route must have try/catch returning {error, data}
 - **Citation:** project-A/src/app/api/auth/login/route.ts:45
 
-     Decay classes [v8, R6]:
+     Decay classes [v7, R6]:
      safety (auth, RLS, crypto) → never auto-decay
      architectural (patterns, topology) → 12 months
      bug (failure patterns) → 6 months
@@ -42,11 +44,12 @@ below baseline (22.22% vs 26.26%). Failure knowledge is +14.3% more valuable.
      Single-project observations and failure-derived patterns go here first.
      Promoted to HOT after 2+ project confirmations.
 
-     v8 format [R6]:
+     v7 format [R6]:
 
 ### [PATTERN-002] Supabase RLS policy missing on new tables
 - **Severity:** P1
 - **Decay:** safety
+- **Evidence count:** 1
 - **Seen in:** project-A
 - **Detection:** `grep -r "CREATE TABLE" supabase/migrations/ | grep -v "ENABLE ROW LEVEL SECURITY"`
 - **Prevention:** Every CREATE TABLE must be followed by ALTER TABLE ENABLE ROW LEVEL SECURITY
@@ -54,6 +57,7 @@ below baseline (22.22% vs 26.26%). Failure knowledge is +14.3% more valuable.
 -->
 
 ### [DEFERRED-001] Name Drift candidates in framework/ (Round 1.5)
+- **Evidence count:** 1
 - **Status:** DEFERRED from Round 1.5 on scope grounds
 - **Context:** Sweep of "Named Failure" references across framework/ found 8 instances in 5 textual forms. One clear typo was fixed in micro.md ("Named Failure Prohibitions" → "Named Failure Mode Prohibitions", commit c4a20ea). Two borderline cases were deferred:
   - **Form B** — `framework/agents/executor.md:3` YAML description: `Named failure prohibitions` (lowercase, 3 words). Judged as prose, not lookup-intent.
@@ -62,6 +66,7 @@ below baseline (22.22% vs 26.26%). Failure knowledge is +14.3% more valuable.
 - **Citations:** framework/agents/executor.md:3, framework/commands/apex/health-check.md:71
 
 ### [DEFERRED-002] The Silent Install Failure anti-pattern (Round 2)
+- **Evidence count:** 1
 - **Status:** DEFERRED
 - **Severity:** P2
 - **Decay:** framework
@@ -72,6 +77,7 @@ below baseline (22.22% vs 26.26%). Failure knowledge is +14.3% more valuable.
 - **Citations:** Round 2 jq installation (2026-04-09); manual fallback copy to `/c/Users/[user]/bin/jq.exe`
 
 ### [AP-002] Pattern-Echo Hallucination
+- **Evidence count:** 1
 - **Status:** ACTIVE
 - **Severity:** P2
 - **Decay:** framework
@@ -82,6 +88,7 @@ below baseline (22.22% vs 26.26%). Failure knowledge is +14.3% more valuable.
 - **Citation:** Round 3.2 Cluster 2 — proposed adding `_require-jq.sh` to phase-tag.sh when it was already present from Round 2.
 
 ### [AP-003] Implicit Write Chain
+- **Evidence count:** 1
 - **Status:** ACTIVE
 - **Severity:** P2
 - **Decay:** architectural
@@ -92,6 +99,7 @@ below baseline (22.22% vs 26.26%). Failure knowledge is +14.3% more valuable.
 - **Citation:** Round 3.2 C-3 — critic.md:74 writes REFLEXION.md on FAIL. Bypassing critic for phantom detection would skip this write, breaking the FAIL handler downstream.
 
 ### [AP-004] Schema-by-Memory Reconstruction
+- **Evidence count:** 1
 - **Status:** ACTIVE
 - **Severity:** P1
 - **Decay:** framework
@@ -102,6 +110,7 @@ below baseline (22.22% vs 26.26%). Failure knowledge is +14.3% more valuable.
 - **Citation:** Checkpoint 2026-04-10 — Shield STATE.json rebuilt without `previous_last_completed_task` and `previous_tasks_completed_in_autopilot` from Round 3.2 A-5.
 
 ### [AP-005] Pipeline Bypass via Orchestrator Convenience
+- **Evidence count:** 1
 - **Status:** ACTIVE
 - **Severity:** P3
 - **Decay:** architectural
@@ -112,6 +121,7 @@ below baseline (22.22% vs 26.26%). Failure knowledge is +14.3% more valuable.
 - **Citation:** Checkpoint 2026-04-10 — C-3 reflexion/retry pipeline not invoked during task 07-10 critic FAIL; orchestrator fixed the stale-closure bug directly.
 
 ### [AP-006] The Unchecked Audit
+- **Evidence count:** 1
 - **Status:** ACTIVE
 - **Severity:** P2
 - **Decay:** framework
