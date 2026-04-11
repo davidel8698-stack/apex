@@ -1,0 +1,45 @@
+{
+  "_comment": "APEX Workflow Library — pre-built recipes for common tasks. Each workflow defines phases that the architect can adopt directly.",
+  "workflows": [
+    {
+      "id": "add-authentication",
+      "name": "Add Authentication",
+      "description": "JWT or session-based auth with login, register, and protected routes",
+      "file": "add-authentication.md",
+      "complexity": "C",
+      "estimated_phases": 4
+    },
+    {
+      "id": "add-stripe-payments",
+      "name": "Add Stripe Payments",
+      "description": "Stripe checkout, webhooks, subscription management",
+      "file": "add-stripe-payments.md",
+      "complexity": "D",
+      "estimated_phases": 5
+    },
+    {
+      "id": "migrate-to-postgres",
+      "name": "Migrate to PostgreSQL",
+      "description": "Switch from SQLite/other DB to PostgreSQL with data migration",
+      "file": "migrate-to-postgres.md",
+      "complexity": "C",
+      "estimated_phases": 3
+    },
+    {
+      "id": "add-api-rate-limiting",
+      "name": "Add API Rate Limiting",
+      "description": "Per-user and per-endpoint rate limiting with Redis or in-memory store",
+      "file": "add-api-rate-limiting.md",
+      "complexity": "B",
+      "estimated_phases": 2
+    },
+    {
+      "id": "setup-ci-cd",
+      "name": "Setup CI/CD Pipeline",
+      "description": "GitHub Actions or similar with test, lint, build, deploy stages",
+      "file": "setup-ci-cd.md",
+      "complexity": "B",
+      "estimated_phases": 2
+    }
+  ]
+}
