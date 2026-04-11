@@ -20,7 +20,9 @@
       "escalate_on_retry": "opus"
     },
     "critic": {
-      "default": "sonnet"
+      "default": "sonnet",
+      "cross_model_required": true,
+      "fallback_if_same": "opus"
     },
     "verifier": {
       "default": "sonnet"

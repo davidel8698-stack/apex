@@ -373,11 +373,19 @@ If task verify_level == "D" OR task.specialist == "security":
     If you find ZERO issues, state why you're confident."
   }
 
+## CROSS-MODEL ENFORCEMENT [R-008]
+## Spec: "Cross-model critic חובה" — critic must run on a different model than executor.
+critic_model = resolve_model("critic")
+executor_model = (the model resolved for this task's executor dispatch)
+If critic_model == executor_model AND routing["critic"].cross_model_required:
+  critic_model = routing["critic"].fallback_if_same
+  Log to SESSION-LOG: "Cross-model enforcement: executor={executor_model}, critic escalated to {critic_model}"
+
 ## RENDER: Mission Briefing (Section 10-B variant for critic)
 ##   Agent card: CRITIC (Section 10-A)
 ##   "Will verify against [N] criteria" instead of "Done When"
 ##   Note: "Clean-room: no SUMMARY.md"
-Task("critic", CRITIC_CONTEXT, model=resolve_model("critic"))
+Task("critic", CRITIC_CONTEXT, model=critic_model)
 ## RENDER: Flight Recorder (Section 10-C variant for critic)
 ##   Parse .apex/phases/${current_phase}/${task_id}-CRITIC.md
 ##   Body: VERDICT with verified/unverified/missing counts (NO files touched section)
