@@ -31,6 +31,16 @@ NEVER output bare text. NEVER skip a frame. NEVER add emojis inside frames.
 
 Read .apex/STATE.json
 
+## TECHNICAL LEVEL ADAPTATION
+Read technical level from CLAUDE.md ## User Profile section.
+TECH_LEVEL = non-programmer / junior / senior / architect
+
+Adapt all user-facing output in this command:
+- non-programmer: simple language, no jargon, explain every decision, offer guided choices, frame errors as "something went wrong" with clear next steps
+- junior: moderate detail, explain technical terms on first use, highlight recommended actions
+- senior: concise, use technical terms freely, focus on what changed
+- architect: terse, assume full context, focus on trade-offs and risks
+
 ## CONTEXT OVERFLOW CHECK — RUNS FIRST
 bash ~/.claude/hooks/context-monitor.sh
 If "CRITICAL_OVERFLOW": save state, "⚠️ Context at [N]%. Run /apex:resume", STOP.

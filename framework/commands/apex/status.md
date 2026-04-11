@@ -14,6 +14,13 @@ Append signature line (Section 3.E) at the bottom.
 2. Section 10-E (Live Ticker)      — literal tail -5 from SESSION-LOG.md
 This lets the user scan recent activity before diving into the full telemetry.
 
+## TECHNICAL LEVEL ADAPTATION
+Read technical level from CLAUDE.md ## User Profile section.
+Adapt dashboard commentary:
+- non-programmer: after each metric section, add a plain-language sentence explaining what it means and whether it's good or bad
+- junior: add brief tooltips for non-obvious metrics (EvoScore, DORA, mutation kill rate)
+- senior/architect: display raw metrics only (current behavior)
+
 ## DATA GATHERING
 Read .apex/STATE.json
 

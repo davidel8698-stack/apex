@@ -3,6 +3,13 @@ description: Recover from crash or stuck state.
 ---
 
 <context>
+## TECHNICAL LEVEL ADAPTATION
+Read technical level from CLAUDE.md ## User Profile section.
+Adapt recovery options display:
+- non-programmer: explain each option in plain language, recommend the safest choice (option 3 or 5), hide internal details like "reflexion counter"
+- junior: explain options briefly, highlight recommended choice
+- senior/architect: show options as-is (current behavior)
+
 1. Check .apex/STATE.json.lock
 2. No lock: "No crash. /apex:next to continue. Or /apex:resume for fresh session."
 3. Lock exists, process dead:
