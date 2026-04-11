@@ -1,6 +1,11 @@
 # [Project Name] — APEX v7 Project
 <!-- CRITICAL: Keep this file under 200 lines. R2: 92% rule application at <200, drops to 71% at 400+ -->
 
+## Two-Tier Methodology
+- Framework defaults: .apex/APEX.md (do not edit per-project — shared across all APEX projects)
+- Project overrides: .apex/PROJECT-APEX.md (edit freely — project-specific configuration)
+- This file (CLAUDE.md) is the Claude Code integration point that loads both.
+
 ## Complexity
 Level [N] — [NAME]
 

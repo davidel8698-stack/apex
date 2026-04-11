@@ -31,6 +31,11 @@ If no:
   0. Render Section 5 banner with [●] for completed steps, [◐] for active, [○] for pending.
   1. mkdir -p .apex/{pre-build,phases,backups,debate-log,comprehension-gates}
 
+  ## TWO-TIER METHODOLOGY SETUP
+  1b. Copy ~/.claude/APEX-TEMPLATE.md to .apex/APEX.md
+  1c. Copy ~/.claude/PROJECT-APEX-TEMPLATE.md to .apex/PROJECT-APEX.md
+      Substitute [PROJECT_NAME] with project directory name.
+
   ## USER PROFILE CAPTURE
   2. Ask user (in detected language or default English):
      - "What is your technical level?" → non-programmer / junior / senior / architect
