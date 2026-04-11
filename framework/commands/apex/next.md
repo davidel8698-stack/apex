@@ -418,6 +418,16 @@ PASS:
       consecutive_partials = 0
     bash ~/.claude/hooks/session-log.sh "checkpoint" "משימה ${NEXT_UNIT} הושלמה ✅"
 
+  ## DORA RECOVERY TRACKING [R-011]
+  If STATE.dora._last_failure_at is non-null:
+    RECOVERY_HOURS = (now - STATE.dora._last_failure_at) in hours
+    If STATE.dora.recovery_time_avg is null:
+      STATE.dora.recovery_time_avg = RECOVERY_HOURS
+    Else:
+      STATE.dora.recovery_time_avg = (STATE.dora.recovery_time_avg + RECOVERY_HOURS) / 2
+    STATE.dora._last_failure_at = null
+    STATE.dora.last_updated = now
+
   ## MUTATION GATE (C/D tasks only)
   Read task verify_level from PLAN_META.json for NEXT_UNIT.
   If verify_level in ["C", "D"]:
@@ -478,6 +488,15 @@ FAIL:
     If RESULT.confidence == "low": STATE.session.drift_indicators.low_confidence_results++
     If STATE.circuit_breaker.triggered: STATE.session.drift_indicators.circuit_breaker_triggers++
     bash ~/.claude/hooks/session-log.sh "fail" "משימה ${NEXT_UNIT} נכשלה (ניסיון ${ATTEMPTS}/3)"
+
+  ## DORA FAILURE TRACKING [R-011]
+  STATE.dora.phases_failed++
+  STATE.dora._last_failure_at = now (ISO 8601)
+  If STATE.phases_completed > 0:
+    STATE.dora.change_failure_rate = STATE.dora.phases_failed / STATE.phases_completed
+  Else:
+    STATE.dora.change_failure_rate = 1.0
+  STATE.dora.last_updated = now
 
   ## AUTOPILOT PAUSE ON FAIL
   If STATE.autopilot.enabled:

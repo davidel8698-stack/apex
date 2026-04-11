@@ -71,6 +71,8 @@
     "deployment_freq": null,
     "change_failure_rate": null,
     "recovery_time_avg": null,
+    "phases_failed": 0,
+    "_last_failure_at": null,
     "last_updated": null
   },
   "mutation_scores": {},

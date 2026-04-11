@@ -396,12 +396,14 @@
       "type": "object",
       "description": "DORA self-monitoring metrics for engineering delivery tracking",
       "additionalProperties": false,
-      "required": ["lead_time_avg", "deployment_freq", "change_failure_rate", "recovery_time_avg", "last_updated"],
+      "required": ["lead_time_avg", "deployment_freq", "change_failure_rate", "recovery_time_avg", "phases_failed", "_last_failure_at", "last_updated"],
       "properties": {
         "lead_time_avg": { "type": ["number", "null"], "description": "Average lead time in hours from phase start to phase completion" },
         "deployment_freq": { "type": ["number", "null"], "description": "Phases completed per day (rolling average)" },
         "change_failure_rate": { "type": ["number", "null"], "minimum": 0, "maximum": 1, "description": "Fraction of phases that required revert or re-execution" },
         "recovery_time_avg": { "type": ["number", "null"], "description": "Average hours from failure detection to recovery" },
+        "phases_failed": { "type": "integer", "minimum": 0, "description": "Total number of phases that failed (for change_failure_rate computation)" },
+        "_last_failure_at": { "type": ["string", "null"], "format": "date-time", "description": "Transient timestamp of last failure for recovery_time_avg computation. Cleared after recovery." },
         "last_updated": { "type": ["string", "null"], "format": "date-time" }
       }
     },
