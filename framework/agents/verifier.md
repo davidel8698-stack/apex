@@ -43,6 +43,18 @@ Phase-specific:
 DATA: migrations clean | BACKEND: endpoints smoke test
 INTEGRATION: mock webhook test | FRONTEND: build 0 errors
 
+STEP 6: Scope-reduction detection [R-021]
+"Scope reduction is a bug." Compare planned scope against delivered:
+For each task in PLAN_META.json:
+  Check if a matching *-RESULT.json exists with status != "skip"
+  If no RESULT found → flag as MISSING: "Task [id] has no RESULT — scope reduced"
+  If RESULT status == "skip" → flag as SKIPPED: "Task [id] was skipped — scope reduced"
+  If originating_requirement_id exists in task, verify it appears in at least one RESULT
+Collect all flags into a SCOPE REDUCTION REPORT section in VERIFY.md.
+This check is ADVISORY — it does not change the verdict.
+  If flags found: "⚠️ Scope reduction detected — [N] tasks missing or skipped. Review with stakeholder."
+  If clean: "✅ No scope reduction — all planned tasks have results."
+
 ## [שיפור 16] CROSS-PHASE REGRESSION CHECK
 Before writing final verdict:
 bash ~/.claude/hooks/cross-phase-audit.sh [current_phase_number]
@@ -57,6 +69,7 @@ OUTPUT: VERIFY.md with:
 - Task Results table (Task | Level | Verify | Tests | Edge Cases | Silent Audit | Status)
 - Integration Results
 - Phantom Verification check
+- Scope Reduction Report [R-021]
 - Cross-Phase Regression Results [שיפור 16]
 - EvoScore update
 - Phase Tag created [שיפור 23]
