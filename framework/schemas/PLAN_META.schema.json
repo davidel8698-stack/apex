@@ -48,7 +48,8 @@
           "silent_failure_risks": { "type": "array", "items": { "type": "string" } },
           "dependencies": { "type": "array", "items": { "type": "string" } },
           "wave": { "type": "integer", "minimum": 1 },
-          "originating_requirement_id": { "type": "string", "description": "Unique requirement ID (REQ-NNN) from SPEC.md that this task traces to" }
+          "originating_requirement_id": { "type": "string", "description": "Unique requirement ID (REQ-NNN) from SPEC.md that this task traces to" },
+          "decision_mode": { "type": "string", "enum": ["collaborator", "replacement"], "description": "Dual-mode classifier: collaborator for product/irreversible decisions requiring human approval, replacement for autonomous technical decisions [F-005]" }
         }
       }
     }

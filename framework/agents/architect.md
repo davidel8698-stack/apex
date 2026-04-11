@@ -40,6 +40,7 @@ Level 3: FOUNDATION → INTEGRATIONS → CORE LOGIC → BACKEND API → FRONTEND
     <complexity>[low|medium|high]</complexity>
     <specialist>[none|integration|security|data|frontend]</specialist>
     <is_irreversible>[true|false]</is_irreversible>
+    <decision_mode>[collaborator|replacement]</decision_mode>
 
     <files>src/path/file.ts</files>
     <context>[What executor needs to know]</context>
@@ -66,6 +67,16 @@ After writing PLAN.md, generate PLAN_META.json with structured data:
 - originating_requirement_id per task — maps to REQ-NNN from SPEC.md for requirement-level traceability
 - Wave assignments based on dependency analysis
 This JSON is used by hooks — it MUST be accurate and match PLAN.md exactly.
+
+## STEP 1.6: Classify Decision Mode [F-005]
+For each task in PLAN_META.json, assign `decision_mode` using these MECHANICAL rules (no AI judgment):
+- `verify_level == "D"` OR `is_irreversible == true` → `"collaborator"`
+- `verify_level == "A"` OR `verify_level == "B"` → `"replacement"`
+- `verify_level == "C"` AND `specialist == "security"` → `"collaborator"`
+- `verify_level == "C"` otherwise → `"replacement"`
+- If field absent: defaults to `"replacement"` at runtime (next.md enforcement)
+
+Write `decision_mode` into each task object in PLAN_META.json.
 
 ## STEP 2: Generate WAVE_MAP.json [שיפור 22]
 Analyze task dependencies within each phase:

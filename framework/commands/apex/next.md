@@ -271,8 +271,15 @@ If STATE.strict_mode == true:
   Override verify_level to "D" for this task (runtime only — PLAN_META unchanged).
   bash ~/.claude/hooks/session-log.sh "strict_mode" "STRICT MODE — משימה ${NEXT_UNIT} מוגברת ל-verify_level D"
 
-TASK_AUTONOMY = STATE.autonomy.by_verify_level[verify_level]
-EFFECTIVE_LEVEL = min(TASK_AUTONOMY.level, cap) where caps: A→2, B→2, C→1, D→0
+## DECISION MODE ENFORCEMENT [F-005]
+Read task decision_mode from PLAN_META.json (default: "replacement" if field absent)
+If decision_mode == "collaborator":
+  EFFECTIVE_LEVEL = 0
+  bash ~/.claude/hooks/session-log.sh "decision_mode" "COLLABORATOR MODE — task ${NEXT_UNIT} forces approval (decision_mode=collaborator)"
+  Skip to approval prompt below.
+Else (decision_mode == "replacement" or absent):
+  TASK_AUTONOMY = STATE.autonomy.by_verify_level[verify_level]
+  EFFECTIVE_LEVEL = min(TASK_AUTONOMY.level, cap) where caps: A→2, B→2, C→1, D→0
 
 If EFFECTIVE_LEVEL == 0: show plan + "Proceed? (y/n/edit)"
 If EFFECTIVE_LEVEL >= 1: execute automatically
