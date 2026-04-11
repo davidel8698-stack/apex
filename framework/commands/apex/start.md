@@ -121,9 +121,11 @@ If no:
      }
   4. If .apex/CONTEXT_BUDGET.json does not exist:
        Copy ~/.claude/CONTEXT_BUDGET.default.json to .apex/CONTEXT_BUDGET.json
-  5. bash ~/.claude/hooks/session-log.sh "start" "סשן התחיל — [project name]"
-  6. Task("planner", "Project root: $PWD. Run Phase 0 auto-detection first. Classify this project, capture requirements, and generate pre-build checklist if Level 3+.")
-  7. After planner:
+  5. Copy ~/.claude/THREAT_MODEL-TEMPLATE.md to .apex/THREAT_MODEL.md
+     Substitute [PROJECT_NAME] with project name, [DATE] with current date, [DETECTED_STACK] with "TBD — updated after Phase 0".
+  6. bash ~/.claude/hooks/session-log.sh "start" "סשן התחיל — [project name]"
+  7. Task("planner", "Project root: $PWD. Run Phase 0 auto-detection first. Classify this project, capture requirements, and generate pre-build checklist if Level 3+.")
+  8. After planner:
      Level 3+: Update STATE: {current_stage: "pre-build", status: "blocking"}
      Else:     Update STATE: {current_stage: "spec", status: "pending_approval"}
 </context>
