@@ -20,10 +20,10 @@ LOC=$(find . -type f \( -name "*.ts" -o -name "*.js" -o -name "*.py" -o -name "*
 ```
 
 Signal→complexity mapping:
-- **L1 (Quick fix):** LOC < 500, no tests, no CI, no Docker, ≤ 1 contributor
+- **L1 (Trying it out):** LOC < 500, no tests, no CI, no Docker, ≤ 1 contributor
 - **L2 (Building something real):** LOC 500–5000, some tests OR CI present, ≤ 3 contributors
 - **L3 (Going to production):** LOC 5000–50000, test suite + CI present, Docker likely, 2+ contributors
-- **L4 (Business depends on this):** LOC > 50000, full test suite, CI+CD, Docker, 4+ contributors
+- **L4 (My business depends on this):** LOC > 50000, full test suite, CI+CD, Docker, 4+ contributors
 
 If signals are sufficient (LOC > 0 OR commits > 5):
   Present as proposal: "Based on your project: Level [N] — [NAME]. ([LOC] LOC, [TEST_FILES] test files, [CONTRIBUTORS] contributors, CI: [yes/no]). Override? (y/N)"
@@ -40,10 +40,10 @@ Start: "Tell me about what you want to build — what does it do and who uses it
 Probe: user accounts? external services? multi-tenant? bg jobs? real-time? tech stack?
 
 CLASSIFICATION:
-- Level 1: no auth OR single user, max 1 integration, no bg jobs
-- Level 2: auth, 1-2 integrations, 3-8 tables, single-tenant
-- Level 3: multi-tenant OR 3+ integrations OR bg jobs OR webhooks OR payments
-- Level 4: 10+ integrations OR multiple products OR compliance
+- Level 1 — "Trying it out": no auth OR single user, max 1 integration, no bg jobs
+- Level 2 — "Building something real": auth, 1-2 integrations, 3-8 tables, single-tenant
+- Level 3 — "Going to production": multi-tenant OR 3+ integrations OR bg jobs OR webhooks OR payments
+- Level 4 — "My business depends on this": 10+ integrations OR multiple products OR compliance
 
 Identify stack skills from ~/.claude/apex-skills/ (only existing .md files).
 Write .apex/COMPLEXITY.md: Level + Why, Pipeline, Drivers, Specialists, Debate Candidates, Stack Skills.

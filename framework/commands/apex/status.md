@@ -27,7 +27,7 @@ Read .apex/STATE.json
 Extract and substitute into Section 6 template:
   [PROJECT_NAME]         → STATE.project
   [project_name]         → STATE.project
-  [N] · [level_name]     → STATE.complexity_level · STATE.complexity_name
+  [N] · [preset_name]    → STATE.complexity_level · STATE.complexity_name (preset name, e.g. "Trying it out")
   [stage] → [status]     → STATE.current_stage → STATE.status
   [N] / [total] WAVE [W] → STATE.current_phase / STATE.total_phases · STATE.current_wave
 

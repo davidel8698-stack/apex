@@ -133,6 +133,8 @@ If no:
   6. bash ~/.claude/hooks/session-log.sh "start" "סשן התחיל — [project name]"
   7. Task("planner", "Project root: $PWD. Run Phase 0 auto-detection first. Classify this project, capture requirements, and generate pre-build checklist if Level 3+.")
   8. After planner:
+     Read STATE.json complexity_level and complexity_name.
+     Display: "Preset: [complexity_name] (Level [complexity_level])"
      Level 3+: Update STATE: {current_stage: "pre-build", status: "blocking"}
      Else:     Update STATE: {current_stage: "spec", status: "pending_approval"}
 </context>
