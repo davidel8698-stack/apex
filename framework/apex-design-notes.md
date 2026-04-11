@@ -57,6 +57,9 @@ Reference the research round (R1-R8) for full evidence.
 - confidence + attempt_number in RESULT.json: enables routing decisions (R3: typed artifacts)
 - Type-specific decay for learnings: safety=∞, framework=3mo, project=30d (R6: knowledge half-lives)
 
+## Security Hooks: JS-to-Shell Deviation
+The spec names `apex-prompt-guard.js`, `apex-workflow-guard.js`, and `security.cjs` as JavaScript files. APEX implements these as shell scripts (`prompt-guard.sh`, `path-guard.sh`) instead. Rationale: the framework has zero JavaScript runtime dependencies — all hooks are bash+jq. Adding Node.js for two guards would break the simplicity contract and introduce a runtime dependency that no other component requires. Shell scripts follow the same pattern as `destructive-guard.sh` (receive input, pattern-match, exit 0/2) and integrate directly with the existing hook system. CI scanner is out of scope (belongs to target project, not framework).
+
 ## Environment Note: OneDrive
 OneDrive real-time sync can corrupt `.apex/` state files during writes (observed: STATE.json zeroed, write conflicts on concurrent access). Mitigation: exclude `.apex/` from OneDrive sync via Settings → Choose folders, or relocate project outside OneDrive.
 
