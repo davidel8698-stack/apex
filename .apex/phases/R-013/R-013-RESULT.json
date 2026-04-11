@@ -1,0 +1,45 @@
+{
+  "task_id": "R-013",
+  "status": "success",
+  "files_modified": [
+    {"path": "framework/agents/specialist/security.md", "action": "modified"},
+    {"path": "framework/agents/specialist/data.md", "action": "modified"},
+    {"path": "framework/agents/specialist/frontend.md", "action": "modified"},
+    {"path": "framework/agents/specialist/integration.md", "action": "modified"}
+  ],
+  "files_read": [
+    "framework/agents/specialist/security.md",
+    "framework/agents/specialist/data.md",
+    "framework/agents/specialist/frontend.md",
+    "framework/agents/specialist/integration.md",
+    "framework/agents/executor.md"
+  ],
+  "tests_run": [],
+  "verify_commands_run": [
+    {"command": "wc -l on all 4 specialist files", "exit_code": 0, "output": "security.md: 82, data.md: 81, frontend.md: 81, integration.md: 80 — all within 80-120 range"}
+  ],
+  "done_criteria_checked": [
+    {"criterion": "Each specialist file expanded to 80-120 lines", "verified": true, "evidence": "wc -l output: security=82, data=81, frontend=81, integration=80"},
+    {"criterion": "Named failure mode prohibitions added per domain", "verified": true, "evidence": "security: 5 prohibitions (TENANT BYPASS, HARDCODED SECRET, UNVALIDATED INPUT, MISSING RATE LIMIT, NEGATIVE AUTH OMISSION), data: 4 (UNVALIDATED MIGRATION, MISSING ROLLBACK, UNBOUNDED QUERY, SWALLOWED DB ERROR), frontend: 4 (ACCESSIBILITY VIOLATION, UNRESPONSIVE LAYOUT, MISSING ERROR STATE, SILENT ASYNC FAILURE), integration: 4 (MISSING RETRY, UNHANDLED TIMEOUT, TOKEN LEAK, SWALLOWED EXTERNAL ERROR)"},
+    {"criterion": "TDAD awareness section added", "verified": true, "evidence": "All 4 files contain TDAD AWARENESS section with IMPACTED_TESTS.txt check and npm test command"},
+    {"criterion": "Domain-specific checks added", "verified": true, "evidence": "security: 6 checks, data: 7 checks, frontend: 7 checks, integration: 6 checks"},
+    {"criterion": "Negative auth test note in security.md", "verified": true, "evidence": "NEGATIVE AUTH OMISSION prohibition + domain check #1 both address deny tests"},
+    {"criterion": "No duplication of executor.md content", "verified": true, "evidence": "All prohibitions are domain-specific, not repeating executor generic prohibitions"},
+    {"criterion": "Domain invariants section focuses on permanent rules not task-specific", "verified": true, "evidence": "DOMAIN INVARIANTS section in each file lists rules that apply regardless of task XML"}
+  ],
+  "edge_cases_handled": [
+    {"case": "Content stays focused on domain invariants not task-specific instructions", "handled": true, "how": "DOMAIN INVARIANTS section explicitly states 'regardless of task XML content'"},
+    {"case": "No bloat beyond 120 lines", "handled": true, "how": "All files at 80-82 lines, well within range"}
+  ],
+  "decisions_made": [
+    {"decision": "Added DOMAIN INVARIANTS section as a preamble to prohibitions", "rationale": "Provides clear, scannable list of always-true rules per domain", "spec_ref": "R-013 task spec"},
+    {"decision": "Added Required pattern lines to each prohibition matching executor.md format", "rationale": "Consistency with executor.md prohibition format", "spec_ref": "executor.md Named Failure Mode Prohibitions"},
+    {"decision": "Each prohibition has 4-5 lines (name, NEVER rule, context, required pattern)", "rationale": "Matches executor style while being domain-specific", "spec_ref": "executor.md format"}
+  ],
+  "confidence": "high",
+  "attempt_number": 1,
+  "issues_found": [],
+  "unresolved_risks": [],
+  "spec_sections_referenced": ["R-013", "executor.md Named Failure Mode Prohibitions", "TDAD"],
+  "what_next_tasks_can_assume": "All 4 specialist agents (security, data, frontend, integration) now have domain-specific named failure prohibitions, TDAD awareness, domain invariants, and domain-specific checks. Each file is 80-82 lines. The prohibitions use the same format as executor.md (bold name, NEVER rule, required pattern). Specialists reference IMPACTED_TESTS.txt for TDAD."
+}
