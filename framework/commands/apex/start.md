@@ -122,7 +122,7 @@ If no:
   4. If .apex/CONTEXT_BUDGET.json does not exist:
        Copy ~/.claude/CONTEXT_BUDGET.default.json to .apex/CONTEXT_BUDGET.json
   5. bash ~/.claude/hooks/session-log.sh "start" "סשן התחיל — [project name]"
-  6. Task("planner", "Classify this project, capture requirements, and generate pre-build checklist if Level 3+.")
+  6. Task("planner", "Project root: $PWD. Run Phase 0 auto-detection first. Classify this project, capture requirements, and generate pre-build checklist if Level 3+.")
   7. After planner:
      Level 3+: Update STATE: {current_stage: "pre-build", status: "blocking"}
      Else:     Update STATE: {current_stage: "spec", status: "pending_approval"}
