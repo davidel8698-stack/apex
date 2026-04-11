@@ -29,7 +29,8 @@
           "edge_cases",
           "silent_failure_risks",
           "dependencies",
-          "wave"
+          "wave",
+          "originating_requirement_id"
         ],
         "properties": {
           "id": { "type": "string" },
@@ -46,7 +47,8 @@
           "edge_cases": { "type": "array", "items": { "type": "string" } },
           "silent_failure_risks": { "type": "array", "items": { "type": "string" } },
           "dependencies": { "type": "array", "items": { "type": "string" } },
-          "wave": { "type": "integer", "minimum": 1 }
+          "wave": { "type": "integer", "minimum": 1 },
+          "originating_requirement_id": { "type": "string", "description": "Unique requirement ID (REQ-NNN) from SPEC.md that this task traces to" }
         }
       }
     }

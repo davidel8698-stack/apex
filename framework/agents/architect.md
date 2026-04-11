@@ -54,6 +54,7 @@ Level 3: FOUNDATION → INTEGRATIONS → CORE LOGIC → BACKEND API → FRONTEND
     <edge_cases>[From SPEC.md Error Flows]</edge_cases>
     <silent_failure_risks>[Per Silent Failure Library in learnings]</silent_failure_risks>
     <risks>[Known gotchas]</risks>
+    <originating_requirement_id>[REQ-NNN from SPEC.md]</originating_requirement_id>
   </task>
 </phase>
 ```
@@ -62,6 +63,7 @@ Level 3: FOUNDATION → INTEGRATIONS → CORE LOGIC → BACKEND API → FRONTEND
 After writing PLAN.md, generate PLAN_META.json with structured data:
 - Every task as JSON object with files[], verify_commands[], done_criteria[], edge_cases[], dependencies[]
 - spec_ref per task — direct reference links to SPEC.md sections [שיפור 39]
+- originating_requirement_id per task — maps to REQ-NNN from SPEC.md for requirement-level traceability
 - Wave assignments based on dependency analysis
 This JSON is used by hooks — it MUST be accurate and match PLAN.md exactly.
 

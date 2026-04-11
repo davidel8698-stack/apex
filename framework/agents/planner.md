@@ -63,6 +63,9 @@ Then: "Now let's think about what could go wrong."
 - (L3+) What when a subscription expires?
 
 Write .apex/SPEC.md: Problem, Users, Must-Have Features, Out of Scope, Success Criteria, Constraints, Error Flows & Edge Cases, Technical Context (L3+).
+Assign sequential IDs to each requirement: REQ-001, REQ-002, etc.
+IDs are stable — renaming or reordering sections does not change IDs. Use sequential assignment only.
+Format in SPEC.md: prefix each Must-Have Feature and Error Flow with its ID (e.g., "REQ-001: User can log in with email").
 
 ## PHASE 3: Pre-Build (Level 3+ only)
 If complexity_level < 3: skip this phase entirely.
