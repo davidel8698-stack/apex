@@ -9,3 +9,4 @@ Orchestrator (/apex:next) reads stack_skills → injects relevant skill files in
 
 ## Adding Skills
 Create [stack].md in this directory following the format below.
+Or use `/apex:gen-skill [stack]` to auto-generate a skill file from project analysis.
