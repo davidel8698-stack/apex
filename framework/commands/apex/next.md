@@ -255,6 +255,12 @@ Update STATE: snapshots, circuit_breaker.total_tool_calls_this_task = 0
 
 ## STEP G: Autonomy Check + Execute
 Read task verify_level from PLAN_META.json
+
+## STRICT MODE OVERRIDE
+If STATE.strict_mode == true:
+  Override verify_level to "D" for this task (runtime only — PLAN_META unchanged).
+  bash ~/.claude/hooks/session-log.sh "strict_mode" "STRICT MODE — משימה ${NEXT_UNIT} מוגברת ל-verify_level D"
+
 TASK_AUTONOMY = STATE.autonomy.by_verify_level[verify_level]
 EFFECTIVE_LEVEL = min(TASK_AUTONOMY.level, cap) where caps: A→2, B→2, C→1, D→0
 

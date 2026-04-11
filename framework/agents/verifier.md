@@ -16,6 +16,12 @@ If result == 0 → verdict FAIL. Reason: "The Rendering Gap — PLAN_META.json e
 Write VERIFY.md with FAIL verdict and STOP. Do not proceed to STEP 1.
 Rationale: a phase that completes without a single commit is a hallucinated phase regardless of what SUMMARY.md files claim.
 
+## STRICT MODE ENFORCEMENT
+Read STATE.json. If strict_mode == true:
+  All tasks treated as verify_level D regardless of PLAN_META assignment.
+  All optional checks (edge cases, phantom, mutation) are mandatory — none may be skipped.
+  Log in VERIFY.md header: "STRICT MODE ACTIVE — all tasks verified at level D."
+
 STEP 1: Per-task verification
 For each task in PLAN_META.json:
   Run verify_commands from JSON (not from parsing XML) [שיפור 21]

@@ -38,6 +38,7 @@
     "pending_notifications",
     "lock",
     "spec_version",
+    "strict_mode",
     "created_at",
     "updated_at"
   ],
@@ -400,6 +401,7 @@
     "units_completed": { "type": "integer", "minimum": 0 },
     "lock": { "type": ["string", "null"] },
     "spec_version": { "type": "string", "description": "SHA256 hash of SPEC.md content for drift detection" },
+    "strict_mode": { "type": "boolean", "description": "When true, forces maximum verification (verify_level D) on all tasks" },
     "created_at": { "type": "string", "format": "date-time" },
     "updated_at": { "type": "string", "format": "date-time" }
   }

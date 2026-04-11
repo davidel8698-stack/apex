@@ -54,6 +54,7 @@ If no:
      status: "initializing"
      lock: null
      spec_version: ""
+     strict_mode: false
      created_at: now
      updated_at: now
      phases_total: 0
