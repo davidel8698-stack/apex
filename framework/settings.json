@@ -1,0 +1,34 @@
+{
+  "hooks": [
+    {
+      "type": "PreToolUse",
+      "matcher": "Bash",
+      "command": "bash ~/.claude/hooks/destructive-guard.sh"
+    },
+    {
+      "type": "PreToolUse",
+      "matcher": "Write|Edit|Agent",
+      "command": "bash ~/.claude/hooks/prompt-guard.sh"
+    },
+    {
+      "type": "PreToolUse",
+      "matcher": "Write|Edit",
+      "command": "bash ~/.claude/hooks/path-guard.sh"
+    },
+    {
+      "type": "PostToolUse",
+      "matcher": "Write|Edit",
+      "command": "bash ~/.claude/hooks/post-write.sh"
+    },
+    {
+      "type": "PostToolUse",
+      "matcher": "Bash",
+      "command": "bash ~/.claude/hooks/circuit-breaker.sh"
+    },
+    {
+      "type": "PreToolUse",
+      "matcher": "Bash",
+      "command": "bash ~/.claude/hooks/pre-task-snapshot.sh"
+    }
+  ]
+}

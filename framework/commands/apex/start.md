@@ -48,6 +48,12 @@ If no:
   1c. Copy ~/.claude/PROJECT-APEX-TEMPLATE.md to .apex/PROJECT-APEX.md
       Substitute [PROJECT_NAME] with project directory name.
 
+  ## HOOK REGISTRATION DEPLOYMENT
+  1d. Copy ~/.claude/settings.json to .claude/settings.json in the target project root.
+      If .claude/settings.json already exists, read existing content, merge the hooks array
+      (append any hooks from the template that are not already present by command match),
+      and write back. Do not overwrite user-defined hooks or permissions.
+
   ## USER PROFILE CAPTURE
   2. Ask user (in detected language or default English):
      - "What is your technical level?" → non-programmer / junior / senior / architect
@@ -72,7 +78,8 @@ If no:
       If (2): display "No problem — just use Claude Code without /apex commands." and STOP.
       If (1): proceed.
 
-  ## STATE INITIALIZATION — fields are progressively populated by planner/architect stages.
+  ## STATE INITIALIZATION — CANONICAL STATE / single source of truth for all orchestration decisions.
+  ## Fields are progressively populated by planner/architect stages.
   ## Also update STATE.schema.json, status.md, and test fixtures on changes.
   3. Create STATE.json with:
      project: ""
