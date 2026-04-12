@@ -21,3 +21,13 @@ Level [N] — [NAME]
 
 ## Build Commands
 [exact commands for build, test, lint, dev server]
+
+## APEXSkin Overrides
+<!-- Override visual output variables. Defaults from apex-branding.md Section 17. -->
+<!-- Resolution order: values here → APEX.md defaults → built-in defaults. -->
+- project_name: "[PROJECT_NAME]"
+- theme_color: "summit"
+- sigil_variant: "stacked"
+- frame_style: "standard"
+- version_tag: "v7"
+- signature_line: true

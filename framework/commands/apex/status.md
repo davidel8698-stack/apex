@@ -9,6 +9,13 @@ Render Section 6 (The Cockpit Dashboard) verbatim — substitute placeholders wi
 Preserve all frame alignment. Do NOT add emojis inside the MEGA frame.
 Append signature line (Section 3.E) at the bottom.
 
+### APEXSkin Resolution
+Before rendering, resolve APEXSkin variables (Section 17 of apex-branding.md).
+Resolution order: PROJECT-APEX.md `## APEXSkin Overrides` → APEX.md defaults → built-in defaults.
+Apply resolved values to all template placeholders ({{project_name}}, {{theme_color}},
+{{sigil_variant}}, {{frame_style}}, {{version_tag}}, {{signature_line}}).
+Variable substitution MUST complete before rendering — never substitute mid-frame.
+
 ## GLASS COCKPIT — AMBIENT HEADER (prepend BEFORE the Cockpit Dashboard)
 1. Section 10-D (Ambient Timeline) — last 8 events from SESSION-LOG.md
 2. Section 10-E (Live Ticker)      — literal tail -5 from SESSION-LOG.md

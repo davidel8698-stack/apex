@@ -9,6 +9,13 @@ Read ~/.claude/apex-branding.md before producing any output.
 Opening banner: render Section 5 (Project Init Banner) verbatim — substitute placeholders.
 Signature line appears at the bottom. Never skip a frame.
 
+### APEXSkin Resolution
+Before rendering, resolve APEXSkin variables (Section 17 of apex-branding.md).
+Resolution order: PROJECT-APEX.md `## APEXSkin Overrides` → APEX.md defaults → built-in defaults.
+Apply resolved values to all template placeholders ({{project_name}}, {{theme_color}},
+{{sigil_variant}}, {{frame_style}}, {{version_tag}}, {{signature_line}}).
+Variable substitution MUST complete before rendering — never substitute mid-frame.
+
 ## ENVIRONMENT PRECHECK — runs FIRST, before any other step
 MISSING_TOOLS=""
 command -v jq &>/dev/null || MISSING_TOOLS="$MISSING_TOOLS jq"

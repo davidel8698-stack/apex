@@ -7,6 +7,13 @@ description: Advance to next logical step. Orchestration heart of APEX.
 Read ~/.claude/apex-branding.md before producing any user-facing output.
 Every output must use Peak Protocol templates. Render references below.
 
+### APEXSkin Resolution
+Before rendering, resolve APEXSkin variables (Section 17 of apex-branding.md).
+Resolution order: PROJECT-APEX.md `## APEXSkin Overrides` → APEX.md defaults → built-in defaults.
+Apply resolved values to all template placeholders ({{project_name}}, {{theme_color}},
+{{sigil_variant}}, {{frame_style}}, {{version_tag}}, {{signature_line}}).
+Variable substitution MUST complete before rendering — never substitute mid-frame.
+
 ## RENDER TABLE (apex-branding.md section references)
 - Top of every output:          Section 13 status bar
 - Autopilot active badge:       Section 9 (only if STATE.autopilot.enabled)

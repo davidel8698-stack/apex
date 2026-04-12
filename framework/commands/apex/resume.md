@@ -9,6 +9,13 @@ Render Section 8.C (Context Rotation) as the opening transition.
 Render Section 13 status bar below the transition.
 If autopilot is enabled, render Section 9 active badge after the status bar.
 
+### APEXSkin Resolution
+Before rendering, resolve APEXSkin variables (Section 17 of apex-branding.md).
+Resolution order: PROJECT-APEX.md `## APEXSkin Overrides` → APEX.md defaults → built-in defaults.
+Apply resolved values to all template placeholders ({{project_name}}, {{theme_color}},
+{{sigil_variant}}, {{frame_style}}, {{version_tag}}, {{signature_line}}).
+Variable substitution MUST complete before rendering — never substitute mid-frame.
+
 ## GLASS COCKPIT — AMBIENT HEADER
 After the status bar/badge, render:
   1. Section 10-D (Ambient Timeline) — last 8 events from SESSION-LOG.md

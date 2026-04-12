@@ -3,6 +3,16 @@ description: Save current state and pause work.
 ---
 
 <context>
+## VISUAL IDENTITY
+Read ~/.claude/apex-branding.md before producing output.
+
+### APEXSkin Resolution
+Before rendering, resolve APEXSkin variables (Section 17 of apex-branding.md).
+Resolution order: PROJECT-APEX.md `## APEXSkin Overrides` → APEX.md defaults → built-in defaults.
+Apply resolved values to all template placeholders ({{project_name}}, {{theme_color}},
+{{sigil_variant}}, {{frame_style}}, {{version_tag}}, {{signature_line}}).
+Variable substitution MUST complete before rendering — never substitute mid-frame.
+
 Read .apex/STATE.json
 
 1. Save current state:
