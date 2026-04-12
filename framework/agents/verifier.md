@@ -56,8 +56,9 @@ For each task in PLAN_META.json:
   If RESULT status == "skip" → flag as SKIPPED: "Task [id] was skipped — scope reduced"
   If originating_requirement_id exists in task, verify it appears in at least one RESULT
 Collect all flags into a SCOPE REDUCTION REPORT section in VERIFY.md.
-This check is ADVISORY — it does not change the verdict.
-  If flags found: "⚠️ Scope reduction detected — [N] tasks missing or skipped. Review with stakeholder."
+This check is BLOCKING — scope reduction is a bug, not an advisory.
+  If flags found: verdict = PARTIAL (even if all other checks passed).
+    "🚫 Scope reduction detected — [N] tasks missing or skipped. Verdict downgraded to PARTIAL."
   If clean: "✅ No scope reduction — all planned tasks have results."
 
 ## [שיפור 16] CROSS-PHASE REGRESSION CHECK
