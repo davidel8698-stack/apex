@@ -40,6 +40,206 @@
       "file": "setup-ci-cd.md",
       "complexity": "B",
       "estimated_phases": 2
+    },
+    {
+      "id": "prepare-for-production",
+      "name": "Prepare for Production",
+      "description": "Environment hardening, security, performance, observability, and deployment readiness",
+      "file": "prepare-for-production.md",
+      "complexity": "C",
+      "estimated_phases": 4
+    },
+    {
+      "id": "accessibility-audit",
+      "name": "Accessibility Audit",
+      "description": "WCAG 2.1 AA compliance audit and remediation for web applications",
+      "file": "accessibility-audit.md",
+      "complexity": "B",
+      "estimated_phases": 3
+    },
+    {
+      "id": "add-testing",
+      "name": "Add Testing",
+      "description": "Unit, integration, and E2E test setup with CI integration",
+      "file": "add-testing.md",
+      "complexity": "B",
+      "estimated_phases": 3
+    },
+    {
+      "id": "setup-monitoring",
+      "name": "Setup Monitoring",
+      "description": "Health checks, metrics, dashboards, and alerting for production systems",
+      "file": "setup-monitoring.md",
+      "complexity": "B",
+      "estimated_phases": 3
+    },
+    {
+      "id": "add-logging",
+      "name": "Add Logging",
+      "description": "Structured centralized logging with request correlation and log aggregation",
+      "file": "add-logging.md",
+      "complexity": "A",
+      "estimated_phases": 2
+    },
+    {
+      "id": "add-caching",
+      "name": "Add Caching",
+      "description": "In-memory or distributed caching with invalidation strategies",
+      "file": "add-caching.md",
+      "complexity": "B",
+      "estimated_phases": 3
+    },
+    {
+      "id": "deploy-to-cloud",
+      "name": "Deploy to Cloud",
+      "description": "Cloud deployment with infrastructure, CI/CD pipeline, and production validation",
+      "file": "deploy-to-cloud.md",
+      "complexity": "C",
+      "estimated_phases": 4
+    },
+    {
+      "id": "add-docker",
+      "name": "Add Docker",
+      "description": "Containerize application with Dockerfile, docker-compose, and production optimization",
+      "file": "add-docker.md",
+      "complexity": "B",
+      "estimated_phases": 3
+    },
+    {
+      "id": "setup-database",
+      "name": "Setup Database",
+      "description": "Database connection, schema design, migrations, seed data, and data access layer",
+      "file": "setup-database.md",
+      "complexity": "B",
+      "estimated_phases": 3
+    },
+    {
+      "id": "add-search",
+      "name": "Add Search",
+      "description": "Full-text search with indexing, relevance tuning, and autocomplete",
+      "file": "add-search.md",
+      "complexity": "C",
+      "estimated_phases": 3
+    },
+    {
+      "id": "add-websockets",
+      "name": "Add WebSockets",
+      "description": "Real-time communication with rooms, reconnection, and multi-server broadcasting",
+      "file": "add-websockets.md",
+      "complexity": "B",
+      "estimated_phases": 3
+    },
+    {
+      "id": "add-file-uploads",
+      "name": "Add File Uploads",
+      "description": "File upload with cloud storage, validation, thumbnails, and virus scanning",
+      "file": "add-file-uploads.md",
+      "complexity": "B",
+      "estimated_phases": 3
+    },
+    {
+      "id": "add-email-notifications",
+      "name": "Add Email Notifications",
+      "description": "Transactional email with templates, delivery tracking, and bounce handling",
+      "file": "add-email-notifications.md",
+      "complexity": "B",
+      "estimated_phases": 3
+    },
+    {
+      "id": "add-i18n",
+      "name": "Add Internationalization",
+      "description": "Multi-language support with locale detection, translations, and RTL",
+      "file": "add-i18n.md",
+      "complexity": "B",
+      "estimated_phases": 3
+    },
+    {
+      "id": "add-rbac",
+      "name": "Add Role-Based Access Control",
+      "description": "Roles, permissions, authorization middleware, and admin management",
+      "file": "add-rbac.md",
+      "complexity": "C",
+      "estimated_phases": 4
+    },
+    {
+      "id": "add-graphql-api",
+      "name": "Add GraphQL API",
+      "description": "GraphQL schema, resolvers, auth integration, and DataLoader optimization",
+      "file": "add-graphql-api.md",
+      "complexity": "C",
+      "estimated_phases": 4
+    },
+    {
+      "id": "setup-error-tracking",
+      "name": "Setup Error Tracking",
+      "description": "Centralized error capture with context enrichment, alerting, and release tracking",
+      "file": "setup-error-tracking.md",
+      "complexity": "A",
+      "estimated_phases": 2
+    },
+    {
+      "id": "add-background-jobs",
+      "name": "Add Background Jobs",
+      "description": "Async job processing with queue, retry logic, priorities, and monitoring",
+      "file": "add-background-jobs.md",
+      "complexity": "B",
+      "estimated_phases": 3
+    },
+    {
+      "id": "add-feature-flags",
+      "name": "Add Feature Flags",
+      "description": "Feature flag management with percentage rollout and environment targeting",
+      "file": "add-feature-flags.md",
+      "complexity": "B",
+      "estimated_phases": 2
+    },
+    {
+      "id": "migrate-to-typescript",
+      "name": "Migrate to TypeScript",
+      "description": "Incremental JavaScript to TypeScript migration with strict mode enforcement",
+      "file": "migrate-to-typescript.md",
+      "complexity": "C",
+      "estimated_phases": 4
+    },
+    {
+      "id": "add-oauth-social-login",
+      "name": "Add OAuth Social Login",
+      "description": "Google, GitHub, Facebook social login with account linking",
+      "file": "add-oauth-social-login.md",
+      "complexity": "C",
+      "estimated_phases": 3
+    },
+    {
+      "id": "add-pdf-generation",
+      "name": "Add PDF Generation",
+      "description": "Template-based PDF creation for invoices, reports, and documents",
+      "file": "add-pdf-generation.md",
+      "complexity": "B",
+      "estimated_phases": 2
+    },
+    {
+      "id": "setup-ssl-https",
+      "name": "Setup SSL/HTTPS",
+      "description": "SSL certificate provisioning, HTTPS enforcement, and security headers",
+      "file": "setup-ssl-https.md",
+      "complexity": "A",
+      "estimated_phases": 2
+    },
+    {
+      "id": "add-api-documentation",
+      "name": "Add API Documentation",
+      "description": "OpenAPI/Swagger spec generation with interactive documentation playground",
+      "file": "add-api-documentation.md",
+      "complexity": "A",
+      "estimated_phases": 2
+    },
+    {
+      "id": "add-data-export",
+      "name": "Add Data Export",
+      "description": "CSV, Excel, JSON export with streaming for large datasets and async generation",
+      "file": "add-data-export.md",
+      "complexity": "B",
+      "estimated_phases": 2
     }
   ]
 }
