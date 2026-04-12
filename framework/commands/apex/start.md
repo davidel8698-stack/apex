@@ -43,6 +43,23 @@ If no:
      Write answers into CLAUDE.md ## User Profile section (from CLAUDE-TEMPLATE.md).
      USER_LANG = captured language preference.
 
+  ## SCOPE WARNING [F-027]
+  2b. Before proceeding, display scope warning (in USER_LANG):
+      "APEX is designed for structured software projects with git and a test framework.
+       It may not be the right fit if your project:
+       - Has no git repository
+       - Has no test framework or runner
+       - Is a one-off script or experiment (<30 min of work)
+       - Is non-code (documentation, design, data analysis)
+       - Is prototype/throwaway code
+       - Is a single-file utility
+
+       See 'When NOT to Use APEX' in APEX-TEMPLATE.md for details.
+
+       (1) Continue with APEX   (2) Exit and use Claude Code directly"
+      If (2): display "No problem — just use Claude Code without /apex commands." and STOP.
+      If (1): proceed.
+
   ## STATE INITIALIZATION — fields are progressively populated by planner/architect stages.
   ## Also update STATE.schema.json, status.md, and test fixtures on changes.
   3. Create STATE.json with:

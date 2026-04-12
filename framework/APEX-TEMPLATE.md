@@ -34,6 +34,17 @@ Context Budget: .apex/CONTEXT_BUDGET.json | Threat Model: .apex/THREAT_MODEL.md
 - Predictability over capability.
 - Filter, don't flood.
 
+## When NOT to Use APEX
+APEX is designed for structured software projects. It adds overhead that is counterproductive for:
+- **No git repository** — APEX relies on git for snapshots, rollback, and commit discipline.
+- **No test framework** — verification levels (B/C/D) require runnable tests. Without a test runner, verification is manual only.
+- **One-off scripts or experiments** — if the task takes <30 minutes, APEX's planning overhead exceeds the work itself.
+- **Non-code projects** — documentation-only, design, data analysis, or content creation projects don't benefit from the pipeline.
+- **Prototype/throwaway code** — if you plan to discard the code, structured verification has no value.
+- **Single-file utilities** — APEX's phase-based architecture is designed for multi-file, multi-concern projects.
+
+If your project fits any of these, use Claude Code directly without APEX.
+
 ## Agent Autonomy
 - Work start-to-finish. Fix errors yourself. Only stop if blocked after 3 attempts.
 - When asking (D-level or blocked), use this format:
