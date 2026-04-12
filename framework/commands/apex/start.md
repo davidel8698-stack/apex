@@ -54,6 +54,18 @@ If no:
       (append any hooks from the template that are not already present by command match),
       and write back. Do not overwrite user-defined hooks or permissions.
 
+  ## SNAPSHOT ORPHAN BRANCH INIT
+  1e. Initialize persistent snapshot branch (idempotent — skip if exists):
+      ```bash
+      if ! git rev-parse --verify apex/snapshots >/dev/null 2>&1; then
+        EMPTY_TREE=$(git hash-object -t tree /dev/null)
+        INIT_COMMIT=$(git commit-tree "$EMPTY_TREE" -m "apex: init snapshot branch")
+        git update-ref refs/heads/apex/snapshots "$INIT_COMMIT"
+      fi
+      ```
+      This creates a hidden orphan branch for persistent pre-task snapshots.
+      Unlike stash, this survives `git stash clear` and provides browseable history.
+
   ## USER PROFILE CAPTURE
   2. Ask user (in detected language or default English):
      - "What is your technical level?" → non-programmer / junior / senior / architect

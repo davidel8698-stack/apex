@@ -63,7 +63,7 @@ if [ -z "$STASH_SHA" ]; then
 fi
 
 # Store the stash object in the stash list with a named message
-git stash store -m "$STASH_MSG" "$STASH_SHA" 2>/dev/null
+STORE_ERR=$(git stash store -m "$STASH_MSG" "$STASH_SHA" 2>&1)
 
 # FILESYSTEM-LEVEL VERIFICATION — matches critic.md rule.
 # Don't trust $? alone; confirm the stash is actually in the list.
@@ -71,12 +71,29 @@ if git stash list | grep -qF "$STASH_MSG"; then
   update_state_stash "$STASH_MSG"
   echo "✅ PRE-TASK SNAPSHOT: Saved for task $TASK_ID"
   echo "   Rollback: git reset --hard HEAD && git stash apply \"stash^{/$STASH_MSG}\""
+
+  # ORPHAN BRANCH COMMIT — persistent snapshot (non-blocking)
+  # If orphan branch exists, commit the stash tree to it for browseable history.
+  # Failure here does NOT affect the stash snapshot or exit code.
+  if git rev-parse --verify apex/snapshots >/dev/null 2>&1; then
+    TREE=$(git rev-parse "${STASH_SHA}^{tree}" 2>/dev/null)
+    if [ -n "$TREE" ]; then
+      PARENT=$(git rev-parse apex/snapshots 2>/dev/null)
+      ORPHAN_SHA=$(git commit-tree "$TREE" -p "$PARENT" -m "snapshot: ${TASK_ID} ${TIMESTAMP}" 2>/dev/null)
+      if [ -n "$ORPHAN_SHA" ]; then
+        git update-ref refs/heads/apex/snapshots "$ORPHAN_SHA" 2>/dev/null
+        echo "   Persistent snapshot: apex/snapshots ($(echo "$ORPHAN_SHA" | cut -c1-8))"
+      fi
+    fi
+  fi
+
   exit 0
 else
   # The stash did not land — fail loud so the caller can decide.
   update_state_stash_null
   echo "🚫 PRE-TASK SNAPSHOT: stash creation unverified at filesystem level" >&2
   echo "   task=$TASK_ID msg=$STASH_MSG sha=$STASH_SHA" >&2
+  [ -n "$STORE_ERR" ] && echo "   git error: $STORE_ERR" >&2
   echo "   Aborting task to preserve data integrity." >&2
   exit 2
 fi

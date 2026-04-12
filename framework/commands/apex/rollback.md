@@ -23,7 +23,15 @@ STASH_LIST=$(git stash list --grep="apex-snapshot" 2>/dev/null)
 TAG_LIST=$(git tag -l "apex/*" --sort=-creatordate 2>/dev/null)
 ```
 
-If both empty:
+### Persistent snapshots (orphan branch)
+```bash
+ORPHAN_LIST=""
+if git rev-parse --verify apex/snapshots >/dev/null 2>&1; then
+  ORPHAN_LIST=$(git log apex/snapshots --oneline --max-count=20 2>/dev/null)
+fi
+```
+
+If all three empty:
   "❌ No rollback points found.
    Task snapshots are created by /apex:fast and /apex:quick (pre-task-snapshot.sh).
    Phase tags are created when a phase passes verification (phase-tag.sh).
@@ -41,6 +49,13 @@ For each stash entry matching apex-snapshot:
 "### Phase Tags"
 For each apex/* tag:
   "[N] {tag name} — {date} — {message}"
+
+"### Persistent Snapshots (orphan branch)"
+If ORPHAN_LIST is not empty:
+  For each orphan commit:
+    "[N] {short sha} — {commit message}"
+Else:
+  "(none — run /apex:start to initialize orphan branch)"
 
 "Enter number to rollback, or 'cancel':"
 
@@ -69,6 +84,11 @@ If selected a stash entry:
 If selected a tag:
   ```bash
   git checkout {tag_name} -- .
+  ```
+
+If selected an orphan branch snapshot:
+  ```bash
+  git checkout {orphan_commit_sha} -- .
   ```
 
 ### Update STATE.json after rollback
