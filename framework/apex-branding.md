@@ -251,6 +251,7 @@ The information cockpit. Full project telemetry in a single view.
 ║       EvoScore regression    ░░░░░░░░░░░░░░░░░░░░  [pct]%                  ║
 ║       Comprehension gates    ██░░░░░░░░░░░░░░░░░░  [N] / [total]           ║
 ║       Mutation kill rate     ██████████░░░░░░░░░░  [pct]%                  ║
+║       Evidence total        ████████████████████  [N] citations            ║
 ║                                                                            ║
 ╠════════════════════════════════════════════════════════════════════════════╣
 ║                                                                            ║

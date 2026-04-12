@@ -60,6 +60,7 @@ Extract and substitute into Section 6 template:
     EvoScore regression from STATE.evoscore.regression_rate
     Comprehension gates N/total
     Mutation kill rate from STATE.mutation_scores (show "N/A" if no scores exist)
+    Evidence total: parse ~/.claude/apex-learnings.md, sum all `**Evidence count: N**` entries. Display total integer. Show "0" if file missing or no entries.
 
   DORA METRICS:
     Lead Time: STATE.dora.lead_time_avg hours (avg phase completion time) or "N/A" if null
