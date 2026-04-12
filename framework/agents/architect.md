@@ -102,6 +102,22 @@ For each task in PLAN_META.json:
 
 Write `negative_auth_required` into each security task object in PLAN_META.json.
 
+## STEP 1.8: Jagged Frontier Assessment [F-012]
+For each task, assess AI capability frontier risk based on task content:
+
+**High frontier risk** (escalate verify_level one notch: A→B, B→C, C→D):
+- Security-sensitive: auth, encryption, access control, token handling
+- Concurrency: race conditions, locks, parallel state, async coordination
+- Distributed state: multi-service transactions, eventual consistency, cache invalidation
+- Complex algorithms: custom parsers, state machines, graph traversal, optimization
+- Domain-specific compliance: regulatory, financial calculations, medical, legal
+
+**Standard frontier risk** (no escalation):
+- CRUD operations, UI components, configuration, standard API endpoints, file I/O, schema changes
+
+For each task: evaluate `frontier_risk` (high/standard). If high → bump `verify_level` one notch.
+Write `frontier_risk` into each task object in PLAN_META.json.
+
 ## STEP 2: Generate WAVE_MAP.json [שיפור 22]
 Analyze task dependencies within each phase:
 - Tasks with NO dependencies on other tasks in same phase → Wave 1
