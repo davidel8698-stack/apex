@@ -220,6 +220,11 @@ If task.is_irreversible == true:
   Source and follow ~/.claude/commands/apex/_debate.md protocol.
   "⚖️ Debate complete."
 
+If task.roundtable_needed == true:
+  "🔵 Multi-faceted decision: [name]. Convening Roundtable..."
+  Source and follow ~/.claude/commands/apex/_roundtable.md protocol.
+  "🔵 Roundtable complete."
+
 ## STEP D: Reflexion State
 ATTEMPTS = STATE.reflexion.current_unit_attempts
 If ATTEMPTS > 0: load .apex/phases/${current_phase}/[unit]-REFLEXION.md as "PREVIOUS ATTEMPT FAILED: [content]"

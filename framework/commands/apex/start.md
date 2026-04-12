@@ -29,7 +29,7 @@ Check .apex/STATE.json. If exists: "Project in progress. /apex:next or /apex:res
 
 If no:
   0. Render Section 5 banner with [●] for completed steps, [◐] for active, [○] for pending.
-  1. mkdir -p .apex/{pre-build,phases,backups,debate-log,comprehension-gates,todos,threads,seeds,backlog}
+  1. mkdir -p .apex/{pre-build,phases,backups,debate-log,roundtable-log,comprehension-gates,todos,threads,seeds,backlog}
 
   ## TWO-TIER METHODOLOGY SETUP
   1b. Copy ~/.claude/APEX-TEMPLATE.md to .apex/APEX.md
