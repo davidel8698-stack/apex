@@ -33,7 +33,7 @@ if [[ "$FILE" == *.ts ]] || [[ "$FILE" == *.tsx ]]; then
   fi
 fi
 
-# ADVISORY: conventional commit format validation [R-027]
+# BLOCKING: conventional commit format validation [R-027]
 # Detects commit message files (COMMIT_EDITMSG, .commit-msg) and validates format
 if [[ "$FILE" == *COMMIT_EDITMSG ]] || [[ "$FILE" == *.commit-msg ]] || [[ "$FILE" == *commit-message* ]]; then
   FIRST_LINE=$(head -1 "$FILE" 2>/dev/null | tr -d '\r')
@@ -41,6 +41,7 @@ if [[ "$FILE" == *COMMIT_EDITMSG ]] || [[ "$FILE" == *.commit-msg ]] || [[ "$FIL
     echo "⚠️ WARNING: Commit message does not follow conventional format: type(scope): description"
     echo "   Valid types: feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert"
     echo "   Got: $FIRST_LINE"
+    exit 2
   fi
 fi
 
