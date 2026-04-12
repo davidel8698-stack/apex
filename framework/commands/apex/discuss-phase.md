@@ -32,15 +32,31 @@ $ARGUMENTS may contain a phase number. If empty, use STATE.current_phase + 1 (ne
    **Complexity level**: [level]
    **Prior decisions that affect this phase**: [list relevant ones]"
 
-5. Ask clarifying questions based on SPEC analysis:
-   - Identify ambiguities in the SPEC for this phase
+5. **Gray-Area Scan** [R-011]:
+   Before asking questions, scan SPEC.md sections relevant to this phase for ambiguity:
+   - **Vague language markers:** "should", "might", "possibly", "could", "TBD", "maybe", "ideally", "as needed"
+   - **Thin sections:** Sections with <3 sentences of substantive detail
+   - **Undefined terms:** Terms referenced but never defined in SPEC
+   - **Potential contradictions:** Requirements that could conflict with each other
+
+   Output a prioritized gray-area list:
+   "### Gray Areas Detected
+   | # | Section | Signal | Ambiguity Level | Detail |
+   |---|---------|--------|-----------------|--------|
+   | 1 | ...     | vague language | HIGH | ... |"
+
+   Use HIGH/MEDIUM/LOW ambiguity levels. HIGH = contradictions or undefined terms.
+   MEDIUM = vague language in critical sections. LOW = thin sections or minor vagueness.
+
+6. Ask clarifying questions based on SPEC analysis and gray-area scan:
+   - Prioritize HIGH ambiguity items from step 5
    - Identify external dependencies or integration points
    - Identify potential edge cases
    - Ask about priorities and constraints
 
    Present as numbered questions. Wait for user response.
 
-6. After user responds, capture answers:
+7. After user responds, capture answers:
    Write to .apex/phases/{phase}/CONTEXT.md:
    "# Phase {phase} Context
    Date: [now]
@@ -57,10 +73,10 @@ $ARGUMENTS may contain a phase number. If empty, use STATE.current_phase + 1 (ne
    ## Dependencies
    [any dependencies identified]"
 
-7. Confirm:
+8. Confirm:
    "Context captured in .apex/phases/{phase}/CONTEXT.md
    Ready for: /apex:plan-phase {phase}"
 
-8. Log event:
+9. Log event:
    bash ~/.claude/hooks/session-log.sh "phase_discuss" "Phase {phase} context gathered"
 </context>
