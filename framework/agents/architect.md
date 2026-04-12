@@ -68,13 +68,30 @@ After writing PLAN.md, generate PLAN_META.json with structured data:
 - Wave assignments based on dependency analysis
 This JSON is used by hooks — it MUST be accurate and match PLAN.md exactly.
 
-## STEP 1.6: Classify Decision Mode [F-005]
-For each task in PLAN_META.json, assign `decision_mode` using these MECHANICAL rules (no AI judgment):
+## STEP 1.6: Classify Decision Mode — Dual-Mode [F-005, F-010]
+For each task in PLAN_META.json, assign `decision_mode` in two layers:
+
+**Layer 1: Content-based domain detection (product vs technical)**
+Classify task domain by examining `files[]` and `specialist`:
+- Product domain (user is expert → collaborator):
+  - Files match `**/components/**`, `**/pages/**`, `**/routes/**`, `**/*.css`, `**/*.html`, `**/*.scss`, `**/views/**`, `**/templates/**`
+  - OR `specialist == "frontend"`
+  - OR task touches UX flows, business rules, pricing, user-facing copy
+- Technical domain (AI is expert → replacement):
+  - Files match `**/migrations/**`, `**/config/**`, `**/infra/**`, `**/*.lock`
+  - OR `specialist` in `["security", "data", "integration"]` (unless overridden by Layer 2)
+  - OR task touches architecture, performance, database schema, CI/CD
+
+Product-domain tasks → `"collaborator"` regardless of verify_level.
+
+**Layer 2: Mechanical rules (fallback for tasks without clear domain signal)**
 - `verify_level == "D"` OR `is_irreversible == true` → `"collaborator"`
 - `verify_level == "A"` OR `verify_level == "B"` → `"replacement"`
 - `verify_level == "C"` AND `specialist == "security"` → `"collaborator"`
 - `verify_level == "C"` otherwise → `"replacement"`
 - If field absent: defaults to `"replacement"` at runtime (next.md enforcement)
+
+Layer 1 takes precedence over Layer 2. If Layer 1 classifies a task as product-domain, it is `"collaborator"` even if Layer 2 would assign `"replacement"`.
 
 Write `decision_mode` into each task object in PLAN_META.json.
 
