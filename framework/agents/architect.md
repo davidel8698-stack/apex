@@ -78,6 +78,13 @@ For each task in PLAN_META.json, assign `decision_mode` using these MECHANICAL r
 
 Write `decision_mode` into each task object in PLAN_META.json.
 
+## STEP 1.7: Flag Negative Auth Requirement [F-028]
+For each task in PLAN_META.json:
+- `specialist == "security"` → `"negative_auth_required": true`
+- All other tasks → field omitted (defaults to false at runtime)
+
+Write `negative_auth_required` into each security task object in PLAN_META.json.
+
 ## STEP 2: Generate WAVE_MAP.json [שיפור 22]
 Analyze task dependencies within each phase:
 - Tasks with NO dependencies on other tasks in same phase → Wave 1

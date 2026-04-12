@@ -512,6 +512,16 @@ PASS:
       Log to DECISIONS.md: "Auditor advisory: ${NEXT_UNIT} — minor test quality gaps noted"
       # Advisory only — does not change verdict. Continue.
 
+  ## NEGATIVE AUTH GATE (security tasks only) [R-028]
+  Read task from PLAN_META.json for NEXT_UNIT.
+  If task.negative_auth_required == true:
+    Read RESULT.json tests_run for NEXT_UNIT.
+    DENY_PATTERN = grep -iE "deny|unauthorized|forbidden|403|401" in test names
+    If zero matches:
+      Treat as PARTIAL — task correctness confirmed by critic, but missing negative authorization tests.
+      "⚠️ Security task missing negative auth (deny) tests. At least one test must verify unauthorized access is denied."
+      Log to DECISIONS.md: "Negative auth gate: ${NEXT_UNIT} passed critic but has no deny tests"
+
   ## AUTOPILOT STATE UPDATE (on PASS)
   If STATE.autopilot.enabled:
     STATE.autopilot.tasks_completed_in_autopilot++

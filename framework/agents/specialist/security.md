@@ -72,6 +72,7 @@ Before completing any task, verify the following that apply:
 4. **Password/token storage**: If the task touches password or token storage, confirm hashing algorithm and cost factor match project standards (bcrypt >= 12 rounds or argon2id).
 5. **CORS/CSP changes**: If the task modifies CORS or CSP headers, verify the change does not widen the policy beyond what the spec requires. Compare before/after values explicitly.
 6. **Session handling**: If the task touches session management, verify sessions are invalidated on password change, logout, and permission changes.
+7. **Negative auth enforcement** [F-028]: If task has `negative_auth_required: true` in PLAN_META.json, verify RESULT.json `tests_run` contains at least one test with deny/unauthorized/forbidden/403/401 in its name. If none found, add one or flag in RESULT.json.unresolved_risks.
 
 ## MANDATORY VERIFY COMMANDS (run before completing)
 
