@@ -47,6 +47,9 @@
       "escalate_on_level": {
         "4": "opus"
       }
+    },
+    "test-architect": {
+      "default": "haiku"
     }
   }
 }

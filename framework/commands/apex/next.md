@@ -263,6 +263,27 @@ If hook exit code == 2: snapshot verification failed (filesystem-level).
 Else (exit 0): proceed.
 Update STATE: snapshots, circuit_breaker.total_tool_calls_this_task = 0
 
+## STEP F.5: Test Architecture Review (C/D only) [F-006]
+Read task verify_level from PLAN_META.json.
+If verify_level in ["A", "B"]: skip this step entirely.
+If verify_level in ["C", "D"]:
+  Resolve model: routing["test-architect"] from apex-model-routing.json.
+  Task("test-architect", {
+    input: task_xml + .apex/SPEC.md,
+    output: ".apex/phases/$PHASE/TEST_PLAN.json"
+  })
+  Read TEST_PLAN.json.
+  If TEST_PLAN.veto == true:
+    bash ~/.claude/hooks/session-log.sh "test_architect" "VETO — test-architect blocked task ${NEXT_UNIT}: ${TEST_PLAN.veto_reason}"
+    STATE.status = "blocked_by_test_architect"
+    Display to user:
+    "🚫 Test architect vetoed task ${NEXT_UNIT}: ${TEST_PLAN.veto_reason}
+     Review TEST_PLAN.json and address gaps before re-running /apex:next."
+    STOP.
+  Else:
+    bash ~/.claude/hooks/session-log.sh "test_architect" "TEST_PLAN approved for task ${NEXT_UNIT} — risk: ${TEST_PLAN.risk_profile}"
+    Inject TEST_PLAN.json into executor context (executor receives test requirements).
+
 ## STEP G: Autonomy Check + Execute
 Read task verify_level from PLAN_META.json
 
