@@ -150,6 +150,11 @@ CRITICAL: done_criteria_checked MUST list ALL criteria from <done> in task XML.
 Mark verified=false for any criterion you did not actually test with a command.
 This is the HONEST UNCERTAINTY mechanism [שיפור 37]. Never mark verified=true without evidence.
 
+COMPUTED ARRAYS (derive from done_criteria_checked — do NOT populate manually):
+- "verified_criteria": items where verified == true → [{"criterion": "...", "evidence": "..."}]
+- "unverified_criteria": items where verified == false → [{"criterion": "...", "reason": "..."}]
+  (the evidence field from done_criteria_checked becomes reason — e.g., "NOT TESTED" or explanation)
+
 confidence rules [v7, R3]:
 - "high" — all verify_commands passed, all tests green, no assumptions made
 - "medium" — verify_commands passed but some edge cases not testable
