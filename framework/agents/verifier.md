@@ -17,10 +17,15 @@ Write VERIFY.md with FAIL verdict and STOP. Do not proceed to STEP 1.
 Rationale: a phase that completes without a single commit is a hallucinated phase regardless of what SUMMARY.md files claim.
 
 ## STRICT MODE ENFORCEMENT
-Read STATE.json. If strict_mode == true:
+Strict mode activates via EITHER mechanism (env var takes precedence):
+1. Environment variable: `APEX_STRICT_MODE=1` (useful for CI or temporary override without state mutation)
+2. STATE.json field: `strict_mode == true` (persistent across sessions)
+
+Check: if `$APEX_STRICT_MODE == "1"` OR STATE.json `strict_mode == true`:
   All tasks treated as verify_level D regardless of PLAN_META assignment.
   All optional checks (edge cases, phantom, mutation) are mandatory — none may be skipped.
   Log in VERIFY.md header: "STRICT MODE ACTIVE — all tasks verified at level D."
+  Log activation source: "Activated via: [env var | STATE.json | both]"
 
 STEP 1: Per-task verification
 For each task in PLAN_META.json:
