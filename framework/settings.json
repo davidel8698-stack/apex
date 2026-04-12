@@ -29,6 +29,11 @@
       "type": "PreToolUse",
       "matcher": "Bash",
       "command": "bash ~/.claude/hooks/pre-task-snapshot.sh"
+    },
+    {
+      "type": "PostToolUse",
+      "matcher": "Write|Edit",
+      "command": "bash ~/.claude/hooks/schema-drift.sh"
     }
   ]
 }
