@@ -1,0 +1,68 @@
+# APEX Security CI Scanner — OPTIONAL TEMPLATE
+# Copy this file to .github/workflows/apex-security-ci.yml in your project.
+# Recommended for projects at complexity level L3 and above.
+#
+# This template provides CI-level security checks that complement
+# APEX's in-session hooks (destructive-guard.sh, path-guard.sh, post-write.sh).
+# It catches issues in code pushed directly without going through the APEX pipeline.
+
+name: APEX Security Scan
+
+on:
+  pull_request:
+    branches: [main, master]
+  push:
+    branches: [main, master]
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Secret detection — regex from post-write.sh
+      - name: Detect hardcoded secrets
+        run: |
+          echo "Scanning for hardcoded secrets..."
+          FOUND=0
+          while IFS= read -r file; do
+            if grep -nE "(password|secret|token|key|api_key|credential|private_key|bearer)\s*[:=]\s*['\"][a-zA-Z0-9_/+=-]{8,}" "$file" 2>/dev/null; then
+              echo "::error file=$file::Potential hardcoded secret detected"
+              FOUND=1
+            fi
+          done < <(find . -type f \( -name '*.ts' -o -name '*.tsx' -o -name '*.js' -o -name '*.jsx' -o -name '*.py' -o -name '*.sh' -o -name '*.json' -o -name '*.yml' -o -name '*.yaml' \) -not -path '*/node_modules/*' -not -path '*/.git/*')
+          if [ "$FOUND" -eq 1 ]; then
+            echo "::error::Secret detection failed — review flagged files"
+            exit 1
+          fi
+          echo "No hardcoded secrets detected."
+
+      # Path traversal detection — patterns from path-guard.sh
+      - name: Detect path traversal patterns
+        run: |
+          echo "Scanning for path traversal patterns..."
+          FOUND=0
+          while IFS= read -r file; do
+            if grep -nE '(\.\./|/etc/|/usr/|/var/|/root/|/home/|\\Windows\\|\\Program Files)' "$file" 2>/dev/null | grep -vE '(node_modules|\.git|package-lock|\.md$)' | head -5; then
+              echo "::warning file=$file::Potential path traversal pattern"
+              FOUND=1
+            fi
+          done < <(find . -type f \( -name '*.ts' -o -name '*.tsx' -o -name '*.js' -o -name '*.jsx' -o -name '*.py' -o -name '*.sh' \) -not -path '*/node_modules/*' -not -path '*/.git/*')
+          if [ "$FOUND" -eq 1 ]; then
+            echo "::warning::Path traversal patterns detected — review flagged files"
+          fi
+          echo "Path traversal scan complete."
+
+      # Conventional commit validation on PR titles
+      - name: Validate conventional commit format
+        if: github.event_name == 'pull_request'
+        run: |
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          if [[ ! "$PR_TITLE" =~ ^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\(.+\))?!?:[[:space:]].+ ]]; then
+            echo "::error::PR title does not follow conventional commit format"
+            echo "Expected: type(scope): description"
+            echo "Valid types: feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert"
+            echo "Got: $PR_TITLE"
+            exit 1
+          fi
+          echo "PR title follows conventional commit format."
