@@ -465,6 +465,26 @@ PASS:
       "⚠️ Mutation kill rate below threshold. Tests need strengthening."
       Log to DECISIONS.md: "Mutation gate: ${NEXT_UNIT} passed critic but below mutation threshold"
 
+  ## TEST AUDITOR (C/D tasks only) [R-012]
+  ## Quarantined agent — reads ONLY test files, never implementation code.
+  ## Runs after critic PASS + mutation gate, before autopilot state update.
+  If verify_level in ["C", "D"]:
+    AUDITOR_CONTEXT = {
+      test_plan: .apex/phases/${current_phase}/TEST_PLAN.json,
+      critic_verdict: .apex/phases/${current_phase}/${NEXT_UNIT}-CRITIC.md (verdict line only),
+      result_tests: .apex/phases/${current_phase}/${NEXT_UNIT}-RESULT.json (tests_run, verify_commands_run only),
+      task_spec: PLAN_META.json task XML for NEXT_UNIT (done_criteria, edge_cases, verify_level)
+    }
+    Task("auditor", AUDITOR_CONTEXT, model=resolve_model("auditor"))
+    Read .apex/phases/${current_phase}/${NEXT_UNIT}-AUDIT.md
+    If verdict == "FAIL":
+      Treat as PARTIAL — task correctness confirmed by critic, but test quality insufficient per auditor.
+      "⚠️ Auditor detected test quality issues. Tests need strengthening."
+      Log to DECISIONS.md: "Auditor: ${NEXT_UNIT} passed critic but failed test quality audit"
+    If verdict == "WARN":
+      Log to DECISIONS.md: "Auditor advisory: ${NEXT_UNIT} — minor test quality gaps noted"
+      # Advisory only — does not change verdict. Continue.
+
   ## AUTOPILOT STATE UPDATE (on PASS)
   If STATE.autopilot.enabled:
     STATE.autopilot.tasks_completed_in_autopilot++
