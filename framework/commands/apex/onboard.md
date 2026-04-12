@@ -27,24 +27,34 @@ Guide through APEX setup for an existing project that does not have .apex/ initi
 
    Display: "Detected project type: [type]"
 
-3. Analyze project size:
-   - Count source files: find . -name "*.{ext}" | wc -l
-   - Check git history: git log --oneline | wc -l
-   - Check for existing tests: look for test directories
+3. Analyze project complexity (Scale-Adaptive Classifier):
+   Run these bash commands silently:
+   ```bash
+   COMMITS=$(git log --oneline 2>/dev/null | wc -l)
+   TEST_FILES=$(find . -name "*.test.*" -o -name "*.spec.*" -o -name "*_test.*" 2>/dev/null | grep -v node_modules | wc -l)
+   HAS_CI=$( [ -d .github/workflows ] || [ -f .gitlab-ci.yml ] || [ -f Jenkinsfile ] || [ -f .circleci/config.yml ] && echo 1 || echo 0 )
+   HAS_DOCKER=$( [ -f Dockerfile ] || [ -f docker-compose.yml ] || [ -f docker-compose.yaml ] && echo 1 || echo 0 )
+   CONTRIBUTORS=$(git shortlog -sn 2>/dev/null | wc -l)
+   LOC=$(find . -type f \( -name "*.ts" -o -name "*.js" -o -name "*.py" -o -name "*.go" -o -name "*.rs" -o -name "*.java" -o -name "*.rb" -o -name "*.sh" \) -not -path "*/node_modules/*" -not -path "*/.git/*" 2>/dev/null | head -5000 | xargs wc -l 2>/dev/null | tail -1 | awk '{print $1}')
+   ```
 
    Display:
    "Project analysis:
-   - Source files: [N]
-   - Git commits: [N]
-   - Test directory: [found/not found]"
+   - LOC: [N]
+   - Test files: [N]
+   - CI/CD: [yes/no]
+   - Docker: [yes/no]
+   - Contributors: [N]
+   - Git commits: [N]"
 
-4. Suggest complexity level:
-   - < 20 files, no tests → suggest level 2 (Trying it out)
-   - 20-100 files → suggest level 3 (Serious side project)
-   - 100+ files or existing tests → suggest level 4 (Production-grade)
-   
-   Display: "Suggested complexity level: [N] — [name]. Agree? (y/n or specify level 1-5)"
-   Wait for user response.
+4. Suggest complexity level (Signal→complexity mapping):
+   - **L1 (Trying it out):** LOC < 500, no tests, no CI, no Docker, ≤ 1 contributor
+   - **L2 (Building something real):** LOC 500–5000, some tests OR CI present, ≤ 3 contributors
+   - **L3 (Going to production):** LOC 5000–50000, test suite + CI present, Docker likely, 2+ contributors
+   - **L4 (My business depends on this):** LOC > 50000, full test suite, CI+CD, Docker, 4+ contributors
+
+   Display: "Suggested complexity level: L[N] — [name]. Override? (y/N or specify level 1-4)"
+   Wait for user response. If user accepts or no response → use detected level. If user overrides → use their choice.
 
 5. Pre-fill and invoke /apex:start:
    "Starting APEX with:
