@@ -363,6 +363,7 @@
         },
         "auto_paused": { "type": "boolean" },
         "auto_pause_reason": { "type": ["string", "null"] },
+        "last_time_gate": { "type": ["string", "null"], "format": "date-time" },
         "drift_indicators": {
           "type": "object",
           "additionalProperties": false,

@@ -103,6 +103,28 @@ If STATE.session exists:
     bash ~/.claude/hooks/session-log.sh "warning" "[warning in user language]"
     Continue cautiously.
 
+## TIME-BASED DECISION GATE — RUNS AFTER SESSION HEALTH CHECK
+If STATE.session.started_at exists:
+  ELAPSED_MINUTES = (now - STATE.session.started_at) in minutes
+  LAST_GATE = STATE.session.last_time_gate OR STATE.session.started_at
+  MINUTES_SINCE_GATE = (now - LAST_GATE) in minutes
+
+  If ELAPSED_MINUTES >= 60 AND MINUTES_SINCE_GATE >= 60:
+    STATE.session.last_time_gate = now
+    Write updated STATE.json
+    bash ~/.claude/hooks/session-log.sh "time_gate" "Decision gate at [ELAPSED_MINUTES] minutes"
+    Display in user's configured language (from CLAUDE.md User Profile):
+    "⏱️ עברו [ELAPSED_MINUTES] דקות מתחילת הסשן.
+
+    אפשרויות:
+    1. המשך — הכל בסדר, תמשיך לעבוד
+    2. /apex:pause — שמור מצב והפסק
+    3. /apex:resume — התחל סשן חדש עם הקשר נקי"
+
+    Wait for user response.
+    If user selects 1 ("continue"): proceed normally.
+    If user selects 2 or 3: execute selected command. STOP.
+
 ## MODEL ROUTING HELPER (used by all agent invocations below)
 Read ~/.claude/apex-model-routing.json (if exists)
 resolve_model(agent_type, verify_level):
