@@ -72,7 +72,10 @@ Extract and substitute into Section 6 template:
     EvoScore regression from STATE.evoscore.regression_rate
     Comprehension gates N/total
     Mutation kill rate from STATE.mutation_scores (show "N/A" if no scores exist)
-    Evidence total: parse ~/.claude/apex-learnings.md, sum all `**Evidence count: N**` entries. Display total integer. Show "0" if file missing or no entries.
+    Living Evidence Counter: parse ~/.claude/apex-learnings.md by tier section (## HOT, ## WARM, ## COLD).
+      For each tier, count entries and sum their `**Evidence count: N**` values.
+      Display: "Living Evidence: [total_confirmations] confirmations across [total_learnings] learnings ([H] hot, [W] warm, [C] cold)"
+      Show "Living Evidence: 0 confirmations across 0 learnings (0 hot, 0 warm, 0 cold)" if file missing or no entries.
 
   DORA METRICS:
     Lead Time: STATE.dora.lead_time_avg hours (avg phase completion time) or "N/A" if null
