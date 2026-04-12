@@ -3,6 +3,11 @@ description: Execute trivial task with zero ceremony. <5 min, single file, no lo
 ---
 
 <context>
+## PROPOSALS MODE GUARD
+Read .apex/STATE.json → proposals_mode.
+If proposals_mode == true: NEVER ask open-ended questions in this command.
+Instead, present numbered proposals with a recommended default marked [recommended].
+
 Task from $ARGUMENTS.
 
 ## INPUT GUARD (The Guessing Entry — anti-pattern)

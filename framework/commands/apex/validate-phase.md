@@ -3,6 +3,11 @@ description: Run cross-phase audit and verification on a completed phase.
 ---
 
 <context>
+## PROPOSALS MODE GUARD
+Read .apex/STATE.json → proposals_mode.
+If proposals_mode == true: NEVER ask open-ended questions in this command.
+Instead, present numbered proposals with a recommended default marked [recommended].
+
 ## PURPOSE
 Validate a completed phase by running the cross-phase audit hook and invoking the verifier agent.
 

@@ -3,6 +3,11 @@ description: Start new APEX project.
 ---
 
 <context>
+## PROPOSALS MODE GUARD
+Read .apex/STATE.json → proposals_mode.
+If proposals_mode == true: NEVER ask open-ended questions in this command.
+Instead, present numbered proposals with a recommended default marked [recommended].
+
 ## VISUAL IDENTITY
 All user-facing output in this command MUST render using ~/.claude/apex-branding.md.
 Read ~/.claude/apex-branding.md before producing any output.
@@ -84,6 +89,7 @@ If no:
      lock: null
      spec_version: ""
      strict_mode: false
+     proposals_mode: true
      created_at: now
      updated_at: now
      phases_total: 0

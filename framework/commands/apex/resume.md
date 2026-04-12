@@ -3,6 +3,11 @@ description: Resume project in fresh session after context rotation or crash.
 ---
 
 <context>
+## PROPOSALS MODE GUARD
+Read .apex/STATE.json → proposals_mode.
+If proposals_mode == true: NEVER ask open-ended questions in this command.
+Instead, present numbered proposals with a recommended default marked [recommended].
+
 ## VISUAL IDENTITY
 Read ~/.claude/apex-branding.md before producing output.
 Render Section 8.C (Context Rotation) as the opening transition.

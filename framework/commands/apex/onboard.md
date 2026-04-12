@@ -3,6 +3,11 @@ description: Onboard an existing project to APEX. Guided setup for projects with
 ---
 
 <context>
+## PROPOSALS MODE GUARD
+Read .apex/STATE.json → proposals_mode.
+If proposals_mode == true: NEVER ask open-ended questions in this command.
+Instead, present numbered proposals with a recommended default marked [recommended].
+
 ## PURPOSE
 Guide through APEX setup for an existing project that does not have .apex/ initialized.
 

@@ -3,6 +3,11 @@ description: Recover from crash or stuck state.
 ---
 
 <context>
+## PROPOSALS MODE GUARD
+Read .apex/STATE.json → proposals_mode.
+If proposals_mode == true: NEVER ask open-ended questions in this command.
+Instead, present numbered proposals with a recommended default marked [recommended].
+
 ## TECHNICAL LEVEL ADAPTATION
 Read technical level from CLAUDE.md ## User Profile section.
 Adapt recovery options display:

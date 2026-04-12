@@ -3,6 +3,11 @@ description: Guided forensics with step-by-step explanations and fix suggestions
 ---
 
 <context>
+## PROPOSALS MODE GUARD
+Read .apex/STATE.json → proposals_mode.
+If proposals_mode == true: NEVER ask open-ended questions in this command.
+Instead, present numbered proposals with a recommended default marked [recommended].
+
 ## PURPOSE
 A guided, interactive version of /apex:forensics. Walks the user through
 what happened, explains each step in plain language, and offers fix suggestions.

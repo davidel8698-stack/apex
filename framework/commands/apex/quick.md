@@ -3,6 +3,11 @@ description: Execute small task without full planning.
 ---
 
 <context>
+## PROPOSALS MODE GUARD
+Read .apex/STATE.json → proposals_mode.
+If proposals_mode == true: NEVER ask open-ended questions in this command.
+Instead, present numbered proposals with a recommended default marked [recommended].
+
 Task from $ARGUMENTS.
 
 ## INPUT GUARD (The Guessing Entry — anti-pattern)
@@ -60,7 +65,10 @@ Else:
   If critic verdict is PASS:
     STATE.reflexion.current_unit_attempts = 0
 
-9. bash ~/.claude/hooks/phantom-check.sh .apex/phases/quick/${TASK_ID}-SUMMARY.md [שיפור 17]
+9. If .apex/phases/quick/${TASK_ID}-SUMMARY.md exists:
+     bash ~/.claude/hooks/phantom-check.sh .apex/phases/quick/${TASK_ID}-SUMMARY.md [שיפור 17]
+   Else:
+     echo "⚠️ No SUMMARY.md — phantom check skipped"
 10. Update learnings if notable
 11. Update STATE.json.tokens [שיפור 20]
 </context>

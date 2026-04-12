@@ -40,6 +40,7 @@
     "lock",
     "spec_version",
     "strict_mode",
+    "proposals_mode",
     "created_at",
     "updated_at"
   ],
@@ -419,6 +420,7 @@
     "lock": { "type": ["string", "null"] },
     "spec_version": { "type": "string", "description": "SHA256 hash of SPEC.md content for drift detection" },
     "strict_mode": { "type": "boolean", "description": "When true, forces maximum verification (verify_level D) on all tasks" },
+    "proposals_mode": { "type": "boolean", "description": "When true, never ask open-ended questions — present numbered proposals with recommended default" },
     "created_at": { "type": "string", "format": "date-time" },
     "updated_at": { "type": "string", "format": "date-time" }
   }

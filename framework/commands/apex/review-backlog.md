@@ -3,6 +3,11 @@ description: Review pending backlog items — promote, archive, or delete.
 ---
 
 <context>
+## PROPOSALS MODE GUARD
+Read .apex/STATE.json → proposals_mode.
+If proposals_mode == true: NEVER ask open-ended questions in this command.
+Instead, present numbered proposals with a recommended default marked [recommended].
+
 ## GUARD
 If no .apex/STATE.json: "❌ No APEX project. Run /apex:start first." STOP.
 

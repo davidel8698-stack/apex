@@ -3,6 +3,11 @@ description: Browse and select from pre-built workflow recipes. Workflows provid
 ---
 
 <context>
+## PROPOSALS MODE GUARD
+Read .apex/STATE.json → proposals_mode.
+If proposals_mode == true: NEVER ask open-ended questions in this command.
+Instead, present numbered proposals with a recommended default marked [recommended].
+
 Read `~/.claude/apex-workflows/_index.json`.
 
 If `$ARGUMENTS` is empty:

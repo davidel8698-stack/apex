@@ -2,6 +2,11 @@
 description: Architecture debate protocol for irreversible decisions. Sourced by /apex:next Step D.
 ---
 
+## PROPOSALS MODE GUARD
+Read .apex/STATE.json → proposals_mode.
+If proposals_mode == true: NEVER ask open-ended questions in this command.
+Instead, present numbered proposals with a recommended default marked [recommended].
+
 ## ARCHITECTURE DEBATE — FILE-BASED ISOLATION
 
 Write .apex/debate-log/[decision]-brief-A.md

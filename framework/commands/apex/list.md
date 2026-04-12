@@ -3,6 +3,11 @@ description: List all /apex: commands grouped by category.
 ---
 
 <context>
+## PROPOSALS MODE GUARD
+Read .apex/STATE.json → proposals_mode.
+If proposals_mode == true: NEVER ask open-ended questions in this command.
+Instead, present numbered proposals with a recommended default marked [recommended].
+
 ## PURPOSE
 Display all available /apex: commands with one-line descriptions, organized by category.
 

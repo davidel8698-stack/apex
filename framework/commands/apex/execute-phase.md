@@ -3,6 +3,11 @@ description: Execute all tasks in a specified phase in wave order.
 ---
 
 <context>
+## PROPOSALS MODE GUARD
+Read .apex/STATE.json → proposals_mode.
+If proposals_mode == true: NEVER ask open-ended questions in this command.
+Instead, present numbered proposals with a recommended default marked [recommended].
+
 ## PURPOSE
 Execute all tasks in a phase by invoking /apex:next for each task, respecting wave ordering.
 

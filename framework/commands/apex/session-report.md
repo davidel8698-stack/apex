@@ -3,6 +3,11 @@ description: Extract and display session metrics from STATE.json.
 ---
 
 <context>
+## PROPOSALS MODE GUARD
+Read .apex/STATE.json → proposals_mode.
+If proposals_mode == true: NEVER ask open-ended questions in this command.
+Instead, present numbered proposals with a recommended default marked [recommended].
+
 ## PURPOSE
 Generate a formatted report of the current session's metrics from STATE.json.
 

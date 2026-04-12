@@ -3,6 +3,11 @@ description: Redirect to /apex:resume. Alias for resume command.
 ---
 
 <context>
+## PROPOSALS MODE GUARD
+Read .apex/STATE.json → proposals_mode.
+If proposals_mode == true: NEVER ask open-ended questions in this command.
+Instead, present numbered proposals with a recommended default marked [recommended].
+
 Redirecting to /apex:resume...
 
 This command is an alias. Invoking /apex:resume behavior now.

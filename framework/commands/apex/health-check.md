@@ -3,6 +3,11 @@ description: Poison Pill validation — checks all agent prompts using real git 
 ---
 
 <context>
+## PROPOSALS MODE GUARD
+Read .apex/STATE.json → proposals_mode.
+If proposals_mode == true: NEVER ask open-ended questions in this command.
+Instead, present numbered proposals with a recommended default marked [recommended].
+
 "🧪 Running APEX Agent Health Check (Real Environment)..."
 
 ## TEST 0 — Environment Precheck [Round 2]

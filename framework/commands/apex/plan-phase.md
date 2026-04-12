@@ -3,6 +3,11 @@ description: Create PLAN.md for a specified phase using the architect agent.
 ---
 
 <context>
+## PROPOSALS MODE GUARD
+Read .apex/STATE.json → proposals_mode.
+If proposals_mode == true: NEVER ask open-ended questions in this command.
+Instead, present numbered proposals with a recommended default marked [recommended].
+
 ## PURPOSE
 Generate a detailed execution plan for a specific phase by invoking the architect agent.
 

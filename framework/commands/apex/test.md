@@ -3,6 +3,11 @@ description: Run verify commands for the current or specified phase.
 ---
 
 <context>
+## PROPOSALS MODE GUARD
+Read .apex/STATE.json → proposals_mode.
+If proposals_mode == true: NEVER ask open-ended questions in this command.
+Instead, present numbered proposals with a recommended default marked [recommended].
+
 ## PURPOSE
 Execute verification commands defined in PLAN_META.json for the current or specified phase.
 

@@ -2,6 +2,11 @@
 description: Multi-specialist roundtable protocol for complex architectural decisions. Sourced by /apex:next when task.roundtable_needed == true.
 ---
 
+## PROPOSALS MODE GUARD
+Read .apex/STATE.json → proposals_mode.
+If proposals_mode == true: NEVER ask open-ended questions in this command.
+Instead, present numbered proposals with a recommended default marked [recommended].
+
 ## ROUNDTABLE SESSION — FILE-BASED ISOLATION
 
 This protocol convenes 3-5 specialists for multi-faceted architectural decisions.

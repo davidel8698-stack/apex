@@ -3,6 +3,11 @@ description: Generate a stack-specific skill file by analyzing the current proje
 ---
 
 <context>
+## PROPOSALS MODE GUARD
+Read .apex/STATE.json → proposals_mode.
+If proposals_mode == true: NEVER ask open-ended questions in this command.
+Instead, present numbered proposals with a recommended default marked [recommended].
+
 Read `$ARGUMENTS` as the target stack name (e.g., "express", "drizzle", "tailwind").
 
 If `$ARGUMENTS` is empty:

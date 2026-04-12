@@ -3,6 +3,11 @@ description: Final verification and release tag. Ship the project.
 ---
 
 <context>
+## PROPOSALS MODE GUARD
+Read .apex/STATE.json → proposals_mode.
+If proposals_mode == true: NEVER ask open-ended questions in this command.
+Instead, present numbered proposals with a recommended default marked [recommended].
+
 ## PURPOSE
 Run final verification across all phases, then create a release tag if everything passes.
 
