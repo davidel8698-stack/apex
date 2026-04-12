@@ -70,3 +70,8 @@ assert_exit 0 $? "recover.md exists"
 # precheck.md exists
 [ -f "$COMMANDS_DIR/precheck.md" ]
 assert_exit 0 $? "precheck.md exists"
+
+# R-001: help.md exists with routing table
+[ -f "$COMMANDS_DIR/help.md" ]
+assert_exit 0 $? "R-001: help.md exists"
+assert_contains "$COMMANDS_DIR/help.md" "forensics|rollback|status|walkthrough" "R-001: help.md has intent-to-command routing"
