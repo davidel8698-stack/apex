@@ -8,6 +8,18 @@ if grep -E "(password|secret|token|key|api_key|credential|private_key|bearer)\s*
   exit 2
 fi
 
+# BLOCKING: skipped-test regression detection
+# Catches .skip(), .only(), xit(), xdescribe(), @pytest.mark.skip, etc. in test files
+if echo "$FILE" | grep -qE '\.(test|spec)\.|test_[^/]*$|_test\.'; then
+  SKIP_HITS=$(grep -nE '\.skip\(|\.only\(|\bxit\(|\bxdescribe\(|@pytest\.mark\.skip|@unittest\.skip|#\[ignore\]|\bpending\(' "$FILE" 2>/dev/null || true)
+  if [ -n "$SKIP_HITS" ]; then
+    echo "🚫 BLOCKED: Skipped/disabled tests detected in $FILE:"
+    echo "$SKIP_HITS"
+    echo "   If intentional, document in PLAN_META.json as accepted risk."
+    exit 2
+  fi
+fi
+
 if [[ "$FILE" == *.ts ]] || [[ "$FILE" == *.tsx ]]; then
   # BLOCKING: TypeScript type check (only if project has tsconfig.json)
   if [ -f tsconfig.json ] && command -v npx &>/dev/null; then
