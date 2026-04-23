@@ -230,6 +230,29 @@ If STATE.context.current_session_phase != current_phase AND current_session_phas
 Before proceeding: verify .apex/phases/${current_phase}/PLAN_META.json and WAVE_MAP.json exist.
 If either is missing: STOP. "🚫 Architect output incomplete — PLAN_META.json or WAVE_MAP.json missing. Re-run /apex:next."
 
+## WAVE 0: Nyquist Validation Layer [F-005]
+If STATE.complexity_level >= 2 AND NOT file_exists(.apex/phases/${current_phase}/WAVE_0_TEST_MAP.json):
+  Resolve model: routing["test-architect"] from apex-model-routing.json.
+  Task("test-architect", {
+    mode: "phase",
+    input: .apex/phases/${current_phase}/PLAN_META.json + .apex/SPEC.md,
+    output: ".apex/phases/${current_phase}/WAVE_0_TEST_MAP.json"
+  })
+  Read WAVE_0_TEST_MAP.json.
+  If WAVE_0_TEST_MAP.veto == true:
+    bash ~/.claude/hooks/session-log.sh "veto" "Wave 0 — test-architect vetoed phase ${current_phase}: ${WAVE_0_TEST_MAP.veto_reason}"
+    STATE.status = "blocked_by_wave_0"
+    Display:
+    "🚫 Wave 0 veto: ${WAVE_0_TEST_MAP.veto_reason}
+     Test infrastructure must be established before code execution.
+     Address gaps and re-run /apex:next."
+    STOP.
+  Else:
+    bash ~/.claude/hooks/session-log.sh "wave_0" "Wave 0 passed — test infrastructure mapped for phase ${current_phase}"
+
+If STATE.complexity_level <= 1:
+  ## L1 skip — minimal ceremony, Wave 0 not required
+
 ## STEP A: Read Wave Map
 CURRENT_WAVE = STATE.current_wave
 WAVE_TASKS = WAVE_MAP.waves[CURRENT_WAVE].tasks

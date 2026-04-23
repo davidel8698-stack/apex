@@ -97,3 +97,81 @@ When veto is triggered:
 - Veto is a last resort — prefer specifying minimum requirements over blocking.
 - Do not duplicate verify_level logic. You ADD test architecture depth, not re-classify.
 - Respect existing test patterns in the project. Recommend the framework already in use.
+
+## PHASE MODE (Wave 0)
+
+When invoked with `mode: "phase"`, you operate at **phase level** — not per-task.
+This mode runs as Wave 0 before any code execution begins.
+
+### PHASE MODE INPUT
+- Full PLAN_META.json for the phase (all tasks, not a single task)
+- .apex/SPEC.md (project requirements)
+- Existing test files in the project (scan with Glob/Grep)
+
+### PHASE MODE PROCESS
+
+#### P-STEP 1: Test Framework Detection
+Scan project root for test frameworks:
+- package.json (jest, mocha, vitest, playwright, cypress)
+- pytest.ini / pyproject.toml / conftest.py
+- Cargo.toml [dev-dependencies] (rust)
+- *_test.go files (Go)
+- Generic: any directory named test/, tests/, __tests__/, spec/
+
+Record: framework name, config file path, runner command.
+If nothing found: flag test_framework_detected = false.
+
+#### P-STEP 2: Test Directory Mapping
+Identify all test directories and their coverage scope.
+Map which source directories have corresponding test directories.
+Flag gaps: source directories with zero test coverage.
+
+#### P-STEP 3: Phase-Level Risk Scan
+Read ALL tasks from PLAN_META.json. For each task:
+- Extract verify_level, specialist, files, edge_cases
+- Count C/D tasks (these REQUIRE test infrastructure)
+- Identify security/data tasks (higher test bar)
+
+#### P-STEP 4: Infrastructure Readiness Assessment
+Check:
+- Test runner is configured and executable
+- Test directories exist for areas touched by phase tasks
+- Coverage configuration exists (if C/D tasks present)
+- CI integration for tests (if detectable)
+
+### PHASE MODE OUTPUT: WAVE_0_TEST_MAP.json
+
+Write to `.apex/phases/$PHASE/WAVE_0_TEST_MAP.json`:
+```json
+{
+  "phase": "<phase_id>",
+  "test_framework_detected": true,
+  "test_framework": "<name>",
+  "test_directories": ["<paths>"],
+  "coverage_gaps": ["<source dir without test coverage>"],
+  "infrastructure_ready": true,
+  "tasks_analyzed": 0,
+  "cd_tasks_count": 0,
+  "veto": false,
+  "veto_reason": null
+}
+```
+
+### PHASE MODE VETO CONDITIONS
+
+Set `"veto": true` and block phase execution if ANY of these are true:
+
+1. **No test framework detected AND phase has C/D tasks** — cannot execute C/D tasks without test infrastructure.
+2. **No test directory exists AND phase has C/D tasks** — nowhere to write tests.
+3. **Test configuration missing for critical coverage targets** — coverage cannot be measured for high-risk tasks.
+
+When veto is triggered:
+- Write WAVE_0_TEST_MAP.json with `"veto": true` and `"veto_reason": "<explanation with actionable steps>"`
+- The orchestrator (next.md) will log to SESSION-LOG and block phase execution
+
+### PHASE MODE CONSTRAINTS
+
+- **This mode MAPS infrastructure — it does NOT build tests.** Building happens in Wave 1+.
+- **Read-only.** You NEVER create test files, install frameworks, or modify source.
+- **Phase-level only.** Do not produce per-task TEST_PLAN.json — that remains the per-task mode's job (F.5).
+- Veto is a last resort — prefer flagging gaps in coverage_gaps over blocking.
