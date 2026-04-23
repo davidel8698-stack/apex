@@ -987,6 +987,52 @@ D  ░░░░  L0
 
 ---
 
+## 12-A. COLOR DISCIPLINE
+
+Semantic indicator mapping. Every indicator carries fixed meaning — never decorative.
+Part of the anti-fake-reporting strategy (Failure 5) and UX for non-technical users.
+
+### Framed output (commands — Sections 7-10)
+
+Uses Unicode glyphs per Section 12. No emoji inside frames (Rule R7).
+
+| State | Glyph | Meaning |
+|-------|-------|---------|
+| Verified / Pass | `✓` | Confirmed by evidence |
+| Failed | `✗` | Confirmed failure |
+| Partial | `◐` | Incomplete — some criteria unmet |
+| Blocked | `⊘` | Exhausted retries |
+| Pending | `○` | Not yet attempted |
+| Active | `◉` | In progress |
+
+### Hook/log context (session-log.sh, inline messages)
+
+Uses emoji for readability in plain-echo output. This is intentional (Rule R5).
+Canonical source: `session-log.sh` lines 38-53.
+
+| State | Emoji | Meaning |
+|-------|-------|---------|
+| Verified / Complete | `✅` | Action confirmed done |
+| Failed | `❌` | Action failed |
+| Warning / Partial | `⚠️` | Needs attention |
+| Auto-pause / Blocked | `🛑` | Execution halted |
+| Caution | `🟡` | Advisory |
+| Rotation / Retry | `🔄` | Restarting |
+| Wave complete | `🌊` | Wave boundary |
+| Phase complete | `🏁` | Phase boundary |
+| Coherence failure | `💥` | Cross-task regression |
+| Phantom failure | `👻` | Unverified claim detected |
+| Resume | `▶️` | Session resumed |
+| Start | `🚀` | Project initialized |
+| Bypass | `⏩` | Pipeline shortcut taken |
+| Default | `📝` | Informational |
+
+### Invariant
+
+`✅` MUST only appear for states that are **verified by evidence** (test output, git diff, command exit code). Never for intent, expectation, or plan. Violation is treated as phantom verification (Failure 5).
+
+---
+
 ## 13. STATUS BAR (use at top of /apex:next and /apex:resume outputs)
 
 ```

@@ -195,6 +195,42 @@ else
 fi
 ```
 
+### TEST 0i: Color Discipline Audit [R-010]
+Verify emoji consistency across command files and branding canonical map.
+```bash
+# 0i-a: apex-branding.md has Color Discipline section
+if ! grep -q "COLOR DISCIPLINE" ~/.claude/apex-branding.md 2>/dev/null; then
+  echo "❌ TEST 0i FAIL: apex-branding.md missing Color Discipline section"
+  exit 1
+fi
+echo "✅ TEST 0i-a PASS: Color Discipline section exists"
+
+# 0i-b: ✅ never used with uncertainty language in command .md files
+MISUSE=$(grep -rl "✅" ~/.claude/commands/apex/*.md 2>/dev/null | while read f; do
+  grep -n "✅" "$f" | grep -iE "(should|seems|expect|believe|probably|likely|appears)" && echo "  in: $f"
+done)
+if [ -n "$MISUSE" ]; then
+  echo "❌ TEST 0i-b FAIL: ✅ used with uncertainty language:"
+  echo "$MISUSE"
+  exit 1
+fi
+echo "✅ TEST 0i-b PASS: no ✅ misuse with uncertainty language"
+
+# 0i-c: session-log.sh core emoji mappings match canonical
+CORE_MISSING=""
+grep -q 'checkpoint.*✅' ~/.claude/hooks/session-log.sh 2>/dev/null || CORE_MISSING="$CORE_MISSING checkpoint→✅"
+grep -q 'fail.*❌' ~/.claude/hooks/session-log.sh 2>/dev/null || CORE_MISSING="$CORE_MISSING fail→❌"
+grep -q 'partial.*⚠️' ~/.claude/hooks/session-log.sh 2>/dev/null || CORE_MISSING="$CORE_MISSING partial→⚠️"
+grep -q 'auto_pause.*🛑' ~/.claude/hooks/session-log.sh 2>/dev/null || CORE_MISSING="$CORE_MISSING auto_pause→🛑"
+grep -q 'warning.*🟡' ~/.claude/hooks/session-log.sh 2>/dev/null || CORE_MISSING="$CORE_MISSING warning→🟡"
+if [ -n "$CORE_MISSING" ]; then
+  echo "❌ TEST 0i-c FAIL: session-log.sh diverged from canonical map:$CORE_MISSING"
+  exit 1
+fi
+echo "✅ TEST 0i-c PASS: session-log.sh emoji map matches canonical"
+```
+Expected: 0i-a/0i-b/0i-c all PASS. Any FAIL blocks the rest of health-check.
+
 ## SETUP: Create temp test environment [שיפור 26]
 ```bash
 HEALTH_DIR=$(mktemp -d)
@@ -344,5 +380,5 @@ If any failures:
 Failed: [list with test IDs]
 Fix: update failing agent's system prompt, re-run /apex:health-check"
 
-If all pass: "✅ All agents healthy (14/14 tests passed — TEST 0 environment + schema validation + 12 agent tests)"
+If all pass: "✅ All agents healthy (15/15 tests passed — TEST 0 environment + schema validation + color discipline + 12 agent tests)"
 </context>
