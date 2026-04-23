@@ -47,14 +47,28 @@ Guide through APEX setup for an existing project that does not have .apex/ initi
    - Contributors: [N]
    - Git commits: [N]"
 
-4. Suggest complexity level (Signal→complexity mapping):
-   - **L1 (Trying it out):** LOC < 500, no tests, no CI, no Docker, ≤ 1 contributor
-   - **L2 (Building something real):** LOC 500–5000, some tests OR CI present, ≤ 3 contributors
-   - **L3 (Going to production):** LOC 5000–50000, test suite + CI present, Docker likely, 2+ contributors
-   - **L4 (My business depends on this):** LOC > 50000, full test suite, CI+CD, Docker, 4+ contributors
+4. Suggest complexity level (Scale-Adaptive Classifier):
+   Internal mapping (NOT shown to user):
+   - 1: LOC < 500, no tests, no CI, no Docker, ≤ 1 contributor
+   - 2: LOC 500–5000, some tests OR CI present, ≤ 3 contributors
+   - 3: LOC 5000–50000, test suite + CI present, Docker likely, 2+ contributors
+   - 4: LOC > 50000, full test suite, CI+CD, Docker, 4+ contributors
 
-   Display: "Suggested complexity level: L[N] — [name]. Override? (y/N or specify level 1-4)"
-   Wait for user response. If user accepts or no response → use detected level. If user overrides → use their choice.
+   Auto-detect which level matches. Let DETECTED = the matched level number (1-4).
+
+   Display (friendly 4-button menu — no L1/L2/L3/L4 labels visible):
+   "Based on your project, I recommend:
+
+   1. Trying it out — small experiments, scripts
+   2. Building something real — medium projects with some tests
+   3. Going to production — production-bound with CI/CD
+   4. My business depends on this — critical enterprise systems
+
+   Select (1-4) or press Enter for [recommended]:"
+
+   The auto-detected level shows [recommended] next to its line.
+   Wait for user response. If user presses Enter or no response → use detected level. If user picks a number → use their choice.
+   Store the selected number (1-4) in STATE.json as complexity_level.
 
 5. Pre-fill and invoke /apex:start:
    "Starting APEX with:
