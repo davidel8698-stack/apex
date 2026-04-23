@@ -131,7 +131,13 @@ If STATE.session.started_at exists:
   LAST_GATE = STATE.session.last_time_gate OR STATE.session.started_at
   MINUTES_SINCE_GATE = (now - LAST_GATE) in minutes
 
-  If ELAPSED_MINUTES >= 60 AND MINUTES_SINCE_GATE >= 60:
+  GATE_INTERVAL = case STATE.complexity_level:
+    1, 2 → 90
+    3    → 75
+    4    → 60
+    default → 60
+
+  If ELAPSED_MINUTES >= 60 AND MINUTES_SINCE_GATE >= GATE_INTERVAL:
     STATE.session.last_time_gate = now
     Write updated STATE.json
     bash ~/.claude/hooks/session-log.sh "time_gate" "Decision gate at [ELAPSED_MINUTES] minutes"
@@ -569,7 +575,9 @@ PASS:
       result_tests: .apex/phases/${current_phase}/${NEXT_UNIT}-RESULT.json (tests_run, verify_commands_run only),
       task_spec: PLAN_META.json task XML for NEXT_UNIT (done_criteria, edge_cases, verify_level)
     }
+    export APEX_ACTIVE_AGENT=auditor
     Task("auditor", AUDITOR_CONTEXT, model=resolve_model("auditor"))
+    unset APEX_ACTIVE_AGENT
     Read .apex/phases/${current_phase}/${NEXT_UNIT}-AUDIT.md
     If verdict == "FAIL":
       Treat as PARTIAL — task correctness confirmed by critic, but test quality insufficient per auditor.
