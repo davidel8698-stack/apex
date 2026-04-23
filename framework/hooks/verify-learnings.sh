@@ -17,10 +17,10 @@ NOW_EPOCH=$(date +%s)
 
 [ ! -f "$LEARNINGS" ] && exit 0
 
-# Portable date-to-epoch: GNU (Linux/Git Bash) first, BSD (macOS) fallback
+# Portable date-to-epoch: shared utility with 4-tier fallback
+source "$(dirname "$0")/_date-parse.sh"
 parse_date_epoch() {
-  local d="$1"
-  date -d "$d" +%s 2>/dev/null || date -j -f "%Y-%m-%d" "$d" +%s 2>/dev/null || echo ""
+  parse_epoch "$1" "%Y-%m-%d"
 }
 
 # v7 [R6]: Map decay class to max days

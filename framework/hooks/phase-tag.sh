@@ -6,6 +6,7 @@ source "$(dirname "$0")/_require-jq.sh"
 require_jq
 source "$(dirname "$0")/_require-git.sh"
 source "$(dirname "$0")/_state-update.sh"
+source "$(dirname "$0")/_date-parse.sh"
 
 export APEX_HOOK_SOURCE="phase-tag"
 
@@ -40,7 +41,7 @@ if git tag -l "$TAG_NAME" | grep -qF "$TAG_NAME"; then
     if [ -f "$PLAN_META" ]; then
       CREATED_AT=$(jq -r '.created_at // empty' "$PLAN_META" 2>/dev/null)
       if [ -n "$CREATED_AT" ]; then
-        CREATED_TS=$(date -d "$CREATED_AT" +%s 2>/dev/null || date -j -f "%Y-%m-%dT%H:%M:%S" "${CREATED_AT%%.*}" +%s 2>/dev/null || echo "")
+        CREATED_TS=$(parse_epoch "$CREATED_AT")
         NOW_TS=$(date +%s)
         if [ -n "$CREATED_TS" ]; then
           LEAD_HOURS=$(awk "BEGIN {printf \"%.1f\", ($NOW_TS - $CREATED_TS) / 3600}")
@@ -57,7 +58,7 @@ if git tag -l "$TAG_NAME" | grep -qF "$TAG_NAME"; then
     CREATED_AT_PROJ=$(jq -r '.created_at // empty' .apex/STATE.json 2>/dev/null)
     PHASES_DONE=$(jq -r '.phases_completed // 0' .apex/STATE.json 2>/dev/null)
     if [ -n "$CREATED_AT_PROJ" ] && [ "$PHASES_DONE" -gt 0 ] 2>/dev/null; then
-      PROJ_TS=$(date -d "$CREATED_AT_PROJ" +%s 2>/dev/null || date -j -f "%Y-%m-%dT%H:%M:%S" "${CREATED_AT_PROJ%%.*}" +%s 2>/dev/null || echo "")
+      PROJ_TS=$(parse_epoch "$CREATED_AT_PROJ")
       NOW_TS=$(date +%s)
       if [ -n "$PROJ_TS" ]; then
         DAYS_ELAPSED=$(awk "BEGIN {d=($NOW_TS - $PROJ_TS) / 86400; if(d<1) d=1; printf \"%.2f\", $PHASES_DONE / d}")
