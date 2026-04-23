@@ -63,6 +63,10 @@ Adapt all user-facing output in this command:
 bash ~/.claude/hooks/context-monitor.sh
 If "CRITICAL_OVERFLOW": save state, "⚠️ Context at [N]%. Run /apex:resume", STOP.
 If "WARNING_OVERFLOW":
+  MEMORY_FILE_COUNT = count files in .apex/todos/, .apex/threads/, .apex/seeds/
+  If MEMORY_FILE_COUNT > 10:
+    Run memory-synthesis agent in background (dream-cycle mode)
+    bash ~/.claude/hooks/session-log.sh "dream_cycle" "Dream-cycle before context compact — ${ESTIMATED_PCT}% usage, [MEMORY_FILE_COUNT] memory files"
   If STATE.session exists AND (STATE.session.tasks_completed - STATE.session.tasks_since_last_rotation) >= 4:
     bash ~/.claude/hooks/session-log.sh "rotate" "סיבוב הקשר יזום — ${ESTIMATED_PCT}% שימוש"
     Save state, run /compact, update STATE.session.total_context_rotations++, STATE.session.tasks_since_last_rotation = STATE.session.tasks_completed
@@ -140,7 +144,12 @@ If STATE.session.started_at exists:
     3. /apex:resume — התחל סשן חדש עם הקשר נקי"
 
     Wait for user response.
-    If user selects 1 ("continue"): proceed normally.
+    If user selects 1 ("continue"):
+      MEMORY_FILE_COUNT = count files in .apex/todos/, .apex/threads/, .apex/seeds/
+      If MEMORY_FILE_COUNT > 10:
+        Run memory-synthesis agent in background (dream-cycle mode)
+        bash ~/.claude/hooks/session-log.sh "dream_cycle" "Periodic dream-cycle triggered at [ELAPSED_MINUTES] min — [MEMORY_FILE_COUNT] memory files"
+      proceed normally.
     If user selects 2 or 3: execute selected command. STOP.
 
 ## MODEL ROUTING HELPER (used by all agent invocations below)
