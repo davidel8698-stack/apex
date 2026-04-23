@@ -20,6 +20,8 @@ If $ARGUMENTS is empty:
 TIMESTAMP = $(date +%Y%m%d-%H%M%S)
 BACKLOG_FILE = .apex/backlog/item-${TIMESTAMP}.md
 
+Ensure directory exists: `mkdir -p .apex/backlog/`
+
 Create file:
 ```
 # Backlog Item: [timestamp]

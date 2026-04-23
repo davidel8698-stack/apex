@@ -24,6 +24,8 @@ Extract topic slug from $ARGUMENTS:
 CONTENT = full $ARGUMENTS text
 THREAD_FILE = .apex/threads/${SLUG}.md
 
+Ensure directory exists: `mkdir -p .apex/threads/`
+
 ## WRITE
 If THREAD_FILE exists:
   Append to file:

@@ -20,6 +20,8 @@ If $ARGUMENTS is empty:
 TIMESTAMP = $(date +%Y%m%d-%H%M%S)
 SEED_FILE = .apex/seeds/seed-${TIMESTAMP}.md
 
+Ensure directory exists: `mkdir -p .apex/seeds/`
+
 Create file:
 ```
 # Seed: planted [timestamp]
