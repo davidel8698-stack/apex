@@ -65,6 +65,14 @@ if git tag -l "$TAG_NAME" | grep -qF "$TAG_NAME"; then
           '.dora.deployment_freq = $freq'
       fi
     fi
+    # Change failure rate: phases_failed / phases_completed
+    PHASES_FAILED=$(jq -r '.phases_failed // 0' .apex/STATE.json 2>/dev/null)
+    PHASES_DONE_CFR=$(jq -r '.phases_completed // 1' .apex/STATE.json 2>/dev/null)
+    if [ "$PHASES_DONE_CFR" -gt 0 ] 2>/dev/null; then
+      CFR=$(awk "BEGIN {printf \"%.2f\", $PHASES_FAILED / $PHASES_DONE_CFR}")
+      _state_update --argjson cfr "$CFR" \
+        '.dora.change_failure_rate = $cfr'
+    fi
   fi
   echo "✅ Phase tag verified: $TAG_NAME"
   echo "   Rollback available: git revert --no-commit HEAD..$TAG_NAME"
