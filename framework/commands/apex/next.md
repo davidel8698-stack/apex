@@ -214,6 +214,13 @@ Update STATE: {
 STATE: current_stage=build, status=pending_approval
 ─────────────────────────────────────────────────────────
 
+## TWO-TIER METHODOLOGY CHECK
+If NOT file_exists(.apex/APEX.md) OR NOT file_exists(.apex/PROJECT-APEX.md):
+  MISSING = list missing files
+  "⚠️ Two-tier methodology: ${MISSING} not found. Run /apex:start to regenerate."
+  bash ~/.claude/hooks/session-log.sh "warning" "Two-tier methodology: ${MISSING} missing"
+  Continue (advisory only).
+
 ## CHECK CONTEXT ROTATION
 If STATE.context.current_session_phase != current_phase AND current_session_phase is not null:
   "🔄 New phase. Run /apex:resume for clean context, or 'continue'."
