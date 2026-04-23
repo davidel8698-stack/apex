@@ -76,3 +76,24 @@ All agent `.md` files MUST follow this structure:
 3. `PLAN_META.json` (when present) MUST validate against `PLAN_META.schema.json`.
 4. `RESULT.json` files MUST validate against `RESULT.schema.json`.
 5. Phase directories use zero-padded numbering: `01/`, `02/`, etc.
+
+## Observation Masking Protocol
+
+Spec anchor: "Context engineering at state-of-the-art. Observation masking." (F-024)
+
+APEX implements observation masking through the zone-based context dispatch system
+in `/apex:next` Step E (Build Executor Context):
+
+| Zone | Content | Masking Behavior |
+|------|---------|-----------------|
+| Zone 1: Stable Prefix | System prompt, CLAUDE.md, repo map, stack skills | Cached — not re-read per task |
+| Zone 2: Task Context | Task XML, spec sections, decisions, active files | JIT — replaced entirely per task |
+| Zone 3: Working Memory | Impacted tests, reflexion brief | Volatile — previous task's outputs discarded |
+
+**Key masking rules:**
+- Previous task's tool outputs are NOT carried forward (Zone 3 replacement)
+- When context exceeds budget, trim order: dep summaries → spec → skills → decisions
+- **NEVER trim:** task_xml, acceptance_criteria, reflexion_brief
+
+This ensures stale observations are automatically masked by zone replacement,
+not by explicit summarization.

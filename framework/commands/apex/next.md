@@ -269,7 +269,8 @@ If task.roundtable_needed == true:
 ATTEMPTS = STATE.reflexion.current_unit_attempts
 If ATTEMPTS > 0: load .apex/phases/${current_phase}/[unit]-REFLEXION.md as "PREVIOUS ATTEMPT FAILED: [content]"
 
-## STEP E: Build Executor Context (zone-based + observation masking)
+## STEP E: Build Executor Context — Observation Masking Protocol
+## Observation masking: context is structured so stale observations are replaced per-task, not summarized. See DIRECTORY-CONTRACT.md.
 Read CONTEXT_BUDGET.json, PLAN_META.json for current task.
 Stable prefix FIRST (for cache hits), volatile LAST:
 
