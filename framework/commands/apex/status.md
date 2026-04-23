@@ -22,9 +22,13 @@ Apply resolved values to all template placeholders ({{project_name}}, {{theme_co
 Variable substitution MUST complete before rendering — never substitute mid-frame.
 
 ## GLASS COCKPIT — AMBIENT HEADER (prepend BEFORE the Cockpit Dashboard)
-1. Section 10-D (Ambient Timeline) — last 8 events from SESSION-LOG.md
+1. Section 10-D (Ambient Timeline) — decision-filtered query (overrides Section 10-D parse rule):
+   DECISION_TYPES = pending_approval | auto_pause | time_gate | coherence_fail | veto | blocked | phantom_fail
+   Primary: jq on .apex/event-log.jsonl filtering for DECISION_TYPES → keep last 5
+   Fallback: grep SESSION-LOG.md for decision event emojis (🛑|💥|👻) → keep last 5
+   If fewer than 3 decision items → pad with recent events until 3 total. Cap at 5.
 2. Section 10-E (Live Ticker)      — literal tail -5 from SESSION-LOG.md
-This lets the user scan recent activity before diving into the full telemetry.
+This lets the user scan decision-required items before diving into the full telemetry.
 
 ## TECHNICAL LEVEL ADAPTATION
 Read technical level from CLAUDE.md ## User Profile section.

@@ -37,7 +37,12 @@ Variable substitution MUST complete before rendering — never substitute mid-fr
 NEVER output bare text. NEVER skip a frame. NEVER add emojis inside frames.
 
 ## GLASS COCKPIT — AMBIENT HEADER (render at top of every /apex:next output)
-1. tail -12 .apex/SESSION-LOG.md → filter to last 8 event lines → render Section 10-D (Ambient Timeline)
+1. DECISION FILTER for Section 10-D (Ambient Timeline) — overrides Section 10-D parse rule:
+   a. DECISION_TYPES = pending_approval | auto_pause | time_gate | coherence_fail | veto | blocked | phantom_fail
+   b. Primary: jq -c 'select(.event == "pending_approval" or .event == "auto_pause" or .event == "time_gate" or .event == "coherence_fail" or .event == "veto" or .event == "blocked" or .event == "phantom_fail")' .apex/event-log.jsonl | tail -5
+   c. Fallback (if event-log.jsonl missing): grep -E '(🛑|💥|👻)' .apex/SESSION-LOG.md | tail -5
+   d. If result has fewer than 3 items → pad with most recent events from tail -5 .apex/SESSION-LOG.md (skip date headers)
+   e. Cap at 5 items maximum. Render using Section 10-D visual template.
 2. tail -5 .apex/SESSION-LOG.md → render Section 10-E (Live Ticker)
 3. These appear BEFORE any other framed content in the output (right after the status bar)
 
