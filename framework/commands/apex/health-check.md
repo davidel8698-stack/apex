@@ -150,6 +150,51 @@ else
 fi
 ```
 
+### TEST 0h: Agent Prompt Structure Audit [R-008]
+Verify all agent `.md` files follow U-shaped attention pattern (critical constraints at top/bottom).
+```bash
+AGENTS_DIR="$HOME/.claude/agents"
+if [ -d "$AGENTS_DIR" ]; then
+  USHAPE_PASS=0
+  USHAPE_FAIL=0
+  for agent_file in "$AGENTS_DIR"/*.md "$AGENTS_DIR"/specialist/*.md; do
+    [ -f "$agent_file" ] || continue
+    TOTAL_LINES=$(wc -l < "$agent_file")
+    TOP_CUTOFF=$(( TOTAL_LINES / 5 ))
+    BOTTOM_START=$(( TOTAL_LINES - TOTAL_LINES / 5 ))
+    TOP_CONTENT=$(head -n "$TOP_CUTOFF" "$agent_file")
+    BOTTOM_CONTENT=$(tail -n +"$BOTTOM_START" "$agent_file")
+    # Check top has critical markers
+    if echo "$TOP_CONTENT" | grep -qiE "(You are|Non-negotiable|NEVER|MUST|constraint|invariant|CLEAN.ROOM|adversarial)"; then
+      TOP_OK=1
+    else
+      TOP_OK=0
+    fi
+    # Check bottom has enforcement markers
+    if echo "$BOTTOM_CONTENT" | grep -qiE "(VERDICT|MANDATORY|VERIFY|OUTPUT|FORMAT|FAIL|PROHIBIT|confidence)"; then
+      BOTTOM_OK=1
+    else
+      BOTTOM_OK=0
+    fi
+    BASENAME=$(basename "$agent_file")
+    if [ "$TOP_OK" -eq 1 ] && [ "$BOTTOM_OK" -eq 1 ]; then
+      USHAPE_PASS=$((USHAPE_PASS + 1))
+    else
+      USHAPE_FAIL=$((USHAPE_FAIL + 1))
+      [ "$TOP_OK" -eq 0 ] && echo "⚠️ $BASENAME: missing critical constraints in top 20%"
+      [ "$BOTTOM_OK" -eq 0 ] && echo "⚠️ $BASENAME: missing enforcement rules in bottom 20%"
+    fi
+  done
+  if [ "$USHAPE_FAIL" -eq 0 ]; then
+    echo "✅ TEST 0h PASS: all $USHAPE_PASS agents follow U-shaped structure"
+  else
+    echo "⚠️ TEST 0h WARN: $USHAPE_FAIL/$((USHAPE_PASS + USHAPE_FAIL)) agents need U-shape review"
+  fi
+else
+  echo "❌ TEST 0h FAIL: agents directory not found"
+fi
+```
+
 ## SETUP: Create temp test environment [שיפור 26]
 ```bash
 HEALTH_DIR=$(mktemp -d)

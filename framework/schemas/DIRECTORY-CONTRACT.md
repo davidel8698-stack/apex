@@ -54,6 +54,21 @@ Created during planning and execution (per phase directory):
 | `.apex/TASK_MAP.md` | Task dependency map |
 | `.apex/TEST_MAP.txt` | Test coverage map |
 
+## Agent Prompt Structure — U-Shaped Attention Guidelines
+
+Spec anchor: "U-shaped attention awareness." (F-008)
+
+LLMs attend more strongly to the beginning and end of context (primacy-recency effect).
+All agent `.md` files MUST follow this structure:
+
+| Position | Content | Why |
+|----------|---------|-----|
+| Top 20% (lines 1-N) | Role identity, non-negotiables, domain invariants, critical constraints | Primacy — highest attention |
+| Middle 60% | Task-specific logic, steps, context injection points | Lower attention — procedural content |
+| Bottom 20% | Verdict rules, mandatory verify commands, output format, failure mode prohibitions | Recency — second-highest attention |
+
+**Enforcement:** health-check TEST 0h validates this structure for all agent files.
+
 ## Validation Rules
 
 1. All 9 subdirectories MUST exist after `/apex:start` completes.
