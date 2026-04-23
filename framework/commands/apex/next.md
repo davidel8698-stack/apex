@@ -323,6 +323,15 @@ If verify_level in ["C", "D"]:
     bash ~/.claude/hooks/session-log.sh "test_architect" "TEST_PLAN approved for task ${NEXT_UNIT} — risk: ${TEST_PLAN.risk_profile}"
     Inject TEST_PLAN.json into executor context (executor receives test requirements).
 
+## STEP F.6: Spec Drift Check [F-014]
+If STATE.spec_version is non-empty AND file .apex/SPEC.md exists:
+  CURRENT_HASH = sha256sum .apex/SPEC.md | cut -d' ' -f1
+  If CURRENT_HASH != STATE.spec_version:
+    STATE.session.drift_indicators.spec_drift_count++
+    bash ~/.claude/hooks/session-log.sh "spec_drift" "SPEC.md changed since planning (stored: ${STATE.spec_version:0:8}…, current: ${CURRENT_HASH:0:8}…). Consider /apex:spec."
+    "⚠️ Spec drift detected — SPEC.md has changed since last /apex:spec. Review changes or re-run /apex:spec to update."
+    (Advisory only — do not block execution)
+
 ## STEP G: Autonomy Check + Execute
 Read task verify_level from PLAN_META.json
 
