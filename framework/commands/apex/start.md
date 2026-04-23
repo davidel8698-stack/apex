@@ -42,6 +42,7 @@ Check .apex/STATE.json. If exists: "Project in progress. /apex:next or /apex:res
 If no:
   0. Render Section 5 banner with [●] for completed steps, [◐] for active, [○] for pending.
   1. mkdir -p .apex/{pre-build,phases,backups,debate-log,roundtable-log,comprehension-gates,todos,threads,seeds,backlog}
+     touch .apex/event-log.jsonl
 
   ## TWO-TIER METHODOLOGY SETUP
   1b. Copy ~/.claude/APEX-TEMPLATE.md to .apex/APEX.md
@@ -65,6 +66,30 @@ If no:
       ```
       This creates a hidden orphan branch for persistent pre-task snapshots.
       Unlike stash, this survives `git stash clear` and provides browseable history.
+
+  ## STATE MANAGEMENT ARCHITECTURE (C-001 resolution)
+  When generating .apex/APEX.md, include the following section:
+
+  ```
+  ## State Management Architecture
+
+  APEX uses structured JSON + Markdown as source of truth, with
+  `.apex/event-log.jsonl` as the queryable event stream for temporal
+  queries, provenance tracking, and timeline reconstruction.
+
+  Every state mutation (_state-update.sh) and session event (session-log.sh)
+  appends a structured JSONL line with timestamp, source, and details.
+
+  Query examples:
+  - Last 10 events: `tail -10 .apex/event-log.jsonl | jq .`
+  - All failures: `jq -s '[.[] | select(.event=="fail")]' .apex/event-log.jsonl`
+  - State changes by hook: `jq -s '[.[] | select(.source=="circuit-breaker")]' .apex/event-log.jsonl`
+  - Events since date: `jq -s '[.[] | select(.ts > "2026-04-01")]' .apex/event-log.jsonl`
+
+  Migration path: JSONL is directly importable to SQLite+FTS5 when
+  framework-level query needs exceed jq capabilities. The structured
+  format ensures zero data loss during migration.
+  ```
 
   ## USER PROFILE CAPTURE
   2. Ask user (in detected language or default English):

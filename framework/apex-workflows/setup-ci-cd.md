@@ -45,3 +45,10 @@ Create a continuous integration and deployment pipeline using GitHub Actions (or
 - Build artifacts MUST match what was tested (same dependencies, same env)
 - Deployment MUST be reversible (keep previous deployment for rollback)
 - Cache invalidation MUST be tied to lock file hash (package-lock.json, yarn.lock)
+
+## Security Invariants
+- All secrets MUST use GitHub Secrets (or equivalent vault), never environment file commits
+- Workflow files MUST NOT echo or log secret values (mask with `::add-mask::`)
+- Deployment tokens MUST have least-privilege scope (deploy only, no admin access)
+- Third-party Actions MUST be pinned to specific SHA, not mutable tags (e.g., `actions/checkout@v4` -> `actions/checkout@<sha>`)
+- Pipeline MUST NOT allow PRs from forks to access production secrets (use `pull_request_target` with caution)

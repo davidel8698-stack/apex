@@ -7,6 +7,8 @@ require_jq
 source "$(dirname "$0")/_require-git.sh"
 source "$(dirname "$0")/_state-update.sh"
 
+export APEX_HOOK_SOURCE="phase-tag"
+
 # G-2: Ensure CWD is project root so .apex/ paths resolve
 cd "$(git rev-parse --show-toplevel)" || exit 2
 

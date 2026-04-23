@@ -53,3 +53,10 @@ Migrate an existing application from SQLite, MySQL, or another database to Postg
 - Migration scripts MUST be idempotent (safe to re-run)
 - Verify row counts match between source and target for every table
 - Test with production-like data volume (not just dev fixtures)
+
+## Security Invariants
+- Database credentials MUST use environment variables, never hardcoded in source or migration scripts
+- Connection strings MUST use SSL/TLS in production (sslmode=require or verify-full)
+- Migration user MUST have minimal required privileges (no SUPERUSER for application connections)
+- Exported data files MUST be deleted after import, never committed to git
+- PostgreSQL roles MUST follow least-privilege: separate migration user (DDL) from application user (DML only)

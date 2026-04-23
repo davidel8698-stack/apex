@@ -37,11 +37,25 @@ _state_update() {
   fi
 
   local tmp="/tmp/_apex_state_$(date +%s%N).json"
-  if jq "${jq_args[@]}" "$expr" "$state_file" > "$tmp" 2>/dev/null; then
+  local err="/tmp/_apex_state_err_$$.txt"
+  if jq "${jq_args[@]}" "$expr" "$state_file" > "$tmp" 2>"$err"; then
     mv "$tmp" "$state_file"
+    rm -f "$err"
+    # Append structured event to event-log.jsonl (fire-and-forget)
+    local state_dir
+    state_dir=$(dirname "$state_file")
+    local safe_expr
+    safe_expr=$(printf '%s' "$expr" | tr '"' "'" | tr '\n' ' ')
+    printf '{"ts":"%s","type":"state_mutation","source":"%s","expr":"%s"}\n' \
+      "$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date +%Y-%m-%dT%H:%M:%SZ)" \
+      "${APEX_HOOK_SOURCE:-unknown}" \
+      "$safe_expr" >> "${state_dir}/event-log.jsonl" 2>/dev/null || true
   else
     rm -f "$tmp"
-    echo "⚠️ STATE update failed: $expr" >&2
+    local jq_msg
+    jq_msg=$(cat "$err" 2>/dev/null)
+    rm -f "$err"
+    echo "⚠️ STATE update failed: $expr${jq_msg:+ — $jq_msg}" >&2
     return 1
   fi
 }

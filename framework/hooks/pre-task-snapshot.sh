@@ -15,6 +15,8 @@ source "$(dirname "$0")/_require-jq.sh"
 require_jq
 source "$(dirname "$0")/_state-update.sh"
 
+export APEX_HOOK_SOURCE="pre-task-snapshot"
+
 # Validate STATE.json against schema before snapshot (soft mode — warn, don't block)
 if [ -f .apex/STATE.json ] && [ -f ~/.claude/schemas/STATE.schema.json ] && [ -f ~/.claude/scripts/validate-state.sh ]; then
   bash ~/.claude/scripts/validate-state.sh --soft ~/.claude/schemas/STATE.schema.json .apex/STATE.json 2>&1 || true

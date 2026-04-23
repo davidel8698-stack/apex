@@ -8,6 +8,11 @@ require_jq
 source "$(dirname "$0")/_require-git.sh"
 source "$(dirname "$0")/_state-update.sh"
 
+export APEX_HOOK_SOURCE="cross-phase-audit"
+
+# Single source of truth: extraction filter matches execution allowlist (line 52)
+ALLOWED_PREFIXES="^(npm|npx|node|python3?|pytest|vitest|jest|curl|grep|bash)"
+
 # G-2: Ensure CWD is project root so .apex/ paths resolve
 cd "$(git rev-parse --show-toplevel)" || exit 2
 
@@ -32,12 +37,12 @@ for phase_dir in .apex/phases/*/; do
     if [ -f "$META_FILE" ]; then
       # [שיפור 21] Read verify_commands from structured JSON
       VERIFY_CMDS=$(jq -r '.tasks[].verify_commands[]' "$META_FILE" 2>/dev/null | \
-        grep -E "^(npm|npx|node|curl)" | sort -u | head -10)
+        grep -E "$ALLOWED_PREFIXES" | sort -u | head -10)
     else
       # Fallback for projects without PLAN_META.json (legacy layout)
       VERIFY_CMDS=$(grep -h "<verify>" "${phase_dir}"*.md 2>/dev/null | \
         grep -v "^<verify>" | sed 's|.*<verify>||;s|</verify>.*||' | \
-        grep -E "^(npm|npx|node|curl)" | sort -u | head -10)
+        grep -E "$ALLOWED_PREFIXES" | sort -u | head -10)
     fi
 
     if [ -n "$VERIFY_CMDS" ]; then

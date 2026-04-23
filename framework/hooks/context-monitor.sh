@@ -7,6 +7,8 @@ source "$(dirname "$0")/_require-jq.sh"
 require_jq
 source "$(dirname "$0")/_state-update.sh"
 
+export APEX_HOOK_SOURCE="context-monitor"
+
 STATE_FILE=".apex/STATE.json"
 BUDGET_FILE=".apex/CONTEXT_BUDGET.json"
 
@@ -25,6 +27,8 @@ TOTAL_OUTPUT=$(jq -r '.tokens.total_output // 0' "$STATE_FILE" 2>/dev/null || ec
 
 # Effective capacity from CONTEXT_BUDGET.json (default 200K per R2 design)
 EFFECTIVE_CAPACITY=$(jq -r '.capacity_tokens // 200000' "$BUDGET_FILE" 2>/dev/null || echo 200000)
+# Guard against zero/invalid capacity to prevent division by zero
+[ "$EFFECTIVE_CAPACITY" -le 0 ] 2>/dev/null && EFFECTIVE_CAPACITY=200000
 
 if [ "$TOTAL_INPUT" -gt 0 ]; then
   # Real token data available — use it

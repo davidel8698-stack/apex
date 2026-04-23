@@ -46,7 +46,8 @@ if [ -f "$META_FILE" ]; then
 
   # Get task name for keyword search
   TASK_NAME=$(jq -r ".tasks[] | select(.id == \"$TASK_ID\") | .name" "$META_FILE" 2>/dev/null)
-  KEYWORDS=$(echo "$TASK_NAME" | tr ' ' '\n' | grep -E "^[A-Za-z]{5,}" | \
+  KEYWORDS=$(echo "$TASK_NAME" | tr ' ' '\n' | grep -E "^[A-Za-z]{3,}" | \
+    grep -Ev "^(the|and|for|with|from|into|that|this|have|will|should|could|would|been)$" | \
     sort -u | head -6 | tr '\n' '|' | sed 's/|$//')
 
   if [ -n "$KEYWORDS" ] && command -v rg &>/dev/null; then

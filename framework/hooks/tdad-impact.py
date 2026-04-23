@@ -42,6 +42,8 @@ if __name__ == '__main__':
         print(f"✅ TDAD: {len(tests)} impacted tests identified")
         print('\n'.join(tests))
     else:
-        if os.path.exists('.apex/IMPACTED_TESTS.txt'):
+        try:
             os.remove('.apex/IMPACTED_TESTS.txt')
+        except FileNotFoundError:
+            pass
         print("ℹ️ TDAD: No specific test dependencies found — using default verification")

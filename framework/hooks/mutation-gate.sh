@@ -7,6 +7,8 @@ source "$(dirname "$0")/_require-jq.sh"
 require_jq
 source "$(dirname "$0")/_state-update.sh"
 
+export APEX_HOOK_SOURCE="mutation-gate"
+
 STATE_FILE=".apex/STATE.json"
 TASK_ID="${1:-}"
 VERIFY_LEVEL="${2:-}"
@@ -43,7 +45,7 @@ if echo "$CHANGED_FILES" | grep -qE '\.py$'; then
   if command -v mutmut &>/dev/null; then
     TOOL_FOUND=1
     PY_FILES=$(echo "$CHANGED_FILES" | grep -E '\.py$' | tr '\n' ' ')
-    OUTPUT=$(python -m mutmut run --paths-to-mutate $PY_FILES --no-progress 2>&1 | tail -20)
+    OUTPUT=$(python3 -m mutmut run --paths-to-mutate $PY_FILES --no-progress 2>&1 | tail -20)
     KILLED=$(echo "$OUTPUT" | grep -oP 'Killed:\s*(\d+)' | grep -oP '\d+')
     TOTAL=$(echo "$OUTPUT" | grep -oP 'Total:\s*(\d+)' | grep -oP '\d+')
     if [ -n "$TOTAL" ] && [ "$TOTAL" -gt 0 ]; then
