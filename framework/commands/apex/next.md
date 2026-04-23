@@ -44,7 +44,8 @@ NEVER output bare text. NEVER skip a frame. NEVER add emojis inside frames.
    d. If result has fewer than 3 items → pad with most recent events from tail -5 .apex/SESSION-LOG.md (skip date headers)
    e. Cap at 5 items maximum. Render using Section 10-D visual template.
 2. tail -5 .apex/SESSION-LOG.md → render Section 10-E (Live Ticker)
-3. These appear BEFORE any other framed content in the output (right after the status bar)
+3. ELAPSED TIME: Compute elapsed = now - STATE.created_at. Format as "[N]d [N]h" (e.g., "3d 14h"). If created_at missing or null: show "N/A". Display in cockpit header after Live Ticker.
+4. These appear BEFORE any other framed content in the output (right after the status bar)
 
 Read .apex/STATE.json
 
