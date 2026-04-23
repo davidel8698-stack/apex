@@ -645,6 +645,13 @@ Remove lock. Show batched P1/P2 notifications at wave boundaries.
 STATE: current_stage=build, status=verify_needed
 ─────────────────────────────────────────────────────────
 
+## STRUCTURAL CONTRACT CHECK
+Verify .apex/phases/${current_phase}/PLAN_META.json exists.
+If missing:
+  "⚠️ Structural contract: PLAN_META.json missing from phase ${current_phase} directory."
+  bash ~/.claude/hooks/session-log.sh "warning" "Structural contract violation: PLAN_META.json missing in phase ${current_phase}"
+Continue — do not block (could be from manual cleanup).
+
 ## PHASE VERIFICATION — ADAPTIVE BY COMPLEXITY
 COMPLEXITY = STATE.complexity_level
 
