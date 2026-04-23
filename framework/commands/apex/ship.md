@@ -19,6 +19,11 @@ Run final verification across all phases, then create a release tag if everythin
      Complete remaining phases before shipping."
      STOP.
 
+   Activate strict mode before verification:
+   Set STATE.strict_mode = true and write updated STATE.json.
+   This ensures all subsequent verification (test suite, cross-phase audit, unresolved items check)
+   runs at D-level strictness — every task treated as verify_level D.
+
 2. Run full test suite:
    Read .apex/phases/*/PLAN_META.json — collect all verify_commands across all phases.
    Execute each verify command:
