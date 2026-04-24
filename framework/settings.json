@@ -69,6 +69,27 @@
           { "type": "command", "command": "bash ~/.claude/hooks/phantom-check.sh" }
         ]
       }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          { "type": "command", "command": "bash ~/.claude/hooks/verify-learnings.sh" }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          { "type": "command", "command": "bash ~/.claude/hooks/pre-compact.sh" }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          { "type": "command", "command": "bash ~/.claude/hooks/subagent-stop.sh" }
+        ]
+      }
     ]
   }
 }

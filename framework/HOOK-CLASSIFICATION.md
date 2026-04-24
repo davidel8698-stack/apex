@@ -55,12 +55,16 @@ Source: `framework/settings.json` entries under `.hooks.PostToolUse[]` (each ent
 ## Command-Invoked / Event-Triggered (12)
 
 Hooks that fire via explicit invocation from command `.md` files, from other
-hooks, or from Claude Code lifecycle events (not auto-wired in `settings.json`).
+hooks, or from Claude Code lifecycle events.
+
+**Auto-wired via `settings.json` (post-R4-007):** `verify-learnings.sh` (SessionStart),
+`pre-compact.sh` (PreCompact), `subagent-stop.sh` (SubagentStop). The remaining
+9 are command-invoked only — not in `settings.json`.
 
 | File | Invoked by | Purpose |
 |---|---|---|
 | `phase-tag.sh` | `/apex:next`, `/apex:ship` | Creates git tag for completed phase; updates DORA metrics in STATE.json (cumulative avg post-R-002, cross-platform date parsing post-R-005). |
-| `verify-learnings.sh` | `/apex:next`, SessionStart event | v7 tiered enforcement + decay-class-aware staleness; SessionStart emits HOT/WARM counts. |
+| `verify-learnings.sh` | `/apex:next`, SessionStart event (auto-wired R4-007) | v7 tiered enforcement + decay-class-aware staleness; SessionStart emits HOT/WARM counts. |
 | `cross-phase-audit.sh` | `/apex:validate-phase`, `/apex:next` | Runs all prior-phase tests to catch regressions before advancing. |
 | `mutation-gate.sh` | `/apex:next` (after critic PASS on verify_level C/D) | Mutation-testing gate. |
 | `ci-scan.sh` | CI pipeline / manual | Supply-chain vector scanner. Not auto-wired by design — CI invocation only. |
@@ -69,8 +73,8 @@ hooks, or from Claude Code lifecycle events (not auto-wired in `settings.json`).
 | `generate-task-map.sh` | `/apex:next` | Generates task map using jq + git. |
 | `tdad-index.sh` | `/apex:next` (after architect) | Builds code-test dependency graph for TDAD impact analysis. |
 | `tdad-impact.py` | `tdad-index.sh`, `/apex:next` | Python helper — given changed files, find impacted tests via `.apex/TEST_MAP.txt`. |
-| `pre-compact.sh` | PreCompact event (Claude Code runtime) | v7 observation-masking tracking; 50% cost reduction at neutral/positive quality. Backs up state to `.apex/backups/`. |
-| `subagent-stop.sh` | SubagentStop event (Claude Code runtime) | Subagent lifecycle cleanup; reads agent_name from stdin JSON. |
+| `pre-compact.sh` | PreCompact event (auto-wired R4-007, Claude Code runtime) | v7 observation-masking tracking; 50% cost reduction at neutral/positive quality. Backs up state to `.apex/backups/`. |
+| `subagent-stop.sh` | SubagentStop event (auto-wired R4-007, Claude Code runtime) | Subagent lifecycle cleanup; reads agent_name from stdin JSON. |
 
 **Note:** Grep across `framework/commands/apex/` returns 51 invocation sites
 across 15 command files — `/apex:next` alone invokes 34 of these. See the
