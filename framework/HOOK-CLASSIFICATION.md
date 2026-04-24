@@ -16,8 +16,8 @@ developer can answer "how does this hook fire?" without cross-referencing
 
 | Type | How it fires | Config source |
 |---|---|---|
-| **Auto-PreToolUse** | Claude Code runtime fires before a matching tool call | `framework/settings.json` `hooks[].type == "PreToolUse"` |
-| **Auto-PostToolUse** | Claude Code runtime fires after a matching tool call | `framework/settings.json` `hooks[].type == "PostToolUse"` |
+| **Auto-PreToolUse** | Claude Code runtime fires before a matching tool call | `framework/settings.json` entries under `.hooks.PreToolUse[]` |
+| **Auto-PostToolUse** | Claude Code runtime fires after a matching tool call | `framework/settings.json` entries under `.hooks.PostToolUse[]` |
 | **Command-Invoked / Event-Triggered** | Explicit `bash ~/.claude/hooks/<name>.sh ...` from a command `.md`, another hook, or a Claude Code event (SubagentStop, PreCompact, SessionStart) | Command `.md` files or Claude Code event wiring |
 | **Library — Sourced** | Never invoked directly; sourced via `source "$(dirname "$0")/<name>.sh"` by other hooks | `_`-prefix convention |
 
@@ -34,7 +34,7 @@ developer can answer "how does this hook fire?" without cross-referencing
 | `quarantine-guard.sh` | `Read\|Bash` | Agent-aware file access control. When `APEX_ACTIVE_AGENT=auditor`, restrict reads to test files and `.apex/` state. Microsecond pass-through otherwise. |
 | `workflow-guard.sh` | `Read` | Workflow-recipe injection scanner (post-R-006 auto-wiring). Self-filters non-workflow paths. Also invoked explicitly by `/apex:workflow`. |
 
-Source: `framework/settings.json` entries with `"type": "PreToolUse"`.
+Source: `framework/settings.json` entries under `.hooks.PreToolUse[]` (each entry has `matcher` and a nested `hooks:[{"type":"command", ...}]` array per Claude Code's native schema).
 
 ---
 
@@ -48,7 +48,7 @@ Source: `framework/settings.json` entries with `"type": "PreToolUse"`.
 | `phantom-check.sh` | `Write` | Blocks phase advancement when SUMMARY.md contains uncertainty language (e.g., "should work", "might pass"). |
 | `circuit-breaker.sh` | `Bash` | v7 total tool-call cap + enhanced loop detection. Interrupts runaway sessions. |
 
-Source: `framework/settings.json` entries with `"type": "PostToolUse"`.
+Source: `framework/settings.json` entries under `.hooks.PostToolUse[]` (each entry has `matcher` and a nested `hooks:[{"type":"command", ...}]` array per Claude Code's native schema).
 
 ---
 

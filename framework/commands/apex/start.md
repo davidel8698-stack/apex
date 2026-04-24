@@ -33,6 +33,26 @@ if [ -n "$MISSING_TOOLS" ]; then
   STOP.
 fi
 
+## DATE PARSER PREFLIGHT [R3-009] — catches silent DORA / learning-staleness degradation on Windows without Python
+DATE_SELFTEST=$(bash ~/.claude/hooks/_date-parse.sh 2>&1)
+case "$DATE_SELFTEST" in
+  "OK "*)
+    # Parser functional (gnu-date, bsd-date, python3, or python2). Continue silently.
+    ;;
+  "FAIL "*)
+    echo "🚫 APEX PRECHECK FAILED — date parser unavailable"
+    echo "   $DATE_SELFTEST"
+    echo "   Why this matters: DORA metrics (lead_time_avg, deployment_freq) and"
+    echo "   learning-staleness checks will silently produce empty data without this."
+    echo "   Fix (Windows Git Bash): install Python 3 from https://python.org and restart shell."
+    echo "   Fix (other): investigate why date -d / date -j -f both fail in your shell."
+    STOP.
+    ;;
+  *)
+    echo "⚠️ Date parser selftest returned unexpected output — continuing, but run /apex:health-check."
+    ;;
+esac
+
 ## INFRASTRUCTURE SELF-TEST
 bash ~/.claude/scripts/self-test.sh 2>&1
 If exit code > 0: "⚠️ APEX infrastructure degraded — $EXIT test(s) failed. Run /apex:health-check."
@@ -51,9 +71,11 @@ If no:
 
   ## HOOK REGISTRATION DEPLOYMENT
   1d. Copy ~/.claude/settings.json to .claude/settings.json in the target project root.
-      If .claude/settings.json already exists, read existing content, merge the hooks array
-      (append any hooks from the template that are not already present by command match),
-      and write back. Do not overwrite user-defined hooks or permissions.
+      If .claude/settings.json already exists, read existing content, merge each
+      event bucket (.hooks.PreToolUse[] and .hooks.PostToolUse[]) — append any
+      entries from the template that are not already present (match by the
+      nested `.hooks[].command` field), and write back. Do not overwrite
+      user-defined hooks or permissions.
 
   ## SNAPSHOT ORPHAN BRANCH INIT
   1e. Initialize persistent snapshot branch (idempotent — skip if exists):
