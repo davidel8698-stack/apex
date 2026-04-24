@@ -121,3 +121,17 @@ assert_exit 0 $? "S-12: ci-scan passes fully pinned Actions"
 # S-13: ci-scan exits 0 when no workflows directory
 bash "$HOOKS_DIR/ci-scan.sh" "$TEMP_REPO/nonexistent-dir" 2>/dev/null
 assert_exit 0 $? "S-13: ci-scan exits 0 when no workflows directory"
+
+# S-14: ci-scan passes local actions in list-item form (no false positive)
+cat > "$TEMP_REPO/.github/workflows/ci.yml" <<'CIEOF'
+name: CI
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: ./local-action
+      - run: npm test
+CIEOF
+bash "$HOOKS_DIR/ci-scan.sh" "$TEMP_REPO/.github/workflows" 2>/dev/null
+assert_exit 0 $? "S-14: ci-scan passes local actions (./path) in list form"
