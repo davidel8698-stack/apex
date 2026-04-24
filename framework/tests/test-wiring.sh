@@ -1,3 +1,11 @@
+# R4-004: self-source harness if run standalone
+if [ -z "${COMMANDS_DIR:-}" ]; then
+  TEST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  source "$TEST_DIR/_harness.sh"
+  harness_setup
+  STANDALONE=1
+fi
+
 echo "  Wiring: command → hook references"
 
 # A-2: next.md passes phase arg to cross-phase-audit (2 sites)
@@ -123,3 +131,9 @@ for cmd_pair in "thread:threads" "plant-seed:seeds" "add-backlog:backlog" "_deba
   dir="${cmd_pair##*:}"
   assert_contains "$COMMANDS_DIR/${cmd}.md" "mkdir -p .apex/${dir}" "R3-012: ${cmd}.md has defensive mkdir -p .apex/${dir}"
 done
+
+# R4-004: standalone-mode cleanup (only fires when this test file was invoked directly)
+if [ "${STANDALONE:-0}" = "1" ]; then
+  harness_teardown
+  harness_report
+fi

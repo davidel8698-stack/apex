@@ -1,3 +1,11 @@
+# R4-004: self-source harness if run standalone
+if [ -z "${COMMANDS_DIR:-}" ]; then
+  TEST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  source "$TEST_DIR/_harness.sh"
+  harness_setup
+  STANDALONE=1
+fi
+
 echo "  Hooks: blocking behavior"
 
 cd "$TEMP_REPO"
@@ -74,3 +82,9 @@ assert_contains "$HOOKS_DIR/pre-task-snapshot.sh" "_require-git" "B-5: pre-task-
 assert_contains "$HOOKS_DIR/subagent-stop.sh" "exit 0" "W-1a: subagent-stop has exit 0 (validated)"
 assert_contains "$HOOKS_DIR/subagent-stop.sh" "exit 1" "W-1b: subagent-stop has exit 1 (git error advisory)"
 assert_contains "$HOOKS_DIR/subagent-stop.sh" "exit 2" "W-1c: subagent-stop has exit 2 (hallucination)"
+
+# R4-004: standalone-mode cleanup (only fires when this test file was invoked directly)
+if [ "${STANDALONE:-0}" = "1" ]; then
+  harness_teardown
+  harness_report
+fi

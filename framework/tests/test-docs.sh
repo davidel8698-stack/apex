@@ -1,3 +1,11 @@
+# R4-004: self-source harness if run standalone
+if [ -z "${COMMANDS_DIR:-}" ]; then
+  TEST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  source "$TEST_DIR/_harness.sh"
+  harness_setup
+  STANDALONE=1
+fi
+
 echo "  Docs: content correctness"
 
 BRANDING="$HOME/.claude/apex-branding.md"
@@ -36,3 +44,9 @@ assert_contains "$BRANDING" "R13|Mission Briefing|Flight Recorder" "R13: briefin
 
 # Model routing file exists and is valid JSON
 assert_jq "$HOME/.claude/apex-model-routing.json" '.agents != null or ._comment != null' "model-routing.json is valid"
+
+# R4-004: standalone-mode cleanup (only fires when this test file was invoked directly)
+if [ "${STANDALONE:-0}" = "1" ]; then
+  harness_teardown
+  harness_report
+fi

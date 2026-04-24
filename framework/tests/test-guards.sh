@@ -1,3 +1,11 @@
+# R4-004: self-source harness if run standalone
+if [ -z "${COMMANDS_DIR:-}" ]; then
+  TEST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  source "$TEST_DIR/_harness.sh"
+  harness_setup
+  STANDALONE=1
+fi
+
 echo "  Guards: tool availability"
 
 # G-1a: _require-git fails without git (code inspection — PATH tricks unreliable on Windows)
@@ -24,3 +32,9 @@ assert_contains "$HOOKS_DIR/generate-task-map.sh" "command -v rg" "G-3: rg usage
 # G-4: tsc guarded in post-write
 assert_contains "$HOOKS_DIR/post-write.sh" "tsconfig.json" "G-4a: tsc guarded by tsconfig check"
 assert_contains "$HOOKS_DIR/post-write.sh" "command -v npx" "G-4b: tsc guarded by npx check"
+
+# R4-004: standalone-mode cleanup (only fires when this test file was invoked directly)
+if [ "${STANDALONE:-0}" = "1" ]; then
+  harness_teardown
+  harness_report
+fi
