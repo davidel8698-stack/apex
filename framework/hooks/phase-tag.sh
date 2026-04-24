@@ -48,9 +48,11 @@ if git tag -l "$TAG_NAME" | grep -qF "$TAG_NAME"; then
           # Update rolling average lead_time
           _state_update --argjson hours "$LEAD_HOURS" \
             --arg now "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-            'if .dora.lead_time_avg == null then .dora.lead_time_avg = $hours
-             else .dora.lead_time_avg = ((.dora.lead_time_avg + $hours) / 2)
-             end | .dora.last_updated = $now'
+            'if .dora.lead_time_sum == null then
+               .dora.lead_time_sum = $hours | .dora.lead_time_count = 1
+             else
+               .dora.lead_time_sum = (.dora.lead_time_sum + $hours) | .dora.lead_time_count = (.dora.lead_time_count + 1)
+             end | .dora.lead_time_avg = (.dora.lead_time_sum / .dora.lead_time_count) | .dora.last_updated = $now'
         fi
       fi
     fi
