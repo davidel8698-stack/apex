@@ -160,11 +160,12 @@ If STATE.session.started_at exists:
 
 ## MODEL ROUTING HELPER (used by all agent invocations below)
 Read ~/.claude/apex-model-routing.json (if exists)
-resolve_model(agent_type, verify_level):
+resolve_model(agent_type, verify_level, mode):
   model = routing[agent_type].default
   If verify_level AND routing[agent_type].downgrade_on_verify_level[verify_level] exists → use that
   If STATE.complexity_level in routing[agent_type].escalate_on_level → use that (overrides downgrade)
   If retrying AND routing[agent_type].escalate_on_retry exists → use that (overrides all)
+  If mode AND routing[agent_type].escalate_on_mode[mode] exists → use that (overrides all — veto decisions must not be cost-downgraded)
   Return model
 
 ─────────────────────────────────────────────────────────
@@ -247,7 +248,7 @@ If either is missing: STOP. "🚫 Architect output incomplete — PLAN_META.json
 
 ## WAVE 0: Nyquist Validation Layer [F-005]
 If STATE.complexity_level >= 2 AND NOT file_exists(.apex/phases/${current_phase}/WAVE_0_TEST_MAP.json):
-  Resolve model: routing["test-architect"] from apex-model-routing.json.
+  Resolve model: resolve_model("test-architect", null, "phase") from apex-model-routing.json.
   Task("test-architect", {
     mode: "phase",
     input: .apex/phases/${current_phase}/PLAN_META.json + .apex/SPEC.md,

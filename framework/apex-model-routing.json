@@ -49,7 +49,10 @@
       }
     },
     "test-architect": {
-      "default": "haiku"
+      "default": "haiku",
+      "escalate_on_mode": {
+        "phase": "sonnet"
+      }
     },
     "auditor": {
       "default": "haiku"
