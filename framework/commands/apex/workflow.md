@@ -24,6 +24,12 @@ If `$ARGUMENTS` is empty:
 
 If `$ARGUMENTS` matches a workflow ID or name:
   Read the matching workflow .md file from `~/.claude/apex-workflows/`.
+  
+  **Security validation:** Before displaying, run:
+  `bash ~/.claude/hooks/workflow-guard.sh "$WORKFLOW_FILE_PATH"`
+  If exit 2: BLOCK — display the guard's stderr message. Do NOT show or adopt this workflow.
+  If exit 0: proceed.
+  
   Display its contents to the user.
   
   Present options:

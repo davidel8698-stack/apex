@@ -231,6 +231,68 @@ echo "✅ TEST 0i-c PASS: session-log.sh emoji map matches canonical"
 ```
 Expected: 0i-a/0i-b/0i-c all PASS. Any FAIL blocks the rest of health-check.
 
+### TEST 0j: Hook Classification & Distribution Coherence [R3-006 + R3-002]
+Verify HOOK-CLASSIFICATION.md matches actual hook count AND every APEX hook
+wired in framework/settings.json reached the live install via sync.
+```bash
+HOOKS_DIR_FW="$( (ls framework/hooks 2>/dev/null || ls ~/.claude/hooks) | head -1 >/dev/null && echo "framework/hooks" || echo "$HOME/.claude/hooks")"
+[ -d framework/hooks ] && HOOKS_DIR_FW="framework/hooks" || HOOKS_DIR_FW="$HOME/.claude/hooks"
+ACTUAL_HOOK_COUNT=$(ls "$HOOKS_DIR_FW" | wc -l)
+CLASSIFIED_COUNT=$(grep -oP '\*\*Total\*\*\s*\|\s*\*\*\K[0-9]+' framework/HOOK-CLASSIFICATION.md 2>/dev/null || \
+                   grep -oP '\*\*Total files:\*\*\s*\K[0-9]+' framework/HOOK-CLASSIFICATION.md 2>/dev/null || echo "0")
+
+if [ "$ACTUAL_HOOK_COUNT" != "$CLASSIFIED_COUNT" ]; then
+  echo "❌ TEST 0j-a FAIL: HOOK-CLASSIFICATION.md claims $CLASSIFIED_COUNT hooks, actual: $ACTUAL_HOOK_COUNT"
+  exit 1
+fi
+echo "✅ TEST 0j-a PASS: HOOK-CLASSIFICATION.md count matches actual ($ACTUAL_HOOK_COUNT)"
+
+# 0j-b: Every APEX hook in framework/settings.json reached ~/.claude/settings.json
+if [ -f framework/settings.json ] && [ -f "$HOME/.claude/settings.json" ]; then
+  FW_APEX=$(jq -r '[.hooks | to_entries[] | .value[] | .hooks[]?.command // empty] | .[] | select(contains("~/.claude/hooks/"))' framework/settings.json 2>/dev/null | sort -u)
+  LIVE_APEX=$(jq -r '[.hooks | to_entries[] | .value[] | .hooks[]?.command // empty] | .[] | select(contains("~/.claude/hooks/"))' "$HOME/.claude/settings.json" 2>/dev/null | sort -u)
+  MISSING=$(comm -23 <(echo "$FW_APEX") <(echo "$LIVE_APEX"))
+  if [ -n "$MISSING" ]; then
+    echo "❌ TEST 0j-b FAIL: APEX hooks in framework/settings.json not reached live install:"
+    echo "$MISSING"
+    echo "  Fix: bash framework/scripts/sync-to-claude.sh"
+    exit 1
+  fi
+  echo "✅ TEST 0j-b PASS: all APEX hooks from framework/settings.json present in live install"
+else
+  echo "⚠️ TEST 0j-b SKIP: framework/settings.json or ~/.claude/settings.json missing"
+fi
+```
+Expected: 0j-a/0j-b PASS. 0j-a drift means classification doc lagged a hook add/remove; 0j-b drift means sync-to-claude.sh was not run after a wiring change.
+
+### TEST 0k: Cross-Platform Date Parser Preflight [R3-009]
+Verify `_date-parse.sh` has at least one working fallback tier. Silent degradation of DORA metrics and learning staleness checks on Windows/Git Bash without Python is a "fail-silent" violation — this test catches it loud.
+```bash
+DATE_PARSE="$HOME/.claude/hooks/_date-parse.sh"
+if [ ! -f "$DATE_PARSE" ]; then
+  echo "❌ TEST 0k FAIL: _date-parse.sh not deployed to $HOME/.claude/hooks/"
+  echo "   Fix: bash framework/scripts/sync-to-claude.sh"
+  exit 1
+fi
+PARSE_RESULT=$(bash "$DATE_PARSE" 2>&1)
+case "$PARSE_RESULT" in
+  "OK "*)
+    echo "✅ TEST 0k PASS: date parser functional — $PARSE_RESULT"
+    ;;
+  "FAIL "*)
+    echo "❌ TEST 0k FAIL: $PARSE_RESULT"
+    echo "   DORA metrics (phase-tag.sh) and learning staleness (verify-learnings.sh)"
+    echo "   will silently produce empty data without this. Install Python 3."
+    exit 1
+    ;;
+  *)
+    echo "❌ TEST 0k FAIL: selftest produced unexpected output: $PARSE_RESULT"
+    exit 1
+    ;;
+esac
+```
+Expected: `OK gnu-date` on Linux, `OK bsd-date` on macOS, `OK python3` on Windows Git Bash with Python installed.
+
 ## SETUP: Create temp test environment [שיפור 26]
 ```bash
 HEALTH_DIR=$(mktemp -d)

@@ -1,59 +1,74 @@
 {
-  "hooks": [
-    {
-      "type": "PreToolUse",
-      "matcher": "Bash",
-      "command": "bash ~/.claude/hooks/destructive-guard.sh"
-    },
-    {
-      "type": "PreToolUse",
-      "matcher": "Write|Edit|Agent",
-      "command": "bash ~/.claude/hooks/prompt-guard.sh"
-    },
-    {
-      "type": "PreToolUse",
-      "matcher": "Write|Edit",
-      "command": "bash ~/.claude/hooks/path-guard.sh"
-    },
-    {
-      "type": "PostToolUse",
-      "matcher": "Write|Edit",
-      "command": "bash ~/.claude/hooks/post-write.sh"
-    },
-    {
-      "type": "PostToolUse",
-      "matcher": "Bash",
-      "command": "bash ~/.claude/hooks/circuit-breaker.sh"
-    },
-    {
-      "type": "PreToolUse",
-      "matcher": "Bash",
-      "command": "bash ~/.claude/hooks/pre-task-snapshot.sh"
-    },
-    {
-      "type": "PostToolUse",
-      "matcher": "Write|Edit",
-      "command": "bash ~/.claude/hooks/schema-drift.sh"
-    },
-    {
-      "type": "PostToolUse",
-      "matcher": "Write|Edit",
-      "command": "bash ~/.claude/hooks/ast-kb-check.sh"
-    },
-    {
-      "type": "PreToolUse",
-      "matcher": "Read|Bash",
-      "command": "bash ~/.claude/hooks/quarantine-guard.sh"
-    },
-    {
-      "type": "PostToolUse",
-      "matcher": "Write",
-      "command": "bash ~/.claude/hooks/phantom-check.sh"
-    },
-    {
-      "type": "PreToolUse",
-      "matcher": "Read",
-      "command": "bash ~/.claude/hooks/workflow-guard.sh"
-    }
-  ]
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": "bash ~/.claude/hooks/destructive-guard.sh" }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": "bash ~/.claude/hooks/pre-task-snapshot.sh" }
+        ]
+      },
+      {
+        "matcher": "Write|Edit|Agent",
+        "hooks": [
+          { "type": "command", "command": "bash ~/.claude/hooks/prompt-guard.sh" }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          { "type": "command", "command": "bash ~/.claude/hooks/path-guard.sh" }
+        ]
+      },
+      {
+        "matcher": "Read|Bash",
+        "hooks": [
+          { "type": "command", "command": "bash ~/.claude/hooks/quarantine-guard.sh" }
+        ]
+      },
+      {
+        "matcher": "Read",
+        "hooks": [
+          { "type": "command", "command": "bash ~/.claude/hooks/workflow-guard.sh" }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          { "type": "command", "command": "bash ~/.claude/hooks/post-write.sh" }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": "bash ~/.claude/hooks/circuit-breaker.sh" }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          { "type": "command", "command": "bash ~/.claude/hooks/schema-drift.sh" }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          { "type": "command", "command": "bash ~/.claude/hooks/ast-kb-check.sh" }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          { "type": "command", "command": "bash ~/.claude/hooks/phantom-check.sh" }
+        ]
+      }
+    ]
+  }
 }

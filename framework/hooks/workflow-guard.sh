@@ -1,7 +1,8 @@
 #!/bin/bash
 set -u
 # Workflow recipe injection scanner — defense-in-depth layer
-# Hook type: Explicit invocation by /apex:workflow (NOT auto-fired)
+# Hook type: Auto-wired PreToolUse:Read (framework/settings.json) + explicit invocation by /apex:workflow
+#            Self-filters on path: scans only apex-workflows/* files; instant exit 0 for all others.
 #
 # Scans a workflow .md file for injection patterns before execution.
 # Exit 2 = blocked (injection detected), Exit 0 = clean

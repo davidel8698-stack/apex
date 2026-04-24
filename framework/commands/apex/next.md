@@ -160,6 +160,12 @@ If STATE.session.started_at exists:
 
 ## MODEL ROUTING HELPER (used by all agent invocations below)
 Read ~/.claude/apex-model-routing.json (if exists)
+# NOTE (R3-007): resolve_model is AI-interpreted pseudocode by design —
+#   orchestration happens inside Claude's reasoning during /apex:next, not in bash.
+#   The structural invariants that make this pseudocode safe (every agent has .default;
+#   escalation maps are objects where present; escalate_on_retry is a string) are
+#   asserted in framework/tests/test-wiring.sh ("R3-007: ..." checks). Any change to
+#   the pseudocode's contract must be accompanied by a matching test-wiring update.
 resolve_model(agent_type, verify_level, mode):
   model = routing[agent_type].default
   If verify_level AND routing[agent_type].downgrade_on_verify_level[verify_level] exists → use that

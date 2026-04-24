@@ -31,22 +31,22 @@ assert_exit 0 "$EXIT" "A-3c: post-write exits 0 without tsconfig (G-4 guard)"
 rm -f bad.ts out.txt
 
 # R-020a: post-write blocks non-conventional commit message
-echo "added new stuff to the app" > COMMIT_EDITMSG
-bash "$HOOKS_DIR/post-write.sh" COMMIT_EDITMSG >out.txt 2>&1; EXIT=$?
+echo "added new stuff to the app" > "$TEMP_REPO/COMMIT_EDITMSG"
+bash "$HOOKS_DIR/post-write.sh" "$TEMP_REPO/COMMIT_EDITMSG" >out.txt 2>&1; EXIT=$?
 assert_exit 2 "$EXIT" "R-020a: post-write exits 2 on non-conventional commit"
-rm -f COMMIT_EDITMSG out.txt
+rm -f "$TEMP_REPO/COMMIT_EDITMSG" out.txt
 
 # R-020b: post-write passes conventional commit message
-echo "feat(auth): add login page" > COMMIT_EDITMSG
-bash "$HOOKS_DIR/post-write.sh" COMMIT_EDITMSG >out.txt 2>&1; EXIT=$?
+echo "feat(auth): add login page" > "$TEMP_REPO/COMMIT_EDITMSG"
+bash "$HOOKS_DIR/post-write.sh" "$TEMP_REPO/COMMIT_EDITMSG" >out.txt 2>&1; EXIT=$?
 assert_exit 0 "$EXIT" "R-020b: post-write exits 0 on conventional commit"
-rm -f COMMIT_EDITMSG out.txt
+rm -f "$TEMP_REPO/COMMIT_EDITMSG" out.txt
 
 # R-020c: post-write passes conventional commit with scope and bang
-echo "fix(api)!: handle null response in payments" > COMMIT_EDITMSG
-bash "$HOOKS_DIR/post-write.sh" COMMIT_EDITMSG >out.txt 2>&1; EXIT=$?
+echo "fix(api)!: handle null response in payments" > "$TEMP_REPO/COMMIT_EDITMSG"
+bash "$HOOKS_DIR/post-write.sh" "$TEMP_REPO/COMMIT_EDITMSG" >out.txt 2>&1; EXIT=$?
 assert_exit 0 "$EXIT" "R-020c: post-write exits 0 on breaking change commit"
-rm -f COMMIT_EDITMSG out.txt
+rm -f "$TEMP_REPO/COMMIT_EDITMSG" out.txt
 
 # A-8: circuit-breaker unique hash for empty diff
 echo '{"circuit_breaker":{"consecutive_no_change_actions":0,"max_allowed":3,"last_file_hash":null,"triggered":false,"total_tool_calls_this_task":0,"max_tool_calls_per_task":80}}' > .apex/STATE.json

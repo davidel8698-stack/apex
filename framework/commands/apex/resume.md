@@ -23,7 +23,7 @@ Variable substitution MUST complete before rendering — never substitute mid-fr
 
 ## GLASS COCKPIT — AMBIENT HEADER
 After the status bar/badge, render:
-  1. Section 10-D (Ambient Timeline) — last 8 events from SESSION-LOG.md
+  1. Section 10-D (Ambient Timeline) — decision-filtered query (see apex-branding.md Section 10-D parse rule: DECISION_TYPES filter on event-log.jsonl, cap at 5, pad to 3)
   2. Section 10-E (Live Ticker)      — literal tail -5 from SESSION-LOG.md
 This gives the user instant continuity — "here's what happened before the rotation".
 

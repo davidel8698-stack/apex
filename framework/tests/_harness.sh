@@ -10,6 +10,8 @@ harness_setup() {
   git init -q && git config user.email "test@apex" && git config user.name "APEX"
   echo "init" > init.txt && git add . && git commit -qm "init"
   mkdir -p .apex/phases/01
+  # NOTE: Tests run against installed hooks/commands ($HOME/.claude/), not framework source.
+  # After modifying framework/hooks/ or framework/commands/, re-install before running self-test.
   HOOKS_DIR="$HOME/.claude/hooks"
   SCHEMAS_DIR="$HOME/.claude/schemas"
   COMMANDS_DIR="$HOME/.claude/commands/apex"

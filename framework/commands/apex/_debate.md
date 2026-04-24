@@ -9,6 +9,8 @@ Instead, present numbered proposals with a recommended default marked [recommend
 
 ## ARCHITECTURE DEBATE — FILE-BASED ISOLATION
 
+Ensure directory exists: `mkdir -p .apex/debate-log/`
+
 Write .apex/debate-log/[decision]-brief-A.md
 Write .apex/debate-log/[decision]-brief-B.md
 

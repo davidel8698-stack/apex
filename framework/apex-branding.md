@@ -837,20 +837,24 @@ Rendered at the **top of every /apex:next output** and in the Cockpit Dashboard.
 ### Parse rule
 
 ```
-1. tail -12 .apex/SESSION-LOG.md
-2. Filter lines matching: checkpoint | fail | partial | wave_complete | phase_complete
-3. Keep last 8 after filtering
-4. For each line:
+DECISION_TYPES = pending_approval | auto_pause | time_gate | coherence_fail | veto | blocked | phantom_fail
+
+1. Primary: jq '.[] | select(.type == DECISION_TYPES)' .apex/event-log.jsonl
+   - Keep last 5 decision events
+   - If fewer than 3 decision events: pad with most recent events until 3 total
+   - Cap at 5
+2. Fallback (if event-log.jsonl missing): grep SESSION-LOG.md for decision emoji markers
+3. For each event:
    - read event type (icon column)
    - map to slot icon + verdict mark
-5. Append current agent slot (●now) at the end
-6. Render inside the single-line frame (68 chars total)
+4. Append current agent slot (●now) at the end
+5. Render inside the single-line frame (68 chars total)
 ```
 
 ### Spacing rule
 - Slots are padded so the full row fits in 66 content chars
-- If more than 8 recent events exist, keep only the most recent 8
-- If fewer than 8, left-align and fill the rest with spaces
+- Decision-filtered events cap at 5 (not 8) — focused on what needs user action
+- If fewer than 3, pad with recent events and left-align
 
 ---
 

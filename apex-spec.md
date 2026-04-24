@@ -25,7 +25,7 @@ APEX הוא **multi-agent framework ופלטפורמה לסוכני קוד** (Cl
 ### 3. Context loss (אובדן הקשר בין session-ים ובתוכם)
 **מה זה:** הסוכן לא יודע איפה הוא נמצא.
 **למה זה קורה:** אין observable state. U-shaped attention.
-**איך APEX מטפל:** STATE.json + SQLite control plane. Glass cockpit עם 3-5 פריטי decision-required עליונה. Context ordering לפי U-shape. Aider-style repo map. **`/apex:list`**, **`/apex:onboard`**. **`/apex:resume-work`** ו-**`/apex:pause-work`** עם structured handoff. **`/apex:session-report`**. **Scale-Adaptive Classifier ב-onboarding** (חידוש מ-BMAD): APEX מסיק scale אוטומטית על בסיס גודל קוד, נוכחות tests, CI/CD, production deployment, team size, ומתאים את ההגדרות. המשתמש יכול לעקוף, אבל ברירת המחדל מתאימה את עצמה. זה מוריד decision burden מהמשתמש הלא-טכני — במקום שיבחר preset, ה-system מנחש נכון ומציג.
+**איך APEX מטפל:** STATE.json + event-log.jsonl control plane (git-diff-able, jq-queryable). Glass cockpit עם 3-5 פריטי decision-required עליונה. Context ordering לפי U-shape. Aider-style repo map. **`/apex:list`**, **`/apex:onboard`**. **`/apex:resume-work`** ו-**`/apex:pause-work`** עם structured handoff. **`/apex:session-report`**. **Scale-Adaptive Classifier ב-onboarding** (חידוש מ-BMAD): APEX מסיק scale אוטומטית על בסיס גודל קוד, נוכחות tests, CI/CD, production deployment, team size, ומתאים את ההגדרות. המשתמש יכול לעקוף, אבל ברירת המחדל מתאימה את עצמה. זה מוריד decision burden מהמשתמש הלא-טכני — במקום שיבחר preset, ה-system מנחש נכון ומציג.
 
 ### 4. Drift (סטייה מהתוכנית)
 **מה זה:** הוחלט X. הסוכן עושה Y. גם — drift סגנוני.
@@ -79,7 +79,7 @@ APEX הוא **multi-agent framework ופלטפורמה לסוכני קוד** (Cl
 
 כל module repo נפרד, issues נפרדים, versioning נפרד. זה מאפשר growth אינקרמנטלי בלי שהליבה תתפח.
 
-**State management היברידי.** Markdown + SQLite+FTS5.
+**State management היברידי.** Markdown + JSONL + jq (with SQLite+FTS5 as future migration path when query needs exceed jq — zero binary dependencies today, git-diff-able proof-of-process).
 
 **Hook system** — 24+ hooks כולל prompt-guard ו-workflow-guard.
 
@@ -99,7 +99,7 @@ APEX הוא **multi-agent framework ופלטפורמה לסוכני קוד** (Cl
 
 **Verification stack עשר-שכבתי.**
 
-**APEX-SKILL.md generation. APEXSkin. Structural contract. APEX_STRICT_MODE. PEP 420 namespace. Living Evidence Counter. Conventional commits. Public proof-of-process.**
+**APEX-SKILL.md generation. APEXSkin. Structural contract. APEX_STRICT_MODE. Living Evidence Counter. Conventional commits. Public proof-of-process.**
 
 **`apex-workflows/` library** — 30+ מתכונים מוכנים ל-tasks נפוצים. משתמש לא-טכני בוחר מ-menu במקום לתאר מה הוא רוצה.
 

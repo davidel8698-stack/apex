@@ -7,17 +7,19 @@
 #   changes in a Claude Code session.
 #
 # Usage
-#   bash framework/scripts/sync-to-claude.sh            # perform sync
-#   bash framework/scripts/sync-to-claude.sh --dry-run  # preview only
-#   bash framework/scripts/sync-to-claude.sh --clean    # detect orphaned APEX files in ~/.claude/
+#   bash framework/scripts/sync-to-claude.sh                  # perform sync (incl. settings.json merge)
+#   bash framework/scripts/sync-to-claude.sh --dry-run        # preview only (shows settings.json diff)
+#   bash framework/scripts/sync-to-claude.sh --skip-settings  # sync files but do NOT touch settings.json
+#   bash framework/scripts/sync-to-claude.sh --clean          # detect orphaned APEX files in ~/.claude/
 #
 # Safety guarantees
-#   - Additive only by default — never deletes files from ~/.claude/
+#   - Additive for file trees — never deletes files from ~/.claude/
+#   - settings.json merge is surgical: only APEX hooks (commands containing
+#     ~/.claude/hooks/) are replaced. User/GSD hooks, permissions, env,
+#     theme, and any other settings.json keys are preserved.
+#   - --skip-settings preserves the legacy "never touch settings.json" behavior
 #   - --clean mode detects orphans but only deletes with user confirmation
-#   - Scoped to APEX — non-APEX files (GSD agents, user hooks,
-#     settings.json) are never touched
-#   - Only copies files that exist under framework/
-#   - Creates destination directories if missing, never removes them
+#   - Scoped to APEX — non-APEX agent/hook files (GSD, user) are never touched
 
 set -euo pipefail
 
@@ -27,10 +29,13 @@ CLAUDE_ROOT="$HOME/.claude"
 
 DRY_RUN=0
 CLEAN_MODE=0
+SKIP_SETTINGS=0
 if [[ "${1:-}" == "--dry-run" ]]; then
   DRY_RUN=1
 elif [[ "${1:-}" == "--clean" ]]; then
   CLEAN_MODE=1
+elif [[ "${1:-}" == "--skip-settings" ]]; then
+  SKIP_SETTINGS=1
 fi
 
 log() { printf '[sync] %s\n' "$*"; }
@@ -63,6 +68,111 @@ copy_tree() {
   done < <(find "$src_dir" -type f -print0)
 }
 
+# merge_apex_hooks — Surgically replace APEX hook wirings in ~/.claude/settings.json.
+#
+# Claude Code's settings.json has a nested hooks structure:
+#   .hooks.{PreToolUse,PostToolUse,PreCompact,SessionStart,...}[]
+#     .matcher
+#     .hooks[]
+#       .type    (always "command")
+#       .command (shell command string)
+#
+# An "APEX matcher group" is a .hooks.<event>[] entry where ALL its .hooks[]
+# commands target ~/.claude/hooks/ (i.e. every command in the group is ours).
+# All such groups are removed from the live settings and replaced with the
+# groups from framework/settings.json.
+#
+# Non-APEX groups (user-authored, GSD, or mixed) are preserved byte-for-byte.
+# Event types that APEX does not wire (PreCompact, SessionStart, etc.) are
+# never touched.
+#
+# Top-level keys (permissions, env, statusLine, theme, ...) are preserved.
+#
+# If ~/.claude/settings.json does not exist, it is created as a copy of
+# framework/settings.json.
+#
+# Idempotent: running twice produces the same result as running once.
+merge_apex_hooks() {
+  local src="$FRAMEWORK_ROOT/settings.json"
+  local dst="$CLAUDE_ROOT/settings.json"
+
+  if [[ ! -f "$src" ]]; then
+    log "skip settings merge (missing framework/settings.json)"
+    return
+  fi
+
+  if ! command -v jq >/dev/null 2>&1; then
+    log "WARNING: jq not found — cannot merge settings.json safely. Skipping."
+    log "         Install jq and re-run, or use --skip-settings if intentional."
+    return
+  fi
+
+  mkdir -p "$CLAUDE_ROOT"
+
+  # Bootstrap path: no existing settings.json → full copy.
+  if [[ ! -f "$dst" ]]; then
+    if [[ $DRY_RUN -eq 1 ]]; then
+      printf '[dry-run] bootstrap: %s -> %s\n' "settings.json" "$dst"
+      return
+    fi
+    cp "$src" "$dst"
+    log "copied: settings.json (bootstrap — no prior file)"
+    return
+  fi
+
+  # For each event type that APEX defines (PreToolUse, PostToolUse, ...):
+  #   - drop live matcher groups where every command contains ~/.claude/hooks/
+  #   - append APEX matcher groups from src
+  # For event types APEX does not define: keep live as-is.
+  # For top-level keys outside .hooks: keep live as-is.
+  local merged
+  merged=$(jq -s '
+    .[0] as $u | .[1] as $a |
+    ($a.hooks // {}) as $apex_hooks |
+    $u
+    | (.hooks //= {})
+    | .hooks = (
+        .hooks as $live |
+        reduce ($apex_hooks | keys_unsorted[]) as $evt (
+          $live;
+          .[$evt] = (
+            (($live[$evt] // []) | map(
+              select(
+                ((.hooks // []) | length) == 0
+                or ((.hooks // []) | map((.command // "") | contains("~/.claude/hooks/")) | all | not)
+              )
+            ))
+            + ($apex_hooks[$evt] // [])
+          )
+        )
+      )
+  ' "$dst" "$src")
+
+  if [[ -z "$merged" ]]; then
+    log "ERROR: settings merge produced empty output. Aborting settings update."
+    return
+  fi
+
+  # Sanity: merged must be valid JSON and must preserve top-level keys.
+  if ! echo "$merged" | jq . >/dev/null 2>&1; then
+    log "ERROR: merged settings.json is not valid JSON. Aborting."
+    return
+  fi
+
+  if [[ $DRY_RUN -eq 1 ]]; then
+    printf '[dry-run] settings.json merge preview (diff vs live):\n'
+    diff <(jq -S . "$dst") <(echo "$merged" | jq -S .) || true
+    printf '\n'
+    return
+  fi
+
+  # Atomic write: temp file then mv
+  local tmp="$dst.apex-merge.tmp"
+  echo "$merged" | jq . > "$tmp"
+  mv "$tmp" "$dst"
+  log "merged: settings.json (APEX matcher groups updated; user/GSD groups and other keys preserved)"
+}
+
 log "framework root: $FRAMEWORK_ROOT"
 log "claude root:    $CLAUDE_ROOT"
 if [[ $DRY_RUN -eq 1 ]]; then
@@ -90,6 +200,13 @@ copy_file "$FRAMEWORK_ROOT/CONTEXT_BUDGET.default.json" "$CLAUDE_ROOT/CONTEXT_BU
 copy_file "$FRAMEWORK_ROOT/scripts/self-test.sh"      "$CLAUDE_ROOT/scripts/self-test.sh"
 copy_file "$FRAMEWORK_ROOT/scripts/validate-state.sh" "$CLAUDE_ROOT/scripts/validate-state.sh"
 copy_file "$FRAMEWORK_ROOT/../CLAUDE-TEMPLATE.md"   "$CLAUDE_ROOT/CLAUDE-TEMPLATE.md"
+
+# settings.json merge (surgical — preserves user/GSD hooks)
+if [[ $SKIP_SETTINGS -eq 1 ]]; then
+  log "skip settings.json (--skip-settings)"
+elif [[ $CLEAN_MODE -ne 1 ]]; then
+  merge_apex_hooks
+fi
 
 echo
 log "done"

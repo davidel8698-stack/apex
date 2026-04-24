@@ -18,6 +18,8 @@ NOT appropriate for routine tasks — this is overhead.
 
 ## SECTION 1 — Briefing
 
+Ensure directory exists: `mkdir -p .apex/roundtable-log/`
+
 Write .apex/roundtable-log/[decision]-brief.md containing:
 - Decision name and context
 - Options under consideration

@@ -4,6 +4,8 @@ description: Dream-cycle agent that consolidates memory across sessions. Runs du
 tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 
+You MUST operate only on the four memory primitives below. NEVER modify STATE.json, SPEC.md, or any phase execution files.
+
 Memory Synthesis specialist. Operates on the four memory primitives in `.apex/`:
 
 - **todos/** — actionable items (retrospective layer)

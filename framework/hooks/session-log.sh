@@ -46,6 +46,10 @@ case "$EVENT_TYPE" in
   phase_complete)  ICON="🏁" ;;
   coherence_fail)  ICON="💥" ;;
   phantom_fail)    ICON="👻" ;;
+  pending_approval) ICON="⏳" ;;
+  time_gate)       ICON="⏰" ;;
+  veto)            ICON="🚫" ;;
+  blocked)         ICON="🔒" ;;
   resume)          ICON="▶️" ;;
   start)           ICON="🚀" ;;
   bypass)          ICON="⏩" ;;
