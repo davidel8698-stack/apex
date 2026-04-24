@@ -315,7 +315,7 @@ ATTEMPTS = STATE.reflexion.current_unit_attempts
 If ATTEMPTS > 0: load .apex/phases/${current_phase}/[unit]-REFLEXION.md as "PREVIOUS ATTEMPT FAILED: [content]"
 
 ## STEP E: Build Executor Context — Observation Masking Protocol
-## Observation masking: context is structured so stale observations are replaced per-task, not summarized. See DIRECTORY-CONTRACT.md.
+## Observation masking enforcement: the zone structure below IS the enforcement mechanism. Stale observations are replaced by re-reading active_files per-task (Zone 2). No external hook can validate context composition — this is by design. See DIRECTORY-CONTRACT.md.
 Read CONTEXT_BUDGET.json, PLAN_META.json for current task.
 Stable prefix FIRST (for cache hits), volatile LAST:
 
