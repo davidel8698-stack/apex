@@ -44,8 +44,9 @@ case "$DATE_SELFTEST" in
     echo "   $DATE_SELFTEST"
     echo "   Why this matters: DORA metrics (lead_time_avg, deployment_freq) and"
     echo "   learning-staleness checks will silently produce empty data without this."
+    echo "   Fix (Linux): GNU coreutils provides 'date -d' — install with apt/yum/dnf if missing."
+    echo "   Fix (macOS): BSD 'date -j -f' is built-in — a FAIL here is unusual; check shell PATH."
     echo "   Fix (Windows Git Bash): install Python 3 from https://python.org and restart shell."
-    echo "   Fix (other): investigate why date -d / date -j -f both fail in your shell."
     STOP.
     ;;
   *)
