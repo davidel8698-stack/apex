@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  shellcheck:
+    name: ShellCheck hooks
+    runs-on: ubuntu-latest
+    continue-on-error: true  # warn-only for the initial release; tighten later
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run ShellCheck on framework/hooks
+        run: |
+          if ! command -v shellcheck >/dev/null 2>&1; then
+            sudo apt-get update && sudo apt-get install -y shellcheck
+          fi
+          set +e
+          fail=0
+          for f in framework/hooks/*.sh; do
+            [ -f "$f" ] || continue
+            echo "::group::$f"
+            shellcheck -S warning "$f" || fail=1
+            echo "::endgroup::"
+          done
+          exit $fail
+
+  json-validate:
+    name: Validate JSON schemas and configs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate JSON files parse cleanly
+        run: |
+          set -e
+          fail=0
+          while IFS= read -r f; do
+            if ! python3 -c "import json,sys; json.load(open(sys.argv[1]))" "$f" 2>/dev/null; then
+              echo "::error file=$f::Invalid JSON"
+              fail=1
+            else
+              echo "ok: $f"
+            fi
+          done < <(find framework -name '*.json' -type f)
+          exit $fail
+
+  markdown-links:
+    name: Check markdown for obvious issues
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify README, CONTRIBUTING, LICENSE present
+        run: |
+          for f in README.md CONTRIBUTING.md LICENSE CHANGELOG.md .github/SECURITY.md; do
+            if [ ! -f "$f" ]; then
+              echo "::error file=$f::Missing required file"
+              exit 1
+            fi
+            echo "ok: $f"
+          done
