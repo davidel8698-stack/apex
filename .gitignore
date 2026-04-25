@@ -1,0 +1,43 @@
+# APEX runtime state (per-project, not for framework repo)
+.apex/STATE.json
+.apex/CONTEXT_BUDGET.json
+.apex/event-log.jsonl
+.apex/backups/
+.apex/phases/
+
+# Claude Code local settings (contains personal machine paths)
+.claude/settings.local.json
+
+# Internal audit artifacts (not for public)
+apex-audit-findings-*.md
+NEW-FINDINGS-*.md
+WAVE-*-RESULT.md
+WAVES-R*.md
+ROUND-R*-CLOSURE.md
+REMEDIATION-PLAN-*.md
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editors
+.idea/
+.vscode/
+*.swp
+*~
+
+# Logs
+*.log
+
+# Node / Python (defensive — in case skills install deps)
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Environment
+.env
+.env.local
+.env.*.local
