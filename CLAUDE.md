@@ -1,4 +1,11 @@
-# APEX v6 — Framework Build Project
+# CLAUDE.md — Internal Build Instructions
+
+> **Note for human readers:** This file is consumed automatically by Claude Code
+> as build instructions for the APEX framework. For the public-facing project
+> introduction, see [README.md](README.md). For the full specification, see
+> [apex-spec.md](apex-spec.md).
+
+---
 
 ## What This Is
 This is a BUILD project for the APEX framework itself — not an application.
