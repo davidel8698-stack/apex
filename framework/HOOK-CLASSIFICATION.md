@@ -61,6 +61,17 @@ hooks, or from Claude Code lifecycle events.
 `pre-compact.sh` (PreCompact), `subagent-stop.sh` (SubagentStop). The remaining
 9 are command-invoked only — not in `settings.json`.
 
+**Design note — this is intentional, not wiring debt.** These hooks take CLI
+arguments (`TASK_ID`, `VERIFY_LEVEL`, `--files`, phase ID, ...) and are invoked
+by APEX commands at the correct phase boundary, with the correct context.
+Wiring them to a generic `PreToolUse` / `PostToolUse` event would either no-op
+silently (the missing `VERIFY_LEVEL` arg in `mutation-gate.sh` makes its
+early-exit guard always skip) or error on every tool call (`tdad-impact.py`'s
+`argparse` requires `--files`). If a future contributor wants such a hook to
+also fire from an event, the right move is a thin wrapper hook that translates
+the event JSON into the args — not adding the original hook to `settings.json`
+directly.
+
 | File | Invoked by | Purpose |
 |---|---|---|
 | `phase-tag.sh` | `/apex:next`, `/apex:ship` | Creates git tag for completed phase; updates DORA metrics in STATE.json (cumulative avg post-R-002, cross-platform date parsing post-R-005). |

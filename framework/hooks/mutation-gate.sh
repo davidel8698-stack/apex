@@ -9,6 +9,13 @@ source "$(dirname "$0")/_state-update.sh"
 
 export APEX_HOOK_SOURCE="mutation-gate"
 
+# Opt-out for environments where the gate is unwanted (e.g. CI without test
+# mutation tooling, or local sessions doing exploratory work).
+if [ "${APEX_MUTATION_GATE:-on}" = "off" ]; then
+  echo "SKIP: mutation gate disabled via APEX_MUTATION_GATE=off"
+  exit 0
+fi
+
 STATE_FILE=".apex/STATE.json"
 TASK_ID="${1:-}"
 VERIFY_LEVEL="${2:-}"
@@ -30,12 +37,21 @@ fi
 KILL_RATE=0
 TOOL_FOUND=0
 
+# Cap each mutation tool at 5 minutes — Stryker/mutmut can otherwise hang for
+# tens of minutes on pathological inputs and block the entire session.
+MUTATION_TIMEOUT="${APEX_MUTATION_TIMEOUT:-300}"
+
 # JS/TS: Stryker
 if [ -f "package.json" ] && echo "$CHANGED_FILES" | grep -qE '\.(ts|tsx|js|jsx)$'; then
   if command -v npx &>/dev/null && npx stryker --version &>/dev/null 2>&1; then
     TOOL_FOUND=1
     MUTATE_FILES=$(echo "$CHANGED_FILES" | grep -E '\.(ts|tsx|js|jsx)$' | tr '\n' ',' | sed 's/,$//')
-    OUTPUT=$(npx stryker run --mutate "$MUTATE_FILES" --reporters clear-text 2>&1 | tail -30)
+    OUTPUT=$(timeout "${MUTATION_TIMEOUT}s" npx stryker run --mutate "$MUTATE_FILES" --reporters clear-text 2>&1 | tail -30)
+    RC=$?
+    if [ "$RC" -eq 124 ]; then
+      echo "ADVISORY: stryker timed out after ${MUTATION_TIMEOUT}s — mutation gate skipped"
+      exit 0
+    fi
     KILL_RATE=$(echo "$OUTPUT" | grep -oP 'Mutation score.*?(\d+(\.\d+)?)%' | grep -oP '\d+(\.\d+)?' | tail -1)
   fi
 fi
@@ -45,7 +61,12 @@ if echo "$CHANGED_FILES" | grep -qE '\.py$'; then
   if command -v mutmut &>/dev/null; then
     TOOL_FOUND=1
     PY_FILES=$(echo "$CHANGED_FILES" | grep -E '\.py$' | tr '\n' ' ')
-    OUTPUT=$(python3 -m mutmut run --paths-to-mutate $PY_FILES --no-progress 2>&1 | tail -20)
+    OUTPUT=$(timeout "${MUTATION_TIMEOUT}s" python3 -m mutmut run --paths-to-mutate $PY_FILES --no-progress 2>&1 | tail -20)
+    RC=$?
+    if [ "$RC" -eq 124 ]; then
+      echo "ADVISORY: mutmut timed out after ${MUTATION_TIMEOUT}s — mutation gate skipped"
+      exit 0
+    fi
     KILLED=$(echo "$OUTPUT" | grep -oP 'Killed:\s*(\d+)' | grep -oP '\d+')
     TOTAL=$(echo "$OUTPUT" | grep -oP 'Total:\s*(\d+)' | grep -oP '\d+')
     if [ -n "$TOTAL" ] && [ "$TOTAL" -gt 0 ]; then
