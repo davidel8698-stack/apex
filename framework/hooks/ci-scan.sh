@@ -1,14 +1,73 @@
 #!/bin/bash
 set -u
 # CI supply-chain vector scanner — defense-in-depth layer
-# Hook type: Manual invocation (not wired to settings.json)
+# Hook type: Auto-PostToolUse (Write|Edit, self-filtered to .github/workflows/*) [R5-010]
+#            Also retains command-invoked usage (CI pipeline / manual sweep).
 #
 # Scans .github/workflows/*.yml for known CI supply-chain vectors.
-# Exit 2 = vectors found, Exit 0 = clean or no workflows directory
+# Exit 2 = vectors found, Exit 0 = clean or path outside .github/workflows/
+# or no workflows directory.
+#
+# Path-filter contract (R5-010): Claude Code's PostToolUse matcher is
+# tool-name level (Write|Edit), not path-level. So when invoked from
+# settings.json this hook receives the touched path on stdin (Claude
+# Code hook protocol) or as $1; if it does not begin with
+# `.github/workflows/`, exit 0 fast. The detection logic below is
+# preserved byte-for-byte from the manual-invocation era.
 
 source "$(dirname "$0")/_security-common.sh"
 
-WORKFLOWS_DIR="${1:-.github/workflows}"
+# --- R5-010: Path-filter early-exit for auto-PostToolUse invocation ---
+# When invoked from settings.json the hook receives a JSON payload on
+# stdin describing the tool call. We support three invocation shapes:
+#   1) Auto-PostToolUse: stdin = JSON like {"tool_input":{"file_path":"..."}}
+#      → if file_path is outside .github/workflows/, exit 0.
+#   2) Direct command-invocation with explicit dir: bash ci-scan.sh path/
+#      → scan that dir.
+#   3) Default (no arg, no stdin): scan .github/workflows/.
+#
+# Note: under shape (2), if $1 is a *file* path (e.g., a touched
+# workflow), we treat its parent dir as the scan target.
+WORKFLOWS_DIR=""
+if [ -p /dev/stdin ] || [ ! -t 0 ]; then
+  # stdin is piped — try to parse Claude Code hook payload.
+  STDIN_BUF=$(cat 2>/dev/null || true)
+  if [ -n "$STDIN_BUF" ] && command -v jq >/dev/null 2>&1; then
+    HOOK_PATH=$(echo "$STDIN_BUF" | jq -r '.tool_input.file_path // .tool_input.path // empty' 2>/dev/null)
+    if [ -n "$HOOK_PATH" ]; then
+      # Auto-PostToolUse path: enforce self-filter. Only scan workflow files.
+      case "$HOOK_PATH" in
+        .github/workflows/*|*/.github/workflows/*)
+          # Scan the parent directory of the touched file.
+          WORKFLOWS_DIR="$(dirname "$HOOK_PATH")"
+          ;;
+        *)
+          # Path is outside .github/workflows/ — fast exit, do not scan.
+          exit 0
+          ;;
+      esac
+    fi
+  fi
+fi
+
+# Fall through to argv / default if stdin parsing did not set WORKFLOWS_DIR.
+if [ -z "$WORKFLOWS_DIR" ]; then
+  ARG="${1:-.github/workflows}"
+  if [ -f "$ARG" ]; then
+    # Treat a file argument as "scan its parent dir" for parity with the
+    # auto-PostToolUse path. Self-filter still applies.
+    case "$ARG" in
+      .github/workflows/*|*/.github/workflows/*)
+        WORKFLOWS_DIR="$(dirname "$ARG")"
+        ;;
+      *)
+        exit 0
+        ;;
+    esac
+  else
+    WORKFLOWS_DIR="$ARG"
+  fi
+fi
 
 if [ ! -d "$WORKFLOWS_DIR" ]; then
   # No workflows directory — nothing to scan

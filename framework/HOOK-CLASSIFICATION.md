@@ -39,7 +39,7 @@ Source: `framework/settings.json` entries under `.hooks.PreToolUse[]` (each entr
 
 ---
 
-## Auto-PostToolUse (5)
+## Auto-PostToolUse (6)
 
 | File | Matcher | Purpose |
 |---|---|---|
@@ -48,12 +48,13 @@ Source: `framework/settings.json` entries under `.hooks.PreToolUse[]` (each entr
 | `ast-kb-check.sh` | `Write\|Edit` | AST/KB hallucination gate — import validation. Advisory (exit 1, not 2). |
 | `phantom-check.sh` | `Write` | Blocks phase advancement when SUMMARY.md contains uncertainty language (e.g., "should work", "might pass"). |
 | `circuit-breaker.sh` | `Bash` | v7 total tool-call cap + enhanced loop detection. Interrupts runaway sessions. |
+| `ci-scan.sh` | `Write\|Edit` | Supply-chain vector scanner for `.github/workflows/*.yml` (R5-010). Self-filtered: parses Claude Code hook stdin payload, exits 0 fast when the touched path is outside `.github/workflows/`. Exit 2 on detected vectors (unpinned actions, secret exposure, write-all permissions, unsafe `pull_request_target`). Also retains command-invoked usage. |
 
 Source: `framework/settings.json` entries under `.hooks.PostToolUse[]` (each entry has `matcher` and a nested `hooks:[{"type":"command", ...}]` array per Claude Code's native schema).
 
 ---
 
-## Command-Invoked / Event-Triggered (13)
+## Command-Invoked / Event-Triggered (12)
 
 Hooks that fire via explicit invocation from command `.md` files, from other
 hooks, or from Claude Code lifecycle events.
@@ -61,8 +62,9 @@ hooks, or from Claude Code lifecycle events.
 **Auto-wired via `settings.json` (post-R4-007 + R5-004):** `state-rebuild.sh`
 (SessionStart, conditional — fires before verify-learnings when STATE.json
 missing), `verify-learnings.sh` (SessionStart), `pre-compact.sh` (PreCompact),
-`subagent-stop.sh` (SubagentStop). The remaining 9 are command-invoked only —
-not in `settings.json`.
+`subagent-stop.sh` (SubagentStop). The remaining 8 are command-invoked only —
+not in `settings.json`. (R5-010: `ci-scan.sh` was promoted from this
+section to **Auto-PostToolUse** — see the row above.)
 
 | File | Invoked by | Purpose |
 |---|---|---|
@@ -70,7 +72,6 @@ not in `settings.json`.
 | `verify-learnings.sh` | `/apex:next`, SessionStart event (auto-wired R4-007) | v7 tiered enforcement + decay-class-aware staleness; SessionStart emits HOT/WARM counts. |
 | `cross-phase-audit.sh` | `/apex:validate-phase`, `/apex:next` | Runs all prior-phase tests to catch regressions before advancing. |
 | `mutation-gate.sh` | `/apex:next` (after critic PASS on verify_level C/D) | Mutation-testing gate. |
-| `ci-scan.sh` | CI pipeline / manual | Supply-chain vector scanner. Not auto-wired by design — CI invocation only. |
 | `context-monitor.sh` | `/apex:next`, `/apex:status`, `/apex:pause`, `/apex:resume` | Real-token counting from STATE.json; compact at 50–60%, rotate at 70%. |
 | `session-log.sh` | Many commands and hooks | APEX Session Guardian — appends events to `.apex/SESSION-LOG.md`. Shared logging primitive. |
 | `generate-task-map.sh` | `/apex:next` | Generates task map using jq + git. |
@@ -136,8 +137,8 @@ available, and both fall back to the preserved Bash logic when not.
 | Category | Count |
 |---|---|
 | Auto-PreToolUse | 6 |
-| Auto-PostToolUse | 5 |
-| Command-Invoked / Event-Triggered | 13 |
+| Auto-PostToolUse | 6 |
+| Command-Invoked / Event-Triggered | 12 |
 | Library — Sourced | 9 |
 | CommonJS — Node-runtime guards (R5-003) | 3 |
 | **Total** | **36** |

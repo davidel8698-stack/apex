@@ -68,6 +68,12 @@
         "hooks": [
           { "type": "command", "command": "bash ~/.claude/hooks/phantom-check.sh" }
         ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          { "type": "command", "command": "bash ~/.claude/hooks/ci-scan.sh" }
+        ]
       }
     ],
     "SessionStart": [
