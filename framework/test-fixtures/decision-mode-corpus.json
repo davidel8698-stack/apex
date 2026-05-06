@@ -1,0 +1,137 @@
+{
+  "_doc": "R5-018 ground-truth corpus for the architect's decision-mode classifier (collaborator vs replacement). Each entry: description (task summary), expected_mode, rationale. Heuristic-as-proxy: keyword sets approximate the architect prompt's STEP 1.6 logic.",
+  "entries": [
+    {
+      "id": 1,
+      "description": "Add a new feature page that lets users save favorite items to their profile.",
+      "expected_mode": "collaborator",
+      "rationale": "User-facing feature, business rule, UX decision."
+    },
+    {
+      "id": 2,
+      "description": "Refactor the database migration to add a partial index on orders.status.",
+      "expected_mode": "replacement",
+      "rationale": "Schema/migration/performance — technical domain."
+    },
+    {
+      "id": 3,
+      "description": "Decide on the pricing tier copy and CTA wording for the upgrade modal.",
+      "expected_mode": "collaborator",
+      "rationale": "Pricing, business rule, user-facing copy."
+    },
+    {
+      "id": 4,
+      "description": "Tune the connection pool size and JVM heap for the staging cluster.",
+      "expected_mode": "replacement",
+      "rationale": "Performance, infra — technical domain."
+    },
+    {
+      "id": 5,
+      "description": "Design the onboarding flow for first-time users.",
+      "expected_mode": "collaborator",
+      "rationale": "UX, user-facing flow — product domain."
+    },
+    {
+      "id": 6,
+      "description": "Implement OAuth2 PKCE flow with refresh-token rotation.",
+      "expected_mode": "replacement",
+      "rationale": "Security architecture — technical domain."
+    },
+    {
+      "id": 7,
+      "description": "Choose icons and colors for the status badges in the admin dashboard.",
+      "expected_mode": "collaborator",
+      "rationale": "UX, visual design — product domain."
+    },
+    {
+      "id": 8,
+      "description": "Set up a CI pipeline that runs unit tests, lint, and type-check on every PR.",
+      "expected_mode": "replacement",
+      "rationale": "CI/CD, infra — technical domain."
+    },
+    {
+      "id": 9,
+      "description": "Write a business rule that calculates discounts for loyalty-program members.",
+      "expected_mode": "collaborator",
+      "rationale": "Business rule, pricing — product domain."
+    },
+    {
+      "id": 10,
+      "description": "Add a Redis cache layer in front of the products API with a 5-minute TTL.",
+      "expected_mode": "replacement",
+      "rationale": "Performance, architecture — technical domain."
+    },
+    {
+      "id": 11,
+      "description": "Decide which fields should be visible on the public profile vs private.",
+      "expected_mode": "collaborator",
+      "rationale": "User-facing privacy, business rule — product domain."
+    },
+    {
+      "id": 12,
+      "description": "Migrate from REST polling to WebSocket push for live updates.",
+      "expected_mode": "replacement",
+      "rationale": "Architecture migration — technical domain."
+    },
+    {
+      "id": 13,
+      "description": "Author the marketing landing page hero section copy.",
+      "expected_mode": "collaborator",
+      "rationale": "User-facing copy — product domain."
+    },
+    {
+      "id": 14,
+      "description": "Configure Postgres replication with streaming and a hot-standby replica.",
+      "expected_mode": "replacement",
+      "rationale": "Database architecture — technical domain."
+    },
+    {
+      "id": 15,
+      "description": "Define the empty-state message and illustration for an empty cart.",
+      "expected_mode": "collaborator",
+      "rationale": "UX, user-facing copy — product domain."
+    },
+    {
+      "id": 16,
+      "description": "Add structured logging with trace IDs across all microservices.",
+      "expected_mode": "replacement",
+      "rationale": "Observability infra — technical domain."
+    },
+    {
+      "id": 17,
+      "description": "Choose the default sort order for search results based on user research.",
+      "expected_mode": "collaborator",
+      "rationale": "UX, business rule — product domain."
+    },
+    {
+      "id": 18,
+      "description": "Implement constant-time string comparison for password hash verification.",
+      "expected_mode": "replacement",
+      "rationale": "Security implementation — technical domain."
+    },
+    {
+      "id": 19,
+      "description": "Plan a feature that lets sellers respond to buyer questions in-app.",
+      "expected_mode": "collaborator",
+      "rationale": "User-facing feature, UX — product domain."
+    },
+    {
+      "id": 20,
+      "description": "Switch the queue backend from in-memory to RabbitMQ with dead-letter handling.",
+      "expected_mode": "replacement",
+      "rationale": "Architecture migration — technical domain."
+    },
+    {
+      "id": 21,
+      "description": "Decide whether to require email verification before account activation.",
+      "expected_mode": "collaborator",
+      "rationale": "User-facing flow, business rule — product domain."
+    },
+    {
+      "id": 22,
+      "description": "Optimize the N+1 query in the dashboard endpoint with a join.",
+      "expected_mode": "replacement",
+      "rationale": "Performance, schema — technical domain."
+    }
+  ]
+}
