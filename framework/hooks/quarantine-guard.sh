@@ -21,9 +21,10 @@ INPUT="${1:-}"
 # Allow empty input (shouldn't happen, but safe)
 [ -z "$INPUT" ] && exit 0
 
-# Allow-list patterns for auditor
-# Test files and directories
-if echo "$INPUT" | grep -qiE "(test|tests|__tests__|spec|\.test\.|\.spec\.|test_)" 2>/dev/null; then
+# Allow-list patterns for auditor — anchored to actual test files / test directories
+# R5-008: regex tightened to avoid substring matches like "spec" → "specialist"/"specification"
+# Matches: /test/, /tests/, /__tests__/, .test., .spec., paths starting with test_ (or /test_)
+if echo "$INPUT" | grep -qE "(/test/|/tests/|/__tests__/|\.test\.|\.spec\.|^test_|/test_)" 2>/dev/null; then
   exit 0
 fi
 
