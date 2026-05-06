@@ -127,6 +127,10 @@ bringing the total to 29. All files accounted for in the tables above.
 - `framework/security-policy.md` — deeper map of the 6 security mechanisms
   against the 5 guard hooks + `_security-common.sh`.
 - `apex-spec.md` — Failure 9 (Defense-in-Depth), capabilities ("24+ hooks").
+- `framework/adapters/adapter-contract.md` (R5-025) — multi-platform context.
+  Hooks listed above are Claude-Code-canonical. Alternative-platform
+  adapters (e.g. `framework/adapters/cursor/`) may declare
+  `hook_protocol.supported = "none"` and defer the entire hook plane.
 
 ---
 

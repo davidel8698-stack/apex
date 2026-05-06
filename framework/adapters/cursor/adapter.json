@@ -1,0 +1,24 @@
+{
+  "schema_version": "1",
+  "platform": "cursor",
+  "display_name": "Cursor",
+  "status": "active",
+  "paths": {
+    "agents":   "~/.cursor/agents",
+    "commands": "~/.cursor/rules",
+    "hooks":    null,
+    "settings": "~/.cursor/settings.json",
+    "skills":   null
+  },
+  "settings_format": "cursor-rules-v1",
+  "hook_protocol": {
+    "supported": "none",
+    "notes": "Cursor does not expose Claude Code's PreToolUse/PostToolUse plane. The entire hook layer is deferred until Cursor exposes a comparable primitive. APEX's behavioral guarantees that depend on hooks (destructive-guard, prompt-guard, schema-drift, ...) are not available on Cursor in this round."
+  },
+  "agent_dispatch": {
+    "convention": "frontmatter-name",
+    "notes": "Cursor reads `.cursor/rules/*.md` with a similar frontmatter shape; agent dispatch by frontmatter `name:` carries."
+  },
+  "deferred": ["hooks", "apex-skills", "settings.json-merge"],
+  "delivers": ["agents", "commands"]
+}

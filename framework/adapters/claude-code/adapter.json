@@ -1,0 +1,24 @@
+{
+  "schema_version": "1",
+  "platform": "claude-code",
+  "display_name": "Claude Code",
+  "status": "canonical",
+  "paths": {
+    "agents":   "~/.claude/agents",
+    "commands": "~/.claude/commands/apex",
+    "hooks":    "~/.claude/hooks",
+    "settings": "~/.claude/settings.json",
+    "skills":   "~/.claude/apex-skills"
+  },
+  "settings_format": "claude-code-hooks-v1",
+  "hook_protocol": {
+    "supported": "full",
+    "notes": "Reference implementation. PreToolUse, PostToolUse, PreCompact, SessionStart, SubagentStop all carry."
+  },
+  "agent_dispatch": {
+    "convention": "frontmatter-name",
+    "notes": "Claude Code resolves Task(\"<name>\", ...) by reading the agent file's frontmatter `name:` field, not by filename."
+  },
+  "deferred": [],
+  "delivers": ["agents", "commands", "hooks", "skills", "settings"]
+}

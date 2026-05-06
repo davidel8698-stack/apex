@@ -1,6 +1,16 @@
 #!/usr/bin/env bash
 # sync-to-claude.sh — Copy framework/ APEX files to ~/.claude/
 #
+# Adapter context (R5-025)
+#   This is the canonical (Claude Code) sync. The contract every
+#   APEX adapter implements is documented in
+#   framework/adapters/adapter-contract.md. The Claude Code manifest
+#   sits at framework/adapters/claude-code/adapter.json. Alternative
+#   platforms ship their own sync script (e.g.
+#   framework/scripts/sync-to-cursor.sh for Cursor). This script's
+#   body logic is unchanged by R5-025 — only this comment block was
+#   added.
+#
 # Purpose
 #   Deploy changes from the framework/ source-of-truth tree to the live
 #   ~/.claude/ installation. Run after editing framework/ and testing
