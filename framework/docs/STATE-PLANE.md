@@ -127,6 +127,55 @@ emitters may legitimately set the same canonical field in one session.
   semantic event end up in the `events` table. R6-013 wires the
   watermark logic that ingests multi-event windows.
 
+## Watermark-based ingestion (R6-013) — every event-log line, not every state-write
+
+`_state-sqlite.sh mirror` ingests **every** event-log.jsonl line written
+since the last mirror call, not just the most recent one. This is the
+"events table mirrors the JSONL stream" contract from the spec, applied
+honestly to the heterogeneous event traffic that production emits
+(`state_mutation` from `_state-update.sh`, session-log lines from
+`session-log.sh`, dream-cycle lines from `_dream-cycle-emit.sh`, plus
+the R6-004 dual-emit semantic events that ride alongside canonical-field
+state writes).
+
+**Sidecar watermark.** Each `mirror` call reads `.apex/.sqlite-mirror.offset`
+(line number of the last mirrored event-log line; default 0 on first
+run — bootstrap case ingests the full log). It tails every line past
+the offset, INSERTs each into `events` and `events_fts`, then writes the
+new line count back to the sidecar.
+
+**Why a line-number watermark, not a byte offset.** event-log.jsonl is
+line-delimited; line numbers survive log rotation when the rotation
+contract preserves line continuity. If log rotation is later wired with
+a body-rewrite step, the watermark switches to event hash (flagged for a
+future round; see NF-R6-P-005).
+
+**Why not multi-emitter wiring.** The alternative is to wire
+`_state_sqlite_mirror` into all three emitters so each fires the mirror.
+That has lower latency but couples three hooks to the mirror — heavier
+blast radius and a stronger preservation-contract obligation on every
+emitter touch. The watermark approach decouples mirror frequency from
+emitter frequency: the mirror catches up on its own schedule (after the
+next state write or an explicit `bash _state-sqlite.sh mirror` call).
+
+**Trigger-versus-explicit-INSERT note.** The `events_fts` virtual table
+is populated by an explicit FTS5 INSERT after each `events` row insert
+(see Activation contract above). When the watermark approach ingests a
+multi-line window, this means N row inserts and N FTS5 inserts per
+mirror call. A SQLite trigger (`AFTER INSERT ON events`) would produce
+the same outcome with one ingestion path — that migration is the
+candidate documented under R6-012 / F-013 follow-up; the explicit-INSERT
+form is preserved here because the watermark logic emits per-row in a
+shell loop rather than a bulk SQL INSERT.
+
+**Idempotency.** Running `mirror` twice with no new lines is a no-op:
+total_lines == offset → no INSERTs, watermark unchanged. External
+truncation (rotation, manual edit) that shrinks the log below the
+offset triggers a defensive reset to 0 and a re-ingestion of the full
+log on the next call.
+
+---
+
 ## Read surface — preservation contract
 
 - `framework/hooks/_state-read.sh` and every read-path consumer continue to read from `.apex/STATE.json`. There is no `read-from-SQLite` path in this round.

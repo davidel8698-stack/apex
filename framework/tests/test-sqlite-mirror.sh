@@ -160,6 +160,80 @@ assert_pass "fail-loud message printed (sqlite3 absent path)" \
   "grep -q 'sqlite3' '$ERR_LOG' || ! command -v sqlite3 >/dev/null 2>&1"
 rm -rf "$SANDBOX_C"
 
+# --- R6-013: Multi-event watermark ingestion ----------------------------
+# Three event-log appends with no mirror call between them, then one mirror
+# call → all three land in the events table (not just the last). Verifies
+# the watermark sidecar exists and equals the line count. Verifies the
+# bootstrap case (no offset file → ingest the full log).
+echo
+echo "[R6-013] watermark-based multi-event ingestion"
+if command -v sqlite3 >/dev/null 2>&1; then
+  SANDBOX_D="$(run_sandbox)"
+  (
+    cd "$SANDBOX_D"
+    export APEX_SQLITE_MIRROR=1
+    # Hand-craft three event lines (no _state_update so the mirror is not
+    # auto-fired — we want to test the manual mirror call against a
+    # multi-line log).
+    cat > .apex/event-log.jsonl <<'JSONL'
+{"ts":"2026-05-01T10:00:00Z","type":"phase_set","source":"test","current_phase":"01"}
+{"ts":"2026-05-01T10:05:00Z","type":"decision_mode_set","source":"test","decision_mode":"fast"}
+{"ts":"2026-05-01T10:10:00Z","type":"complexity_set","source":"test","complexity_level":3}
+JSONL
+    # First-time mirror (no offset file) → bootstrap case ingests full log.
+    bash "$SQLITE_LIB" mirror .apex/STATE.json .apex/event-log.jsonl >/dev/null 2>&1
+  )
+  EVENT_COUNT=$(sqlite3 "$SANDBOX_D/.apex/state.db" "SELECT COUNT(*) FROM events;" 2>/dev/null || echo 0)
+  assert_pass "R6-013: bootstrap mirror ingests all 3 event-log lines" \
+    "[ ${EVENT_COUNT:-0} -ge 3 ]"
+  assert_pass "R6-013: watermark sidecar exists after mirror" \
+    "[ -f '$SANDBOX_D/.apex/.sqlite-mirror.offset' ]"
+  WATERMARK=$(cat "$SANDBOX_D/.apex/.sqlite-mirror.offset" 2>/dev/null | tr -d '[:space:]')
+  assert_pass "R6-013: watermark equals event-log line count (=3)" \
+    "[ '${WATERMARK:-0}' = '3' ]"
+  # Append three more lines, mirror again → only the new lines are ingested.
+  (
+    cd "$SANDBOX_D"
+    export APEX_SQLITE_MIRROR=1
+    cat >> .apex/event-log.jsonl <<'JSONL'
+{"ts":"2026-05-01T10:15:00Z","type":"session_event","source":"test","msg":"checkpoint"}
+{"ts":"2026-05-01T10:20:00Z","type":"phase_set","source":"test","current_phase":"02"}
+{"ts":"2026-05-01T10:25:00Z","type":"complexity_set","source":"test","complexity_level":4}
+JSONL
+    bash "$SQLITE_LIB" mirror .apex/STATE.json .apex/event-log.jsonl >/dev/null 2>&1
+  )
+  EVENT_COUNT_2=$(sqlite3 "$SANDBOX_D/.apex/state.db" "SELECT COUNT(*) FROM events;" 2>/dev/null || echo 0)
+  assert_pass "R6-013: second mirror appends only new lines (total=6)" \
+    "[ ${EVENT_COUNT_2:-0} -eq 6 ]"
+  WATERMARK_2=$(cat "$SANDBOX_D/.apex/.sqlite-mirror.offset" 2>/dev/null | tr -d '[:space:]')
+  assert_pass "R6-013: watermark advances to new line count (=6)" \
+    "[ '${WATERMARK_2:-0}' = '6' ]"
+  # FTS5 mirror keeps pace with events table.
+  FTS_COUNT=$(sqlite3 "$SANDBOX_D/.apex/state.db" "SELECT COUNT(*) FROM events_fts;" 2>/dev/null || echo 0)
+  assert_pass "R6-013: events_fts mirrors events row-for-row" \
+    "[ ${FTS_COUNT:-0} -eq 6 ]"
+  # Idempotency: running mirror again with no new lines → no row growth.
+  (
+    cd "$SANDBOX_D"
+    export APEX_SQLITE_MIRROR=1
+    bash "$SQLITE_LIB" mirror .apex/STATE.json .apex/event-log.jsonl >/dev/null 2>&1
+  )
+  EVENT_COUNT_3=$(sqlite3 "$SANDBOX_D/.apex/state.db" "SELECT COUNT(*) FROM events;" 2>/dev/null || echo 0)
+  assert_pass "R6-013: idempotent mirror call (no growth, total=6)" \
+    "[ ${EVENT_COUNT_3:-0} -eq 6 ]"
+  rm -rf "$SANDBOX_D"
+else
+  echo "  SKIP: sqlite3 CLI not available — cannot exercise R6-013 watermark cases"
+fi
+
+# --- R6-013: STATE-PLANE.md documents the watermark approach -------------
+echo
+echo "[R6-013] STATE-PLANE.md watermark documentation"
+assert_pass "R6-013: STATE-PLANE.md documents watermark" \
+  "grep -q 'watermark' '$REPO_ROOT/framework/docs/STATE-PLANE.md'"
+assert_pass "R6-013: STATE-PLANE.md names .sqlite-mirror.offset sidecar" \
+  "grep -q '.sqlite-mirror.offset' '$REPO_ROOT/framework/docs/STATE-PLANE.md'"
+
 echo
 echo "=== Results: PASS=$PASS FAIL=$FAIL ==="
 if [ "$FAIL" -ne 0 ]; then

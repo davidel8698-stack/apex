@@ -107,19 +107,48 @@ _state_sqlite_mirror() {
     return 0
   fi
 
-  # Append the most recent event-log.jsonl line, if any.
+  # R6-013: Watermark-based ingestion. Read the sidecar offset (default 0,
+  # bootstrap case → ingest the full log on first run), tail every line
+  # past the offset, INSERT each into events + events_fts (per-row), then
+  # update the offset to the new line count. This decouples mirror
+  # frequency from emitter frequency: state_mutation events from
+  # _state-update.sh, session-log lines, dream-cycle lines, and the
+  # R6-004 dual-emit semantic events all land in the mirror, not just
+  # the last write.
   if [ -f "$event_log" ]; then
-    local last_event
-    last_event=$(tail -n 1 "$event_log" 2>/dev/null)
-    if [ -n "$last_event" ]; then
-      local e_ts e_type e_agent e_payload
-      e_ts=$(printf '%s' "$last_event" | jq -r '.ts // empty' 2>/dev/null)
-      e_type=$(printf '%s' "$last_event" | jq -r '.type // empty' 2>/dev/null)
-      e_agent=$(printf '%s' "$last_event" | jq -r '.agent // .source // empty' 2>/dev/null)
-      e_payload=$(printf '%s' "$last_event" | sed "s/'/''/g")
-      [ -z "$e_ts" ] && e_ts="$ts"
-      sqlite3 "$db" "INSERT INTO events(ts, type, agent, payload) VALUES ('$e_ts', '$e_type', '$e_agent', '$e_payload');" 2>/dev/null || true
-      sqlite3 "$db" "INSERT INTO events_fts(rowid, payload) SELECT rowid, payload FROM events ORDER BY rowid DESC LIMIT 1;" 2>/dev/null || true
+    local offset_file="${state_dir}/.sqlite-mirror.offset"
+    local offset=0
+    if [ -f "$offset_file" ]; then
+      offset=$(cat "$offset_file" 2>/dev/null | tr -d '[:space:]' || echo 0)
+      # Defensive: if the offset file is corrupt or non-numeric, reset to 0.
+      case "$offset" in
+        ''|*[!0-9]*) offset=0 ;;
+      esac
+    fi
+    local total_lines
+    total_lines=$(wc -l < "$event_log" 2>/dev/null | tr -d '[:space:]')
+    : "${total_lines:=0}"
+    # Guard against external truncation (rotation, manual edit) — if the
+    # log shrank below the offset, reset and re-ingest from the top.
+    if [ "$offset" -gt "$total_lines" ] 2>/dev/null; then
+      offset=0
+    fi
+    if [ "$total_lines" -gt "$offset" ] 2>/dev/null; then
+      local start_line=$((offset + 1))
+      # tail -n +N emits lines from line N onward (1-indexed).
+      while IFS= read -r line; do
+        [ -z "$line" ] && continue
+        local e_ts e_type e_agent e_payload
+        e_ts=$(printf '%s' "$line" | jq -r '.ts // empty' 2>/dev/null)
+        e_type=$(printf '%s' "$line" | jq -r '.type // empty' 2>/dev/null)
+        e_agent=$(printf '%s' "$line" | jq -r '.agent // .source // empty' 2>/dev/null)
+        e_payload=$(printf '%s' "$line" | sed "s/'/''/g")
+        [ -z "$e_ts" ] && e_ts="$ts"
+        sqlite3 "$db" "INSERT INTO events(ts, type, agent, payload) VALUES ('$e_ts', '$e_type', '$e_agent', '$e_payload');" 2>/dev/null || true
+        sqlite3 "$db" "INSERT INTO events_fts(rowid, payload) SELECT rowid, payload FROM events ORDER BY rowid DESC LIMIT 1;" 2>/dev/null || true
+      done < <(tail -n +"$start_line" "$event_log" 2>/dev/null)
+      # Persist the new watermark (the line count post-ingestion).
+      printf '%s' "$total_lines" > "$offset_file" 2>/dev/null || true
     fi
   fi
 
