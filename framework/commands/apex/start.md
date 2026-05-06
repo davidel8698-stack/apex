@@ -8,6 +8,46 @@ Read .apex/STATE.json → proposals_mode.
 If proposals_mode == true: NEVER ask open-ended questions in this command.
 Instead, present numbered proposals with a recommended default marked [recommended].
 
+## ADAPTER HONESTY BANNER [R6-017]
+## Spec anchors: "Multi-platform from day one." + "Honest scope over marketing scope." + "Honestly Scoped, Not Universally Promised."
+## Runtime propagation of manifest-level honesty: when running on a
+## non-canonical adapter (hook_protocol.supported != "full"), the user
+## must be told which APEX behavioral guarantees are deferred on this
+## host. One-time per project — suppressed by STATE.adapter_honesty_shown.
+```bash
+# Resolve framework root for adapter manifest reads.
+APEX_FW_ROOT="${APEX_FW_ROOT:-$HOME/.claude}"
+ADAPTER_DETECT="$APEX_FW_ROOT/hooks/_adapter-detect.sh"
+if [ -f "$ADAPTER_DETECT" ]; then
+  ACTIVE_ADAPTER=$(bash "$ADAPTER_DETECT" active 2>/dev/null || echo "claude-code")
+else
+  ACTIVE_ADAPTER="claude-code"
+fi
+ADAPTER_MANIFEST="$APEX_FW_ROOT/adapters/$ACTIVE_ADAPTER/adapter.json"
+ALREADY_SHOWN=$(jq -r '.adapter_honesty_shown // false' .apex/STATE.json 2>/dev/null || echo "false")
+if [ -f "$ADAPTER_MANIFEST" ] && [ "$ALREADY_SHOWN" != "true" ]; then
+  HOOK_SUPPORT=$(jq -r '.hook_protocol.supported // "full"' "$ADAPTER_MANIFEST" 2>/dev/null)
+  if [ "$HOOK_SUPPORT" != "full" ]; then
+    DEFERRED_LIST=$(jq -r '.deferred // [] | join(", ")' "$ADAPTER_MANIFEST" 2>/dev/null)
+    DISPLAY_NAME=$(jq -r '.display_name // .platform // "this adapter"' "$ADAPTER_MANIFEST" 2>/dev/null)
+    echo ""
+    echo "⚠️  APEX SCOPE-HONESTY BANNER"
+    echo "   Active adapter: $DISPLAY_NAME (hook_protocol.supported = $HOOK_SUPPORT)"
+    echo "   Out-of-scope on this platform: $DEFERRED_LIST"
+    echo "   Behavioral guarantees that depend on hooks (destructive-guard,"
+    echo "   prompt-guard, schema-drift, phantom-check, ...) are NOT enforced"
+    echo "   on $DISPLAY_NAME until the host exposes a comparable primitive."
+    echo "   See framework/adapters/$ACTIVE_ADAPTER/adapter.json + framework/docs/MULTI-PLATFORM.md."
+    echo ""
+    # One-time suppression: set the flag in STATE.json.
+    if [ -f .apex/STATE.json ]; then
+      tmp=".apex/STATE.json.banner.tmp"
+      jq '.adapter_honesty_shown = true' .apex/STATE.json > "$tmp" && mv "$tmp" .apex/STATE.json
+    fi
+  fi
+fi
+```
+
 ## VISUAL IDENTITY
 All user-facing output in this command MUST render using ~/.claude/apex-branding.md.
 Read ~/.claude/apex-branding.md before producing any output.

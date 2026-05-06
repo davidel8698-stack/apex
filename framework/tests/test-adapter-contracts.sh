@@ -217,6 +217,76 @@ if [ "$PARITY_FAILURES" -eq 0 ]; then
   PASS=$((PASS+1))
 fi
 
+# --- R6-017: Adapter-honesty banner ---------------------------------------
+# When a non-full-hook-protocol adapter is active, /apex:start and
+# /apex:onboard must render a runtime banner naming the deferred surfaces.
+# This is the runtime propagation of manifest-level honesty (brand
+# position #8: "Honestly Scoped, Not Universally Promised").
+#
+# Three structural assertions:
+#   (a) The detection helper exists and defaults to claude-code.
+#   (b) Both start.md and onboard.md contain the banner block, anchored
+#       on the "ADAPTER HONESTY BANNER [R6-017]" heading.
+#   (c) The banner reads the active adapter's manifest deferred list and
+#       uses STATE.adapter_honesty_shown as the one-time suppression flag.
+echo
+echo "[R6-017] adapter-honesty banner"
+
+ADAPTER_DETECT_SH="$REPO_ROOT/framework/hooks/_adapter-detect.sh"
+START_MD="$REPO_ROOT/framework/commands/apex/start.md"
+ONBOARD_MD="$REPO_ROOT/framework/commands/apex/onboard.md"
+STATE_SCHEMA="$REPO_ROOT/framework/schemas/STATE.schema.json"
+
+# (a) Detection helper exists and behaves correctly.
+assert_pass "_adapter-detect.sh exists" \
+  "test -f '$ADAPTER_DETECT_SH'"
+assert_pass "_adapter-detect.sh active returns claude-code by default" \
+  "[ \"\$(env -i HOME=\"\$HOME\" PATH=\"\$PATH\" bash '$ADAPTER_DETECT_SH' active)\" = 'claude-code' ]"
+
+# Sidecar override smoke test in a tmp dir.
+TMP_SIDECAR_DIR="$(mktemp -d 2>/dev/null || echo "")"
+if [ -n "$TMP_SIDECAR_DIR" ]; then
+  mkdir -p "$TMP_SIDECAR_DIR/.apex"
+  echo "cursor" > "$TMP_SIDECAR_DIR/.apex/adapter"
+  SIDECAR_OUT=$(APEX_PROJECT_ROOT="$TMP_SIDECAR_DIR" bash "$ADAPTER_DETECT_SH" active 2>/dev/null)
+  assert_pass "_adapter-detect.sh respects .apex/adapter sidecar (returns 'cursor')" \
+    "[ \"$SIDECAR_OUT\" = 'cursor' ]"
+  rm -rf "$TMP_SIDECAR_DIR"
+fi
+
+# (b) Banner block present in start.md and onboard.md.
+assert_pass "start.md contains ADAPTER HONESTY BANNER block (R6-017)" \
+  "grep -q 'ADAPTER HONESTY BANNER \[R6-017\]' '$START_MD'"
+assert_pass "onboard.md contains ADAPTER HONESTY BANNER block (R6-017)" \
+  "grep -q 'ADAPTER HONESTY BANNER \[R6-017\]' '$ONBOARD_MD'"
+
+# (c) Banner content references hook_protocol.supported, .deferred, and the
+# adapter_honesty_shown suppression flag.
+assert_pass "start.md banner reads hook_protocol.supported" \
+  "grep -q 'hook_protocol.supported' '$START_MD'"
+assert_pass "start.md banner reads .deferred manifest list" \
+  "grep -q '.deferred' '$START_MD'"
+assert_pass "start.md banner reads/sets adapter_honesty_shown" \
+  "grep -q 'adapter_honesty_shown' '$START_MD'"
+assert_pass "onboard.md banner reads/sets adapter_honesty_shown" \
+  "grep -q 'adapter_honesty_shown' '$ONBOARD_MD'"
+
+# (d) STATE.schema.json declares the optional suppression flag.
+assert_pass "STATE.schema.json declares adapter_honesty_shown property" \
+  "jq -e '.properties.adapter_honesty_shown.type == \"boolean\"' '$STATE_SCHEMA'"
+assert_pass "STATE.schema.json adapter_honesty_shown is OPTIONAL (not in required[])" \
+  "jq -e '(.required // []) | index(\"adapter_honesty_shown\") == null' '$STATE_SCHEMA'"
+
+# (e) Banner does NOT fire on claude-code (default-host UX unchanged).
+# We assert the gating logic in start.md compares hook_protocol against
+# "full" — so the active claude-code manifest (supported=full) skips it.
+assert_pass "start.md banner is gated on hook_protocol != full" \
+  "grep -q 'HOOK_SUPPORT' '$START_MD' && grep -q '!= \"full\"' '$START_MD'"
+
+# (f) sync-to-claude.sh delivers the new helper.
+assert_pass "sync-to-claude.sh delivers _adapter-detect.sh" \
+  "grep -q '_adapter-detect.sh' '$CLAUDE_SH'"
+
 echo
 echo "=== Results: PASS=$PASS FAIL=$FAIL ==="
 if [ "$FAIL" -ne 0 ]; then

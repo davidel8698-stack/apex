@@ -321,6 +321,23 @@ copy_file "$FRAMEWORK_ROOT/docs/OWNS-FILES-CONTRACT.md" "$CLAUDE_ROOT/docs/OWNS-
 # drift is detected by framework/tests/test-state-rebuild.sh strict-schema
 # validation.
 copy_file "$FRAMEWORK_ROOT/templates/STATE-init.template.json" "$CLAUDE_ROOT/templates/STATE-init.template.json"
+# R6-017: explicit delivery anchor for the active-adapter detection
+# helper. The copy_tree call above already covers it (under hooks/), but
+# the explicit line documents the contract: _adapter-detect.sh is sourced
+# (or invoked as `bash ... active`) by /apex:start and /apex:onboard at
+# the ADAPTER HONESTY BANNER block to read the active adapter's manifest.
+# Three-places contract: framework/hooks/, ~/.claude/hooks/, and
+# framework/HOOK-CLASSIFICATION.md.
+copy_file "$FRAMEWORK_ROOT/hooks/_adapter-detect.sh" "$CLAUDE_ROOT/hooks/_adapter-detect.sh"
+# R6-017: deliver the adapter manifest tree so the runtime banner block
+# in /apex:start and /apex:onboard can read .hook_protocol.supported,
+# .deferred, and .display_name from the active adapter's manifest. The
+# manifests live under framework/adapters/<name>/adapter.json; without
+# this delivery the runtime banner cannot resolve manifest data and
+# silently degrades to "no banner" — defeating the runtime-honesty
+# contract. Spec anchors: "Multi-platform from day one." + "Honestly
+# Scoped, Not Universally Promised."
+copy_tree "$FRAMEWORK_ROOT/adapters" "$CLAUDE_ROOT/adapters"
 
 # Top-level files
 copy_file "$FRAMEWORK_ROOT/apex-branding.md"        "$CLAUDE_ROOT/apex-branding.md"

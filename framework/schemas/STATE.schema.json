@@ -469,6 +469,7 @@
     "spec_version": { "type": "string", "description": "SHA256 hash of SPEC.md content for drift detection" },
     "strict_mode": { "type": "boolean", "description": "When true, forces maximum verification (verify_level D) on all tasks" },
     "proposals_mode": { "type": "boolean", "description": "When true, never ask open-ended questions — present numbered proposals with recommended default" },
+    "adapter_honesty_shown": { "type": "boolean", "description": "R6-017: Suppression flag for the runtime adapter-honesty banner. Set to true by /apex:start and /apex:onboard after a non-full-hook-protocol adapter banner has been displayed once, so it does not re-render every session. Optional — absent on projects that have never run on a non-canonical adapter." },
     "created_at": { "type": "string", "format": "date-time" },
     "updated_at": { "type": "string", "format": "date-time" }
   }

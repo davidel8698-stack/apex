@@ -4,13 +4,13 @@
 developer can answer "how does this hook fire?" without cross-referencing
 `framework/settings.json` and 44 command `.md` files.
 
-**Total files:** 41 — 25 functional `.sh` hooks (R5-013 added
-`owner-guard.sh`; R5-016 added `decision-gate.sh`) + 11 library `.sh`
-files (`_`-prefixed; R5-014 added `_fix-plan-emit.sh`) + 1 Python
-helper + 3 CommonJS guards (R5-003: `apex-prompt-guard.cjs`,
-`apex-workflow-guard.cjs`, `security.cjs`; R6-014 prefixed the two
-ported guards with `apex-` to match the spec literal naming). Category
-totals below sum to 41.
+**Total files:** 42 — 26 functional `.sh` hooks (R5-013 added
+`owner-guard.sh`; R5-016 added `decision-gate.sh`) + 12 library `.sh`
+files (`_`-prefixed; R5-014 added `_fix-plan-emit.sh`; R6-017 added
+`_adapter-detect.sh`) + 1 Python helper + 3 CommonJS guards (R5-003:
+`apex-prompt-guard.cjs`, `apex-workflow-guard.cjs`, `security.cjs`;
+R6-014 prefixed the two ported guards with `apex-` to match the spec
+literal naming). Category totals below sum to 42.
 
 **Spec anchor:** `apex-spec.md` — "Hook system — 24+ hooks" and
 "Fail-loud, never fail-silent."
@@ -101,7 +101,7 @@ command `.md` files for exact invocation points.
 
 ---
 
-## Library — Sourced (11)
+## Library — Sourced (12)
 
 Files prefixed with `_` — utility libraries sourced by other hooks.
 **Never invoked directly.**
@@ -119,6 +119,7 @@ Files prefixed with `_` — utility libraries sourced by other hooks.
 | `_agent-dispatch.sh` | `apex_dispatch_enter <agent>` / `apex_dispatch_exit` — sets/unsets `APEX_ACTIVE_AGENT` so the quarantine guard fires structurally on every auditor invocation, regardless of which command invoked it (R5-009). Also exposes `enter` / `exit` subcommands for non-sourcing callers. | `/apex:next` (auditor dispatch site); future agent-quarantined call sites |
 | `_learnings-emit.sh` | `emit_learning <event_type> <phase> <summary>` — appends a structured WARM-section entry (Evidence count + Decay + Verified date + event metadata) to `~/.claude/apex-learnings.md`. Format chosen so verify-learnings.sh continues to parse the file. Bootstraps the file with a minimal section header if missing. Powers the Living Evidence Counter writer side (R5-019). | `phase-tag.sh` (success branch), `phantom-check.sh` (FAIL branch), `framework/agents/critic.md` (FAIL branch), `framework/modules/apex-test-architect/agent.md` (veto branches) |
 | `_fix-plan-emit.sh` | `emit_fix_plan [--also-write-recovery-menu] <source> <reason> <context> [<cmd -- desc>...]` — writes structured `.apex/FIX_PLAN.md` with sections Reason / Context / Recommended commands / How to undo. Generalizes R5-005's RECOVERY_MENU.md prototype (R5-014). Best-effort: failure to write does not mask the caller's exit-2. The `--also-write-recovery-menu` flag mirrors the file at `.apex/RECOVERY_MENU.md` for circuit-breaker.sh's W1 backward-compat contract. Spec anchor: "Failure produces a fix plan, never a 'go debug it'." | `path-guard.sh`, `destructive-guard.sh`, `workflow-guard.sh` (shim), `quarantine-guard.sh`, `schema-drift.sh`, `phantom-check.sh`, `post-write.sh`, `circuit-breaker.sh` |
+| `_adapter-detect.sh` | `apex_adapter_active` (and CLI subcommand `active`) — returns the active APEX adapter name. Detection priority: `.apex/adapter` sidecar → `APEX_ADAPTER` env → `CURSOR_*` env heuristic → default `claude-code`. Powers the runtime adapter-honesty banner (R6-017). Spec anchors: "Multi-platform from day one." + "Honestly Scoped, Not Universally Promised." | `framework/commands/apex/start.md` (ADAPTER HONESTY BANNER block), `framework/commands/apex/onboard.md` (ADAPTER HONESTY BANNER block) |
 
 ---
 
@@ -155,11 +156,11 @@ available, and both fall back to the preserved Bash logic when not.
 | Auto-PreToolUse | 7 |
 | Auto-PostToolUse | 7 |
 | Command-Invoked / Event-Triggered | 14 |
-| Library — Sourced | 11 |
+| Library — Sourced | 12 |
 | CommonJS — Node-runtime guards (R5-003) | 3 |
-| **Total** | **41** (R5-011: `tdad-index.sh` and `cross-phase-audit.sh` are dual-listed in Auto-PostToolUse / SubagentStop AND Command-Invoked; not double-counted in the total. R5-014: `_fix-plan-emit.sh` added to Library — Sourced. R5-013: `owner-guard.sh` added to Auto-PreToolUse. R5-016: `decision-gate.sh` added to Command-Invoked.) |
+| **Total** | **42** (R5-011: `tdad-index.sh` and `cross-phase-audit.sh` are dual-listed in Auto-PostToolUse / SubagentStop AND Command-Invoked; not double-counted in the total. R5-014: `_fix-plan-emit.sh` added to Library — Sourced. R5-013: `owner-guard.sh` added to Auto-PreToolUse. R5-016: `decision-gate.sh` added to Command-Invoked. R6-017: `_adapter-detect.sh` added to Library — Sourced.) |
 
-Verify with: `ls framework/hooks/ | wc -l` → **41**.
+Verify with: `ls framework/hooks/ | wc -l` → **42**.
 
 **Delta from R-003 original acceptance criterion:** plan document referenced
 "28 files" based on a pre-Wave-1 count. Wave 1 R-005 added `_date-parse.sh`
@@ -170,8 +171,9 @@ R5-003 added three CommonJS guards `apex-prompt-guard.cjs`,
 prefix to the two ported guards — count unchanged). Wave 6 R5-009 added `_agent-dispatch.sh` (36). Wave 6
 R5-019 added `_learnings-emit.sh` (37). Wave 6 R5-021 added `agent-lint.sh`
 (38). Wave 7 R5-014 added `_fix-plan-emit.sh` (39). Wave 8 R5-013 added
-`owner-guard.sh` (40). Wave 8 R5-016 added `decision-gate.sh` (41). All
-files accounted for in the tables above.
+`owner-guard.sh` (40). Wave 8 R5-016 added `decision-gate.sh` (41).
+R6 W6 R6-017 added `_adapter-detect.sh` (42). All files accounted for
+in the tables above.
 
 ---
 
