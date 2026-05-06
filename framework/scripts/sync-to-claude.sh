@@ -262,6 +262,14 @@ copy_file "$FRAMEWORK_ROOT/hooks/_agent-dispatch.sh" "$CLAUDE_ROOT/hooks/_agent-
 # test-architect agent so writes to apex-learnings.md happen at every
 # spec'd event-emitting site.
 copy_file "$FRAMEWORK_ROOT/hooks/_learnings-emit.sh" "$CLAUDE_ROOT/hooks/_learnings-emit.sh"
+# R5-014: explicit delivery anchor for the shared fix-plan emitter.
+# The copy_tree call above already covers it, but the explicit line
+# documents the contract: _fix-plan-emit.sh is sourced by every
+# blocking guard (path-, destructive-, workflow-, quarantine-,
+# schema-drift-, phantom-check-, post-write-, circuit-breaker-) so
+# every exit-2 path produces a structured `.apex/FIX_PLAN.md`. Spec
+# anchor: "Failure produces a fix plan, never a 'go debug it'."
+copy_file "$FRAMEWORK_ROOT/hooks/_fix-plan-emit.sh" "$CLAUDE_ROOT/hooks/_fix-plan-emit.sh"
 # R5-021: explicit delivery anchor for the agent-lint validator. The
 # copy_tree call above already covers it, but the explicit line
 # documents the contract: agent-lint.sh is invoked by /apex:new-agent

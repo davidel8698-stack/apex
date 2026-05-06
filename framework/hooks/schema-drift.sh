@@ -5,6 +5,15 @@ set -u
 # Exit 0: valid or non-target file. Exit 2: required fields missing.
 #
 # Registered as PostToolUse for Write|Edit.
+#
+# R5-014: On block (exit 2), source `_fix-plan-emit.sh` and write
+# `.apex/FIX_PLAN.md`. The R5-002 sqlite_mirror shape validation block
+# below is preserved untouched. Only the FIX_PLAN.md emission is new.
+
+# shellcheck source=/dev/null
+if [ -f "$(dirname "$0")/_fix-plan-emit.sh" ]; then
+  source "$(dirname "$0")/_fix-plan-emit.sh"
+fi
 
 FILE="${1:-}"
 
@@ -42,6 +51,17 @@ fi
 # Validate JSON parse
 if ! jq empty "$FILE" 2>/dev/null; then
   echo "🚫 SCHEMA-DRIFT: $FILE is not valid JSON" >&2
+  # R5-014: structured fix plan
+  if command -v emit_fix_plan >/dev/null 2>&1; then
+    emit_fix_plan \
+      "schema-drift" \
+      "Schema-drift detected: $FILE is not valid JSON." \
+      "Last-written file: $FILE" \
+      "/apex:forensics -- find the write that produced invalid JSON" \
+      "/apex:rollback -- restore the file from the last green tag" \
+      "/apex:recover -- reset and re-run the writer with corrected input" \
+      2>/dev/null || true
+  fi
   exit 2
 fi
 
@@ -55,6 +75,17 @@ done
 
 if [ -n "$MISSING" ]; then
   echo "🚫 SCHEMA-DRIFT: $FILE missing required fields:$MISSING" >&2
+  # R5-014: structured fix plan
+  if command -v emit_fix_plan >/dev/null 2>&1; then
+    emit_fix_plan \
+      "schema-drift" \
+      "Schema-drift detected: $FILE is missing required fields:$MISSING" \
+      "Last-written file: $FILE" \
+      "/apex:forensics -- find which write dropped the missing fields" \
+      "/apex:rollback -- restore the file from the last green tag" \
+      "/apex:recover -- reset and re-run the writer to repopulate the schema" \
+      2>/dev/null || true
+  fi
   exit 2
 fi
 
@@ -69,6 +100,17 @@ case "$FILE" in
         and ((has("threshold_events") | not) or (.threshold_events | type == "number"))
       ' "$FILE" >/dev/null 2>&1; then
         echo "🚫 SCHEMA-DRIFT: $FILE sqlite_mirror has invalid shape (expected {enabled?: bool, last_synced_at?: string|null, threshold_events?: int})" >&2
+        # R5-014: structured fix plan (preserves R5-002 sqlite_mirror validation)
+        if command -v emit_fix_plan >/dev/null 2>&1; then
+          emit_fix_plan \
+            "schema-drift" \
+            "Schema-drift: sqlite_mirror field has an invalid shape." \
+            "Last-written file: $FILE — expected {enabled?: bool, last_synced_at?: string|null, threshold_events?: int}" \
+            "/apex:forensics -- find the writer that produced the malformed sqlite_mirror" \
+            "/apex:rollback -- restore the file from the last green tag" \
+            "/apex:recover -- reset and re-run with sqlite_mirror disabled (APEX_SQLITE_MIRROR=)" \
+            2>/dev/null || true
+        fi
         exit 2
       fi
     fi

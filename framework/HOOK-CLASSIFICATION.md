@@ -4,9 +4,10 @@
 developer can answer "how does this hook fire?" without cross-referencing
 `framework/settings.json` and 44 command `.md` files.
 
-**Total files:** 38 — 24 functional `.sh` hooks + 10 library `.sh` files
-(`_`-prefixed) + 1 Python helper + 3 CommonJS guards (R5-003: `prompt-guard.cjs`,
-`workflow-guard.cjs`, `security.cjs`). Category totals below sum to 38.
+**Total files:** 39 — 24 functional `.sh` hooks + 11 library `.sh` files
+(`_`-prefixed; R5-014 added `_fix-plan-emit.sh`) + 1 Python helper + 3
+CommonJS guards (R5-003: `prompt-guard.cjs`, `workflow-guard.cjs`,
+`security.cjs`). Category totals below sum to 39.
 
 **Spec anchor:** `apex-spec.md` — "Hook system — 24+ hooks" and
 "Fail-loud, never fail-silent."
@@ -95,7 +96,7 @@ command `.md` files for exact invocation points.
 
 ---
 
-## Library — Sourced (10)
+## Library — Sourced (11)
 
 Files prefixed with `_` — utility libraries sourced by other hooks.
 **Never invoked directly.**
@@ -112,6 +113,7 @@ Files prefixed with `_` — utility libraries sourced by other hooks.
 | `_state-sqlite.sh` | `_state_sqlite_mirror`, `_state_sqlite_status` — opt-in SQLite mirror over STATE.json + event-log.jsonl when `APEX_SQLITE_MIRROR=1` and `sqlite3` CLI present (R5-002). Fail-loud-and-skip when CLI absent. | `_state-update.sh` (conditional) |
 | `_agent-dispatch.sh` | `apex_dispatch_enter <agent>` / `apex_dispatch_exit` — sets/unsets `APEX_ACTIVE_AGENT` so the quarantine guard fires structurally on every auditor invocation, regardless of which command invoked it (R5-009). Also exposes `enter` / `exit` subcommands for non-sourcing callers. | `/apex:next` (auditor dispatch site); future agent-quarantined call sites |
 | `_learnings-emit.sh` | `emit_learning <event_type> <phase> <summary>` — appends a structured WARM-section entry (Evidence count + Decay + Verified date + event metadata) to `~/.claude/apex-learnings.md`. Format chosen so verify-learnings.sh continues to parse the file. Bootstraps the file with a minimal section header if missing. Powers the Living Evidence Counter writer side (R5-019). | `phase-tag.sh` (success branch), `phantom-check.sh` (FAIL branch), `framework/agents/critic.md` (FAIL branch), `framework/modules/apex-test-architect/agent.md` (veto branches) |
+| `_fix-plan-emit.sh` | `emit_fix_plan [--also-write-recovery-menu] <source> <reason> <context> [<cmd -- desc>...]` — writes structured `.apex/FIX_PLAN.md` with sections Reason / Context / Recommended commands / How to undo. Generalizes R5-005's RECOVERY_MENU.md prototype (R5-014). Best-effort: failure to write does not mask the caller's exit-2. The `--also-write-recovery-menu` flag mirrors the file at `.apex/RECOVERY_MENU.md` for circuit-breaker.sh's W1 backward-compat contract. Spec anchor: "Failure produces a fix plan, never a 'go debug it'." | `path-guard.sh`, `destructive-guard.sh`, `workflow-guard.sh` (shim), `quarantine-guard.sh`, `schema-drift.sh`, `phantom-check.sh`, `post-write.sh`, `circuit-breaker.sh` |
 
 ---
 
@@ -148,11 +150,11 @@ available, and both fall back to the preserved Bash logic when not.
 | Auto-PreToolUse | 6 |
 | Auto-PostToolUse | 7 |
 | Command-Invoked / Event-Triggered | 13 |
-| Library — Sourced | 10 |
+| Library — Sourced | 11 |
 | CommonJS — Node-runtime guards (R5-003) | 3 |
-| **Total** | **38** (R5-011: `tdad-index.sh` and `cross-phase-audit.sh` are dual-listed in Auto-PostToolUse / SubagentStop AND Command-Invoked; not double-counted in the total) |
+| **Total** | **39** (R5-011: `tdad-index.sh` and `cross-phase-audit.sh` are dual-listed in Auto-PostToolUse / SubagentStop AND Command-Invoked; not double-counted in the total. R5-014: `_fix-plan-emit.sh` added to Library — Sourced.) |
 
-Verify with: `ls framework/hooks/ | wc -l` → **38**.
+Verify with: `ls framework/hooks/ | wc -l` → **39**.
 
 **Delta from R-003 original acceptance criterion:** plan document referenced
 "28 files" based on a pre-Wave-1 count. Wave 1 R-005 added `_date-parse.sh`
@@ -161,7 +163,8 @@ Verify with: `ls framework/hooks/ | wc -l` → **38**.
 R5-003 added three CommonJS guards `prompt-guard.cjs`, `workflow-guard.cjs`,
 `security.cjs` (35). Wave 6 R5-009 added `_agent-dispatch.sh` (36). Wave 6
 R5-019 added `_learnings-emit.sh` (37). Wave 6 R5-021 added `agent-lint.sh`
-(38). All files accounted for in the tables above.
+(38). Wave 7 R5-014 added `_fix-plan-emit.sh` (39). All files accounted for
+in the tables above.
 
 ---
 

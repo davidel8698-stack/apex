@@ -1,10 +1,29 @@
 #!/bin/bash
 set -u
+# R5-014: On block (exit 2), source `_fix-plan-emit.sh` and write
+# `.apex/FIX_PLAN.md`. Detection logic below is unchanged.
+
+# shellcheck source=/dev/null
+if [ -f "$(dirname "$0")/_fix-plan-emit.sh" ]; then
+  source "$(dirname "$0")/_fix-plan-emit.sh"
+fi
+
 FILE="${1:-}"
 
 # BLOCKING: secret detection (all source files — not gated on file type)
 if grep -E "(password|secret|token|key|api_key|credential|private_key|bearer)\s*[:=]\s*['\"][a-zA-Z0-9_/+=-]{8,}" "$FILE" 2>/dev/null; then
   echo "🚫 BLOCKED: Potential hardcoded secret in $FILE"
+  # R5-014: structured fix plan
+  if command -v emit_fix_plan >/dev/null 2>&1; then
+    emit_fix_plan \
+      "post-write" \
+      "Potential hardcoded secret detected in a written file." \
+      "Last-written file: $FILE" \
+      "/apex:forensics -- locate the secret and trace where it was added" \
+      "/apex:rollback -- revert the write that introduced the secret" \
+      "/apex:recover -- reset and re-run with the secret moved to env/secret store" \
+      2>/dev/null || true
+  fi
   exit 2
 fi
 
@@ -16,6 +35,17 @@ if echo "$FILE" | grep -qE '\.(test|spec)\.|test_[^/]*$|_test\.'; then
     echo "🚫 BLOCKED: Skipped/disabled tests detected in $FILE:"
     echo "$SKIP_HITS"
     echo "   If intentional, document in PLAN_META.json as accepted risk."
+    # R5-014: structured fix plan
+    if command -v emit_fix_plan >/dev/null 2>&1; then
+      emit_fix_plan \
+        "post-write" \
+        "Skipped or disabled tests detected in a test file." \
+        "Test file: $FILE" \
+        "/apex:forensics -- inspect which skip directive was added and why" \
+        "/apex:rollback -- revert the skip directive" \
+        "/apex:recover -- if the skip is intentional, document it in PLAN_META.json as accepted risk and re-run" \
+        2>/dev/null || true
+    fi
     exit 2
   fi
 fi
@@ -28,6 +58,17 @@ if [[ "$FILE" == *.ts ]] || [[ "$FILE" == *.tsx ]]; then
     if [ "$TSC_EXIT" -ne 0 ]; then
       echo "$TSC_OUTPUT" | head -10
       echo "🚫 BLOCKED: TypeScript errors detected (exit code $TSC_EXIT)"
+      # R5-014: structured fix plan
+      if command -v emit_fix_plan >/dev/null 2>&1; then
+        emit_fix_plan \
+          "post-write" \
+          "TypeScript errors detected after a write." \
+          "Last-written file: $FILE (tsc exit code $TSC_EXIT)" \
+          "/apex:forensics -- inspect the tsc output above for the failing types" \
+          "/apex:rollback -- revert the write that broke type-checking" \
+          "/apex:recover -- reset and re-run with the types corrected" \
+          2>/dev/null || true
+      fi
       exit 2
     fi
   fi
@@ -53,6 +94,17 @@ if [[ "$FILE" == *COMMIT_EDITMSG ]] || [[ "$FILE" == *.commit-msg ]] || [[ "$FIL
     echo "⚠️ WARNING: Commit message does not follow conventional format: type(scope): description"
     echo "   Valid types: feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert"
     echo "   Got: $FIRST_LINE"
+    # R5-014: structured fix plan
+    if command -v emit_fix_plan >/dev/null 2>&1; then
+      emit_fix_plan \
+        "post-write" \
+        "Commit message does not follow conventional format (type(scope): description)." \
+        "Commit message file: $FILE — first line: $FIRST_LINE" \
+        "/apex:forensics -- inspect the commit message and amend manually" \
+        "/apex:rollback -- abandon this commit attempt" \
+        "/apex:recover -- reset and re-run the commit with a conventional-format subject (feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)" \
+        2>/dev/null || true
+    fi
     exit 2
   fi
 fi

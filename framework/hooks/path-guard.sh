@@ -2,6 +2,16 @@
 set -u
 # Path traversal and sensitive file protection
 # Hook type: PreToolUse (Write, Edit)
+#
+# R5-014: On block, source `_fix-plan-emit.sh` and write `.apex/FIX_PLAN.md`
+# so the user has a structured next-action plan, not just a stderr stack.
+# Detection logic below is unchanged — only the FIX_PLAN.md emission was
+# added before each `exit 2`. Exit codes preserved.
+
+# shellcheck source=/dev/null
+if [ -f "$(dirname "$0")/_fix-plan-emit.sh" ]; then
+  source "$(dirname "$0")/_fix-plan-emit.sh"
+fi
 
 FILEPATH="${1:-}"
 
@@ -11,6 +21,17 @@ block() {
   echo "Matched: $2" >&2
   echo "" >&2
   echo "This path is on APEX's deny-list. Operation rejected." >&2
+  # R5-014: structured fix plan
+  if command -v emit_fix_plan >/dev/null 2>&1; then
+    emit_fix_plan \
+      "path-guard" \
+      "Path-guard blocked a write/edit because the target path matched a deny pattern: $2." \
+      "Attempted Write/Edit to: $1" \
+      "/apex:forensics -- diagnose why this path was attempted" \
+      "/apex:rollback -- revert any partial edits to the last green tag" \
+      "/apex:recover -- reset and re-plan with a different target path" \
+      2>/dev/null || true
+  fi
 }
 
 # === DENY PATTERNS ===

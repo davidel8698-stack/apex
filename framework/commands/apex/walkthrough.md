@@ -12,6 +12,20 @@ Instead, present numbered proposals with a recommended default marked [recommend
 A guided, interactive version of /apex:forensics. Walks the user through
 what happened, explains each step in plain language, and offers fix suggestions.
 
+## FIX_PLAN.md AWARENESS [R5-014]
+Before stepping through the timeline: if `.apex/FIX_PLAN.md` exists, READ it
+first and surface its `## Reason`, `## Context`, and `## Recommended commands`
+sections at the top of the walkthrough output. FIX_PLAN.md is written by
+every blocking guard (path-, destructive-, workflow-, quarantine-, schema-drift-,
+phantom-check-, post-write-, circuit-breaker-) via the shared
+`framework/hooks/_fix-plan-emit.sh` helper, and it is the canonical
+"what to do next" plan for the most recent block. The legacy
+`.apex/RECOVERY_MENU.md` (W1 R5-005) is preserved as an alias filename —
+when both files are present, prefer FIX_PLAN.md (newer format). The
+walkthrough's per-event explanation and overall assessment below remain
+unchanged; FIX_PLAN.md merely surfaces the structured fix at the start so
+the user is one step from action.
+
 ## PROCEDURE
 1. Read .apex/STATE.json — extract project state.
 2. Read .apex/SESSION-LOG.md — last 30 lines.

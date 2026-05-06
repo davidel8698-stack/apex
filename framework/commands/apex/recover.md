@@ -15,8 +15,22 @@ Adapt recovery options display:
 - junior: explain options briefly, highlight recommended choice
 - senior/architect: show options as-is (current behavior)
 
-## RECOVERY_MENU.md AWARENESS [R5-005]
-Before doing anything else: if `.apex/RECOVERY_MENU.md` exists, READ it and prepend its `## Reason` and `## Options` sections to the user-facing menu below. RECOVERY_MENU.md is written by `circuit-breaker.sh` (and any other blocking guard that follows the R5-014 pattern) and contains contextual fix-plan options tailored to the trip cause. The static menu (steps 1–3) is the fallback when RECOVERY_MENU.md is absent.
+## FIX_PLAN.md / RECOVERY_MENU.md AWARENESS [R5-005 → R5-014]
+Before doing anything else: if `.apex/FIX_PLAN.md` exists, READ it and prepend
+its `## Reason`, `## Context`, and `## Recommended commands` sections to the
+user-facing menu below. FIX_PLAN.md is the canonical fix-plan format
+(R5-014 generalized): every blocking guard (path-guard, destructive-guard,
+workflow-guard, quarantine-guard, schema-drift, phantom-check, post-write,
+circuit-breaker) writes it via the shared `framework/hooks/_fix-plan-emit.sh`
+helper.
+
+For backward compatibility with the W1 R5-005 contract, `.apex/RECOVERY_MENU.md`
+remains as an alias filename — circuit-breaker.sh mirrors FIX_PLAN.md to
+RECOVERY_MENU.md so callers that still read the legacy path continue to
+work. When both files are present, prefer FIX_PLAN.md (newer format with
+`## Recommended commands`). When only RECOVERY_MENU.md is present, read that.
+
+The static menu (steps 1–3) is the fallback when neither file is present.
 
 ## RECONSTRUCT FROM EVENT LOG [R5-004]
 If `.apex/STATE.json` is missing (corruption, accidental delete, fresh-clone-after-crash) AND `.apex/event-log.jsonl` exists:

@@ -84,7 +84,13 @@ assert_pass "menu mentions /apex:forensics" "grep -q '/apex:forensics' '$SANDBOX
 assert_pass "menu mentions /apex:rollback"  "grep -q '/apex:rollback' '$SANDBOX_A/.apex/RECOVERY_MENU.md'"
 assert_pass "menu mentions /apex:recover"   "grep -q '/apex:recover' '$SANDBOX_A/.apex/RECOVERY_MENU.md'"
 assert_pass "menu has Reason header"        "grep -q '^## Reason' '$SANDBOX_A/.apex/RECOVERY_MENU.md'"
-assert_pass "menu has Options header"       "grep -q '^## Options' '$SANDBOX_A/.apex/RECOVERY_MENU.md'"
+# R5-014: format generalized — circuit-breaker now uses the shared
+# _fix-plan-emit.sh helper which writes "## Recommended commands"
+# (matching the round's FIX_PLAN.md acceptance criterion). The legacy
+# "## Options" heading from R5-005 was the prototype; R5-014 unifies
+# the heading across every blocking guard. RECOVERY_MENU.md is the
+# backward-compat alias filename — same content as FIX_PLAN.md.
+assert_pass "menu has Recommended commands header" "grep -q '^## Recommended commands' '$SANDBOX_A/.apex/RECOVERY_MENU.md'"
 
 rm -rf "$SANDBOX_A"
 

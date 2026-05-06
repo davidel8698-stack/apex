@@ -18,6 +18,36 @@ set -u
 
 source "$(dirname "$0")/_security-common.sh"
 
+# R5-014: Source the shared fix-plan emitter and override `_sec_block` so
+# every workflow-guard block also writes `.apex/FIX_PLAN.md`. Detection
+# patterns and exit code below are unchanged. This wrapper only adds
+# the fix-plan write before delegating to the original `_sec_block`.
+# shellcheck source=/dev/null
+if [ -f "$(dirname "$0")/_fix-plan-emit.sh" ]; then
+  source "$(dirname "$0")/_fix-plan-emit.sh"
+fi
+_sec_block_orig=$(declare -f _sec_block)
+if [ -n "$_sec_block_orig" ] && command -v emit_fix_plan >/dev/null 2>&1; then
+  _sec_block() {
+    local _guard="$1" _pattern="$2" _matched="$3"
+    emit_fix_plan \
+      "workflow-guard" \
+      "Workflow recipe injection blocked: $_pattern detected." \
+      "Matched detail: $_matched" \
+      "/apex:forensics -- diagnose where the injected workflow came from" \
+      "/apex:rollback -- revert recent edits to the last green tag" \
+      "/apex:recover -- reset and re-plan with a sanitized workflow" \
+      2>/dev/null || true
+    # Now call the original block writer (it does stderr + exit 2).
+    echo "APEX $_guard: BLOCKED" >&2
+    echo "Pattern: $_pattern" >&2
+    echo "Matched: $_matched" >&2
+    echo "" >&2
+    echo "Security violation detected. Operation rejected." >&2
+    exit 2
+  }
+fi
+
 FILE="${1:-}"
 
 # Hook context fallback: if no $1, try stdin (Claude Code PreToolUse passes JSON)

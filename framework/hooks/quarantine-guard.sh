@@ -7,6 +7,15 @@ set -u
 # When auditor is active, only test files and .apex/ state files are allowed.
 # Non-auditor context: instant pass-through (microsecond overhead).
 # Exit 2 = blocked (quarantine violation), Exit 0 = allowed
+#
+# R5-014: On block, source `_fix-plan-emit.sh` and write `.apex/FIX_PLAN.md`
+# so the user understands which agent was active and which file types are
+# allowed under the quarantine. Detection logic below is unchanged.
+
+# shellcheck source=/dev/null
+if [ -f "$(dirname "$0")/_fix-plan-emit.sh" ]; then
+  source "$(dirname "$0")/_fix-plan-emit.sh"
+fi
 
 ACTIVE_AGENT="${APEX_ACTIVE_AGENT:-}"
 
@@ -45,4 +54,15 @@ echo "Path: $INPUT" >&2
 echo "" >&2
 echo "Auditor agent cannot access implementation files." >&2
 echo "Only test files, .apex/ state, and package manifests are allowed." >&2
+# R5-014: structured fix plan
+if command -v emit_fix_plan >/dev/null 2>&1; then
+  emit_fix_plan \
+    "quarantine-guard" \
+    "Auditor agent attempted to access an implementation file (only tests + .apex/ + package manifests allowed)." \
+    "Blocked path: $INPUT" \
+    "/apex:forensics -- inspect why the auditor crossed the quarantine" \
+    "/apex:rollback -- discard the auditor's tainted findings" \
+    "/apex:recover -- reset and re-run the auditor with the correct scope" \
+    2>/dev/null || true
+fi
 exit 2

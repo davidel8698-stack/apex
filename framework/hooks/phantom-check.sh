@@ -2,6 +2,15 @@
 set -u
 # Blocks advancement if SUMMARY.md uses uncertainty language
 # Usage: bash phantom-check.sh [path-to-summary.md]
+#
+# R5-014: On block (exit 2), source `_fix-plan-emit.sh` and write
+# `.apex/FIX_PLAN.md`. The R5-019 `_learnings-emit.sh` source line is
+# preserved untouched — both helpers coexist. Detection logic unchanged.
+
+# shellcheck source=/dev/null
+if [ -f "$(dirname "$0")/_fix-plan-emit.sh" ]; then
+  source "$(dirname "$0")/_fix-plan-emit.sh"
+fi
 
 SUMMARY_FILE="${1:-$(find .apex/phases -name "*SUMMARY.md" -newer .apex/STATE.json | tail -1)}"
 
@@ -32,6 +41,19 @@ if grep -qi "$RED_FLAGS" "$SUMMARY_FILE" 2>/dev/null; then
     PHASE_GUESS=$(echo "$SUMMARY_FILE" | sed -nE 's|.*phases/([^/]+)/.*|\1|p')
     [ -z "$PHASE_GUESS" ] && PHASE_GUESS="global"
     emit_learning "phantom-fail" "$PHASE_GUESS" "Phantom language in $(basename "$SUMMARY_FILE"): $MATCHED" 2>/dev/null || true
+  fi
+  # R5-014: structured fix plan written AFTER the learnings emit so
+  # both helpers coexist. Failure to write FIX_PLAN.md must not mask
+  # the exit-2 phantom verdict either.
+  if command -v emit_fix_plan >/dev/null 2>&1; then
+    emit_fix_plan \
+      "phantom-check" \
+      "Phantom verification detected: SUMMARY.md uses uncertainty language instead of concrete evidence." \
+      "Summary file: $SUMMARY_FILE — uncertainty terms: $MATCHED" \
+      "/apex:forensics -- inspect the actual command outputs the phase claims to have run" \
+      "/apex:rollback -- discard the unsupported summary and revert" \
+      "/apex:recover -- reset and re-run the phase with concrete evidence captured" \
+      2>/dev/null || true
   fi
   exit 2
 fi

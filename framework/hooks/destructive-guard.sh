@@ -3,6 +3,15 @@ set -u
 # v7: Hardened against bypass — normalized matching, chained command splitting [R1]
 # R1: 10 documented destructive incidents, 0 vendor postmortems
 # Hook type: PreToolUse (Bash)
+#
+# R5-014: On block, source `_fix-plan-emit.sh` and write `.apex/FIX_PLAN.md`
+# so the user has a concrete next-action plan. Detection / chained-command
+# splitting / exit codes below are unchanged.
+
+# shellcheck source=/dev/null
+if [ -f "$(dirname "$0")/_fix-plan-emit.sh" ]; then
+  source "$(dirname "$0")/_fix-plan-emit.sh"
+fi
 
 COMMAND="${1:-}"
 
@@ -109,6 +118,17 @@ block() {
   echo ""
   echo "This command is on APEX's deny-list. It cannot be executed."
   echo "If you believe this is a false positive, use the manual terminal."
+  # R5-014: structured fix plan
+  if command -v emit_fix_plan >/dev/null 2>&1; then
+    emit_fix_plan \
+      "destructive-guard" \
+      "Destructive command was blocked because the segment matched a deny pattern: $2." \
+      "Blocked segment: $1" \
+      "/apex:forensics -- inspect the chain that led to this command" \
+      "/apex:rollback -- revert recent edits to the last green tag" \
+      "/apex:recover -- reset and re-plan without the destructive op" \
+      2>/dev/null || true
+  fi
 }
 
 # v7: Split on && and ; — check each segment independently
