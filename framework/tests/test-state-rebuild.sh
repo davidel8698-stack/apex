@@ -142,6 +142,76 @@ assert_pass "R6-004: rebuilt decision_mode reflects last emit" "[ \"\$(jq -r '.d
 assert_pass "R6-004: rebuilt complexity_level reflects emit"   "[ \"\$(jq -r '.complexity_level' '$SBE/.apex/STATE.json')\" = '4' ]"
 rm -rf "$SBE"
 
+# --- Case F: R6-011 schema-complete rebuild from frozen template ---
+# Asserts that the rebuilt STATE.json carries every canonical schema-required
+# top-level key (50+) — no longer a 7-field stub. Also asserts that the
+# template itself (after stripping the `_doc` annotation) and the rebuilt
+# STATE (after stripping the forensic markers added by state-rebuild.sh)
+# both pass strict-schema validation via framework/scripts/validate-state.sh.
+TEMPLATE="$REPO_ROOT/framework/templates/STATE-init.template.json"
+SCHEMA="$REPO_ROOT/framework/schemas/STATE.schema.json"
+VALIDATOR="$REPO_ROOT/framework/scripts/validate-state.sh"
+assert_pass "R6-011: template file exists"                     "[ -f '$TEMPLATE' ]"
+assert_pass "R6-011: template is valid JSON"                   "jq . '$TEMPLATE' >/dev/null"
+assert_pass "R6-011: template has _doc drift warning"          "jq -e 'has(\"_doc\")' '$TEMPLATE' >/dev/null"
+assert_pass "R6-011: template _doc references start.md"        "[ \"\$(jq -r '._doc' '$TEMPLATE' | grep -c 'start.md')\" -ge 1 ]"
+
+# Strict-schema validation on the template (after stripping the annotation).
+TPL_TMP="$(mktemp).json"
+jq 'del(._doc)' "$TEMPLATE" > "$TPL_TMP"
+bash "$VALIDATOR" "$SCHEMA" "$TPL_TMP" >/dev/null 2>&1
+assert_pass "R6-011: template strict-validates against STATE.schema.json" "[ $? -eq 0 ]"
+rm -f "$TPL_TMP"
+
+# Rebuild flow with no event log: result must still be schema-complete.
+SBF="$(run_sandbox)"
+mkdir -p "$SBF/.apex"
+( cd "$SBF" && bash "$HOOK" >/dev/null 2>&1 )
+EXIT_F=$?
+assert_pass "R6-011: rebuild from empty log exits 0"           "[ $EXIT_F -eq 0 ]"
+assert_pass "R6-011: rebuilt STATE.json was created"           "[ -f '$SBF/.apex/STATE.json' ]"
+# Count the canonical top-level keys (after stripping the forensic markers
+# added by state-rebuild.sh: rebuilt_from_event_log, rebuild_source, and the
+# decision_mode field that pre-dates the schema). 37 are required; the
+# template populates 37 + 1 optional (mutation_scores) = 38 canonical keys.
+KEY_COUNT=$(jq 'del(.rebuilt_from_event_log, .rebuild_source, .decision_mode) | keys | length' "$SBF/.apex/STATE.json" 2>/dev/null)
+assert_pass "R6-011: rebuilt STATE has >= 37 canonical fields" "[ ${KEY_COUNT:-0} -ge 37 ]"
+# Strict-schema validation on the rebuilt STATE (after stripping forensic markers).
+REB_TMP="$(mktemp).json"
+jq 'del(.rebuilt_from_event_log, .rebuild_source, .decision_mode)' "$SBF/.apex/STATE.json" > "$REB_TMP"
+bash "$VALIDATOR" "$SCHEMA" "$REB_TMP" >/dev/null 2>&1
+assert_pass "R6-011: rebuilt STATE strict-validates against schema" "[ $? -eq 0 ]"
+rm -f "$REB_TMP"
+# Init-block defaults preserved for non-derivable fields.
+assert_pass "R6-011: pre_build_complete=false default"         "[ \"\$(jq -r '.pre_build_complete' '$SBF/.apex/STATE.json')\" = 'false' ]"
+assert_pass "R6-011: apex_version=v7 default"                  "[ \"\$(jq -r '.apex_version' '$SBF/.apex/STATE.json')\" = 'v7' ]"
+assert_pass "R6-011: proposals_mode=true default"              "[ \"\$(jq -r '.proposals_mode' '$SBF/.apex/STATE.json')\" = 'true' ]"
+assert_pass "R6-011: autonomy.by_verify_level present"         "jq -e '.autonomy.by_verify_level | has(\"A\") and has(\"B\") and has(\"C\") and has(\"D\")' '$SBF/.apex/STATE.json' >/dev/null"
+assert_pass "R6-011: circuit_breaker.max_allowed=3"            "[ \"\$(jq -r '.circuit_breaker.max_allowed' '$SBF/.apex/STATE.json')\" = '3' ]"
+assert_pass "R6-011: rebuilt STATE has no _doc field"          "! jq -e 'has(\"_doc\")' '$SBF/.apex/STATE.json' >/dev/null 2>&1"
+rm -rf "$SBF"
+
+# --- Case G: R6-011 + R6-004 integration — overlay current_phase from real emit ---
+SBG="$(run_sandbox)"
+mkdir -p "$SBG/.apex"
+echo '{"current_phase":"00","decision_mode":"balanced","complexity_level":2,"complexity_name":"Medium"}' > "$SBG/.apex/STATE.json"
+(
+  cd "$SBG" && \
+  source "$REPO_ROOT/framework/hooks/_state-update.sh" && \
+  _state_update '.current_phase = "03"'
+) >/dev/null 2>&1
+rm -f "$SBG/.apex/STATE.json"
+( cd "$SBG" && bash "$HOOK" >/dev/null 2>&1 )
+assert_pass "R6-011+R6-004: rebuilt current_phase=='03' (overlay)" "[ \"\$(jq -r '.current_phase' '$SBG/.apex/STATE.json')\" = '03' ]"
+# Init-block defaults still present for fields not in the event log.
+assert_pass "R6-011+R6-004: rebuilt status=initializing default"   "[ \"\$(jq -r '.status' '$SBG/.apex/STATE.json')\" = 'initializing' ]"
+assert_pass "R6-011+R6-004: rebuilt phases_total=0 default"        "[ \"\$(jq -r '.phases_total' '$SBG/.apex/STATE.json')\" = '0' ]"
+rm -rf "$SBG"
+
+# --- Case H: R6-011 sync-to-claude.sh delivers the template ---
+assert_pass "R6-011: sync-to-claude delivers STATE-init.template.json" \
+  "grep -q 'STATE-init.template.json' '$REPO_ROOT/framework/scripts/sync-to-claude.sh'"
+
 echo ""
 echo "Results: $PASS passed, $FAIL failed"
 exit "$FAIL"

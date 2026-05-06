@@ -314,6 +314,13 @@ copy_file "$FRAMEWORK_ROOT/docs/MODULE-ECOSYSTEM.md" "$CLAUDE_ROOT/docs/MODULE-E
 # ONE-FILE-ONE-OWNER. Owner-guard.sh (PreToolUse Write|Edit) is the
 # downstream consumer of the field this contract defines.
 copy_file "$FRAMEWORK_ROOT/docs/OWNS-FILES-CONTRACT.md" "$CLAUDE_ROOT/docs/OWNS-FILES-CONTRACT.md"
+# R6-011: explicit delivery anchor for the frozen STATE.json init
+# template consumed by state-rebuild.sh as the schema-complete base
+# before overlaying event-log-derived semantic-event fields. The
+# template MUST mirror the init block in framework/commands/apex/start.md;
+# drift is detected by framework/tests/test-state-rebuild.sh strict-schema
+# validation.
+copy_file "$FRAMEWORK_ROOT/templates/STATE-init.template.json" "$CLAUDE_ROOT/templates/STATE-init.template.json"
 
 # Top-level files
 copy_file "$FRAMEWORK_ROOT/apex-branding.md"        "$CLAUDE_ROOT/apex-branding.md"
