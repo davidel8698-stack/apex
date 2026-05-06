@@ -34,8 +34,8 @@ else
   echo "  ❌ C-1: security-patterns.json missing or invalid"
 fi
 
-# C-2: spec-named CommonJS files exist
-for f in security.cjs prompt-guard.cjs workflow-guard.cjs; do
+# C-2: spec-named CommonJS files exist (R6-014: apex- prefix on the two ported guards)
+for f in security.cjs apex-prompt-guard.cjs apex-workflow-guard.cjs; do
   if [ -f "$FRAMEWORK_ROOT/hooks/$f" ]; then
     TOTAL=$((TOTAL + 1)); PASS=$((PASS + 1))
     echo "  ✅ C-2 ($f): file exists"
@@ -47,19 +47,19 @@ done
 
 # C-3: settings.json runtime-aware dispatch wired for both ported guards
 SETTINGS="$FRAMEWORK_ROOT/settings.json"
-if grep -q "node ~/.claude/hooks/prompt-guard.cjs" "$SETTINGS" 2>/dev/null; then
+if grep -q "node ~/.claude/hooks/apex-prompt-guard.cjs" "$SETTINGS" 2>/dev/null; then
   TOTAL=$((TOTAL + 1)); PASS=$((PASS + 1))
-  echo "  ✅ C-3a: settings.json wires prompt-guard.cjs"
+  echo "  ✅ C-3a: settings.json wires apex-prompt-guard.cjs"
 else
   TOTAL=$((TOTAL + 1)); FAIL=$((FAIL + 1))
-  echo "  ❌ C-3a: settings.json missing prompt-guard.cjs invocation"
+  echo "  ❌ C-3a: settings.json missing apex-prompt-guard.cjs invocation"
 fi
-if grep -q "node ~/.claude/hooks/workflow-guard.cjs" "$SETTINGS" 2>/dev/null; then
+if grep -q "node ~/.claude/hooks/apex-workflow-guard.cjs" "$SETTINGS" 2>/dev/null; then
   TOTAL=$((TOTAL + 1)); PASS=$((PASS + 1))
-  echo "  ✅ C-3b: settings.json wires workflow-guard.cjs"
+  echo "  ✅ C-3b: settings.json wires apex-workflow-guard.cjs"
 else
   TOTAL=$((TOTAL + 1)); FAIL=$((FAIL + 1))
-  echo "  ❌ C-3b: settings.json missing workflow-guard.cjs invocation"
+  echo "  ❌ C-3b: settings.json missing apex-workflow-guard.cjs invocation"
 fi
 
 # Skip the dynamic exit-code parity tests if node is unavailable.
@@ -75,9 +75,9 @@ fi
 # Use the source-tree implementations directly (the harness's HOOKS_DIR
 # points at $HOME/.claude/hooks/, but our R5-003 fixtures may not be
 # delivered there yet — sync runs after install).
-PROMPT_CJS="$FRAMEWORK_ROOT/hooks/prompt-guard.cjs"
+PROMPT_CJS="$FRAMEWORK_ROOT/hooks/apex-prompt-guard.cjs"
 PROMPT_SH="$FRAMEWORK_ROOT/hooks/prompt-guard.sh"
-WORKFLOW_CJS="$FRAMEWORK_ROOT/hooks/workflow-guard.cjs"
+WORKFLOW_CJS="$FRAMEWORK_ROOT/hooks/apex-workflow-guard.cjs"
 WORKFLOW_SH="$FRAMEWORK_ROOT/hooks/workflow-guard.sh"
 
 # Make the source-tree fixture authoritative for both the .cjs (already
@@ -185,14 +185,14 @@ fi
 # C-9: shim auto-delegates to .cjs when node is present (smoke — verified
 # above by the .sh-vs-.cjs parity blocks; here we just assert the shim
 # header documents the dual-runtime contract).
-if grep -q "shim — delegates to prompt-guard.cjs" "$PROMPT_SH" 2>/dev/null; then
+if grep -q "shim — delegates to apex-prompt-guard.cjs" "$PROMPT_SH" 2>/dev/null; then
   TOTAL=$((TOTAL + 1)); PASS=$((PASS + 1))
   echo "  ✅ C-9a: prompt-guard.sh header documents shim role"
 else
   TOTAL=$((TOTAL + 1)); FAIL=$((FAIL + 1))
   echo "  ❌ C-9a: prompt-guard.sh header missing shim documentation"
 fi
-if grep -q "shim — delegates to workflow-guard.cjs" "$WORKFLOW_SH" 2>/dev/null; then
+if grep -q "shim — delegates to apex-workflow-guard.cjs" "$WORKFLOW_SH" 2>/dev/null; then
   TOTAL=$((TOTAL + 1)); PASS=$((PASS + 1))
   echo "  ✅ C-9b: workflow-guard.sh header documents shim role"
 else

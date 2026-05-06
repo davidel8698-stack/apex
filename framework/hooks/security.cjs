@@ -7,8 +7,9 @@
 // Role
 //   Single source of truth for input normalization, zero-width-character
 //   stripping, prompt-injection / workflow-injection pattern detection, and
-//   block-response formatting for the .cjs guard hooks (prompt-guard.cjs,
-//   workflow-guard.cjs). Keeps the .cjs guards behavior-identical to the
+//   block-response formatting for the .cjs guard hooks (apex-prompt-guard.cjs,
+//   apex-workflow-guard.cjs; R6-014 added the `apex-` prefix to both ported
+//   guards to match the spec literal naming). Keeps the .cjs guards behavior-identical to the
 //   pre-existing .sh guards (prompt-guard.sh, workflow-guard.sh,
 //   _security-common.sh).
 //

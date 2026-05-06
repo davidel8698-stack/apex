@@ -16,9 +16,9 @@ If you are adding, modifying, or auditing a security mechanism, start here.
 
 | # | Spec mechanism | Concrete file | Trigger | Status |
 |---|---|---|---|---|
-| 1 | `apex-prompt-guard.js` | `framework/hooks/prompt-guard.cjs` (canonical, post-R5-003) + `framework/hooks/prompt-guard.sh` (shim, falls back to native Bash when node absent) | PreToolUse (Write\|Edit\|Agent) | Active — runtime-aware auto-wired in settings.json |
+| 1 | `apex-prompt-guard.js` | `framework/hooks/apex-prompt-guard.cjs` (canonical, post-R5-003; R6-014 added the `apex-` prefix) + `framework/hooks/prompt-guard.sh` (shim, falls back to native Bash when node absent; shim name preserved per R6-014) | PreToolUse (Write\|Edit\|Agent) | Active — runtime-aware auto-wired in settings.json |
 | 2 | Path Traversal Prevention | `framework/hooks/path-guard.sh` | PreToolUse (Write\|Edit) | Active — auto-wired in settings.json |
-| 3 | `apex-workflow-guard.js` | `framework/hooks/workflow-guard.cjs` (canonical, post-R5-003) + `framework/hooks/workflow-guard.sh` (shim, falls back to native Bash when node absent) | PreToolUse (Read) + explicit invocation from `/apex:workflow` | Active — runtime-aware auto-wired post-R-006 |
+| 3 | `apex-workflow-guard.js` | `framework/hooks/apex-workflow-guard.cjs` (canonical, post-R5-003; R6-014 added the `apex-` prefix) + `framework/hooks/workflow-guard.sh` (shim, falls back to native Bash when node absent; shim name preserved per R6-014) | PreToolUse (Read) + explicit invocation from `/apex:workflow` | Active — runtime-aware auto-wired post-R-006 |
 | 4 | CI scanner | `framework/hooks/ci-scan.sh` | Manual (CI pipeline invocation) | Exists — not auto-wired by design |
 | 5 | `security.cjs` module | `framework/hooks/security.cjs` (literal, post-R5-003) + `framework/hooks/_security-common.sh` (Bash counterpart sourced by shim guards) | Library — required/sourced, never invoked directly | Active |
 | 6 | Destructive command blocking | `framework/hooks/destructive-guard.sh` | PreToolUse (Bash) | Active — auto-wired in settings.json (v7 hardened with chained-command splitting) |
@@ -28,8 +28,10 @@ If you are adding, modifying, or auditing a security mechanism, start here.
 ## Why distributed, not monolithic
 
 The APEX spec names JavaScript artifacts (`.js`, `.cjs`) and as of R5-003
-the three spec-named files exist literally: `prompt-guard.cjs`,
-`workflow-guard.cjs`, `security.cjs`. Detection patterns load from a shared
+the three spec-named files exist (R6-014 added the `apex-` prefix to the
+two ported guards so all three names match the spec literally except for
+the documented .cjs/.js extension equivalence): `apex-prompt-guard.cjs`,
+`apex-workflow-guard.cjs`, `security.cjs`. Detection patterns load from a shared
 fixture (`framework/test-fixtures/security-patterns.json`) so the .cjs and
 .sh branches cannot drift. APEX still ships with **zero npm dependencies** —
 the .cjs files require only the Node standard library; on hosts without

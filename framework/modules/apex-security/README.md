@@ -16,4 +16,4 @@ Resolves to `Task("security-specialist", ...)` calls. The agent's frontmatter `n
 
 ## Future wiring
 
-Per-project `THREAT_MODEL.md` bootstrap (Indirect Prompt Injection as default threat) is wired by R5-020 in Wave 4. The security stack language port (`prompt-guard.cjs`, `workflow-guard.cjs`, `security.cjs`) is R5-003 (Wave 5) and lives under `framework/hooks/` (the live tree remains flat); this module advertises the capability, the hooks are delivered separately by `sync-to-claude.sh`.
+Per-project `THREAT_MODEL.md` bootstrap (Indirect Prompt Injection as default threat) is wired by R5-020 in Wave 4. The security stack language port (`apex-prompt-guard.cjs`, `apex-workflow-guard.cjs`, `security.cjs`; R6-014 added the `apex-` prefix to the two ported guards to match the spec literal naming) is R5-003 (Wave 5) and lives under `framework/hooks/` (the live tree remains flat); this module advertises the capability, the hooks are delivered separately by `sync-to-claude.sh`.

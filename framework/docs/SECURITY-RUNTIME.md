@@ -17,8 +17,8 @@ Two `.js` extensions and one `.cjs`.
 
 Three CommonJS files at `framework/hooks/`:
 
-- `prompt-guard.cjs` — port of `apex-prompt-guard.js`.
-- `workflow-guard.cjs` — port of `apex-workflow-guard.js`.
+- `apex-prompt-guard.cjs` — port of `apex-prompt-guard.js` (R6-014 renamed from `prompt-guard.cjs` to match the spec literal `apex-` prefix).
+- `apex-workflow-guard.cjs` — port of `apex-workflow-guard.js` (R6-014 renamed from `workflow-guard.cjs` to match the spec literal `apex-` prefix).
 - `security.cjs` — the named `security.cjs` module, literal match.
 
 Plus the pre-existing Bash shims at the same names (`prompt-guard.sh`,
@@ -80,12 +80,12 @@ preserved for Bash-only hosts.
 
 ```
 framework/hooks/
-  prompt-guard.cjs     <-- spec: apex-prompt-guard.js  (port)
-  prompt-guard.sh      <-- shim: delegates to .cjs when node available
-  workflow-guard.cjs   <-- spec: apex-workflow-guard.js (port)
-  workflow-guard.sh    <-- shim: delegates to .cjs when node available
-  security.cjs         <-- spec: security.cjs           (literal)
-  _security-common.sh  <-- Bash counterpart of security.cjs (sourced by shims)
+  apex-prompt-guard.cjs     <-- spec: apex-prompt-guard.js  (port; R6-014 prefixed)
+  prompt-guard.sh           <-- shim: delegates to .cjs when node available (R6-014: shim name preserved)
+  apex-workflow-guard.cjs   <-- spec: apex-workflow-guard.js (port; R6-014 prefixed)
+  workflow-guard.sh         <-- shim: delegates to .cjs when node available (R6-014: shim name preserved)
+  security.cjs              <-- spec: security.cjs           (literal)
+  _security-common.sh       <-- Bash counterpart of security.cjs (sourced by shims)
 framework/test-fixtures/
   security-patterns.json  <-- canonical pattern set, loaded by both runtimes
 ```

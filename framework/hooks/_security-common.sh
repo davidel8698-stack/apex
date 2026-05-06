@@ -9,8 +9,10 @@
 #
 # R5-003 dual-runtime note: The two named-as-`.js` guards (prompt-guard,
 # workflow-guard) and the named `security.cjs` module are now also shipped
-# as Node-runtime CommonJS files: `framework/hooks/prompt-guard.cjs`,
-# `workflow-guard.cjs`, `security.cjs`. Those files reimplement the
+# as Node-runtime CommonJS files: `framework/hooks/apex-prompt-guard.cjs`,
+# `apex-workflow-guard.cjs`, `security.cjs` (R6-014 added the `apex-` prefix
+# to the two ported guards to match the spec literal naming; the .sh shim
+# names — `prompt-guard.sh`, `workflow-guard.sh` — are preserved). Those files reimplement the
 # same normalization (zero-width strip + whitespace collapse), pattern
 # matching, and block-response formatting that this Bash library provides.
 # Both runtimes load their detection patterns from

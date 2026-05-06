@@ -16,7 +16,7 @@
       {
         "matcher": "Write|Edit|Agent",
         "hooks": [
-          { "type": "command", "command": "if command -v node >/dev/null 2>&1 && [ -f ~/.claude/hooks/prompt-guard.cjs ]; then node ~/.claude/hooks/prompt-guard.cjs; else bash ~/.claude/hooks/prompt-guard.sh; fi" }
+          { "type": "command", "command": "if command -v node >/dev/null 2>&1 && [ -f ~/.claude/hooks/apex-prompt-guard.cjs ]; then node ~/.claude/hooks/apex-prompt-guard.cjs; else bash ~/.claude/hooks/prompt-guard.sh; fi" }
         ]
       },
       {
@@ -40,7 +40,7 @@
       {
         "matcher": "Read",
         "hooks": [
-          { "type": "command", "command": "if command -v node >/dev/null 2>&1 && [ -f ~/.claude/hooks/workflow-guard.cjs ]; then node ~/.claude/hooks/workflow-guard.cjs; else bash ~/.claude/hooks/workflow-guard.sh; fi" }
+          { "type": "command", "command": "if command -v node >/dev/null 2>&1 && [ -f ~/.claude/hooks/apex-workflow-guard.cjs ]; then node ~/.claude/hooks/apex-workflow-guard.cjs; else bash ~/.claude/hooks/workflow-guard.sh; fi" }
         ]
       }
     ],

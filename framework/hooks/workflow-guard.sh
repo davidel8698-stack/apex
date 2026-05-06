@@ -1,19 +1,22 @@
 #!/bin/bash
 set -u
 # Workflow recipe injection scanner — defense-in-depth layer.
-# Hook type: Auto-PreToolUse:Read (shim — delegates to workflow-guard.cjs when node is present)
+# Hook type: Auto-PreToolUse:Read (shim — delegates to apex-workflow-guard.cjs when node is present)
 #            + explicit invocation by /apex:workflow.
 #            Self-filters on path: scans only apex-workflows/* files; instant exit 0 for all others.
 #
 # R5-003: Spec names this guard as `apex-workflow-guard.js`. The canonical
-# implementation now lives in framework/hooks/workflow-guard.cjs. This .sh
-# remains for two reasons:
+# implementation now lives in framework/hooks/apex-workflow-guard.cjs (R6-014
+# renamed workflow-guard.cjs → apex-workflow-guard.cjs to match the spec
+# literal `apex-` prefix; .cjs/.js extension equivalence is documented in
+# framework/docs/SECURITY-RUNTIME.md). This .sh remains for two reasons:
 #   1. Hosts without `node` on PATH still need the protection.
 #   2. ~/.claude/hooks/workflow-guard.sh is referenced by /apex:workflow and
-#      (historically) by settings.json — keeping the file path stable
-#      preserves those invocation sites.
+#      (historically) by settings.json — keeping the .sh shim name stable
+#      preserves those invocation sites (R6-014 preservation contract: shim
+#      names unchanged; only the .cjs payload was renamed).
 #
-# Behavior contract: byte-equivalent detection patterns to workflow-guard.cjs
+# Behavior contract: byte-equivalent detection patterns to apex-workflow-guard.cjs
 # (both load from framework/test-fixtures/security-patterns.json).
 
 source "$(dirname "$0")/_security-common.sh"
@@ -57,7 +60,7 @@ fi
 
 # --- Delegate to the .cjs when node is present ------------------------------
 if command -v node >/dev/null 2>&1; then
-  CJS_PATH="$(dirname "$0")/workflow-guard.cjs"
+  CJS_PATH="$(dirname "$0")/apex-workflow-guard.cjs"
   if [ -f "$CJS_PATH" ]; then
     if [ -n "$FILE" ]; then
       exec node "$CJS_PATH" "$FILE"

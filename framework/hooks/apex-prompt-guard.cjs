@@ -1,16 +1,20 @@
 #!/usr/bin/env node
-// prompt-guard.cjs — Node port of prompt-guard.sh.
+// apex-prompt-guard.cjs — Node port of prompt-guard.sh.
 //
 // Spec anchor: apex-spec.md, Failure 9 — "apex-prompt-guard.js" in the
 //   Defense-in-Depth Security Layer roster. CommonJS chosen over ESM to
 //   avoid a package.json "type":"module" requirement (zero npm deps).
+//   R6-014 (Wave 2) renamed prompt-guard.cjs → apex-prompt-guard.cjs to
+//   match the spec literal `apex-` prefix; .cjs/.js extension equivalence
+//   is documented in framework/docs/SECURITY-RUNTIME.md.
 //
 // Hook type
 //   Auto-PreToolUse (Write|Edit|Agent) — invoked via:
-//     node ~/.claude/hooks/prompt-guard.cjs
-//   from framework/settings.json. The .sh file at the same name is a thin
-//   shim that delegates here when node is available; otherwise it falls
-//   back to the original Bash logic (no behavior change for Bash-only hosts).
+//     node ~/.claude/hooks/apex-prompt-guard.cjs
+//   from framework/settings.json. The .sh shim `prompt-guard.sh` (name
+//   preserved per R6-014's preservation contract) delegates here when
+//   node is available; otherwise it falls back to the original Bash logic
+//   (no behavior change for Bash-only hosts).
 //
 // Behavior parity
 //   Detection patterns are loaded from

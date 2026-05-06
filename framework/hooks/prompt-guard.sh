@@ -1,18 +1,21 @@
 #!/bin/bash
 set -u
 # Prompt injection detection — defense-in-depth layer.
-# Hook type: Auto-PreToolUse (shim — delegates to prompt-guard.cjs when node is present).
+# Hook type: Auto-PreToolUse (shim — delegates to apex-prompt-guard.cjs when node is present).
 #
 # R5-003: Spec names this guard as `apex-prompt-guard.js`. The canonical
-# implementation now lives in framework/hooks/prompt-guard.cjs. This .sh
-# remains for two reasons:
+# implementation now lives in framework/hooks/apex-prompt-guard.cjs (R6-014
+# renamed prompt-guard.cjs → apex-prompt-guard.cjs to match the spec literal
+# `apex-` prefix; the .cjs/.js extension equivalence is documented in
+# framework/docs/SECURITY-RUNTIME.md). This .sh remains for two reasons:
 #   1. Hosts without `node` on PATH (rare but possible — minimal containers,
 #      Bash-only forensic shells) still need the protection.
 #   2. The path ~/.claude/hooks/prompt-guard.sh is referenced by command .md
-#      files and (historically) by settings.json — keeping the file at the
-#      same name preserves those invocation sites.
+#      files and (historically) by settings.json — keeping the .sh shim name
+#      stable preserves those invocation sites (R6-014 preservation contract:
+#      shim names unchanged; only the .cjs payload was renamed).
 #
-# Behavior contract: byte-equivalent detection patterns to prompt-guard.cjs
+# Behavior contract: byte-equivalent detection patterns to apex-prompt-guard.cjs
 # (both load from framework/test-fixtures/security-patterns.json — see
 # security.cjs for the .cjs side). When node is available, this shim
 # delegates so the canonical regex engine runs both branches identically.
@@ -21,7 +24,7 @@ INPUT="${1:-}"
 
 # --- Delegate to the .cjs when node is present ------------------------------
 if command -v node >/dev/null 2>&1; then
-  CJS_PATH="$(dirname "$0")/prompt-guard.cjs"
+  CJS_PATH="$(dirname "$0")/apex-prompt-guard.cjs"
   if [ -f "$CJS_PATH" ]; then
     if [ -n "$INPUT" ]; then
       exec node "$CJS_PATH" "$INPUT"

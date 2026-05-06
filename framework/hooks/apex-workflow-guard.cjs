@@ -1,8 +1,11 @@
 #!/usr/bin/env node
-// workflow-guard.cjs — Node port of workflow-guard.sh.
+// apex-workflow-guard.cjs — Node port of workflow-guard.sh.
 //
 // Spec anchor: apex-spec.md, Failure 9 — "apex-workflow-guard.js" in the
-//   Defense-in-Depth Security Layer roster.
+//   Defense-in-Depth Security Layer roster. R6-014 (Wave 2) renamed
+//   workflow-guard.cjs → apex-workflow-guard.cjs to match the spec literal
+//   `apex-` prefix; .cjs/.js extension equivalence is documented in
+//   framework/docs/SECURITY-RUNTIME.md.
 //
 // Hook type
 //   Auto-PreToolUse (Read) + explicit invocation by /apex:workflow.
