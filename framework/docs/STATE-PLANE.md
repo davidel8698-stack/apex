@@ -34,7 +34,7 @@ This plane has zero binary dependencies beyond `jq` (already required by every A
 ## Activation contract
 
 - **Default (`APEX_SQLITE_MIRROR` unset or empty):** `_state-update.sh` writes STATE.json, appends event-log.jsonl, and returns. Zero SQLite calls. Existing behavior — byte-identical to pre-mirror outputs.
-- **Mirror requested (`APEX_SQLITE_MIRROR=1`) AND `sqlite3` present:** after every successful state mutation, `_state-update.sh` invokes `_state-sqlite.sh mirror` to copy the new STATE.json into `state_snapshot` and append the structured event into `events`. The FTS5 virtual table is populated by trigger.
+- **Mirror requested (`APEX_SQLITE_MIRROR=1`) AND `sqlite3` present:** after every successful state mutation, `_state-update.sh` invokes `_state-sqlite.sh mirror` to copy the new STATE.json into `state_snapshot` and append the structured event into `events`. The FTS5 virtual table (`events_fts`) is populated by an explicit FTS5 INSERT after each event row insert; future migration to a SQLite trigger is a candidate when bulk-ingestion is wired (see F-013 / R6-013).
 - **Mirror requested AND `sqlite3` absent:** `_state-sqlite.sh mirror` prints a fail-loud message ("`sqlite3` CLI not on PATH; APEX SQLite mirror disabled for this write") and returns 0. The state write itself does **not** crash. This is the spec's "fail-loud, never fail-silent" applied to the mirror — the mirror is informative, not catastrophic.
 
 The state write is never blocked by mirror errors. The mirror is a side-effect, not a precondition.
