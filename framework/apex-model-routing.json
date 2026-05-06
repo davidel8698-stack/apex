@@ -56,6 +56,22 @@
     },
     "auditor": {
       "default": "haiku"
+    },
+    "framework-auditor": {
+      "default": "sonnet"
+    },
+    "remediation-planner": {
+      "default": "sonnet"
+    },
+    "batch-scheduler": {
+      "default": "haiku"
+    },
+    "wave-executor": {
+      "default": "sonnet",
+      "escalate_on_retry": "opus"
+    },
+    "round-checker": {
+      "default": "sonnet"
     }
   }
 }

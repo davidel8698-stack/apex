@@ -88,6 +88,11 @@ If user typed `/apex:help` with no question, list all commands grouped by catego
 | `/apex:workflow` | Run predefined workflow |
 | `/apex:health-check` | Validate framework integrity |
 
+### Framework Maintenance
+| Command | Purpose |
+|---------|---------|
+| `/apex:self-heal` | Run framework gap-closure loop until convergence |
+
 ## INTENT-TO-COMMAND ROUTING TABLE
 
 When user provides a question, match their intent to the best command:
@@ -109,6 +114,7 @@ When user provides a question, match their intent to the best command:
 | "I have an idea" / "save this for later" | `/apex:plant-seed` | Stores idea for future consideration |
 | "Show me everything" / "list" / "what exists" | `/apex:list` | Lists all project artifacts |
 | "Health check" / "is APEX working" / "validate framework" | `/apex:health-check` | Runs framework integrity checks |
+| "Improve APEX itself" / "close framework gaps" / "run audit loop" / "fix everything broken in APEX" / "self-heal" | `/apex:self-heal` | Runs framework gap-closure loop (audit → plan → schedule → execute → check) until two consecutive clean rounds |
 
 ## ROUTING LOGIC
 

@@ -413,6 +413,44 @@
       "type": "object",
       "additionalProperties": { "type": "number" }
     },
+    "self_heal": {
+      "type": "object",
+      "description": "Optional state for /apex:self-heal framework gap-closure loop. Initialized lazily by the orchestrator on first invocation; absent in projects that never run the self-heal loop.",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "current_round",
+        "current_step",
+        "current_wave",
+        "consecutive_clean_rounds",
+        "max_rounds",
+        "last_p01_count",
+        "started_at",
+        "last_round_artifacts"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["idle", "running", "paused", "closed", "halted"],
+          "description": "idle = not started or finished cleanly; running = mid-pipeline; paused = context-rotation pause awaiting /apex:resume; closed = two-clean-rounds convergence reached; halted = max_rounds cap or DIVERGING trajectory escalation."
+        },
+        "current_round": { "type": "integer", "minimum": 0 },
+        "current_step": {
+          "type": ["string", "null"],
+          "enum": ["audit", "plan", "schedule", "execute", "check", "done", null]
+        },
+        "current_wave": { "type": ["integer", "null"], "minimum": 0 },
+        "consecutive_clean_rounds": { "type": "integer", "minimum": 0 },
+        "max_rounds": { "type": "integer", "minimum": 1 },
+        "last_p01_count": { "type": ["integer", "null"], "minimum": 0 },
+        "started_at": { "type": ["string", "null"], "format": "date-time" },
+        "last_round_artifacts": {
+          "type": ["array", "null"],
+          "items": { "type": "string" },
+          "description": "Filenames produced by the most recently completed round, for /apex:status surfacing."
+        }
+      }
+    },
     "phases_total": { "type": "integer", "minimum": 0 },
     "phases_completed": { "type": "integer", "minimum": 0 },
     "units_total": { "type": "integer", "minimum": 0 },

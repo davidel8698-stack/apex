@@ -430,6 +430,84 @@ git add -A && git commit -m "add webhook"
 Task("integration-specialist", "Review webhook.ts. Run git diff HEAD~1.")
 Expected: flags silent error swallow — webhook returns 200 on error, hiding failures from Stripe
 
+### TEST 0l: Self-Heal Registration
+Verify `/apex:self-heal` and its 5 specialist agents are registered and reachable.
+```bash
+# 0l-a: command file deployed
+if [ ! -f ~/.claude/commands/apex/self-heal.md ]; then
+  echo "❌ TEST 0l-a FAIL: self-heal.md not deployed (run sync-to-claude.sh)"
+  exit 1
+fi
+echo "✅ TEST 0l-a PASS: /apex:self-heal command deployed"
+
+# 0l-b: 5 specialist agents deployed with valid frontmatter (name + tools)
+SH_AGENTS="framework-auditor remediation-planner batch-scheduler wave-executor round-checker"
+SH_MISSING=""
+for a in $SH_AGENTS; do
+  AF="$HOME/.claude/agents/specialist/$a.md"
+  if [ ! -f "$AF" ]; then
+    SH_MISSING="$SH_MISSING $a(missing)"
+    continue
+  fi
+  if ! head -10 "$AF" | grep -q "^name: $a"; then
+    SH_MISSING="$SH_MISSING $a(bad-name)"
+  fi
+  if ! head -10 "$AF" | grep -q "^tools:"; then
+    SH_MISSING="$SH_MISSING $a(no-tools)"
+  fi
+done
+if [ -n "$SH_MISSING" ]; then
+  echo "❌ TEST 0l-b FAIL: self-heal agent issues:$SH_MISSING"
+  exit 1
+fi
+echo "✅ TEST 0l-b PASS: all 5 self-heal agents deployed with valid frontmatter"
+
+# 0l-c: STATE schema includes self_heal block
+SCHEMA="$HOME/.claude/schemas/STATE.schema.json"
+if [ -f "$SCHEMA" ]; then
+  if jq -e '.properties.self_heal' "$SCHEMA" >/dev/null 2>&1; then
+    echo "✅ TEST 0l-c PASS: STATE.schema.json includes self_heal block"
+  else
+    echo "❌ TEST 0l-c FAIL: self_heal block missing from STATE.schema.json"
+    exit 1
+  fi
+else
+  echo "⚠️ TEST 0l-c SKIP: STATE.schema.json not deployed"
+fi
+
+# 0l-d: model routing includes all 5 agents
+ROUTING="$HOME/.claude/apex-model-routing.json"
+if [ -f "$ROUTING" ]; then
+  ROUTING_MISSING=""
+  for a in $SH_AGENTS; do
+    if ! jq -e ".routing[\"$a\"]" "$ROUTING" >/dev/null 2>&1; then
+      ROUTING_MISSING="$ROUTING_MISSING $a"
+    fi
+  done
+  if [ -n "$ROUTING_MISSING" ]; then
+    echo "❌ TEST 0l-d FAIL: routing entries missing:$ROUTING_MISSING"
+    exit 1
+  fi
+  echo "✅ TEST 0l-d PASS: all 5 self-heal agents have routing entries"
+else
+  echo "⚠️ TEST 0l-d SKIP: apex-model-routing.json not deployed"
+fi
+
+# 0l-e: Wave executor enforces scope-creep prohibition (verbatim check)
+WX="$HOME/.claude/agents/specialist/wave-executor.md"
+if [ -f "$WX" ]; then
+  if grep -q "NEW-FINDINGS-W" "$WX" && grep -q "do not fix it" "$WX"; then
+    echo "✅ TEST 0l-e PASS: wave-executor enforces scope-creep prohibition"
+  else
+    echo "❌ TEST 0l-e FAIL: wave-executor missing scope-creep guardrails"
+    exit 1
+  fi
+fi
+```
+Expected: 0l-a/0l-b/0l-c/0l-d/0l-e all PASS. Drift means sync-to-claude.sh
+was not run after self-heal additions, or agent files were edited away
+from their contracts.
+
 ## CLEANUP
 ```bash
 rm -rf "$HEALTH_DIR"
@@ -442,5 +520,5 @@ If any failures:
 Failed: [list with test IDs]
 Fix: update failing agent's system prompt, re-run /apex:health-check"
 
-If all pass: "✅ All agents healthy (15/15 tests passed — TEST 0 environment + schema validation + color discipline + 12 agent tests)"
+If all pass: "✅ All agents healthy — TEST 0 environment + schema validation + color discipline + self-heal registration + 12 agent tests passed"
 </context>

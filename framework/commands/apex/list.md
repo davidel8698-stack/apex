@@ -53,6 +53,9 @@ Display the following command catalog:
 - `/apex:peer-review` — Peer review (not yet implemented)
 - `/apex:ui-review` — UI review (not yet implemented)
 
+### Framework Maintenance
+- `/apex:self-heal` — Run framework gap-closure loop (audit → plan → schedule → execute → check, repeat until convergence)
+
 ### Collaboration
 - `/apex:_debate` — Internal debate agent (system use)
 - `/apex:_roundtable` — Internal roundtable agent (system use)

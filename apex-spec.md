@@ -63,7 +63,7 @@ APEX הוא **multi-agent framework ופלטפורמה לסוכני קוד** (Cl
 
 **Scale-Adaptive Classifier ב-onboarding.** Auto-detection של complexity, לא preset בחירה ידנית. המשתמש יכול לעקוף.
 
-**Pipeline commands מלאות.** `/apex:onboard`, `/apex:start`, `/apex:discuss-phase`, `/apex:ui-phase`, `/apex:plan-phase`, `/apex:execute-phase`, `/apex:roundtable`, `/apex:walkthrough`, `/apex:ship`, `/apex:next`, `/apex:fast/quick/full`, `/apex:refine`, `/apex:test`, `/apex:validate-phase`, `/apex:peer-review`, `/apex:ui-review`, `/apex:list`, `/apex:status`, `/apex:health-check`, `/apex:pause-work`, `/apex:resume-work`, `/apex:session-report`, `/apex:rollback`, `/apex:forensics`, `/apex:milestone-summary`, `/apex:new-workspace`, `/apex:thread`, `/apex:plant-seed`, `/apex:add-backlog`, `/apex:review-backlog`, **`/apex:help [natural language]`** (חידוש מ-BMAD), **`/apex:workflow [recipe-name]`** (חידוש מ-BMAD), **`/apex:new-agent`** (חידוש מ-BMAD's Builder).
+**Pipeline commands מלאות.** `/apex:onboard`, `/apex:start`, `/apex:discuss-phase`, `/apex:ui-phase`, `/apex:plan-phase`, `/apex:execute-phase`, `/apex:roundtable`, `/apex:walkthrough`, `/apex:ship`, `/apex:next`, `/apex:fast/quick/full`, `/apex:refine`, `/apex:test`, `/apex:validate-phase`, `/apex:peer-review`, `/apex:ui-review`, `/apex:list`, `/apex:status`, `/apex:health-check`, `/apex:pause-work`, `/apex:resume-work`, `/apex:session-report`, `/apex:rollback`, `/apex:forensics`, `/apex:milestone-summary`, `/apex:new-workspace`, `/apex:thread`, `/apex:plant-seed`, `/apex:add-backlog`, `/apex:review-backlog`, **`/apex:help [natural language]`** (חידוש מ-BMAD), **`/apex:workflow [recipe-name]`** (חידוש מ-BMAD), **`/apex:new-agent`** (חידוש מ-BMAD's Builder), **`/apex:self-heal`** (framework gap-closure loop).
 
 **APEX.md + PROJECT-APEX.md (Two-Tier Methodology).**
 
@@ -222,6 +222,52 @@ APEX הוא **multi-agent framework ופלטפורמה לסוכני קוד** (Cl
 **Free forever at the core, paid at the enterprise edge.** Trust is not monetizable.
 
 **The user is the expert in some domains, not in others. Respect the difference.**
+
+## Self-Healing Loop
+
+APEX maintains itself via `/apex:self-heal` — a framework gap-closure
+pipeline anchored on this spec file. Each round runs five sequential
+agents transcribed from the user-validated 6-instruction protocol:
+
+1. **`framework-auditor`** — performs a 12-axis audit against this
+   spec, producing `apex-audit-findings-R<N>.md` at repo root with
+   F-NNN findings classified P0–P3, status CONFIRMED/SUSPECTED, and
+   spec-anchor citations. The agent's only measuring stick is this
+   spec; nothing else.
+2. **`remediation-planner`** — converts every finding into a typed
+   R-item via the 10-question ecosystem analysis, producing
+   `REMEDIATION-PLAN-R<N>.md`. Authored under
+   `framework/docs/REMEDIATION-STYLE.md` (content-addressable anchors
+   only, no raw line numbers in plan body, three-places contract for
+   hook trigger changes, sync-strategy review for any new
+   `framework/*` file).
+3. **`batch-scheduler`** — groups R-items into independent waves
+   (5–8 per wave; P0 high-blast-radius alone), producing
+   `WAVES-R<N>.md` with verification gates and abort conditions.
+4. **`wave-executor`** — executes one wave per invocation. Strict
+   scope discipline: do-not-touch zones honored, abort-on-fail with
+   full-wave revert, conventional commits per R-item, new findings
+   discovered mid-wave go to `NEW-FINDINGS-W<X>.md` (never to new
+   fixes). Reads-only inputs include this spec, the audit findings,
+   and the remediation plan.
+5. **`round-checker`** — closes the round via convergence analysis,
+   producing `ROUND-R<N>-CLOSURE.md`. Reports trajectory
+   (IMPROVING / STAGNANT / DIVERGING). The loop terminates when two
+   consecutive rounds produce 0 P0/P1 findings and no open NEW-FINDINGS
+   of P0/P1 severity remain. Safety cap: `--max-rounds N` (default 10).
+   Divergence (P0+P1 growing by >2 between rounds) halts and escalates.
+
+All round artifacts live at repo root and follow the .gitignore patterns
+already established (`apex-audit-findings-*.md`, `REMEDIATION-PLAN-*.md`,
+`WAVES-R*.md`, `WAVE-*-RESULT.md`, `NEW-FINDINGS-*.md`,
+`ROUND-R*-CLOSURE.md`). Round state is tracked in `STATE.self_heal`
+(optional schema field initialized lazily on first invocation).
+
+The five agents live in `framework/agents/specialist/`. They are
+pipeline workers, not domain specialists — each transcribes one
+user-validated instruction into the APEX agent template. The
+`framework-auditor` is distinct from the existing test-only `auditor`
+agent (which retains its filesystem quarantine to test files).
 
 ## המיתוג שמייצר את הפער הקטגורי
 

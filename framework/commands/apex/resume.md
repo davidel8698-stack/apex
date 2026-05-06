@@ -91,6 +91,21 @@ Update STATE.context:
    - Session [completed] done · [failed] failed
 5. Append signature line from Section 3.E
 
+## SELF-HEAL RESUME CHECK
+If STATE.self_heal exists AND STATE.self_heal.status == "running":
+  Display in user's configured language:
+  "🔁 Resuming /apex:self-heal at R[STATE.self_heal.current_round], step [STATE.self_heal.current_step]"
+  If STATE.self_heal.current_step == "execute" AND STATE.self_heal.current_wave != null:
+    Display: "  Wave [STATE.self_heal.current_wave]"
+  Source and follow ~/.claude/commands/apex/self-heal.md with the
+  internal flag --resume.
+  STOP. (Do not fall through to autopilot or /apex:next.)
+
+If STATE.self_heal exists AND STATE.self_heal.status in ["closed", "halted"]:
+  Display brief: "Last self-heal loop ended with status [STATE.self_heal.status]
+  at R[STATE.self_heal.current_round]. Type /apex:self-heal to start a new round."
+  (Do not auto-resume; fall through to autopilot/next checks.)
+
 ## AUTOPILOT CHECK
 If STATE.autopilot.enabled == true:
   STATE.autopilot.consecutive_sessions++

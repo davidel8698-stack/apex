@@ -102,6 +102,18 @@ Extract and substitute into Section 6 template:
     Previous tasks completed in autopilot from STATE.autopilot.previous_tasks_completed_in_autopilot
     Advisor risk score from STATE.autopilot.advisor_risk_score
 
+  SELF-HEAL LOOP (only render if STATE.self_heal exists AND status != "idle"):
+    Status from STATE.self_heal.status (running/paused/closed/halted)
+    Round R[STATE.self_heal.current_round]
+    Step from STATE.self_heal.current_step
+    If current_step == "execute" AND current_wave != null: "Wave [current_wave]"
+    Consecutive clean rounds: STATE.self_heal.consecutive_clean_rounds / 2 (target)
+    Last P0+P1 count: STATE.self_heal.last_p01_count or "—"
+    Max rounds: STATE.self_heal.max_rounds
+    Started: STATE.self_heal.started_at (humanized)
+    If last_round_artifacts present: list paths under "Last round artifacts"
+    Render in a soft frame (Section 3.C) below the cockpit, before the signature line.
+
   LEARNINGS:
     HOT bar from hot_count/30
     WARM bar from warm_count/100
