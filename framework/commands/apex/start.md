@@ -65,6 +65,18 @@ If no:
   1. mkdir -p .apex/{pre-build,phases,backups,debate-log,roundtable-log,comprehension-gates,todos,threads,seeds,backlog}
      touch .apex/event-log.jsonl
 
+  ## MEMORY PRIMITIVE SCAFFOLDING [R5-022]
+  1a. Create the four memory primitive directories explicitly and pin them in
+      git with `.gitkeep` markers, so absence of any of these dirs later
+      signals a broken state (not "unused"). Per spec: "ארבעה primitives:
+      `apex/todos/`, `apex/threads/`, `apex/seeds/`, `apex/backlog/`."
+      ```bash
+      mkdir -p .apex/todos .apex/threads .apex/seeds .apex/backlog
+      touch .apex/todos/.gitkeep .apex/threads/.gitkeep .apex/seeds/.gitkeep .apex/backlog/.gitkeep
+      ```
+      Note: `thread.md`, `plant-seed.md`, and `add-backlog.md` retain their
+      defensive `mkdir -p` calls as belt-and-braces — preservation contract.
+
   ## TWO-TIER METHODOLOGY SETUP
   1b. Copy ~/.claude/APEX-TEMPLATE.md to .apex/APEX.md
   1c. Copy ~/.claude/PROJECT-APEX-TEMPLATE.md to .apex/PROJECT-APEX.md
