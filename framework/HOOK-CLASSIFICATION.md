@@ -39,7 +39,7 @@ Source: `framework/settings.json` entries under `.hooks.PreToolUse[]` (each entr
 
 ---
 
-## Auto-PostToolUse (6)
+## Auto-PostToolUse (7)
 
 | File | Matcher | Purpose |
 |---|---|---|
@@ -49,6 +49,7 @@ Source: `framework/settings.json` entries under `.hooks.PreToolUse[]` (each entr
 | `phantom-check.sh` | `Write` | Blocks phase advancement when SUMMARY.md contains uncertainty language (e.g., "should work", "might pass"). |
 | `circuit-breaker.sh` | `Bash` | v7 total tool-call cap + enhanced loop detection. Interrupts runaway sessions. |
 | `ci-scan.sh` | `Write\|Edit` | Supply-chain vector scanner for `.github/workflows/*.yml` (R5-010). Self-filtered: parses Claude Code hook stdin payload, exits 0 fast when the touched path is outside `.github/workflows/`. Exit 2 on detected vectors (unpinned actions, secret exposure, write-all permissions, unsafe `pull_request_target`). Also retains command-invoked usage. |
+| `tdad-index.sh` | `Write\|Edit` | Builds code-test dependency graph for TDAD impact analysis (R5-011). **Auto-wired:** SessionStart (rebuild on session start) + Auto-PostToolUse Write\|Edit (rebuild after source-file edits). Debounced via freshness guard: when `.apex/TEST_MAP.txt` is newer than every source file, exits 0 fast. Also retains command-invoked usage from `/apex:next` (after architect). Index-building logic unchanged — only the freshness guard is new. |
 
 Source: `framework/settings.json` entries under `.hooks.PostToolUse[]` (each entry has `matcher` and a nested `hooks:[{"type":"command", ...}]` array per Claude Code's native schema).
 
@@ -59,23 +60,29 @@ Source: `framework/settings.json` entries under `.hooks.PostToolUse[]` (each ent
 Hooks that fire via explicit invocation from command `.md` files, from other
 hooks, or from Claude Code lifecycle events.
 
-**Auto-wired via `settings.json` (post-R4-007 + R5-004):** `state-rebuild.sh`
-(SessionStart, conditional — fires before verify-learnings when STATE.json
-missing), `verify-learnings.sh` (SessionStart), `pre-compact.sh` (PreCompact),
-`subagent-stop.sh` (SubagentStop). The remaining 8 are command-invoked only —
-not in `settings.json`. (R5-010: `ci-scan.sh` was promoted from this
-section to **Auto-PostToolUse** — see the row above.)
+**Auto-wired via `settings.json` (post-R4-007 + R5-004 + R5-011):**
+`state-rebuild.sh` (SessionStart, conditional — fires before verify-learnings
+when STATE.json missing), `verify-learnings.sh` (SessionStart), `pre-compact.sh`
+(PreCompact), `subagent-stop.sh` (SubagentStop), `tdad-index.sh` (SessionStart
++ PostToolUse Write|Edit, debounced via freshness guard, R5-011),
+`cross-phase-audit.sh` (SubagentStop, gated to `agent_name=executor`,
+R5-011). The remaining 6 are command-invoked only — not in `settings.json`.
+(R5-010: `ci-scan.sh` was promoted from this section to **Auto-PostToolUse** —
+see the row above. R5-011: `tdad-index.sh` and `cross-phase-audit.sh` are
+listed in BOTH the Auto-PostToolUse table above and in this section, because
+they retain command-invoked call sites in `/apex:next` and `/apex:validate-phase`
+in addition to the new auto-wirings.)
 
 | File | Invoked by | Purpose |
 |---|---|---|
 | `phase-tag.sh` | `/apex:next`, `/apex:ship` | Creates git tag for completed phase; updates DORA metrics in STATE.json (cumulative avg post-R-002, cross-platform date parsing post-R-005). |
 | `verify-learnings.sh` | `/apex:next`, SessionStart event (auto-wired R4-007) | v7 tiered enforcement + decay-class-aware staleness; SessionStart emits HOT/WARM counts. |
-| `cross-phase-audit.sh` | `/apex:validate-phase`, `/apex:next` | Runs all prior-phase tests to catch regressions before advancing. |
+| `cross-phase-audit.sh` | `/apex:validate-phase`, `/apex:next`, SubagentStop event (auto-wired R5-011, executor only) | Runs all prior-phase tests to catch regressions before advancing. R5-011: also fires automatically on SubagentStop when `agent_name=executor` (signals phase progression). Other agents pass through. Replay logic unchanged. |
 | `mutation-gate.sh` | `/apex:next` (after critic PASS on verify_level C/D) | Mutation-testing gate. |
 | `context-monitor.sh` | `/apex:next`, `/apex:status`, `/apex:pause`, `/apex:resume` | Real-token counting from STATE.json; compact at 50–60%, rotate at 70%. |
 | `session-log.sh` | Many commands and hooks | APEX Session Guardian — appends events to `.apex/SESSION-LOG.md`. Shared logging primitive. |
 | `generate-task-map.sh` | `/apex:next` | Generates task map using jq + git. |
-| `tdad-index.sh` | `/apex:next` (after architect) | Builds code-test dependency graph for TDAD impact analysis. |
+| `tdad-index.sh` | `/apex:next` (after architect), SessionStart event (auto-wired R5-011), PostToolUse Write\|Edit (auto-wired R5-011, debounced) | Builds code-test dependency graph for TDAD impact analysis. R5-011: also fires automatically on SessionStart and on Write\|Edit; freshness guard short-circuits when `.apex/TEST_MAP.txt` is newer than every source file. Builder logic unchanged — only the guard is new. |
 | `tdad-impact.py` | `tdad-index.sh`, `/apex:next` | Python helper — given changed files, find impacted tests via `.apex/TEST_MAP.txt`. |
 | `pre-compact.sh` | PreCompact event (auto-wired R4-007, Claude Code runtime) | v7 observation-masking tracking; 50% cost reduction at neutral/positive quality. Backs up state to `.apex/backups/`. |
 | `subagent-stop.sh` | SubagentStop event (auto-wired R4-007, Claude Code runtime) | Subagent lifecycle cleanup; reads agent_name from stdin JSON. |
@@ -139,11 +146,11 @@ available, and both fall back to the preserved Bash logic when not.
 | Category | Count |
 |---|---|
 | Auto-PreToolUse | 6 |
-| Auto-PostToolUse | 6 |
+| Auto-PostToolUse | 7 |
 | Command-Invoked / Event-Triggered | 13 |
 | Library — Sourced | 10 |
 | CommonJS — Node-runtime guards (R5-003) | 3 |
-| **Total** | **38** |
+| **Total** | **38** (R5-011: `tdad-index.sh` and `cross-phase-audit.sh` are dual-listed in Auto-PostToolUse / SubagentStop AND Command-Invoked; not double-counted in the total) |
 
 Verify with: `ls framework/hooks/ | wc -l` → **38**.
 

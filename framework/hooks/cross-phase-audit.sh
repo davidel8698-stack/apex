@@ -1,14 +1,37 @@
 #!/bin/bash
 set -uo pipefail
 # Runs all tests from previous phases to detect regressions before advancing
+# Hook type: Auto-SubagentStop (executor only) + Command-Invoked (R5-011)
 # Usage: bash cross-phase-audit.sh [current_phase_number]
 # [שיפור 21] Now reads verify_commands from PLAN_META.json instead of regex
+#
+# R5-011: Auto-SubagentStop wiring. Claude Code's SubagentStop event passes
+# a JSON payload on stdin with `agent_name`. This hook fires automatically
+# when an agent stops; the agent-filter guard below ensures we only run
+# the audit when the executor agent stops (signals phase progression).
+# Other agents (auditor, critic, planner, ...) stop without triggering an
+# audit. Detection / replay logic below is unchanged.
 source "$(dirname "$0")/_require-jq.sh"
 require_jq
 source "$(dirname "$0")/_require-git.sh"
 source "$(dirname "$0")/_state-update.sh"
 
 export APEX_HOOK_SOURCE="cross-phase-audit"
+
+# R5-011: Agent-filter guard for SubagentStop. When invoked by the
+# SubagentStop runtime event, stdin carries a JSON payload with
+# `agent_name`. Only fire on `executor`. Command-invoked callers
+# never pass JSON on stdin, so the guard fast-paths to "proceed".
+if [ ! -t 0 ]; then
+  STDIN_PAYLOAD=$(cat 2>/dev/null || true)
+  if [ -n "$STDIN_PAYLOAD" ]; then
+    AGENT_NAME=$(printf '%s' "$STDIN_PAYLOAD" | jq -r '.agent_name // empty' 2>/dev/null || true)
+    if [ -n "$AGENT_NAME" ] && [ "$AGENT_NAME" != "executor" ]; then
+      # Non-executor agent stop — skip cross-phase audit.
+      exit 0
+    fi
+  fi
+fi
 
 # Single source of truth: extraction filter matches execution allowlist (line 52)
 ALLOWED_PREFIXES="^(npm|npx|node|python3?|pytest|vitest|jest|curl|grep|bash)"

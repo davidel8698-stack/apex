@@ -74,6 +74,12 @@
         "hooks": [
           { "type": "command", "command": "bash ~/.claude/hooks/ci-scan.sh" }
         ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          { "type": "command", "command": "bash ~/.claude/hooks/tdad-index.sh" }
+        ]
       }
     ],
     "SessionStart": [
@@ -85,6 +91,11 @@
       {
         "hooks": [
           { "type": "command", "command": "bash ~/.claude/hooks/verify-learnings.sh" }
+        ]
+      },
+      {
+        "hooks": [
+          { "type": "command", "command": "bash ~/.claude/hooks/tdad-index.sh" }
         ]
       }
     ],
@@ -99,6 +110,11 @@
       {
         "hooks": [
           { "type": "command", "command": "bash ~/.claude/hooks/subagent-stop.sh" }
+        ]
+      },
+      {
+        "hooks": [
+          { "type": "command", "command": "bash ~/.claude/hooks/cross-phase-audit.sh" }
         ]
       }
     ]

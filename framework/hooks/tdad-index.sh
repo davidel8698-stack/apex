@@ -1,12 +1,44 @@
 #!/bin/bash
 set -uo pipefail
 # Builds code-test dependency graph for TDAD impact analysis
-# Run once after architect creates plans, before Phase 01 execution
+# Hook type: Auto-SessionStart + Auto-PostToolUse (Write|Edit, debounced) + Command-Invoked (R5-011)
+# Run once after architect creates plans, before Phase 01 execution.
+# Auto-SessionStart re-builds the index when a session starts.
+# Auto-PostToolUse Write|Edit re-builds when a source file changes — debounced
+# via the freshness guard below: if .apex/TEST_MAP.txt is newer than the most
+# recent source file, exit 0 fast (no rebuild needed).
 
 source "$(dirname "$0")/_require-git.sh"
 
-# G-2: Ensure CWD is project root so .apex/ paths resolve
-cd "$(git rev-parse --show-toplevel)" || exit 2
+# G-2: Ensure CWD is project root so .apex/ paths resolve.
+# Outside a git repo (e.g. generic Claude sessions, SessionStart on a
+# non-APEX directory): pass through silently — not our concern.
+if ! ROOT=$(git rev-parse --show-toplevel 2>/dev/null); then
+  exit 0
+fi
+cd "$ROOT" || exit 0
+
+# R5-011: Freshness guard (debounce). When .apex/TEST_MAP.txt exists and is
+# newer than the most recent source file under the repo, skip rebuild.
+# Rationale: SessionStart fires this hook on every session; on hot caches
+# (TEST_MAP fresh), we must exit 0 fast so SessionStart stays under 2s.
+# Detection logic in the index builder below is unchanged — only this
+# pre-flight guard is added.
+if [ -f .apex/TEST_MAP.txt ]; then
+  # Most recent source mtime among tracked source/test files. Limit to a
+  # bounded set so the find call is fast on large repos.
+  NEWEST_SRC=$(find . \
+    \( -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" \
+       -o -name "*.py" -o -name "*.test.ts" -o -name "*.test.tsx" \
+       -o -name "*.spec.ts" -o -name "*.spec.tsx" \) \
+    -not -path "./node_modules/*" -not -path "./.next/*" \
+    -not -path "./.git/*" -not -path "./dist/*" \
+    -newer .apex/TEST_MAP.txt -print -quit 2>/dev/null)
+  if [ -z "$NEWEST_SRC" ]; then
+    # Index is fresher than every source file — nothing to do.
+    exit 0
+  fi
+fi
 
 echo "🔬 TDAD: Building code-test dependency graph..."
 
