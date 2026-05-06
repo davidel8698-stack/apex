@@ -1,5 +1,5 @@
 ---
-description: Diagnose what went wrong. Timeline reconstruction and failure analysis.
+description: Diagnose what went wrong. Timeline reconstruction and failure analysis (forensics).
 ---
 
 <context>
@@ -38,7 +38,7 @@ Read project history, present findings, and suggest recovery actions.
 ## TIMELINE RECONSTRUCTION
 Present findings as a chronological timeline:
 
-"## Forensics Report
+"## What Went Wrong — Timeline Report (Forensics)
 
 ### Timeline (most recent first)
 | Time | Source | Event |

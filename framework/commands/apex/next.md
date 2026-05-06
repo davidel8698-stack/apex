@@ -298,7 +298,7 @@ If STATE.context.current_session_phase != current_phase AND current_session_phas
 Before proceeding: verify .apex/phases/${current_phase}/PLAN_META.json and WAVE_MAP.json exist.
 If either is missing: STOP. "🚫 Architect output incomplete — PLAN_META.json or WAVE_MAP.json missing. Re-run /apex:next."
 
-## WAVE 0: Nyquist Validation Layer [F-005]
+## STEP 0: tests-can-detect-the-fix layer (Wave 0 / Nyquist Validation Layer) [F-005, R5-015]
 If STATE.complexity_level >= 2 AND NOT file_exists(.apex/phases/${current_phase}/WAVE_0_TEST_MAP.json):
   Resolve model: resolve_model("test-architect", null, "phase") from apex-model-routing.json.
   Task("test-architect", {
@@ -308,18 +308,18 @@ If STATE.complexity_level >= 2 AND NOT file_exists(.apex/phases/${current_phase}
   })
   Read WAVE_0_TEST_MAP.json.
   If WAVE_0_TEST_MAP.veto == true:
-    bash ~/.claude/hooks/session-log.sh "veto" "Wave 0 — test-architect vetoed phase ${current_phase}: ${WAVE_0_TEST_MAP.veto_reason}"
+    bash ~/.claude/hooks/session-log.sh "veto" "Step 0 (Wave 0) — test-architect vetoed phase ${current_phase}: ${WAVE_0_TEST_MAP.veto_reason}"
     STATE.status = "blocked_by_wave_0"
     Display:
-    "🚫 Wave 0 veto: ${WAVE_0_TEST_MAP.veto_reason}
+    "🚫 Step 0 veto (Wave 0 — tests cannot detect the fix yet): ${WAVE_0_TEST_MAP.veto_reason}
      Test infrastructure must be established before code execution.
      Address gaps and re-run /apex:next."
     STOP.
   Else:
-    bash ~/.claude/hooks/session-log.sh "wave_0" "Wave 0 passed — test infrastructure mapped for phase ${current_phase}"
+    bash ~/.claude/hooks/session-log.sh "wave_0" "Step 0 passed (Wave 0) — test infrastructure mapped for phase ${current_phase}"
 
 If STATE.complexity_level <= 1:
-  ## L1 skip — minimal ceremony, Wave 0 not required
+  ## L1 skip — minimal ceremony, Step 0 (Wave 0) not required
 
 ## STEP A: Read Wave Map
 CURRENT_WAVE = STATE.current_wave
@@ -434,7 +434,7 @@ If STATE.spec_version is non-empty AND file .apex/SPEC.md exists:
   If CURRENT_HASH != STATE.spec_version:
     STATE.session.drift_indicators.spec_drift_count++
     bash ~/.claude/hooks/session-log.sh "spec_drift" "SPEC.md changed since planning (stored: ${STATE.spec_version:0:8}…, current: ${CURRENT_HASH:0:8}…). Consider /apex:spec."
-    "⚠️ Spec drift detected — SPEC.md has changed since last /apex:spec. Review changes or re-run /apex:spec to update."
+    "⚠️ Spec changed since last plan (spec drift) — SPEC.md has changed since last /apex:spec. Review changes or re-run /apex:spec to update."
     (Advisory only — do not block execution)
 
 ## STEP G: Autonomy Check + Execute
@@ -481,58 +481,58 @@ Update STATE: {status: "critic_needed"}
 STATE: current_stage=build, status=critic_needed
 ─────────────────────────────────────────────────────────
 
-## PHANTOM CHECK — second defense layer before clean-room critic
-## Rationale: critic never sees SUMMARY.md (clean-room), so SUMMARY phantom language
-## is invisible to critic. The phantom-check hook greps SUMMARY.md for uncertainty
-## phrases ("should", "seems", "I believe", etc.) and fails fast before critic runs.
+## FAKE-COMPLETION CHECK (phantom check) — second defense layer before clean-room reviewer (critic) [R5-015]
+## Rationale: reviewer (critic) never sees SUMMARY.md (clean-room), so SUMMARY fake-completion language
+## (phantom verification) is invisible to the reviewer. The phantom-check hook greps SUMMARY.md for uncertainty
+## phrases ("should", "seems", "I believe", etc.) and fails fast before the reviewer runs.
 bash ~/.claude/hooks/phantom-check.sh .apex/phases/${current_phase}/${NEXT_UNIT}-SUMMARY.md
 PHANTOM_EXIT=$?
 
-If PHANTOM_EXIT == 2: phantom language detected in SUMMARY.md.
-  # Synthesize REFLEXION.md (normally written by critic on FAIL)
+If PHANTOM_EXIT == 2: fake-completion language (phantom verification) detected in SUMMARY.md.
+  # Synthesize REFLEXION.md (normally written by reviewer / critic on FAIL)
   Write .apex/phases/${current_phase}/${NEXT_UNIT}-REFLEXION.md:
-    "# Phantom Verification Failure
+    "# Fake-Completion (Phantom Verification) Failure
     ## What Failed
     SUMMARY.md contained uncertainty language (should/seems/I believe/probably/...)
-    The phantom-check hook blocked advancement before clean-room critic ran.
+    The fake-completion check (phantom-check) hook blocked advancement before the clean-room reviewer (critic) ran.
     ## For Next Attempt
     1. Rewrite SUMMARY.md with concrete command outputs only.
     2. Replace every 'should pass' / 'seems to work' with actual pasted test output.
     3. If you cannot produce concrete evidence for a claim, mark the criterion
        verified=false in RESULT.json and explain why in 'issues_found'.
     ## What NOT to Do Again
-    Never write 'I believe' or 'appears to' in SUMMARY.md — those are phantom verification."
+    Never write 'I believe' or 'appears to' in SUMMARY.md — those are fake-completion (phantom verification) language."
   # Synthesize CRITIC.md with FAIL verdict — verdict handler reads this
   Write .apex/phases/${current_phase}/${NEXT_UNIT}-CRITIC.md:
     "# Clean-Room Review: ${NEXT_UNIT}
     ## Confidence: 0/0 criteria verified | N/A unverified | N/A missing
-    ## Phantom Verification Failure
-    SUMMARY.md contained uncertainty language. Detected by phantom-check hook
-    before clean-room critic dispatch. Critic did not run.
+    ## Fake-Completion (Phantom Verification) Failure
+    SUMMARY.md contained uncertainty language. Detected by the fake-completion check (phantom-check) hook
+    before clean-room reviewer (critic) dispatch. Reviewer did not run.
     ## Verdict: FAIL
-    Phantom verification is treated as a critical failure. Rewrite SUMMARY.md
+    Fake-completion (phantom verification) is treated as a critical failure. Rewrite SUMMARY.md
     with concrete command outputs and retry."
-  # Log phantom failure to session log (DD-002 fix)
+  # Log fake-completion (phantom) failure to session log (DD-002 fix)
   bash ~/.claude/hooks/session-log.sh "phantom_fail" "זיהוי שפת פנטום ב-SUMMARY.md של ${NEXT_UNIT}"
-  # Track phantom-check overhead in framework tokens (DD-004 fix)
+  # Track fake-completion-check (phantom-check) overhead in framework tokens (DD-004 fix)
   STATE.tokens.framework_overhead += 500
-  # Skip the CLEAN-ROOM CRITIC dispatch below. Verdict handler will see FAIL.
+  # Skip the CLEAN-ROOM REVIEWER (CRITIC) dispatch below. Verdict handler will see FAIL.
   PHANTOM_SKIP_CRITIC = true
 
 Else if PHANTOM_EXIT == 1:
-  # Advisory: phantom hook couldn't find SUMMARY.md file. Log warning, continue to critic.
-  bash ~/.claude/hooks/session-log.sh "warning" "phantom-check could not locate SUMMARY.md for ${NEXT_UNIT}"
+  # Advisory: fake-completion-check (phantom-check) hook couldn't find SUMMARY.md file. Log warning, continue to reviewer (critic).
+  bash ~/.claude/hooks/session-log.sh "warning" "fake-completion-check (phantom-check) could not locate SUMMARY.md for ${NEXT_UNIT}"
   PHANTOM_SKIP_CRITIC = false
 
 Else (PHANTOM_EXIT == 0):
-  # SUMMARY uses concrete language — proceed to clean-room critic normally.
+  # SUMMARY uses concrete language — proceed to clean-room reviewer (critic) normally.
   PHANTOM_SKIP_CRITIC = false
 
-## CLEAN-ROOM CRITIC
+## CLEAN-ROOM REVIEWER (CRITIC) [R5-015]
 ## GUARD: If PHANTOM_SKIP_CRITIC == true, skip this ENTIRE section (CRITIC_CONTEXT,
 ## security persona, Mission Briefing, Task("critic"), Flight Recorder, framework_overhead
 ## update) and proceed directly to PROCESS VERDICT + AUTONOMY UPDATE below. The verdict
-## handler will read the synthetic CRITIC.md written by phantom-check and run its FAIL path.
+## handler will read the synthetic CRITIC.md written by fake-completion check (phantom-check) and run its FAIL path.
 If PHANTOM_SKIP_CRITIC: skip to PROCESS VERDICT section below.
 
 CRITIC_CONTEXT = {
@@ -739,7 +739,7 @@ FAIL:
       bash ~/.claude/hooks/session-log.sh "bypass" "pipeline-bypass: direct fix for ${NEXT_UNIT} instead of reflexion→retry"
 
 ## LEARNING EXTRACTION (on FAIL/PARTIAL only)
-If verdict is FAIL or PARTIAL with notable pattern (phantom, test fraud, silent failure):
+If verdict is FAIL or PARTIAL with notable pattern (fake-completion / phantom, test fraud, silent failure):
   Read .apex/phases/${current_phase}/[task]-REFLEXION.md "What Failed" section
   Append verbatim to ~/.claude/apex-learnings.md ## WARM section with timestamp + project tag
 

@@ -50,12 +50,12 @@ If user typed `/apex:help` with no question, list all commands grouped by catego
 | `/apex:peer-review` | Code peer review |
 | `/apex:ui-review` | UI/UX review |
 | `/apex:refine` | Refine and improve code |
-| `/apex:walkthrough` | Guided code walkthrough |
+| `/apex:walkthrough` | Guided explanation of code or decisions (walkthrough) |
 
 ### Recovery & Diagnostics
 | Command | Purpose |
 |---------|---------|
-| `/apex:forensics` | Diagnose what went wrong |
+| `/apex:forensics` | Diagnose what went wrong (timeline reconstruction / forensics) |
 | `/apex:rollback` | Revert to previous state |
 | `/apex:recover` | Recover from crash or stuck state |
 | `/apex:resume` | Resume after context rotation |

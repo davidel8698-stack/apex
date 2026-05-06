@@ -44,13 +44,13 @@ esac
 
 # Require jq
 if ! command -v jq &>/dev/null; then
-  echo "⚠️ SCHEMA-DRIFT: jq not available, skipping validation" >&2
+  echo "⚠️ STATE FILE CHANGED UNEXPECTEDLY (schema-drift): jq not available, skipping validation" >&2
   exit 0
 fi
 
 # Validate JSON parse
 if ! jq empty "$FILE" 2>/dev/null; then
-  echo "🚫 SCHEMA-DRIFT: $FILE is not valid JSON" >&2
+  echo "🚫 STATE FILE CHANGED UNEXPECTEDLY (schema-drift): $FILE is not valid JSON" >&2
   # R5-014: structured fix plan
   if command -v emit_fix_plan >/dev/null 2>&1; then
     emit_fix_plan \
@@ -74,7 +74,7 @@ for KEY in $(echo "$REQUIRED_KEYS" | jq -r '.[]'); do
 done
 
 if [ -n "$MISSING" ]; then
-  echo "🚫 SCHEMA-DRIFT: $FILE missing required fields:$MISSING" >&2
+  echo "🚫 STATE FILE CHANGED UNEXPECTEDLY (schema-drift): $FILE missing required fields:$MISSING" >&2
   # R5-014: structured fix plan
   if command -v emit_fix_plan >/dev/null 2>&1; then
     emit_fix_plan \
@@ -99,7 +99,7 @@ case "$FILE" in
         and ((has("last_synced_at") | not) or (.last_synced_at == null) or (.last_synced_at | type == "string"))
         and ((has("threshold_events") | not) or (.threshold_events | type == "number"))
       ' "$FILE" >/dev/null 2>&1; then
-        echo "🚫 SCHEMA-DRIFT: $FILE sqlite_mirror has invalid shape (expected {enabled?: bool, last_synced_at?: string|null, threshold_events?: int})" >&2
+        echo "🚫 STATE FILE CHANGED UNEXPECTEDLY (schema-drift): $FILE sqlite_mirror has invalid shape (expected {enabled?: bool, last_synced_at?: string|null, threshold_events?: int})" >&2
         # R5-014: structured fix plan (preserves R5-002 sqlite_mirror validation)
         if command -v emit_fix_plan >/dev/null 2>&1; then
           emit_fix_plan \

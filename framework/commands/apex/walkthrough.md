@@ -1,5 +1,5 @@
 ---
-description: Guided forensics with step-by-step explanations and fix suggestions.
+description: Step-by-step explanation of what happened with fix suggestions (guided forensics / walkthrough).
 ---
 
 <context>
@@ -9,7 +9,7 @@ If proposals_mode == true: NEVER ask open-ended questions in this command.
 Instead, present numbered proposals with a recommended default marked [recommended].
 
 ## PURPOSE
-A guided, interactive version of /apex:forensics. Walks the user through
+A guided, interactive version of /apex:forensics (timeline reconstruction). Walks the user through
 what happened, explains each step in plain language, and offers fix suggestions.
 
 ## FIX_PLAN.md AWARENESS [R5-014]

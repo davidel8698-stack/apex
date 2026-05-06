@@ -15,7 +15,7 @@ fi
 SUMMARY_FILE="${1:-$(find .apex/phases -name "*SUMMARY.md" -newer .apex/STATE.json | tail -1)}"
 
 if [ -z "$SUMMARY_FILE" ] || [ ! -f "$SUMMARY_FILE" ]; then
-  echo "⚠️ PHANTOM CHECK: No summary file found" >&2
+  echo "⚠️ FAKE-COMPLETION CHECK (phantom check): No summary file found" >&2
   exit 1
 fi
 
@@ -25,7 +25,7 @@ RED_FLAGS="should pass|seems to|likely works|I believe|appears correct|looks goo
 
 if grep -qi "$RED_FLAGS" "$SUMMARY_FILE" 2>/dev/null; then
   MATCHED=$(grep -oi "$RED_FLAGS" "$SUMMARY_FILE" | head -3 | tr '\n' ', ')
-  echo "❌ PHANTOM VERIFICATION DETECTED in $SUMMARY_FILE"
+  echo "❌ FAKE-COMPLETION LANGUAGE DETECTED (phantom verification) in $SUMMARY_FILE"
   echo "Found uncertainty language: $MATCHED"
   echo ""
   echo "SUMMARY.md must contain ACTUAL command outputs, not beliefs about results."
@@ -58,5 +58,5 @@ if grep -qi "$RED_FLAGS" "$SUMMARY_FILE" 2>/dev/null; then
   exit 2
 fi
 
-echo "✅ PHANTOM CHECK: Summary uses concrete evidence language"
+echo "✅ FAKE-COMPLETION CHECK (phantom check): Summary uses concrete evidence language"
 exit 0

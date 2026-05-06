@@ -84,14 +84,14 @@ if [ "$CURRENT_HASH" = "$LAST_HASH" ] && [ -n "$LAST_HASH" ]; then
     fi
 
     {
-      echo "🛑 CIRCUIT BREAKER: NO-CHANGE LOOP"
+      echo "🛑 SAFETY-STOP FIRED (circuit breaker): STUCK LOOP — NO FILE CHANGES"
       echo "   $COUNT consecutive actions without file changes."
       echo "   Likely stuck in a loop."
       echo ""
       echo "   Fix plan written to: .apex/FIX_PLAN.md (also mirrored to .apex/RECOVERY_MENU.md)"
       echo ""
       echo "   Options:"
-      echo "   1. /apex:forensics — diagnose what happened"
+      echo "   1. /apex:forensics — diagnose what happened (timeline reconstruction)"
       echo "   2. /apex:rollback  — revert to last known-good state"
       echo "   3. /apex:recover   — reset and re-plan"
     } >&2
@@ -145,14 +145,14 @@ if [ "$TOOL_CALLS" -ge "$MAX_TOOL_CALLS" ]; then
   fi
 
   {
-    echo "🛑 CIRCUIT BREAKER: TOOL-CALL CAP REACHED"
+    echo "🛑 SAFETY-STOP FIRED (circuit breaker): TOO MANY TOOL CALLS (tool-call cap reached)"
     echo "   $TOOL_CALLS tool calls on this task (cap: $MAX_TOOL_CALLS)."
     echo "   R7: Failed trajectories cost 4x+ more tokens than successful ones."
     echo ""
     echo "   Fix plan written to: .apex/FIX_PLAN.md (also mirrored to .apex/RECOVERY_MENU.md)"
     echo ""
     echo "   Options:"
-    echo "   1. /apex:forensics — diagnose where it went off the rails"
+    echo "   1. /apex:forensics — diagnose where it went off the rails (timeline reconstruction)"
     echo "   2. /apex:rollback  — revert recent edits"
     echo "   3. /apex:recover   — reset and re-plan"
   } >&2

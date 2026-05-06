@@ -1,5 +1,5 @@
 ---
-description: Poison Pill validation — checks all agent prompts using real git operations. Run weekly or before new project.
+description: Framework health check — validates agent prompts using real git operations (Poison Pill validation). Run weekly or before new project.
 ---
 
 <context>
@@ -8,7 +8,7 @@ Read .apex/STATE.json → proposals_mode.
 If proposals_mode == true: NEVER ask open-ended questions in this command.
 Instead, present numbered proposals with a recommended default marked [recommended].
 
-"🧪 Running APEX Agent Health Check (Real Environment)..."
+"🧪 Running APEX framework health check — agent prompts and infrastructure (Real Environment)..."
 
 ## TEST 0 — Environment Precheck [Round 2]
 Verifies required CLI tools and that jq-dependent hooks fail loud on missing jq.

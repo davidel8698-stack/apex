@@ -32,8 +32,8 @@ This lets the user scan decision-required items before diving into the full tele
 
 ## TECHNICAL LEVEL ADAPTATION
 Read technical level from CLAUDE.md ## User Profile section.
-Adapt dashboard commentary:
-- non-programmer: after each metric section, add a plain-language sentence explaining what it means and whether it's good or bad
+Adapt dashboard commentary (per `framework/docs/PLAIN-LANGUAGE-MAPPING.md` — plain language first, technical term in parens):
+- non-programmer: after each metric section, add a plain-language sentence explaining what it means and whether it's good or bad. Replace bare jargon labels with plain-language form (e.g., "code-evolution score (EvoScore)", "delivery metrics (DORA)", "test-strength score (mutation kill rate)", "hands-off mode (autopilot)").
 - junior: add brief tooltips for non-obvious metrics (EvoScore, DORA, mutation kill rate)
 - senior/architect: display raw metrics only (current behavior)
 
@@ -125,7 +125,7 @@ Follow with the signature line.
 
 ## INLINE HINT (below signature)
 If autopilot is disabled: add rounded frame (Section 3.C) with:
-  "Say 'enable autopilot' to run the Advisor (Section 10)."
+  "Say 'enable hands-off mode (autopilot)' to run the Advisor (Section 10)."
 If autopilot is enabled: add active badge from Section 9.
 If autopilot is paused: add paused badge from Section 9.
 </context>
