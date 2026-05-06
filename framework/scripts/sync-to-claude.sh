@@ -240,6 +240,20 @@ copy_tree "$FRAMEWORK_ROOT/hooks"         "$CLAUDE_ROOT/hooks"
 # copy_tree call above already covers it, but the explicit line documents
 # the contract: _state-sqlite.sh is part of the canonical install.
 copy_file "$FRAMEWORK_ROOT/hooks/_state-sqlite.sh" "$CLAUDE_ROOT/hooks/_state-sqlite.sh"
+# R5-003: explicit delivery anchors for the dual-runtime security stack.
+# copy_tree above walks `find -type f` so it already covers .cjs, but the
+# explicit lines below document the contract: the spec-named CommonJS
+# files (prompt-guard.cjs, workflow-guard.cjs, security.cjs) are part of
+# the canonical install and must reach ~/.claude/hooks/ alongside the .sh
+# shims so settings.json's runtime-aware dispatch resolves to a real file.
+copy_file "$FRAMEWORK_ROOT/hooks/prompt-guard.cjs"   "$CLAUDE_ROOT/hooks/prompt-guard.cjs"
+copy_file "$FRAMEWORK_ROOT/hooks/workflow-guard.cjs" "$CLAUDE_ROOT/hooks/workflow-guard.cjs"
+copy_file "$FRAMEWORK_ROOT/hooks/security.cjs"       "$CLAUDE_ROOT/hooks/security.cjs"
+# R5-003: the .cjs guards load detection patterns from the test-fixtures
+# tree at runtime. The copy_tree call below covers it, but the explicit
+# anchor documents the contract: the security-patterns fixture is a
+# runtime dependency, not just a test artifact.
+copy_file "$FRAMEWORK_ROOT/test-fixtures/security-patterns.json" "$CLAUDE_ROOT/test-fixtures/security-patterns.json"
 copy_tree "$FRAMEWORK_ROOT/apex-skills"   "$CLAUDE_ROOT/apex-skills"
 copy_tree "$FRAMEWORK_ROOT/schemas"       "$CLAUDE_ROOT/schemas"
 copy_tree "$FRAMEWORK_ROOT/tests"           "$CLAUDE_ROOT/tests"

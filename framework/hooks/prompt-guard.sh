@@ -1,9 +1,39 @@
 #!/bin/bash
 set -u
-# Prompt injection detection — defense-in-depth layer
-# Hook type: PreToolUse (agent dispatch / file write)
+# Prompt injection detection — defense-in-depth layer.
+# Hook type: Auto-PreToolUse (shim — delegates to prompt-guard.cjs when node is present).
+#
+# R5-003: Spec names this guard as `apex-prompt-guard.js`. The canonical
+# implementation now lives in framework/hooks/prompt-guard.cjs. This .sh
+# remains for two reasons:
+#   1. Hosts without `node` on PATH (rare but possible — minimal containers,
+#      Bash-only forensic shells) still need the protection.
+#   2. The path ~/.claude/hooks/prompt-guard.sh is referenced by command .md
+#      files and (historically) by settings.json — keeping the file at the
+#      same name preserves those invocation sites.
+#
+# Behavior contract: byte-equivalent detection patterns to prompt-guard.cjs
+# (both load from framework/test-fixtures/security-patterns.json — see
+# security.cjs for the .cjs side). When node is available, this shim
+# delegates so the canonical regex engine runs both branches identically.
 
 INPUT="${1:-}"
+
+# --- Delegate to the .cjs when node is present ------------------------------
+if command -v node >/dev/null 2>&1; then
+  CJS_PATH="$(dirname "$0")/prompt-guard.cjs"
+  if [ -f "$CJS_PATH" ]; then
+    if [ -n "$INPUT" ]; then
+      exec node "$CJS_PATH" "$INPUT"
+    else
+      # No argv → forward stdin to the .cjs (Claude Code hook protocol).
+      exec node "$CJS_PATH"
+    fi
+  fi
+  # Fall through to native Bash if .cjs missing (degraded install).
+fi
+
+# --- Native Bash fallback (preservation contract: original R-006 logic) -----
 
 block() {
   echo "APEX PROMPT GUARD: BLOCKED" >&2

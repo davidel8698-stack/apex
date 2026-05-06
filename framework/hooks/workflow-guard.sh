@@ -1,11 +1,20 @@
 #!/bin/bash
 set -u
-# Workflow recipe injection scanner — defense-in-depth layer
-# Hook type: Auto-wired PreToolUse:Read (framework/settings.json) + explicit invocation by /apex:workflow
+# Workflow recipe injection scanner — defense-in-depth layer.
+# Hook type: Auto-PreToolUse:Read (shim — delegates to workflow-guard.cjs when node is present)
+#            + explicit invocation by /apex:workflow.
 #            Self-filters on path: scans only apex-workflows/* files; instant exit 0 for all others.
 #
-# Scans a workflow .md file for injection patterns before execution.
-# Exit 2 = blocked (injection detected), Exit 0 = clean
+# R5-003: Spec names this guard as `apex-workflow-guard.js`. The canonical
+# implementation now lives in framework/hooks/workflow-guard.cjs. This .sh
+# remains for two reasons:
+#   1. Hosts without `node` on PATH still need the protection.
+#   2. ~/.claude/hooks/workflow-guard.sh is referenced by /apex:workflow and
+#      (historically) by settings.json — keeping the file path stable
+#      preserves those invocation sites.
+#
+# Behavior contract: byte-equivalent detection patterns to workflow-guard.cjs
+# (both load from framework/test-fixtures/security-patterns.json).
 
 source "$(dirname "$0")/_security-common.sh"
 
@@ -15,6 +24,21 @@ FILE="${1:-}"
 if [ -z "$FILE" ] && [ ! -t 0 ]; then
   FILE=$(cat 2>/dev/null | jq -r '.tool_input.file_path // empty' 2>/dev/null)
 fi
+
+# --- Delegate to the .cjs when node is present ------------------------------
+if command -v node >/dev/null 2>&1; then
+  CJS_PATH="$(dirname "$0")/workflow-guard.cjs"
+  if [ -f "$CJS_PATH" ]; then
+    if [ -n "$FILE" ]; then
+      exec node "$CJS_PATH" "$FILE"
+    else
+      exec node "$CJS_PATH"
+    fi
+  fi
+  # Fall through to native Bash if .cjs missing (degraded install).
+fi
+
+# --- Native Bash fallback (preservation contract: original R-006 logic) -----
 
 # Self-filter: only scan workflow recipe files. Instant exit for everything else.
 # Non-workflow Read operations must not incur file I/O cost.

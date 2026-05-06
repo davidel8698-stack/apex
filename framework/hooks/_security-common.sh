@@ -7,6 +7,18 @@
 # described in apex-spec.md (Failure 9 — Defense-in-Depth Security Layer).
 # See framework/security-policy.md for the full mechanism-to-file mapping.
 #
+# R5-003 dual-runtime note: The two named-as-`.js` guards (prompt-guard,
+# workflow-guard) and the named `security.cjs` module are now also shipped
+# as Node-runtime CommonJS files: `framework/hooks/prompt-guard.cjs`,
+# `workflow-guard.cjs`, `security.cjs`. Those files reimplement the
+# same normalization (zero-width strip + whitespace collapse), pattern
+# matching, and block-response formatting that this Bash library provides.
+# Both runtimes load their detection patterns from
+# `framework/test-fixtures/security-patterns.json` — single source of truth,
+# so the .sh and .cjs branches cannot drift. The .sh shims (prompt-guard.sh,
+# workflow-guard.sh) prefer the .cjs path when `node` is on PATH and fall
+# back to the native Bash code below when it is not.
+#
 # Sourced by security hooks that need common normalization and pattern
 # matching. Never executed directly.
 #

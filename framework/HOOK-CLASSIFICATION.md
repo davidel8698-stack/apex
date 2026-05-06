@@ -4,8 +4,9 @@
 developer can answer "how does this hook fire?" without cross-referencing
 `framework/settings.json` and 44 command `.md` files.
 
-**Total files:** 32 — 23 functional `.sh` hooks + 8 library `.sh` files
-(`_`-prefixed) + 1 Python helper. Category totals below sum to 32.
+**Total files:** 35 — 23 functional `.sh` hooks + 8 library `.sh` files
+(`_`-prefixed) + 1 Python helper + 3 CommonJS guards (R5-003: `prompt-guard.cjs`,
+`workflow-guard.cjs`, `security.cjs`). Category totals below sum to 35.
 
 **Spec anchor:** `apex-spec.md` — "Hook system — 24+ hooks" and
 "Fail-loud, never fail-silent."
@@ -28,11 +29,11 @@ developer can answer "how does this hook fire?" without cross-referencing
 | File | Matcher | Purpose |
 |---|---|---|
 | `destructive-guard.sh` | `Bash` | v7 hardened destructive command blocker — normalized matching, chained-command splitting. Exit 2 on rm -rf, force pushes, etc. |
-| `prompt-guard.sh` | `Write\|Edit\|Agent` | Prompt-injection detection (instruction override, role hijacking, hidden HTML, zero-width chars). Exit 2 on match. |
+| `prompt-guard.sh` | `Write\|Edit\|Agent` | Prompt-injection detection (instruction override, role hijacking, hidden HTML, zero-width chars). Exit 2 on match. **Dual-runtime (R5-003):** `.cjs` preferred, `.sh` shim falls back to native Bash when node absent. Settings.json invocation is runtime-aware (`if command -v node ... node prompt-guard.cjs; else bash prompt-guard.sh; fi`). |
 | `path-guard.sh` | `Write\|Edit` | Path traversal and sensitive-file protection (.env, credentials, .git/*, parent-dir escapes). Exit 2 on match. |
 | `pre-task-snapshot.sh` | `Bash` | Git stash snapshot before task execution — enables per-task rollback. |
 | `quarantine-guard.sh` | `Read\|Bash` | Agent-aware file access control. When `APEX_ACTIVE_AGENT=auditor`, restrict reads to test files and `.apex/` state. Microsecond pass-through otherwise. |
-| `workflow-guard.sh` | `Read` | Workflow-recipe injection scanner (post-R-006 auto-wiring). Self-filters non-workflow paths. Also invoked explicitly by `/apex:workflow`. |
+| `workflow-guard.sh` | `Read` | Workflow-recipe injection scanner (post-R-006 auto-wiring). Self-filters non-workflow paths. Also invoked explicitly by `/apex:workflow`. **Dual-runtime (R5-003):** `.cjs` preferred, `.sh` shim falls back to native Bash when node absent. |
 
 Source: `framework/settings.json` entries under `.hooks.PreToolUse[]` (each entry has `matcher` and a nested `hooks:[{"type":"command", ...}]` array per Claude Code's native schema).
 
@@ -103,6 +104,32 @@ Files prefixed with `_` — utility libraries sourced by other hooks.
 
 ---
 
+## CommonJS — Node-runtime guards (3, R5-003)
+
+Spec anchor: "Defense-in-Depth Security Layer: `apex-prompt-guard.js`, Path
+Traversal Prevention, `apex-workflow-guard.js`, CI scanner, `security.cjs`
+module." The two guards spec'd as `.js` and the `security.cjs` module ship as
+CommonJS Node-runtime files. They run with zero npm dependencies (Node stdlib
+only). Detection patterns load from `framework/test-fixtures/security-patterns.json`
+— single source of truth shared with the `.sh` siblings, so the two runtimes
+cannot drift.
+
+| File | Trigger | Purpose |
+|---|---|---|
+| `prompt-guard.cjs` | Auto-PreToolUse (Write\|Edit\|Agent) — invoked by settings.json runtime-aware command, or by `prompt-guard.sh` shim when node is on PATH | Prompt-injection detection. Behavior-identical to `prompt-guard.sh`; exit 2 on match. |
+| `workflow-guard.cjs` | Auto-PreToolUse (Read) — invoked by settings.json runtime-aware command, or by `workflow-guard.sh` shim when node is on PATH | Workflow-recipe injection scanner. Self-filters non-`apex-workflows/` paths. Behavior-identical to `workflow-guard.sh`; exit 2 on match. |
+| `security.cjs` | Library — required by `prompt-guard.cjs` and `workflow-guard.cjs`; never invoked directly | Node counterpart of `_security-common.sh`: `normalize`, `hasZeroWidthChars`, `matchPromptInjection`, `matchWorkflowInjection`, `emitBlock`, `readStdinSync`, `parseHookStdin`. Loads canonical pattern set from `framework/test-fixtures/security-patterns.json`. |
+
+**Runtime-aware dispatch.** `framework/settings.json` PreToolUse entries for
+the two ported guards use a shell conditional: `if command -v node ... && [ -f
+~/.claude/hooks/<name>.cjs ]; then node <name>.cjs; else bash <name>.sh; fi`.
+The `.sh` shims at the same names also auto-delegate to the `.cjs` when node
+is present — so command-invoked sites (e.g. `/apex:workflow`) and the
+auto-wired settings.json path both hit the canonical `.cjs` engine when
+available, and both fall back to the preserved Bash logic when not.
+
+---
+
 ## Category Totals
 
 | Category | Count |
@@ -111,13 +138,17 @@ Files prefixed with `_` — utility libraries sourced by other hooks.
 | Auto-PostToolUse | 5 |
 | Command-Invoked / Event-Triggered | 13 |
 | Library — Sourced | 8 |
-| **Total** | **32** |
+| CommonJS — Node-runtime guards (R5-003) | 3 |
+| **Total** | **35** |
 
-Verify with: `ls framework/hooks/ | wc -l` → **32**.
+Verify with: `ls framework/hooks/ | wc -l` → **35**.
 
 **Delta from R-003 original acceptance criterion:** plan document referenced
-"28 files" based on a pre-Wave-1 count. Wave 1 R-005 added `_date-parse.sh`,
-bringing the total to 29. All files accounted for in the tables above.
+"28 files" based on a pre-Wave-1 count. Wave 1 R-005 added `_date-parse.sh`
+(29). Wave 3 R5-023 added `_dream-cycle-emit.sh` (30). Wave 3 R5-004 added
+`state-rebuild.sh` (31). Wave 4 R5-002 added `_state-sqlite.sh` (32). Wave 5
+R5-003 added three CommonJS guards `prompt-guard.cjs`, `workflow-guard.cjs`,
+`security.cjs` (35). All files accounted for in the tables above.
 
 ---
 
