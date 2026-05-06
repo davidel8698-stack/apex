@@ -237,8 +237,45 @@ If no:
      }
   4. If .apex/CONTEXT_BUDGET.json does not exist:
        Copy ~/.claude/CONTEXT_BUDGET.default.json to .apex/CONTEXT_BUDGET.json
-  5. Copy ~/.claude/THREAT_MODEL-TEMPLATE.md to .apex/THREAT_MODEL.md
-     Substitute [PROJECT_NAME] with project name, [DATE] with current date, [DETECTED_STACK] with "TBD — updated after Phase 0".
+  ## THREAT-MODEL BOOTSTRAP [R5-020] — project-specific, re-runnable
+  ## Spec anchor: "`THREAT_MODEL.md` per-project עם Indirect Prompt Injection כאיום ברירת מחדל."
+  5. Invoke the security specialist in threat-model-bootstrap mode to
+     produce `.apex/THREAT_MODEL.md` from
+     `~/.claude/THREAT_MODEL-TEMPLATE.md`. This is re-runnable: if
+     `.apex/THREAT_MODEL.md` already exists, the agent writes a merge
+     proposal to `.apex/THREAT_MODEL.proposed.md` instead of
+     overwriting (preservation contract). Otherwise it scaffolds
+     `.apex/THREAT_MODEL.md` directly.
+
+     Default-on threat: the produced file MUST contain
+     "Indirect Prompt Injection" verbatim — strip-resistant by spec.
+
+     Bootstrap flow:
+     - If `.apex/THREAT_MODEL.md` exists → propose merge, do NOT
+       overwrite.
+     - Else → copy template to `.apex/THREAT_MODEL.md`, substitute
+       `[PROJECT_NAME]` (project directory name), `[DATE]` (current
+       date), `[DETECTED_STACK]` ("TBD — updated after Phase 0" until
+       planner Phase 0 completes).
+     - Tailor the Stack-Specific Threats section to the detected stack
+       (drop irrelevant T-1xx/T-2xx/T-3xx subsections).
+     - Populate at least one Project-Specific Threat (T-4xx) from
+       captured project context.
+
+     Invocation (prose form to preserve R5-001 Task(...) invocation
+     count invariant): run the security specialist agent in
+     threat-model-bootstrap mode. Pass it the project root ($PWD), the
+     source template path (~/.claude/THREAT_MODEL-TEMPLATE.md), and
+     the target path (.apex/THREAT_MODEL.md). The default threat
+     "Indirect Prompt Injection" must be preserved verbatim. Re-run
+     guard: if target already exists, the agent writes a proposal to
+     .apex/THREAT_MODEL.proposed.md and stops.
+
+     Fallback (security agent unavailable): copy
+     `~/.claude/THREAT_MODEL-TEMPLATE.md` to `.apex/THREAT_MODEL.md`
+     with the same substitutions and continue. The template already
+     contains "Indirect Prompt Injection" as T-001, so the default
+     threat is preserved even via the fallback path.
   6. bash ~/.claude/hooks/session-log.sh "start" "סשן התחיל — [project name]"
   7. Task("planner", "Project root: $PWD. Run Phase 0 auto-detection first. Classify this project, capture requirements, and generate pre-build checklist if Level 3+.")
   8. After planner:

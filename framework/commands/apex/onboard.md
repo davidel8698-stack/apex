@@ -79,6 +79,13 @@ Guide through APEX setup for an existing project that does not have .apex/ initi
    Invoking /apex:start..."
 
    Execute the /apex:start procedure with the gathered context.
+   This includes the THREAT-MODEL BOOTSTRAP [R5-020] step which
+   invokes the security specialist in threat-model-bootstrap mode to
+   produce `.apex/THREAT_MODEL.md` from `~/.claude/THREAT_MODEL-TEMPLATE.md`,
+   with `Indirect Prompt Injection` preserved as the default threat.
+   Re-runnability: if `.apex/THREAT_MODEL.md` already exists from a
+   prior onboarding attempt, the bootstrap writes a merge proposal to
+   `.apex/THREAT_MODEL.proposed.md` rather than overwriting.
 
 6. Log event:
    bash ~/.claude/hooks/session-log.sh "onboard" "Existing project onboarded — type: [type], complexity: [level]"

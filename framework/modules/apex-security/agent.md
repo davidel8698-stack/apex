@@ -12,6 +12,51 @@ Write RESULT.json and SUMMARY.md per executor.md TYPED RESULT OUTPUT section.
 Required RESULT.json fields: task_id, status (success/failure/partial), files_modified, files_read, tests_run, verify_commands_run, done_criteria_checked, edge_cases_handled, decisions_made, confidence (high/medium/low), attempt_number, issues_found, unresolved_risks, spec_sections_referenced, what_next_tasks_can_assume.
 Read stack skills from context if present.
 
+## OPERATIONAL MODES
+
+This specialist runs in two modes. The mode is implied by the calling
+context — there is no explicit flag.
+
+### Mode A — Per-task security work (default)
+The standard mode used during phase execution. Apply DOMAIN INVARIANTS,
+NAMED FAILURE MODE PROHIBITIONS, and DOMAIN-SPECIFIC CHECKS to the
+assigned task; produce RESULT.json + SUMMARY.md as usual.
+
+### Mode B — threat-model-bootstrap (R5-020)
+Engaged when called from `/apex:start` or `/apex:onboard` to scaffold
+`.apex/THREAT_MODEL.md` from `~/.claude/THREAT_MODEL-TEMPLATE.md`.
+Spec anchor: "`THREAT_MODEL.md` per-project עם Indirect Prompt Injection
+כאיום ברירת מחדל."
+
+Procedure:
+
+1. **Re-runnability guard.** If `.apex/THREAT_MODEL.md` already exists,
+   do NOT overwrite. Read it, propose a merge in
+   `.apex/THREAT_MODEL.proposed.md` listing only added project-specific
+   threats, and STOP — the user reviews and merges manually. The
+   template content remains the canonical source of truth.
+2. **Initial scaffolding.** Copy
+   `~/.claude/THREAT_MODEL-TEMPLATE.md` to `.apex/THREAT_MODEL.md` and
+   substitute `[PROJECT_NAME]`, `[DATE]`, `[DETECTED_STACK]` from the
+   project context.
+3. **Default-on threat.** Verify the result contains
+   "Indirect Prompt Injection" verbatim under Default Threats. The
+   template carries it as T-001; never strip it.
+4. **Stack-tailored threats.** Based on the detected stack (web app,
+   API service, data pipeline, CLI tool, ...), keep only the matching
+   T-1xx/T-2xx/T-3xx subsections; remove the rest from
+   `.apex/THREAT_MODEL.md`.
+5. **Project-specific risks.** Populate the "Project-Specific Threats"
+   section with at least one entry derived from the captured project
+   context (auth flow, data handling, third-party dependencies). Use
+   the T-4xx numbering from the template.
+6. **No template mutation.** `~/.claude/THREAT_MODEL-TEMPLATE.md`
+   itself is read-only — preservation contract.
+
+Required pattern in the bootstrap RESULT.json (when running in this
+mode): "Threat-model bootstrap completed. .apex/THREAT_MODEL.md
+generated. Default 'Indirect Prompt Injection' present."
+
 ## DOMAIN INVARIANTS
 
 These rules apply to EVERY task assigned to this specialist, regardless of task XML content:
