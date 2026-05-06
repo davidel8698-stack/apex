@@ -89,6 +89,16 @@ Set `"veto": true` and block execution if ANY of these are true:
 When veto is triggered:
 - Write TEST_PLAN.json with `"veto": true` and `"veto_reason": "<explanation>"`
 - The orchestrator (next.md) will log to SESSION-LOG and block execution
+- **R5-019 Living Evidence Counter (veto branch only):** also append a
+  `test-architect-veto` entry to apex-learnings.md so the counter
+  records the veto event:
+  ```bash
+  source ~/.claude/hooks/_learnings-emit.sh
+  emit_learning "test-architect-veto" "$PHASE" "Test-architect veto on task $TASK_ID: $VETO_REASON"
+  ```
+  Best-effort — wrap with `|| true` if invoked from a context that
+  propagates exit codes. Spec anchor: "Living Evidence Counter" +
+  "Proof-of-process beats proof-of-promise."
 
 ## CONSTRAINTS
 
@@ -169,6 +179,14 @@ Set `"veto": true` and block phase execution if ANY of these are true:
 When veto is triggered:
 - Write WAVE_0_TEST_MAP.json with `"veto": true` and `"veto_reason": "<explanation with actionable steps>"`
 - The orchestrator (next.md) will log to SESSION-LOG and block phase execution
+- **R5-019 Living Evidence Counter (veto branch only):** also append a
+  `test-architect-veto` entry to apex-learnings.md:
+  ```bash
+  source ~/.claude/hooks/_learnings-emit.sh
+  emit_learning "test-architect-veto" "$PHASE" "Wave 0 veto on phase $PHASE: $VETO_REASON"
+  ```
+  Best-effort — wrap with `|| true` if invoked from a context that
+  propagates exit codes.
 
 ### PHASE MODE CONSTRAINTS
 

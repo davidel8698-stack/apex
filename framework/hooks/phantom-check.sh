@@ -23,6 +23,16 @@ if grep -qi "$RED_FLAGS" "$SUMMARY_FILE" 2>/dev/null; then
   echo "Replace uncertainty phrases with:"
   echo "  'Tests pass. Output: [paste actual npm test output]'"
   echo "  'Verified. Command: [cmd]. Output: [actual output]'"
+  # R5-019: Living Evidence Counter — append a phantom-fail entry to
+  # apex-learnings.md. Best-effort: failure here must not mask the
+  # exit-2 phantom verdict.
+  if [ -f "$(dirname "$0")/_learnings-emit.sh" ]; then
+    # shellcheck source=/dev/null
+    source "$(dirname "$0")/_learnings-emit.sh"
+    PHASE_GUESS=$(echo "$SUMMARY_FILE" | sed -nE 's|.*phases/([^/]+)/.*|\1|p')
+    [ -z "$PHASE_GUESS" ] && PHASE_GUESS="global"
+    emit_learning "phantom-fail" "$PHASE_GUESS" "Phantom language in $(basename "$SUMMARY_FILE"): $MATCHED" 2>/dev/null || true
+  fi
   exit 2
 fi
 

@@ -255,6 +255,13 @@ copy_file "$FRAMEWORK_ROOT/hooks/security.cjs"       "$CLAUDE_ROOT/hooks/securit
 # for the auditor quarantine (and any future agent-quarantined dispatch).
 # Every command that invokes auditor sources this file.
 copy_file "$FRAMEWORK_ROOT/hooks/_agent-dispatch.sh" "$CLAUDE_ROOT/hooks/_agent-dispatch.sh"
+# R5-019: explicit delivery anchor for the Living Evidence Counter
+# emitter. The copy_tree call above already covers it, but the
+# explicit line documents the contract: _learnings-emit.sh is sourced
+# by phase-tag.sh, phantom-check.sh, the critic agent, and the
+# test-architect agent so writes to apex-learnings.md happen at every
+# spec'd event-emitting site.
+copy_file "$FRAMEWORK_ROOT/hooks/_learnings-emit.sh" "$CLAUDE_ROOT/hooks/_learnings-emit.sh"
 # R5-003: the .cjs guards load detection patterns from the test-fixtures
 # tree at runtime. The copy_tree call below covers it, but the explicit
 # anchor documents the contract: the security-patterns fixture is a

@@ -4,9 +4,9 @@
 developer can answer "how does this hook fire?" without cross-referencing
 `framework/settings.json` and 44 command `.md` files.
 
-**Total files:** 36 — 23 functional `.sh` hooks + 9 library `.sh` files
+**Total files:** 37 — 23 functional `.sh` hooks + 10 library `.sh` files
 (`_`-prefixed) + 1 Python helper + 3 CommonJS guards (R5-003: `prompt-guard.cjs`,
-`workflow-guard.cjs`, `security.cjs`). Category totals below sum to 36.
+`workflow-guard.cjs`, `security.cjs`). Category totals below sum to 37.
 
 **Spec anchor:** `apex-spec.md` — "Hook system — 24+ hooks" and
 "Fail-loud, never fail-silent."
@@ -87,7 +87,7 @@ command `.md` files for exact invocation points.
 
 ---
 
-## Library — Sourced (9)
+## Library — Sourced (10)
 
 Files prefixed with `_` — utility libraries sourced by other hooks.
 **Never invoked directly.**
@@ -103,6 +103,7 @@ Files prefixed with `_` — utility libraries sourced by other hooks.
 | `_dream-cycle-emit.sh` | `start \| complete \| fail` phases for memory-synthesis dream-cycle wraps; emits structured START/COMPLETE/FAIL JSONL with a correlation id (R5-023) | `/apex:next` (two invocation sites) |
 | `_state-sqlite.sh` | `_state_sqlite_mirror`, `_state_sqlite_status` — opt-in SQLite mirror over STATE.json + event-log.jsonl when `APEX_SQLITE_MIRROR=1` and `sqlite3` CLI present (R5-002). Fail-loud-and-skip when CLI absent. | `_state-update.sh` (conditional) |
 | `_agent-dispatch.sh` | `apex_dispatch_enter <agent>` / `apex_dispatch_exit` — sets/unsets `APEX_ACTIVE_AGENT` so the quarantine guard fires structurally on every auditor invocation, regardless of which command invoked it (R5-009). Also exposes `enter` / `exit` subcommands for non-sourcing callers. | `/apex:next` (auditor dispatch site); future agent-quarantined call sites |
+| `_learnings-emit.sh` | `emit_learning <event_type> <phase> <summary>` — appends a structured WARM-section entry (Evidence count + Decay + Verified date + event metadata) to `~/.claude/apex-learnings.md`. Format chosen so verify-learnings.sh continues to parse the file. Bootstraps the file with a minimal section header if missing. Powers the Living Evidence Counter writer side (R5-019). | `phase-tag.sh` (success branch), `phantom-check.sh` (FAIL branch), `framework/agents/critic.md` (FAIL branch), `framework/modules/apex-test-architect/agent.md` (veto branches) |
 
 ---
 
@@ -139,19 +140,20 @@ available, and both fall back to the preserved Bash logic when not.
 | Auto-PreToolUse | 6 |
 | Auto-PostToolUse | 6 |
 | Command-Invoked / Event-Triggered | 12 |
-| Library — Sourced | 9 |
+| Library — Sourced | 10 |
 | CommonJS — Node-runtime guards (R5-003) | 3 |
-| **Total** | **36** |
+| **Total** | **37** |
 
-Verify with: `ls framework/hooks/ | wc -l` → **36**.
+Verify with: `ls framework/hooks/ | wc -l` → **37**.
 
 **Delta from R-003 original acceptance criterion:** plan document referenced
 "28 files" based on a pre-Wave-1 count. Wave 1 R-005 added `_date-parse.sh`
 (29). Wave 3 R5-023 added `_dream-cycle-emit.sh` (30). Wave 3 R5-004 added
 `state-rebuild.sh` (31). Wave 4 R5-002 added `_state-sqlite.sh` (32). Wave 5
 R5-003 added three CommonJS guards `prompt-guard.cjs`, `workflow-guard.cjs`,
-`security.cjs` (35). Wave 6 R5-009 added `_agent-dispatch.sh` (36). All
-files accounted for in the tables above.
+`security.cjs` (35). Wave 6 R5-009 added `_agent-dispatch.sh` (36). Wave 6
+R5-019 added `_learnings-emit.sh` (37). All files accounted for in the
+tables above.
 
 ---
 

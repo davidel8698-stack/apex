@@ -77,6 +77,14 @@ if git tag -l "$TAG_NAME" | grep -qF "$TAG_NAME"; then
         '.dora.change_failure_rate = $cfr'
     fi
   fi
+  # R5-019: Living Evidence Counter — append a `phase-completed`
+  # entry to apex-learnings.md so the counter is "living" rather than
+  # read-only. Best-effort: a failed append must not fail the tag.
+  if [ -f "$(dirname "$0")/_learnings-emit.sh" ]; then
+    # shellcheck source=/dev/null
+    source "$(dirname "$0")/_learnings-emit.sh"
+    emit_learning "phase-completed" "$PHASE_ID" "Phase ${PHASE_ID} tagged ${TAG_NAME}" 2>/dev/null || true
+  fi
   echo "✅ Phase tag verified: $TAG_NAME"
   echo "   Rollback available: git revert --no-commit HEAD..$TAG_NAME"
   exit 0

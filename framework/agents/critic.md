@@ -81,3 +81,23 @@ ON FAIL → write .apex/phases/$PHASE/[task]-REFLEXION.md:
 - What Failed (specific, max 200 tokens)
 - For Next Attempt: 3 specific changes
 - What NOT to Do Again (1-2 lines)
+
+## LIVING EVIDENCE COUNTER (R5-019, FAIL branch only)
+
+After writing REFLEXION.md (and only on a FAIL verdict), source the
+learnings emitter and append a `critic-fail` entry to apex-learnings.md.
+This makes the Living Evidence Counter actually "live" — accumulating
+proof-of-process across the project's lifetime instead of being read-only.
+
+```bash
+source ~/.claude/hooks/_learnings-emit.sh
+emit_learning "critic-fail" "$PHASE" "Critic FAIL on task $TASK_ID: $REASON_SUMMARY"
+```
+
+Where `$REASON_SUMMARY` is a one-line summary of "What Failed" suitable
+for browsing the learnings file later. Best-effort: a failed append
+must not change the FAIL verdict — wrap with `|| true` if invoking from
+a context that propagates exit codes.
+
+Spec anchor: "Living Evidence Counter" + "Proof-of-process beats
+proof-of-promise."
