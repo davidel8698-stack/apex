@@ -127,6 +127,23 @@ When user provides a question, match their intent to the best command:
 4. If ambiguous (multiple possible matches): present top 2-3 options with brief explanations, let user choose.
 5. If no match: suggest `/apex:status` as default starting point, and list the most likely category of commands.
 
+## STUCK DETECTION RULE [R5-007]
+If the input contains any of these signals — `stuck`, `blocked`, `broken`, `אני תקוע`, `לא עובד`, `נתקעתי`, `נשבר` — prefer `/apex:forensics` over `/apex:status` as the routed command. Reason: when the user signals stuckness, "what's the status" gives them more state but no path forward; forensics reconstructs the timeline and produces a fix plan. `/apex:status` is the no-match fallback for *neutral* inputs only.
+
+## AMBIGUITY POLICY [R5-007]
+When intent matching does NOT produce a single high-confidence row (i.e., top-1 score is close to top-2, or the wording fits two categories such as "stuck" + "deploy"):
+1. Present the top-2 candidates as a numbered proposal block (per `## PROPOSALS MODE GUARD` above): `[1] /apex:forensics — <one-line reason>` and `[2] /apex:rollback — <one-line reason>`. Mark the higher-scoring candidate as `[recommended]`.
+2. Wait for the user to pick `1` or `2`. Do NOT ask an open-ended question — propose, don't ask.
+3. If the user does not pick within the same turn, route to the `[recommended]` default.
+This is the "fuzzy semantic similarity" mechanism made observable: ambiguity produces a proposal, not silence and not an open question.
+
+## LOGGING DIRECTIVE [R5-007]
+After EVERY routing decision (confident match, ambiguous proposal, or no-match fallback), emit a `help_routing` event to the session log so routing quality is audit-able and re-derivable from disk:
+```
+bash ~/.claude/hooks/session-log.sh "help_routing" "intent='<user's text, single quotes escaped>' matched='<command>' confidence='<high|ambiguous|fallback>'"
+```
+This event is consumed by `state-rebuild.sh` (R5-004 — events become disk-derivable state) and surfaces in `/apex:status` history. Spec anchor: "Proof-of-process beats proof-of-promise."
+
 ## DYNAMIC DISCOVERY
 For completeness, also scan `ls ~/.claude/commands/apex/*.md` at runtime to catch any commands not in the static table above.
 </context>

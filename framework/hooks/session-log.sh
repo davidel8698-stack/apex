@@ -53,6 +53,7 @@ case "$EVENT_TYPE" in
   resume)          ICON="▶️" ;;
   start)           ICON="🚀" ;;
   bypass)          ICON="⏩" ;;
+  help_routing)    ICON="🧭" ;;
   *)               ICON="📝" ;;
 esac
 
