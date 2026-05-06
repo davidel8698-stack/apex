@@ -302,6 +302,13 @@ copy_tree "$FRAMEWORK_ROOT/schemas"       "$CLAUDE_ROOT/schemas"
 copy_tree "$FRAMEWORK_ROOT/tests"           "$CLAUDE_ROOT/tests"
 copy_tree "$FRAMEWORK_ROOT/test-fixtures"   "$CLAUDE_ROOT/test-fixtures"
 
+# R6-002: explicit delivery anchor for the module-ecosystem
+# documented-interpretation doc. The doc closes the literal-wording
+# residue surfaced by F-002 and is referenced by `_registry.json`'s
+# `_doc` field. Lives under framework/docs/ which is otherwise not
+# walked by sync; the explicit anchor here is the delivery contract.
+copy_file "$FRAMEWORK_ROOT/docs/MODULE-ECOSYSTEM.md" "$CLAUDE_ROOT/docs/MODULE-ECOSYSTEM.md"
+
 # Top-level files
 copy_file "$FRAMEWORK_ROOT/apex-branding.md"        "$CLAUDE_ROOT/apex-branding.md"
 copy_file "$FRAMEWORK_ROOT/apex-design-notes.md"    "$CLAUDE_ROOT/apex-design-notes.md"

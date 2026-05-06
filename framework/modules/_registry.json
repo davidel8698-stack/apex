@@ -2,6 +2,7 @@
   "$schema_ref": "_schema/manifest.schema.json",
   "version": "1.0.0",
   "description": "Authoritative registry of APEX modules. Contains the eight spec-named modules from apex-spec.md (apex-core, apex-frontend, apex-data, apex-security, apex-test-architect, apex-fintech, apex-healthcare, apex-builder). Two additional migrated modules (apex-integration, apex-memory-synthesis) exist under framework/modules/ and are delivered by sync-to-claude.sh's manifest-driven traversal even though they are not part of the spec's canonical eight; they are listed in `additional_modules` below for discoverability.",
+  "_doc": "Module ecosystem interpretation contract is documented in framework/docs/MODULE-ECOSYSTEM.md (R6-002). Manifest-driven directories satisfy the spec's structural commitments (independent lifecycle, versioning, dispatcher resolution, hook contribution); separate-repo / git-submodule isolation is a future migration path with named trigger conditions. Stub modules (status='stub') are canonical placeholders for spec-named domains; they advertise structure only and intentionally ship without agent.md.",
   "modules": [
     {"name": "apex-core",            "path": "apex-core",            "version": "0.1.0", "status": "core"},
     {"name": "apex-frontend",        "path": "apex-frontend",        "version": "0.1.0", "status": "active"},
