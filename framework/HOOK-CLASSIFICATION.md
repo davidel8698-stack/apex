@@ -4,8 +4,8 @@
 developer can answer "how does this hook fire?" without cross-referencing
 `framework/settings.json` and 44 command `.md` files.
 
-**Total files:** 30 — 23 functional `.sh` hooks + 6 library `.sh` files
-(`_`-prefixed) + 1 Python helper. Category totals below sum to 30.
+**Total files:** 31 — 23 functional `.sh` hooks + 7 library `.sh` files
+(`_`-prefixed) + 1 Python helper. Category totals below sum to 31.
 
 **Spec anchor:** `apex-spec.md` — "Hook system — 24+ hooks" and
 "Fail-loud, never fail-silent."
@@ -85,7 +85,7 @@ command `.md` files for exact invocation points.
 
 ---
 
-## Library — Sourced (6)
+## Library — Sourced (7)
 
 Files prefixed with `_` — utility libraries sourced by other hooks.
 **Never invoked directly.**
@@ -98,6 +98,7 @@ Files prefixed with `_` — utility libraries sourced by other hooks.
 | `_state-read.sh` | Point-in-time STATE.json snapshot for consistent reads within one invocation | Hooks that read STATE multiple times |
 | `_state-update.sh` | Atomic STATE.json update with error handling | Hooks that mutate STATE |
 | `_date-parse.sh` | `parse_epoch` — portable date→epoch (GNU → BSD → Python3 → Python2) | `phase-tag.sh`, `verify-learnings.sh` (post-R-005) |
+| `_dream-cycle-emit.sh` | `start \| complete \| fail` phases for memory-synthesis dream-cycle wraps; emits structured START/COMPLETE/FAIL JSONL with a correlation id (R5-023) | `/apex:next` (two invocation sites) |
 
 ---
 
@@ -108,10 +109,10 @@ Files prefixed with `_` — utility libraries sourced by other hooks.
 | Auto-PreToolUse | 6 |
 | Auto-PostToolUse | 5 |
 | Command-Invoked / Event-Triggered | 13 |
-| Library — Sourced | 6 |
-| **Total** | **30** |
+| Library — Sourced | 7 |
+| **Total** | **31** |
 
-Verify with: `ls framework/hooks/ | wc -l` → **30**.
+Verify with: `ls framework/hooks/ | wc -l` → **31**.
 
 **Delta from R-003 original acceptance criterion:** plan document referenced
 "28 files" based on a pre-Wave-1 count. Wave 1 R-005 added `_date-parse.sh`,

@@ -65,7 +65,17 @@ If "CRITICAL_OVERFLOW": save state, "⚠️ Context at [N]%. Run /apex:resume", 
 If "WARNING_OVERFLOW":
   MEMORY_FILE_COUNT = count files in .apex/todos/, .apex/threads/, .apex/seeds/
   If MEMORY_FILE_COUNT > 10:
-    Run memory-synthesis agent in background (dream-cycle mode)
+    ## DREAM-CYCLE WRAP [R5-023] — fail-loud, never fail-silent
+    DC_START_NS=$(date +%s%N 2>/dev/null || date +%s)
+    DC_CID=$(bash ~/.claude/hooks/_dream-cycle-emit.sh start "pre-compact dream-cycle: ${ESTIMATED_PCT}% usage, [MEMORY_FILE_COUNT] memory files")
+    DC_RC=0
+    Task("memory-synthesis", "Dream-cycle mode. Synthesize .apex/todos/, .apex/threads/, .apex/seeds/ into compact summaries.") || DC_RC=$?
+    DC_END_NS=$(date +%s%N 2>/dev/null || date +%s)
+    DC_DURATION_MS=$(( (DC_END_NS - DC_START_NS) / 1000000 ))
+    If DC_RC == 0:
+      bash ~/.claude/hooks/_dream-cycle-emit.sh complete "$DC_CID" "$DC_DURATION_MS" "ok"
+    Else:
+      bash ~/.claude/hooks/_dream-cycle-emit.sh fail "$DC_CID" "Task() returned exit $DC_RC"
     bash ~/.claude/hooks/session-log.sh "dream_cycle" "Dream-cycle before context compact — ${ESTIMATED_PCT}% usage, [MEMORY_FILE_COUNT] memory files"
   If STATE.session exists AND (STATE.session.tasks_completed - STATE.session.tasks_since_last_rotation) >= 4:
     bash ~/.claude/hooks/session-log.sh "rotate" "סיבוב הקשר יזום — ${ESTIMATED_PCT}% שימוש"
@@ -153,7 +163,17 @@ If STATE.session.started_at exists:
     If user selects 1 ("continue"):
       MEMORY_FILE_COUNT = count files in .apex/todos/, .apex/threads/, .apex/seeds/
       If MEMORY_FILE_COUNT > 10:
-        Run memory-synthesis agent in background (dream-cycle mode)
+        ## DREAM-CYCLE WRAP [R5-023] — fail-loud, never fail-silent
+        DC_START_NS=$(date +%s%N 2>/dev/null || date +%s)
+        DC_CID=$(bash ~/.claude/hooks/_dream-cycle-emit.sh start "periodic dream-cycle at [ELAPSED_MINUTES] min, [MEMORY_FILE_COUNT] memory files")
+        DC_RC=0
+        Task("memory-synthesis", "Dream-cycle mode. Synthesize .apex/todos/, .apex/threads/, .apex/seeds/ into compact summaries.") || DC_RC=$?
+        DC_END_NS=$(date +%s%N 2>/dev/null || date +%s)
+        DC_DURATION_MS=$(( (DC_END_NS - DC_START_NS) / 1000000 ))
+        If DC_RC == 0:
+          bash ~/.claude/hooks/_dream-cycle-emit.sh complete "$DC_CID" "$DC_DURATION_MS" "ok"
+        Else:
+          bash ~/.claude/hooks/_dream-cycle-emit.sh fail "$DC_CID" "Task() returned exit $DC_RC"
         bash ~/.claude/hooks/session-log.sh "dream_cycle" "Periodic dream-cycle triggered at [ELAPSED_MINUTES] min — [MEMORY_FILE_COUNT] memory files"
       proceed normally.
     If user selects 2 or 3: execute selected command. STOP.

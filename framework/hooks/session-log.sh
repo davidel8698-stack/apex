@@ -54,6 +54,9 @@ case "$EVENT_TYPE" in
   start)           ICON="🚀" ;;
   bypass)          ICON="⏩" ;;
   help_routing)    ICON="🧭" ;;
+  dream_cycle_start)    ICON="🌙" ;;
+  dream_cycle_complete) ICON="🌅" ;;
+  dream_cycle_fail)     ICON="💤" ;;
   *)               ICON="📝" ;;
 esac
 
