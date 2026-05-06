@@ -99,14 +99,13 @@ _state_sqlite_mirror() {
   local blob
   blob=$(cat "$state_file" 2>/dev/null) || return 0
 
-  # Upsert STATE.json snapshot at this ts.
-  sqlite3 "$db" <<SQL 2>/dev/null || {
+  # Upsert STATE.json snapshot at this ts. Escape single quotes for SQL.
+  local esc_blob
+  esc_blob=$(printf '%s' "$blob" | sed "s/'/''/g")
+  if ! sqlite3 "$db" "INSERT OR REPLACE INTO state_snapshot(ts, json_blob) VALUES ('$ts', '$esc_blob');" 2>/dev/null; then
     echo "⚠️ APEX SQLite mirror: state_snapshot upsert failed at $ts." >&2
     return 0
-  }
-INSERT OR REPLACE INTO state_snapshot(ts, json_blob)
-VALUES ('$ts', $(printf '%s' "$blob" | sed "s/'/''/g" | awk 'BEGIN{printf "'\''"} {printf "%s\\n", $0} END{printf "'\''"}'));
-SQL
+  fi
 
   # Append the most recent event-log.jsonl line, if any.
   if [ -f "$event_log" ]; then
