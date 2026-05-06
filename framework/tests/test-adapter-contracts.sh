@@ -129,6 +129,94 @@ NON_CC_COUNT=$(find "$ADAPTERS_DIR" -mindepth 2 -maxdepth 2 -name 'adapter.json'
 assert_pass "at least one non-Claude-Code adapter exists" \
   "[ \"$NON_CC_COUNT\" -ge 1 ]"
 
+# --- R6-009: Parity invariant -------------------------------------------
+# For every surface in claude-code/adapter.json:.delivers, the surface
+# must appear in every other adapter's (.delivers + .deferred) — either
+# the adapter delivers it or it explicitly defers it. A new claude-code
+# delivery surface that no other adapter has acknowledged is a multi-
+# platform-from-day-one regression, not silent drift.
+#
+# Naming-alias normalization (R6-009): cursor's `.deferred` uses
+# descriptive feature-ids ("apex-skills", "settings.json-merge") while
+# claude-code's `.delivers` uses canonical surface names ("skills",
+# "settings"). The aliases are documented in adapter-contract.md
+# §"Field semantics" (deferred is "free-form list of feature ids"). We
+# normalise both lists through the same alias table before set
+# comparison so the invariant fires only on REAL omissions.
+echo
+echo "[invariant] R6-009: every claude-code delivery surface is acknowledged on every other adapter"
+
+normalize_surface() {
+  # Strip CR (Windows line endings) and trim whitespace before mapping.
+  local raw="${1//$'\r'/}"
+  raw="${raw## }"; raw="${raw%% }"
+  case "$raw" in
+    apex-skills) echo "skills" ;;
+    settings.json-merge) echo "settings" ;;
+    settings.json) echo "settings" ;;
+    *) echo "$raw" ;;
+  esac
+}
+
+# Build canonical (normalized) list of claude-code delivers.
+CC_DELIVERS_RAW=$(jq -r '.delivers[]' "$CC_JSON" 2>/dev/null)
+declare -a CC_NORM=()
+while IFS= read -r s; do
+  [ -z "$s" ] && continue
+  CC_NORM+=("$(normalize_surface "$s")")
+done <<EOF
+$CC_DELIVERS_RAW
+EOF
+
+# Iterate every non-claude-code adapter under framework/adapters/.
+# State-derived: future adapters (gemini, codex, ...) auto-enrolled.
+PARITY_FAILURES=0
+while IFS= read -r adapter_json; do
+  [ -z "$adapter_json" ] && continue
+  adapter_dir=$(dirname "$adapter_json")
+  adapter_name=$(basename "$adapter_dir")
+  [ "$adapter_name" = "claude-code" ] && continue
+  if ! jq empty "$adapter_json" >/dev/null 2>&1; then
+    echo "  FAIL: parity[$adapter_name]: adapter.json does not parse"
+    FAIL=$((FAIL+1))
+    PARITY_FAILURES=$((PARITY_FAILURES+1))
+    continue
+  fi
+  # Build the union (delivers + deferred), normalized.
+  declare -a ADAPTER_NORM=()
+  ADAPTER_RAW=$(jq -r '(.delivers // []) + (.deferred // []) | .[]' "$adapter_json" 2>/dev/null)
+  while IFS= read -r s; do
+    [ -z "$s" ] && continue
+    ADAPTER_NORM+=("$(normalize_surface "$s")")
+  done <<EOF
+$ADAPTER_RAW
+EOF
+  # For each canonical claude-code surface, assert membership.
+  for surface in "${CC_NORM[@]}"; do
+    found=0
+    for cand in "${ADAPTER_NORM[@]}"; do
+      if [ "$cand" = "$surface" ]; then
+        found=1
+        break
+      fi
+    done
+    if [ "$found" -eq 1 ]; then
+      echo "  PASS: parity[$adapter_name]: surface '$surface' acknowledged (delivers or deferred)"
+      PASS=$((PASS+1))
+    else
+      echo "  FAIL: parity[$adapter_name]: surface '$surface' is delivered by claude-code but missing from .delivers AND .deferred — declare it in deferred[] or deliver it"
+      FAIL=$((FAIL+1))
+      PARITY_FAILURES=$((PARITY_FAILURES+1))
+    fi
+  done
+  unset ADAPTER_NORM
+done < <(find "$ADAPTERS_DIR" -mindepth 2 -maxdepth 2 -name 'adapter.json' 2>/dev/null)
+
+if [ "$PARITY_FAILURES" -eq 0 ]; then
+  echo "  PASS: parity: every non-claude-code adapter acknowledges every canonical surface"
+  PASS=$((PASS+1))
+fi
+
 echo
 echo "=== Results: PASS=$PASS FAIL=$FAIL ==="
 if [ "$FAIL" -ne 0 ]; then
