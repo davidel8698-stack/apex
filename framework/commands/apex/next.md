@@ -602,9 +602,13 @@ PASS:
       result_tests: .apex/phases/${current_phase}/${NEXT_UNIT}-RESULT.json (tests_run, verify_commands_run only),
       task_spec: PLAN_META.json task XML for NEXT_UNIT (done_criteria, edge_cases, verify_level)
     }
-    export APEX_ACTIVE_AGENT=auditor
+    ## R5-009: route through the agent dispatcher so APEX_ACTIVE_AGENT is set
+    ## structurally rather than per-call-site. The dispatcher wraps every
+    ## auditor invocation so the quarantine-guard hook always fires.
+    source ~/.claude/hooks/_agent-dispatch.sh
+    apex_dispatch_enter auditor
     Task("auditor", AUDITOR_CONTEXT, model=resolve_model("auditor"))
-    unset APEX_ACTIVE_AGENT
+    apex_dispatch_exit
     Read .apex/phases/${current_phase}/${NEXT_UNIT}-AUDIT.md
     If verdict == "FAIL":
       Treat as PARTIAL — task correctness confirmed by critic, but test quality insufficient per auditor.
