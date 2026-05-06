@@ -262,6 +262,13 @@ copy_file "$FRAMEWORK_ROOT/hooks/_agent-dispatch.sh" "$CLAUDE_ROOT/hooks/_agent-
 # test-architect agent so writes to apex-learnings.md happen at every
 # spec'd event-emitting site.
 copy_file "$FRAMEWORK_ROOT/hooks/_learnings-emit.sh" "$CLAUDE_ROOT/hooks/_learnings-emit.sh"
+# R5-021: explicit delivery anchor for the agent-lint validator. The
+# copy_tree call above already covers it, but the explicit line
+# documents the contract: agent-lint.sh is invoked by /apex:new-agent
+# (and by community authors directly) to validate a scaffolded module
+# against the manifest schema + agent.md frontmatter contract before
+# the module is registered or delivered.
+copy_file "$FRAMEWORK_ROOT/hooks/agent-lint.sh" "$CLAUDE_ROOT/hooks/agent-lint.sh"
 # R5-003: the .cjs guards load detection patterns from the test-fixtures
 # tree at runtime. The copy_tree call below covers it, but the explicit
 # anchor documents the contract: the security-patterns fixture is a

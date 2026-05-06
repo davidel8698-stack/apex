@@ -4,9 +4,9 @@
 developer can answer "how does this hook fire?" without cross-referencing
 `framework/settings.json` and 44 command `.md` files.
 
-**Total files:** 37 — 23 functional `.sh` hooks + 10 library `.sh` files
+**Total files:** 38 — 24 functional `.sh` hooks + 10 library `.sh` files
 (`_`-prefixed) + 1 Python helper + 3 CommonJS guards (R5-003: `prompt-guard.cjs`,
-`workflow-guard.cjs`, `security.cjs`). Category totals below sum to 37.
+`workflow-guard.cjs`, `security.cjs`). Category totals below sum to 38.
 
 **Spec anchor:** `apex-spec.md` — "Hook system — 24+ hooks" and
 "Fail-loud, never fail-silent."
@@ -54,7 +54,7 @@ Source: `framework/settings.json` entries under `.hooks.PostToolUse[]` (each ent
 
 ---
 
-## Command-Invoked / Event-Triggered (12)
+## Command-Invoked / Event-Triggered (13)
 
 Hooks that fire via explicit invocation from command `.md` files, from other
 hooks, or from Claude Code lifecycle events.
@@ -80,6 +80,7 @@ section to **Auto-PostToolUse** — see the row above.)
 | `pre-compact.sh` | PreCompact event (auto-wired R4-007, Claude Code runtime) | v7 observation-masking tracking; 50% cost reduction at neutral/positive quality. Backs up state to `.apex/backups/`. |
 | `subagent-stop.sh` | SubagentStop event (auto-wired R4-007, Claude Code runtime) | Subagent lifecycle cleanup; reads agent_name from stdin JSON. |
 | `state-rebuild.sh` | SessionStart event (auto-wired R5-004, conditional) + `/apex:recover`, `/apex:resume` | Reconstructs `.apex/STATE.json` from `event-log.jsonl` + phase summaries. Fast-path exits 0 when STATE.json exists; fires only when the file is missing. Spec anchor: "State derives from disk." |
+| `agent-lint.sh` | `/apex:new-agent` (post-scaffold validation, R5-021) | Validates that a generated module under `framework/modules/<name>/` conforms to the manifest schema (R5-001) and the agent prompt conventions (frontmatter complete: name/description/tools; required sections: Role, Domain Invariants, Named Failure Prohibitions, Output Contract; no registry collision). On failure, writes a `FIX_PLAN.md` listing every issue with concrete fix steps and exits 2; on success, exits 0. |
 
 **Note:** Grep across `framework/commands/apex/` returns 51 invocation sites
 across 15 command files — `/apex:next` alone invokes 34 of these. See the
@@ -139,12 +140,12 @@ available, and both fall back to the preserved Bash logic when not.
 |---|---|
 | Auto-PreToolUse | 6 |
 | Auto-PostToolUse | 6 |
-| Command-Invoked / Event-Triggered | 12 |
+| Command-Invoked / Event-Triggered | 13 |
 | Library — Sourced | 10 |
 | CommonJS — Node-runtime guards (R5-003) | 3 |
-| **Total** | **37** |
+| **Total** | **38** |
 
-Verify with: `ls framework/hooks/ | wc -l` → **37**.
+Verify with: `ls framework/hooks/ | wc -l` → **38**.
 
 **Delta from R-003 original acceptance criterion:** plan document referenced
 "28 files" based on a pre-Wave-1 count. Wave 1 R-005 added `_date-parse.sh`
@@ -152,8 +153,8 @@ Verify with: `ls framework/hooks/ | wc -l` → **37**.
 `state-rebuild.sh` (31). Wave 4 R5-002 added `_state-sqlite.sh` (32). Wave 5
 R5-003 added three CommonJS guards `prompt-guard.cjs`, `workflow-guard.cjs`,
 `security.cjs` (35). Wave 6 R5-009 added `_agent-dispatch.sh` (36). Wave 6
-R5-019 added `_learnings-emit.sh` (37). All files accounted for in the
-tables above.
+R5-019 added `_learnings-emit.sh` (37). Wave 6 R5-021 added `agent-lint.sh`
+(38). All files accounted for in the tables above.
 
 ---
 

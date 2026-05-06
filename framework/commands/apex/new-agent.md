@@ -87,20 +87,59 @@ Follow RESULT.json schema: status (pass|fail|partial), summary, files_changed.
 3. `framework/modules/apex-{AGENT_NAME}/README.md` — short description of the
    module, status, and dispatch contract.
 
-After writing, run `bash framework/scripts/sync-to-claude.sh` so the new
-specialist is delivered to `~/.claude/agents/specialist/{AGENT_NAME}.md` (the
-sync script's manifest-driven traversal strips the `apex-` prefix).
+## VALIDATION (R5-021)
 
-> **Note (R5-001 minimal write-path adjustment):** Full manifest-schema
-> validation, agent-lint, and `_registry.json` auto-update land in R5-021
-> (Wave 6). Until then, after running this command also append the new module
-> entry to `framework/modules/_registry.json` by hand, OR run
-> `/apex:new-agent` once R5-021 has shipped to get the full validated flow.
+After scaffolding the module files, run the agent-lint hook to verify
+the contract before declaring success:
+
+```bash
+bash framework/hooks/agent-lint.sh framework/modules/apex-{AGENT_NAME}
+LINT_EXIT=$?
+```
+
+If `LINT_EXIT == 0`: scaffolding passed all contract checks (manifest
+schema, agent.md frontmatter, required sections, no registry collision).
+Proceed to registry update + delivery below.
+
+If `LINT_EXIT == 2`: lint failed. The hook has written
+`framework/modules/apex-{AGENT_NAME}/FIX_PLAN.md` describing every
+issue with concrete fix steps. Display its contents to the user and
+**STOP** — do not register, do not sync. The module is invalid until
+the user fixes the issues and re-runs `/apex:new-agent` (or invokes
+the lint hook directly).
+
+## REGISTRY UPDATE (R5-021)
+
+If lint passed, append a new entry to
+`framework/modules/_registry.json` under `additional_modules` (it's a
+community-authored module, not one of the spec's canonical eight):
+
+```json
+{
+  "name": "apex-{AGENT_NAME}",
+  "path": "apex-{AGENT_NAME}",
+  "version": "0.1.0",
+  "status": "active",
+  "rationale": "Community-authored module via /apex:new-agent."
+}
+```
+
+Use jq to perform the append idempotently (skip if an entry with the
+same name is already present in either `modules` or `additional_modules`).
+
+## DELIVERY
+
+After lint pass + registry update, run
+`bash framework/scripts/sync-to-claude.sh` so the new specialist is
+delivered to `~/.claude/agents/specialist/{AGENT_NAME}.md` (the sync
+script's manifest-driven traversal strips the `apex-` prefix).
 
 ## CONFIRMATION
 
-Display the generated module layout (manifest, agent.md, README).
-"✅ Module 'apex-{AGENT_NAME}' created under framework/modules/apex-{AGENT_NAME}/"
+Display the generated module layout (manifest, agent.md, README) and
+the lint verdict.
+"✅ Module 'apex-{AGENT_NAME}' created under framework/modules/apex-{AGENT_NAME}/ — agent-lint passed."
+"Registry updated: framework/modules/_registry.json (additional_modules)."
 "Run `bash framework/scripts/sync-to-claude.sh` to deploy to ~/.claude/agents/specialist/{AGENT_NAME}.md"
 "Edit the Domain Invariants and Named Failure Prohibitions sections to customize."
 
@@ -108,4 +147,8 @@ Display the generated module layout (manifest, agent.md, README).
 - If modules directory doesn't exist: create `framework/modules/apex-{AGENT_NAME}/` first.
 - If a module with the same name already exists at `framework/modules/apex-{AGENT_NAME}/`: STOP with collision error.
 - If write fails: display error message with path.
+- If `agent-lint.sh` exits 2: display `FIX_PLAN.md` contents and STOP.
+  Do NOT update the registry, do NOT run sync-to-claude.sh — the
+  scaffolded files remain on disk so the user can edit them in place,
+  but the platform contract has not been satisfied.
 </context>
