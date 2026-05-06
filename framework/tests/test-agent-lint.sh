@@ -221,6 +221,87 @@ else
   nope "C-12: stale FIX_PLAN.md still present after passing lint"
 fi
 
+# --- R6-005: stub fast-path -------------------------------------------------
+# Build a stub-shape fixture (status=="stub", agent_path==null, no agent.md).
+# Lint must exit 0 and write NO FIX_PLAN.md.
+build_stub_module() {
+  local name="$1"
+  local mdir="$MODULES_DIR/apex-${name}"
+  mkdir -p "$mdir"
+  cat > "$mdir/manifest.json" <<EOF
+{
+  "name": "apex-${name}",
+  "version": "0.1.0",
+  "owner": "test-author",
+  "status": "stub",
+  "capabilities": ["${name}"],
+  "agent_path": null,
+  "hooks": [],
+  "deps": [],
+  "dispatch_aliases": ["${name}"],
+  "notes": "Stub fixture for R6-005 fast-path test."
+}
+EOF
+  echo "$mdir"
+}
+
+STUB1=$(build_stub_module "stubfix")
+bash "$LINT" "$STUB1" >/dev/null 2>&1
+RC=$?
+if [ "$RC" -eq 0 ] && [ ! -f "$STUB1/FIX_PLAN.md" ]; then
+  ok "C-13: stub module (status=stub, agent_path=null) → exit 0, no FIX_PLAN.md (R6-005)"
+else
+  nope "C-13: expected exit 0 + no FIX_PLAN.md for stub, got exit $RC, FIX_PLAN exists=$([ -f "$STUB1/FIX_PLAN.md" ] && echo yes || echo no)"
+fi
+
+# C-14: spec-named stub modules in the live tree pass (apex-fintech).
+LIVE_STUB="$REPO_ROOT/framework/modules/apex-fintech"
+if [ -f "$LIVE_STUB/manifest.json" ]; then
+  bash "$LINT" "$LIVE_STUB" >/dev/null 2>&1
+  RC=$?
+  if [ "$RC" -eq 0 ] && [ ! -f "$LIVE_STUB/FIX_PLAN.md" ]; then
+    ok "C-14: live apex-fintech stub passes (R6-005)"
+  else
+    nope "C-14: live apex-fintech stub expected exit 0, got $RC"
+  fi
+fi
+
+# C-15: spec-named stub modules pass (apex-healthcare).
+LIVE_STUB2="$REPO_ROOT/framework/modules/apex-healthcare"
+if [ -f "$LIVE_STUB2/manifest.json" ]; then
+  bash "$LINT" "$LIVE_STUB2" >/dev/null 2>&1
+  RC=$?
+  if [ "$RC" -eq 0 ] && [ ! -f "$LIVE_STUB2/FIX_PLAN.md" ]; then
+    ok "C-15: live apex-healthcare stub passes (R6-005)"
+  else
+    nope "C-15: live apex-healthcare stub expected exit 0, got $RC"
+  fi
+fi
+
+# C-16: spec-named stub modules pass (apex-builder).
+LIVE_STUB3="$REPO_ROOT/framework/modules/apex-builder"
+if [ -f "$LIVE_STUB3/manifest.json" ]; then
+  bash "$LINT" "$LIVE_STUB3" >/dev/null 2>&1
+  RC=$?
+  if [ "$RC" -eq 0 ] && [ ! -f "$LIVE_STUB3/FIX_PLAN.md" ]; then
+    ok "C-16: live apex-builder stub passes (R6-005)"
+  else
+    nope "C-16: live apex-builder stub expected exit 0, got $RC"
+  fi
+fi
+
+# C-17: an active module missing agent.md still fails (preservation of
+# active-module enforcement — fast-path must not silently pass actives).
+ACTIVE_MISSING=$(build_good_module "active-no-agent")
+rm "$ACTIVE_MISSING/agent.md"
+bash "$LINT" "$ACTIVE_MISSING" >/dev/null 2>&1
+RC=$?
+if [ "$RC" -eq 2 ]; then
+  ok "C-17: active module missing agent.md still exits 2 (R6-005 preservation)"
+else
+  nope "C-17: expected exit 2 (active w/o agent.md), got $RC — fast-path may be misfiring"
+fi
+
 rm -rf "$SANDBOX"
 
 TOTAL=$((PASS+FAIL))

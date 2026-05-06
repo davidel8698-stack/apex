@@ -94,6 +94,22 @@ if [ ! -f "$MANIFEST" ]; then
   ISSUES+=("missing-manifest: $MANIFEST does not exist")
 fi
 
+# --- R6-005 Stub fast-path -----------------------------------------------
+# Spec-named stub modules (status == "stub" with agent_path == null) are
+# canonical placeholders, not contract failures. Lint passes them with a
+# stub-acknowledged stderr message and writes no FIX_PLAN.md. Active
+# modules continue to follow the full check pipeline below.
+if [ -f "$MANIFEST" ] && jq -e . "$MANIFEST" >/dev/null 2>&1; then
+  STUB_STATUS=$(jq -r '.status // empty' "$MANIFEST" 2>/dev/null)
+  STUB_AGENT_PATH=$(jq -r '.agent_path // "null"' "$MANIFEST" 2>/dev/null)
+  if [ "$STUB_STATUS" = "stub" ] && [ "$STUB_AGENT_PATH" = "null" ]; then
+    echo "✅ agent-lint: $MODULE_PATH stub acknowledged (status=stub, agent_path=null)" >&2
+    # Clear any stale FIX_PLAN.md from a prior run that pre-dated the fast-path.
+    [ -f "$FIX_PLAN_PATH" ] && rm -f "$FIX_PLAN_PATH"
+    exit 0
+  fi
+fi
+
 # --- Check 2: agent.md exists ---
 if [ ! -f "$AGENT_MD" ]; then
   ISSUES+=("missing-agent-md: $AGENT_MD does not exist")
