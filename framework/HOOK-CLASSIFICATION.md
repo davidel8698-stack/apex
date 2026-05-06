@@ -4,8 +4,8 @@
 developer can answer "how does this hook fire?" without cross-referencing
 `framework/settings.json` and 44 command `.md` files.
 
-**Total files:** 29 — 22 functional `.sh` hooks + 6 library `.sh` files
-(`_`-prefixed) + 1 Python helper. Category totals below sum to 29.
+**Total files:** 30 — 23 functional `.sh` hooks + 6 library `.sh` files
+(`_`-prefixed) + 1 Python helper. Category totals below sum to 30.
 
 **Spec anchor:** `apex-spec.md` — "Hook system — 24+ hooks" and
 "Fail-loud, never fail-silent."
@@ -52,14 +52,16 @@ Source: `framework/settings.json` entries under `.hooks.PostToolUse[]` (each ent
 
 ---
 
-## Command-Invoked / Event-Triggered (12)
+## Command-Invoked / Event-Triggered (13)
 
 Hooks that fire via explicit invocation from command `.md` files, from other
 hooks, or from Claude Code lifecycle events.
 
-**Auto-wired via `settings.json` (post-R4-007):** `verify-learnings.sh` (SessionStart),
-`pre-compact.sh` (PreCompact), `subagent-stop.sh` (SubagentStop). The remaining
-9 are command-invoked only — not in `settings.json`.
+**Auto-wired via `settings.json` (post-R4-007 + R5-004):** `state-rebuild.sh`
+(SessionStart, conditional — fires before verify-learnings when STATE.json
+missing), `verify-learnings.sh` (SessionStart), `pre-compact.sh` (PreCompact),
+`subagent-stop.sh` (SubagentStop). The remaining 9 are command-invoked only —
+not in `settings.json`.
 
 | File | Invoked by | Purpose |
 |---|---|---|
@@ -75,6 +77,7 @@ hooks, or from Claude Code lifecycle events.
 | `tdad-impact.py` | `tdad-index.sh`, `/apex:next` | Python helper — given changed files, find impacted tests via `.apex/TEST_MAP.txt`. |
 | `pre-compact.sh` | PreCompact event (auto-wired R4-007, Claude Code runtime) | v7 observation-masking tracking; 50% cost reduction at neutral/positive quality. Backs up state to `.apex/backups/`. |
 | `subagent-stop.sh` | SubagentStop event (auto-wired R4-007, Claude Code runtime) | Subagent lifecycle cleanup; reads agent_name from stdin JSON. |
+| `state-rebuild.sh` | SessionStart event (auto-wired R5-004, conditional) + `/apex:recover`, `/apex:resume` | Reconstructs `.apex/STATE.json` from `event-log.jsonl` + phase summaries. Fast-path exits 0 when STATE.json exists; fires only when the file is missing. Spec anchor: "State derives from disk." |
 
 **Note:** Grep across `framework/commands/apex/` returns 51 invocation sites
 across 15 command files — `/apex:next` alone invokes 34 of these. See the
@@ -104,11 +107,11 @@ Files prefixed with `_` — utility libraries sourced by other hooks.
 |---|---|
 | Auto-PreToolUse | 6 |
 | Auto-PostToolUse | 5 |
-| Command-Invoked / Event-Triggered | 12 |
+| Command-Invoked / Event-Triggered | 13 |
 | Library — Sourced | 6 |
-| **Total** | **29** |
+| **Total** | **30** |
 
-Verify with: `ls framework/hooks/ | wc -l` → **29**.
+Verify with: `ls framework/hooks/ | wc -l` → **30**.
 
 **Delta from R-003 original acceptance criterion:** plan document referenced
 "28 files" based on a pre-Wave-1 count. Wave 1 R-005 added `_date-parse.sh`,

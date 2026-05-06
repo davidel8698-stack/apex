@@ -73,6 +73,11 @@
     "SessionStart": [
       {
         "hooks": [
+          { "type": "command", "command": "bash ~/.claude/hooks/state-rebuild.sh" }
+        ]
+      },
+      {
+        "hooks": [
           { "type": "command", "command": "bash ~/.claude/hooks/verify-learnings.sh" }
         ]
       }

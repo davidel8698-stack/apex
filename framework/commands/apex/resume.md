@@ -29,6 +29,10 @@ This gives the user instant continuity — "here's what happened before the rota
 
 Every output ends with the signature line.
 
+## STATE.json BOOTSTRAP [R5-004]
+If `.apex/STATE.json` is missing AND `.apex/event-log.jsonl` exists:
+  Run `bash ~/.claude/hooks/state-rebuild.sh` first. The hook reconstructs STATE.json from the disk-resident event log + phase summaries (spec: "State derives from disk."). If reconstruction succeeds, proceed below. If STATE.json is still missing after the rebuild attempt, fall through to `/apex:start` rather than reading a non-existent file.
+
 1. Read .apex/STATE.json
 2. Read .apex/COMPLEXITY.md (level + pipeline)
 3. Read .apex/SPEC.md summary (first 3 sections only)
