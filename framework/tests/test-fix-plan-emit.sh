@@ -142,17 +142,19 @@ if command -v jq >/dev/null 2>&1; then
   rm -rf "$SANDBOX_SD"
 fi
 
-# 5e. phantom-check — structural assertion only.
-# The existing phantom-check.sh detection regex uses `grep -qi "$RED_FLAGS"`
-# (BRE), but the RED_FLAGS string is constructed with `|` as alternation
-# (which BRE treats as literal). This is a pre-existing detection bug in
-# phantom-check.sh that predates R5-014 (R5-014's preservation contract
-# explicitly forbids changing detection logic). Recorded as a new finding
-# for the next audit round (NEW-FINDINGS-W7.md). For R5-014's structural
-# acceptance criterion ("each blocking guard sources the helper"), the
-# grep-based assertion above already covers phantom-check.sh; the
-# behavioral exit-2 assertion is skipped here.
-echo "  SKIP: phantom-check behavioral exit-2 (pre-existing BRE/ERE bug — see NEW-FINDINGS-W7.md)"
+# 5e. phantom-check — behavioral assertion (R6-001: BRE→ERE fix landed).
+# A SUMMARY containing uncertainty language ("should pass") MUST cause
+# phantom-check.sh to exit 2 and to write FIX_PLAN.md.
+SANDBOX_PC=$(run_sandbox)
+mkdir -p "$SANDBOX_PC/.apex"
+printf 'Tests should pass.\n' > "$SANDBOX_PC/.apex/SUMMARY.md"
+( cd "$SANDBOX_PC" && \
+  APEX_FIX_PLAN_FILE="$SANDBOX_PC/.apex/FIX_PLAN.md" \
+  bash "$HOOKS_DIR/phantom-check.sh" "$SANDBOX_PC/.apex/SUMMARY.md" >/dev/null 2>&1 )
+EXIT_PC=$?
+assert_pass "phantom-check exits 2 on uncertainty language (R6-001)" "[ $EXIT_PC -eq 2 ]"
+assert_pass "phantom-check wrote FIX_PLAN.md (R6-001)" "[ -f '$SANDBOX_PC/.apex/FIX_PLAN.md' ]"
+rm -rf "$SANDBOX_PC"
 
 # 5f. post-write — block on hardcoded secret
 SANDBOX_PW=$(run_sandbox)

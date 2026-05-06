@@ -23,8 +23,8 @@ RED_FLAGS="should pass|seems to|likely works|I believe|appears correct|looks goo
 |I think|I'm confident|probably works|might work|should work|seems correct\
 |appears to work|it looks like|I assume|I expect"
 
-if grep -qi "$RED_FLAGS" "$SUMMARY_FILE" 2>/dev/null; then
-  MATCHED=$(grep -oi "$RED_FLAGS" "$SUMMARY_FILE" | head -3 | tr '\n' ', ')
+if grep -qiE "$RED_FLAGS" "$SUMMARY_FILE" 2>/dev/null; then
+  MATCHED=$(grep -oiE "$RED_FLAGS" "$SUMMARY_FILE" | head -3 | tr '\n' ', ')
   echo "❌ FAKE-COMPLETION LANGUAGE DETECTED (phantom verification) in $SUMMARY_FILE"
   echo "Found uncertainty language: $MATCHED"
   echo ""
