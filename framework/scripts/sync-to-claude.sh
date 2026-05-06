@@ -284,6 +284,12 @@ copy_file "$FRAMEWORK_ROOT/hooks/agent-lint.sh" "$CLAUDE_ROOT/hooks/agent-lint.s
 # at runtime, so it must reach ~/.claude/hooks/ before the live
 # settings.json invokes it.
 copy_file "$FRAMEWORK_ROOT/hooks/owner-guard.sh" "$CLAUDE_ROOT/hooks/owner-guard.sh"
+# R5-016: explicit delivery anchor for the time-cadence decision gate.
+# The copy_tree call above already covers it, but the explicit line
+# documents the contract: decision-gate.sh is invoked by /apex:next at
+# the top of each cycle and reads STATE.json elapsed/last-gate fields
+# to fire the user-visible 60/90-minute checkpoint.
+copy_file "$FRAMEWORK_ROOT/hooks/decision-gate.sh" "$CLAUDE_ROOT/hooks/decision-gate.sh"
 # R5-003: the .cjs guards load detection patterns from the test-fixtures
 # tree at runtime. The copy_tree call below covers it, but the explicit
 # anchor documents the contract: the security-patterns fixture is a

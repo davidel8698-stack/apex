@@ -59,6 +59,32 @@ Adapt all user-facing output in this command:
 - senior: concise, use technical terms freely, focus on what changed
 - architect: terse, assume full context, focus on trade-offs and risks
 
+## DECISION GATE — TOP OF CYCLE [R5-016]
+Spec anchor: "Decision gates פר 60-90 דקות." The decision-gate hook
+is the structural enforcement of the time-cadence checkpoint —
+complementary to the inline TIME-BASED DECISION GATE block below
+(which retains its session-health-driven prose form). Invoke the hook
+before any other top-of-cycle logic so a fired gate surfaces to the
+user before another agent dispatch consumes the cycle.
+
+bash ~/.claude/hooks/decision-gate.sh
+DECISION_GATE_EXIT=$?
+If DECISION_GATE_EXIT == 1:
+  # Hook fired — STATE.session.last_time_gate has been updated
+  # (debounce); .apex/FIX_PLAN.md now holds three options
+  # (continue / /apex:pause / /apex:resume).
+  Read .apex/FIX_PLAN.md.
+  Render its Reason + Context + Recommended commands inline (use
+  Section 3.C soft frame from apex-branding.md).
+  Wait for user response.
+  If user selects "continue": proceed to CONTEXT OVERFLOW CHECK
+    below — the debounce already prevents an immediate re-fire.
+  If user selects /apex:pause or /apex:resume: execute selected
+    command. STOP.
+Else (DECISION_GATE_EXIT == 0):
+  # No gate due (elapsed < 60 min OR cadence interval not yet met).
+  proceed to CONTEXT OVERFLOW CHECK below.
+
 ## CONTEXT OVERFLOW CHECK — RUNS FIRST
 bash ~/.claude/hooks/context-monitor.sh
 If "CRITICAL_OVERFLOW": save state, "⚠️ Context at [N]%. Run /apex:resume", STOP.

@@ -4,11 +4,12 @@
 developer can answer "how does this hook fire?" without cross-referencing
 `framework/settings.json` and 44 command `.md` files.
 
-**Total files:** 40 — 25 functional `.sh` hooks (R5-013 added
-`owner-guard.sh`) + 11 library `.sh` files (`_`-prefixed; R5-014 added
-`_fix-plan-emit.sh`) + 1 Python helper + 3 CommonJS guards (R5-003:
-`prompt-guard.cjs`, `workflow-guard.cjs`, `security.cjs`). Category
-totals below sum to 40.
+**Total files:** 41 — 25 functional `.sh` hooks (R5-013 added
+`owner-guard.sh`; R5-016 added `decision-gate.sh`) + 11 library `.sh`
+files (`_`-prefixed; R5-014 added `_fix-plan-emit.sh`) + 1 Python
+helper + 3 CommonJS guards (R5-003: `prompt-guard.cjs`,
+`workflow-guard.cjs`, `security.cjs`). Category totals below sum to
+41.
 
 **Spec anchor:** `apex-spec.md` — "Hook system — 24+ hooks" and
 "Fail-loud, never fail-silent."
@@ -91,6 +92,7 @@ in addition to the new auto-wirings.)
 | `subagent-stop.sh` | SubagentStop event (auto-wired R4-007, Claude Code runtime) | Subagent lifecycle cleanup; reads agent_name from stdin JSON. |
 | `state-rebuild.sh` | SessionStart event (auto-wired R5-004, conditional) + `/apex:recover`, `/apex:resume` | Reconstructs `.apex/STATE.json` from `event-log.jsonl` + phase summaries. Fast-path exits 0 when STATE.json exists; fires only when the file is missing. Spec anchor: "State derives from disk." |
 | `agent-lint.sh` | `/apex:new-agent` (post-scaffold validation, R5-021) | Validates that a generated module under `framework/modules/<name>/` conforms to the manifest schema (R5-001) and the agent prompt conventions (frontmatter complete: name/description/tools; required sections: Role, Domain Invariants, Named Failure Prohibitions, Output Contract; no registry collision). On failure, writes a `FIX_PLAN.md` listing every issue with concrete fix steps and exits 2; on success, exits 0. |
+| `decision-gate.sh` | `/apex:next` (top of cycle, R5-016) | User-visible 60/90-minute decision gate. Reads `STATE.session.started_at` + `STATE.session.last_time_gate` + `STATE.complexity_level`. Fires when elapsed >= 60 min AND cadence interval has elapsed since last gate (90/75/60 min by complexity 1-2/3/4+). On fire: writes `.apex/FIX_PLAN.md` with three options (continue / /apex:pause / /apex:resume), updates `STATE.session.last_time_gate` (debounce), and exits 1. On non-fire: exits 0 silently. Spec anchor: "Decision gates פר 60-90 דקות." |
 
 **Note:** Grep across `framework/commands/apex/` returns 51 invocation sites
 across 15 command files — `/apex:next` alone invokes 34 of these. See the
@@ -151,12 +153,12 @@ available, and both fall back to the preserved Bash logic when not.
 |---|---|
 | Auto-PreToolUse | 7 |
 | Auto-PostToolUse | 7 |
-| Command-Invoked / Event-Triggered | 13 |
+| Command-Invoked / Event-Triggered | 14 |
 | Library — Sourced | 11 |
 | CommonJS — Node-runtime guards (R5-003) | 3 |
-| **Total** | **40** (R5-011: `tdad-index.sh` and `cross-phase-audit.sh` are dual-listed in Auto-PostToolUse / SubagentStop AND Command-Invoked; not double-counted in the total. R5-014: `_fix-plan-emit.sh` added to Library — Sourced. R5-013: `owner-guard.sh` added to Auto-PreToolUse.) |
+| **Total** | **41** (R5-011: `tdad-index.sh` and `cross-phase-audit.sh` are dual-listed in Auto-PostToolUse / SubagentStop AND Command-Invoked; not double-counted in the total. R5-014: `_fix-plan-emit.sh` added to Library — Sourced. R5-013: `owner-guard.sh` added to Auto-PreToolUse. R5-016: `decision-gate.sh` added to Command-Invoked.) |
 
-Verify with: `ls framework/hooks/ | wc -l` → **40**.
+Verify with: `ls framework/hooks/ | wc -l` → **41**.
 
 **Delta from R-003 original acceptance criterion:** plan document referenced
 "28 files" based on a pre-Wave-1 count. Wave 1 R-005 added `_date-parse.sh`
@@ -166,7 +168,8 @@ R5-003 added three CommonJS guards `prompt-guard.cjs`, `workflow-guard.cjs`,
 `security.cjs` (35). Wave 6 R5-009 added `_agent-dispatch.sh` (36). Wave 6
 R5-019 added `_learnings-emit.sh` (37). Wave 6 R5-021 added `agent-lint.sh`
 (38). Wave 7 R5-014 added `_fix-plan-emit.sh` (39). Wave 8 R5-013 added
-`owner-guard.sh` (40). All files accounted for in the tables above.
+`owner-guard.sh` (40). Wave 8 R5-016 added `decision-gate.sh` (41). All
+files accounted for in the tables above.
 
 ---
 
