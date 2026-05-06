@@ -109,6 +109,39 @@ EXIT_D=$?
 assert_pass "outside git repo: exits 0 cleanly" "[ $EXIT_D -eq 0 ]"
 rm -rf "$SBD"
 
+# --- Case E: R6-004 end-to-end dual-emit → real _state_update calls drive rebuild ---
+# This case is a tautology-killer: it does NOT write fixture event lines.
+# It invokes the real _state_update helper, lets it emit the dual events
+# (state_mutation + semantic), then rebuilds STATE.json from that real log
+# and asserts the canonical fields reflect the latest semantic events.
+SBE="$(run_sandbox)"
+mkdir -p "$SBE/.apex"
+# Seed a STATE.json so _state_update has something to jq-update; then delete it
+# before rebuild.
+echo '{"current_phase":"00","decision_mode":"balanced","complexity_level":2,"complexity_name":"Medium"}' > "$SBE/.apex/STATE.json"
+(
+  cd "$SBE" && \
+  source "$REPO_ROOT/framework/hooks/_state-update.sh" && \
+  _state_update '.current_phase = "03"' && \
+  _state_update '.decision_mode = "fast"' && \
+  _state_update '.complexity_level = 4'
+) >/dev/null 2>&1
+EXIT_E_EMIT=$?
+assert_pass "R6-004: _state_update calls all exit 0"           "[ $EXIT_E_EMIT -eq 0 ]"
+assert_pass "R6-004: phase_set event emitted"                  "[ \"\$(grep -c '\"type\":\"phase_set\"' '$SBE/.apex/event-log.jsonl')\" -ge 1 ]"
+assert_pass "R6-004: decision_mode_set event emitted"          "[ \"\$(grep -c '\"type\":\"decision_mode_set\"' '$SBE/.apex/event-log.jsonl')\" -ge 1 ]"
+assert_pass "R6-004: complexity_set event emitted"             "[ \"\$(grep -c '\"type\":\"complexity_set\"' '$SBE/.apex/event-log.jsonl')\" -ge 1 ]"
+assert_pass "R6-004: state_mutation events still present"      "[ \"\$(grep -c '\"type\":\"state_mutation\"' '$SBE/.apex/event-log.jsonl')\" -ge 3 ]"
+# Now drive the rebuild against the real (non-fixture) log.
+rm -f "$SBE/.apex/STATE.json"
+( cd "$SBE" && bash "$HOOK" >/dev/null 2>&1 )
+EXIT_E=$?
+assert_pass "R6-004: rebuild from real event log exits 0"      "[ $EXIT_E -eq 0 ]"
+assert_pass "R6-004: rebuilt current_phase reflects last emit" "[ \"\$(jq -r '.current_phase' '$SBE/.apex/STATE.json')\" = '03' ]"
+assert_pass "R6-004: rebuilt decision_mode reflects last emit" "[ \"\$(jq -r '.decision_mode' '$SBE/.apex/STATE.json')\" = 'fast' ]"
+assert_pass "R6-004: rebuilt complexity_level reflects emit"   "[ \"\$(jq -r '.complexity_level' '$SBE/.apex/STATE.json')\" = '4' ]"
+rm -rf "$SBE"
+
 echo ""
 echo "Results: $PASS passed, $FAIL failed"
 exit "$FAIL"

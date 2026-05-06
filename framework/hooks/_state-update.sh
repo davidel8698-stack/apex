@@ -46,10 +46,52 @@ _state_update() {
     state_dir=$(dirname "$state_file")
     local safe_expr
     safe_expr=$(printf '%s' "$expr" | tr '"' "'" | tr '\n' ' ')
+    local _ts_now
+    _ts_now="$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date +%Y-%m-%dT%H:%M:%SZ)"
     printf '{"ts":"%s","type":"state_mutation","source":"%s","expr":"%s"}\n' \
-      "$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date +%Y-%m-%dT%H:%M:%SZ)" \
+      "$_ts_now" \
       "${APEX_HOOK_SOURCE:-unknown}" \
       "$safe_expr" >> "${state_dir}/event-log.jsonl" 2>/dev/null || true
+    # R6-004: Dual-emit semantic events for canonical-field mutations.
+    # Detect the conservative pattern `.<field> = <value>` (with optional
+    # whitespace around `=`) and append a matching semantic event so that
+    # state-rebuild.sh can reconstruct the canonical fields from the event
+    # log without parsing jq expression strings. Pipe-operator updates and
+    # conditional jq forms are intentionally not matched (false-positive
+    # avoidance per R6-004 risk assessment).
+    case "$expr" in
+      *.current_phase[\ ]*=*|*.current_phase=*)
+        local _phase_val
+        _phase_val=$(printf '%s' "$expr" | sed -nE 's/.*\.current_phase[[:space:]]*=[[:space:]]*"([^"]*)".*/\1/p')
+        if [ -n "$_phase_val" ]; then
+          printf '{"ts":"%s","type":"phase_set","source":"%s","current_phase":"%s"}\n' \
+            "$_ts_now" "${APEX_HOOK_SOURCE:-unknown}" "$_phase_val" \
+            >> "${state_dir}/event-log.jsonl" 2>/dev/null || true
+        fi
+        ;;
+    esac
+    case "$expr" in
+      *.decision_mode[\ ]*=*|*.decision_mode=*)
+        local _mode_val
+        _mode_val=$(printf '%s' "$expr" | sed -nE 's/.*\.decision_mode[[:space:]]*=[[:space:]]*"([^"]*)".*/\1/p')
+        if [ -n "$_mode_val" ]; then
+          printf '{"ts":"%s","type":"decision_mode_set","source":"%s","decision_mode":"%s"}\n' \
+            "$_ts_now" "${APEX_HOOK_SOURCE:-unknown}" "$_mode_val" \
+            >> "${state_dir}/event-log.jsonl" 2>/dev/null || true
+        fi
+        ;;
+    esac
+    case "$expr" in
+      *.complexity_level[\ ]*=*|*.complexity_level=*)
+        local _cl_val
+        _cl_val=$(printf '%s' "$expr" | sed -nE 's/.*\.complexity_level[[:space:]]*=[[:space:]]*([0-9]+).*/\1/p')
+        if [ -n "$_cl_val" ]; then
+          printf '{"ts":"%s","type":"complexity_set","source":"%s","complexity_level":%s}\n' \
+            "$_ts_now" "${APEX_HOOK_SOURCE:-unknown}" "$_cl_val" \
+            >> "${state_dir}/event-log.jsonl" 2>/dev/null || true
+        fi
+        ;;
+    esac
     # R5-002: opt-in SQLite mirror. Fires only when APEX_SQLITE_MIRROR=1.
     # Never blocks the canonical write; fail-loud-and-skip on missing CLI.
     if [ "${APEX_SQLITE_MIRROR:-}" = "1" ]; then

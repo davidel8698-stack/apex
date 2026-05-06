@@ -86,6 +86,47 @@ CREATE VIRTUAL TABLE IF NOT EXISTS events_fts
 
 ---
 
+## Dual-emit contract (R6-004) — semantic events for canonical fields
+
+`_state-update.sh` writes the canonical `state_mutation` event for every
+successful jq update. In addition, when the `expr` argument matches one
+of the canonical-field patterns it appends a **semantic event** at the
+same timestamp:
+
+| jq expression pattern (anchored) | Semantic event type | Field carried |
+|----------------------------------|---------------------|---------------|
+| `.current_phase = "<val>"`       | `phase_set`         | `current_phase` |
+| `.decision_mode = "<val>"`       | `decision_mode_set` | `decision_mode` |
+| `.complexity_level = <n>`        | `complexity_set`    | `complexity_level` |
+
+The detection rule is intentionally conservative — only the
+literal-assignment shape `.<field> = <value>` (with optional whitespace
+around `=`) is matched. jq pipe-operator updates, conditional updates,
+and computed expressions are **not** matched, so they remain
+single-emit `state_mutation` events.
+
+**Why dual-emit, not parse-on-rebuild?** `state-rebuild.sh` could in
+principle parse `state_mutation.expr` strings, but jq expression syntax
+is too rich to recover deterministically. Emitting a structured
+semantic event at write time is the robust path. The `state_mutation`
+event format remains byte-compatible (no schema change to the existing
+event type); the semantic event is additive.
+
+**Order semantics.** The rebuild contract is *last-wins* — the most
+recent `phase_set` (etc.) determines the rebuilt field value. Multiple
+emitters may legitimately set the same canonical field in one session.
+
+**Consumers.**
+
+- `state-rebuild.sh` already reads `phase_set` / `decision_mode_set` /
+  `complexity_set` (its read pipeline pre-dates this contract).
+  Dual-emit closes the production-side loop so the rebuild produces the
+  actual session state, not the hardcoded defaults.
+- `_state-sqlite.sh` (when the opt-in mirror is engaged) ingests every
+  event-log line, so both the `state_mutation` event and any matching
+  semantic event end up in the `events` table. R6-013 wires the
+  watermark logic that ingests multi-event windows.
+
 ## Read surface — preservation contract
 
 - `framework/hooks/_state-read.sh` and every read-path consumer continue to read from `.apex/STATE.json`. There is no `read-from-SQLite` path in this round.
