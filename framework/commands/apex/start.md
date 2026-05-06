@@ -126,12 +126,33 @@ If no:
   format ensures zero data loss during migration.
   ```
 
-  ## USER PROFILE CAPTURE
-  2. Ask user (in detected language or default English):
-     - "What is your technical level?" → non-programmer / junior / senior / architect
-     - "What language should I communicate in?" → e.g. Hebrew + English tech terms
-     Write answers into CLAUDE.md ## User Profile section (from CLAUDE-TEMPLATE.md).
-     USER_LANG = captured language preference.
+  ## USER PROFILE CAPTURE [R6-006]
+  ## PROPOSALS_MODE-compliant: numbered proposals, NOT open-ended questions.
+  2. Present numbered proposals to the user (in detected language or default English).
+
+     2.a Technical level — present this 4-option proposal verbatim
+         (one line, mirroring the SCOPE WARNING format):
+
+         "Your technical level?  (1) Non-programmer [recommended]   (2) Junior   (3) Senior   (4) Architect
+          Select (1-4) or press Enter for [recommended]:"
+
+         Map response to STATE field tech_level:
+         (1) → "non-programmer"   (2) → "junior"   (3) → "senior"   (4) → "architect"
+         Enter / no response → "non-programmer" (the [recommended] default).
+
+     2.b Communication language — present this 3-option proposal verbatim
+         (one line, mirroring the SCOPE WARNING format):
+
+         "Your preferred language?  (1) Hebrew + English tech terms [recommended]   (2) English only   (3) Other (specify)
+          Select (1-3) or press Enter for [recommended]:"
+
+         Map response to STATE field language:
+         (1) → "he+en"   (2) → "en"
+         (3) → prompt user once for free-text language code, store as-is.
+         Enter / no response → "he+en" (the [recommended] default).
+
+     Write tech_level and language into CLAUDE.md ## User Profile section
+     (from CLAUDE-TEMPLATE.md). USER_LANG = captured language preference.
 
   ## SCOPE WARNING [F-027]
   2b. Before proceeding, display scope warning (in USER_LANG):
