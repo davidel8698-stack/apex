@@ -15,6 +15,9 @@ Adapt recovery options display:
 - junior: explain options briefly, highlight recommended choice
 - senior/architect: show options as-is (current behavior)
 
+## RECOVERY_MENU.md AWARENESS [R5-005]
+Before doing anything else: if `.apex/RECOVERY_MENU.md` exists, READ it and prepend its `## Reason` and `## Options` sections to the user-facing menu below. RECOVERY_MENU.md is written by `circuit-breaker.sh` (and any other blocking guard that follows the R5-014 pattern) and contains contextual fix-plan options tailored to the trip cause. The static menu (steps 1–3) is the fallback when RECOVERY_MENU.md is absent.
+
 1. Check .apex/STATE.json.lock
 2. No lock: "No crash. /apex:next to continue. Or /apex:resume for fresh session."
 3. Lock exists, process dead:
