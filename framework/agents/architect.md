@@ -118,6 +118,42 @@ For each task, assess AI capability frontier risk based on task content:
 For each task: evaluate `frontier_risk` (high/standard). If high → bump `verify_level` one notch.
 Write `frontier_risk` into each task object in PLAN_META.json.
 
+## STEP 1.9: Roundtable Trigger Classification [R5-024]
+For each task, decide whether `/apex:roundtable` (multi-specialist deliberation)
+should auto-recruit before execution. Roundtable is overhead on routine tasks
+and load-bearing on cross-cutting / irreversible / contract-changing work.
+
+Set `roundtable_needed = true` if ANY of the following holds. The full
+rule set is documented in `framework/docs/ROUNDTABLE-TRIGGERS.md`.
+
+- **R1 — Multi-specialist surface:** task touches >2 specialist domains
+  (e.g., more than two of frontend, data, security, integration,
+  test-architect, memory-synthesis).
+- **R2 — Irreversible decision:** `is_irreversible == true`, OR task
+  description mentions: data deletion, prod deploy, destructive migration,
+  contract break, payment integration, public API release, package publish.
+- **R3 — Schema / migration / contract:** files match
+  `**/migrations/**`, `**/schema/**`, `**/openapi/**`, `**/proto/**`,
+  `**/contracts/**`, OR task description contains: schema change,
+  contract bump, breaking API change, event-schema update.
+- **R4 — Multi-stakeholder:** task description mentions ≥2 human roles
+  with conflicting priorities (end-user, admin, support, data team,
+  finance, legal, compliance, ops), OR mentions: cross-team dependency,
+  sign-off, coordinated rollout, dual-write window.
+- **R5 — Architecture-level decision:** task description contains: choose,
+  decide between, trade-off, ADR, architecture decision, foundational,
+  OR is the first task in a `FOUNDATION` phase.
+
+**Anti-rules** (genuinely routine — leave the field absent):
+- Leaf implementation with `verify_level` A or B and not irreversible.
+- Typo / cosmetic UI / single-file refactor with no contract change.
+- Test additions, test refactors, documentation updates.
+
+If both a trigger rule and an anti-rule fire, the trigger rule wins. Write
+`roundtable_needed = true` (omit the field when false). When set, append a
+`## Roundtable trigger — <task-id>` section to `DECISIONS.md` naming the
+firing rule(s) and a one-sentence rationale.
+
 ## STEP 2: Generate WAVE_MAP.json [שיפור 22]
 Analyze task dependencies within each phase:
 - Tasks with NO dependencies on other tasks in same phase → Wave 1

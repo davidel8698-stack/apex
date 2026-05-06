@@ -1,0 +1,103 @@
+{
+  "_doc": "R5-024 ground-truth corpus for the roundtable trigger classifier. Each entry: description (task summary), expected (true/false), trigger_rule (R1..R5 or 'none'), rationale.",
+  "entries": [
+    {
+      "id": 1,
+      "description": "Add a destructive migration that drops the legacy users_v1 table after backfill.",
+      "expected": true,
+      "trigger_rule": "R2",
+      "rationale": "Irreversible — destructive migration."
+    },
+    {
+      "id": 2,
+      "description": "Fix a typo in the dashboard header copy.",
+      "expected": false,
+      "trigger_rule": "none",
+      "rationale": "Cosmetic, single-file, no contract change."
+    },
+    {
+      "id": 3,
+      "description": "Bump the public API contract from v1 to v2 with a breaking API change in /orders.",
+      "expected": true,
+      "trigger_rule": "R3",
+      "rationale": "Schema / contract change."
+    },
+    {
+      "id": 4,
+      "description": "Refactor the formatPrice helper to use Intl.NumberFormat — no contract change.",
+      "expected": false,
+      "trigger_rule": "none",
+      "rationale": "Single-file refactor, no contract change."
+    },
+    {
+      "id": 5,
+      "description": "Plan the production deploy of the payment integration with Stripe webhooks and customer support sign-off.",
+      "expected": true,
+      "trigger_rule": "R2",
+      "rationale": "Irreversible (prod deploy, payment integration) and multi-stakeholder."
+    },
+    {
+      "id": 6,
+      "description": "Add unit tests for the loyalty discount calculator.",
+      "expected": false,
+      "trigger_rule": "none",
+      "rationale": "Test addition — anti-rule."
+    },
+    {
+      "id": 7,
+      "description": "Decide between Postgres logical replication and Kafka CDC for the data team's analytics pipeline — ADR.",
+      "expected": true,
+      "trigger_rule": "R5",
+      "rationale": "Architecture decision (ADR), choice between options."
+    },
+    {
+      "id": 8,
+      "description": "Update the README onboarding section.",
+      "expected": false,
+      "trigger_rule": "none",
+      "rationale": "Documentation update — anti-rule."
+    },
+    {
+      "id": 9,
+      "description": "Implement the new event-schema update affecting the data team and the support team and the ops team with coordinated rollout.",
+      "expected": true,
+      "trigger_rule": "R3",
+      "rationale": "Event-schema change AND multi-stakeholder."
+    },
+    {
+      "id": 10,
+      "description": "Add a new column 'last_seen_at' to the sessions table and read it in the admin dashboard.",
+      "expected": false,
+      "trigger_rule": "none",
+      "rationale": "Single small schema add (non-breaking), routine. (Borderline — anti-rule wins because verify_level is low and not irreversible.)"
+    },
+    {
+      "id": 11,
+      "description": "Publish the apex-cli npm package to the public registry — first release.",
+      "expected": true,
+      "trigger_rule": "R2",
+      "rationale": "Package publish — irreversible commitment."
+    },
+    {
+      "id": 12,
+      "description": "Add a CSS class for the new 'archived' status badge in the inbox list.",
+      "expected": false,
+      "trigger_rule": "none",
+      "rationale": "Cosmetic UI."
+    },
+    {
+      "id": 13,
+      "description": "Choose the foundational tenant-isolation strategy: schema-per-tenant vs row-level security — first task in FOUNDATION phase.",
+      "expected": true,
+      "trigger_rule": "R5",
+      "rationale": "Foundational architecture decision."
+    },
+    {
+      "id": 14,
+      "description": "Implement the dual-write window between the legacy and new orders service — coordinated rollout with the ops team and the data team.",
+      "expected": true,
+      "trigger_rule": "R4",
+      "rationale": "Multi-stakeholder (ops + data) and dual-write window."
+    }
+  ]
+}

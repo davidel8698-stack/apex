@@ -76,3 +76,27 @@ Write STATUS.json: {"total": N, "completed": 0, "blocking": true}
 Level 1-2: "✅ SPEC.md created. Review: .apex/SPEC.md — Correct? (y/edit/restart)"
 Level 3+: "✅ SPEC.md + Pre-build checklist created. [N] blocking items.
 Review: .apex/SPEC.md — Correct? (y/edit/restart)"
+
+## ROUNDTABLE TRIGGER CLASSIFICATION [R5-024]
+While capturing requirements (Phase 2), tag any requirement (REQ-NNN) that
+matches a roundtable trigger so the architect later sets
+`roundtable_needed = true` on the corresponding task. Triggers (full rule
+set: `framework/docs/ROUNDTABLE-TRIGGERS.md`):
+
+- **R1 — Multi-specialist surface:** requirement touches >2 specialist
+  domains (frontend, data, security, integration, test-architect,
+  memory-synthesis).
+- **R2 — Irreversible decision:** requirement implies data deletion, prod
+  deploy, destructive migration, contract break, payment integration,
+  public API release, package publish.
+- **R3 — Schema / migration / contract:** requirement changes a shared
+  contract (schema, OpenAPI, proto, message format, event schema).
+- **R4 — Multi-stakeholder:** requirement affects ≥2 human roles with
+  conflicting priorities, OR requires sign-off / coordinated rollout.
+- **R5 — Architecture-level decision:** requirement is a directional
+  architectural commitment (choice between options, ADR, foundational).
+
+When a tagged REQ is identified, note it in SPEC.md under the requirement
+with a `**Roundtable:** <rule-id> — <rationale>` line. Anti-rules apply:
+routine leaf-implementation requirements are NOT tagged. Architect picks up
+these tags downstream and sets `roundtable_needed` per task.
