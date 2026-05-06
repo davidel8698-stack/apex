@@ -304,6 +304,48 @@ fi
 
 rm -rf "$SANDBOX"
 
+# --- R6-008: registry _doc consistency assertion --------------------------
+# Internal-contract consistency: the registry text must describe the post-
+# R6-005 behavior (lint honors stub status) AND every module listed in
+# _registry.json must either have an agent.md or declare status=='stub'.
+# Catches future drift (e.g., adding an active module without agent.md).
+LIVE_REGISTRY="$REPO_ROOT/framework/modules/_registry.json"
+if [ -f "$LIVE_REGISTRY" ]; then
+  if grep -q "lint honors stub status" "$LIVE_REGISTRY"; then
+    ok "C-18: _registry.json _doc text describes stub-canonical contract (R6-008)"
+  else
+    nope "C-18: _registry.json _doc missing stub-canonical contract sentence (R6-008)"
+  fi
+  R6008_FAIL=0
+  # Use jq with --raw-output and pipe through tr to strip any CR from
+  # Windows line endings, then iterate via process substitution.
+  R6008_NAMES=$(jq -r '((.modules // []) + (.additional_modules // []))[] | "\(.name)\t\(.path)\t\(.status)"' "$LIVE_REGISTRY" 2>/dev/null | tr -d '\r')
+  while IFS=$'\t' read -r MNAME MPATH MSTATUS; do
+    [ -z "$MNAME" ] && continue
+    MDIR="$REPO_ROOT/framework/modules/$MPATH"
+    # Stub modules are canonical placeholders — the contract is satisfied
+    # by manifest.status='stub' alone (R6-005 fast-path passes them, no
+    # agent.md required).
+    if [ "$MSTATUS" = "stub" ]; then
+      continue
+    fi
+    # apex-core (status='core') is the dispatcher base, not an agent module;
+    # it ships its registry/dispatcher files instead of agent.md.
+    if [ "$MSTATUS" = "core" ]; then
+      continue
+    fi
+    if [ ! -f "$MDIR/agent.md" ]; then
+      R6008_FAIL=1
+      echo "      drift: $MNAME (status=$MSTATUS) lacks agent.md at $MDIR" >&2
+    fi
+  done <<< "$R6008_NAMES"
+  if [ "$R6008_FAIL" -eq 0 ]; then
+    ok "C-19: every non-stub module in _registry.json has agent.md (R6-008)"
+  else
+    nope "C-19: registry/lint contract drift detected (R6-008)"
+  fi
+fi
+
 TOTAL=$((PASS+FAIL))
 echo ""
 echo "$PASS/$TOTAL passed"
