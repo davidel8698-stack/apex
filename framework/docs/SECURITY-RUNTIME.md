@@ -25,6 +25,34 @@ Plus the pre-existing Bash shims at the same names (`prompt-guard.sh`,
 `workflow-guard.sh`) which auto-delegate to the `.cjs` when `node` is on
 PATH and fall back to the original Bash detection logic when it is not.
 
+## Prefix restoration via R6-014 rename
+
+`R6-014` (round 6, finding F-014/F-018) renamed
+`prompt-guard.cjs` → `apex-prompt-guard.cjs` and
+`workflow-guard.cjs` → `apex-workflow-guard.cjs` to match the spec
+literal `apex-` prefix. The .cjs extension is documented as equivalent
+to the spec's .js per the R5-003 paragraph below. Both divergences
+(extension and prefix) are now covered:
+
+- **Extension** — spec `.js` ↔ impl `.cjs`. Documented and justified
+  below ("Why `.cjs` for the two named-as-`.js`"). Functionally
+  equivalent; preserved for the zero-`package.json` requirement.
+- **Prefix** — spec `apex-prompt-guard` / `apex-workflow-guard` ↔ impl
+  literal match (post-R6-014). Brand-position-named files are now
+  literally named per the spec; no aliasing layer is required.
+
+The R6-014 rename touched `framework/settings.json` (matcher entries),
+`framework/scripts/sync-to-claude.sh` (delivery list), this doc
+(file-list section above), `framework/HOOK-CLASSIFICATION.md`, the bash
+shims (`prompt-guard.sh`, `workflow-guard.sh` — names preserved by
+design so existing command-invoked call sites continue to resolve),
+and the `framework/tests/test-security-*.sh` suite. The rename is
+content-preserving for the .cjs files (byte-identical).
+
+If R6-014 is ever reverted, this paragraph and the file-list section
+above must be reverted in lockstep — the doc text must match the
+implementation.
+
 ## Why `.cjs` for the two named-as-`.js`
 
 The spec's `.js` naming is satisfied by `.cjs` (the CommonJS variant of
