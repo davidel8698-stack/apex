@@ -63,12 +63,13 @@ Else:
 
 If user selects cancel: "Cancelled." STOP.
 
-### Confirmation (destructive operation)
+### Confirmation (destructive operation) [R6-016: numbered proposal]
 "⚠️ WARNING: This will revert your working tree to the selected checkpoint.
 Uncommitted changes will be stashed first as safety backup.
-Proceed? (y/n)"
+ (1) Proceed and revert   (2) Cancel [recommended for caution]"
 
-If 'n': "Cancelled." STOP.
+If response is "2" (or empty / no response): "Cancelled." STOP.
+If response is "1": continue to Safety backup.
 
 ### Safety backup
 ```bash
