@@ -47,6 +47,14 @@ if [ -f "$(dirname "$0")/_fix-plan-emit.sh" ]; then
   source "$(dirname "$0")/_fix-plan-emit.sh"
 fi
 
+# R6-003: parse_epoch is sourced from the canonical helper instead of
+# being defined inline. Mirrors the pattern used by phase-tag.sh and
+# verify-learnings.sh — single source for cross-platform date parsing.
+# shellcheck source=/dev/null
+if [ -f "$(dirname "$0")/_date-parse.sh" ]; then
+  source "$(dirname "$0")/_date-parse.sh"
+fi
+
 # === Locate STATE.json ===
 if ! command -v jq >/dev/null 2>&1; then
   exit 0
@@ -76,30 +84,7 @@ LAST_GATE=$(jq -r '.session.last_time_gate // empty' "$STATE_JSON" 2>/dev/null |
 COMPLEXITY=$(jq -r '.complexity_level // empty' "$STATE_JSON" 2>/dev/null || true)
 
 # === Compute elapsed + cadence ===
-# parse_epoch helper — accepts ISO 8601 or numeric epoch; emits epoch
-# seconds (or empty on parse failure). Mirrors the resilient parser
-# pattern used elsewhere in the framework so Windows / macOS / Linux
-# date(1) variants all work.
-parse_epoch() {
-  local raw="${1:-}"
-  [ -z "$raw" ] && return 0
-  # Pure-numeric epoch path.
-  case "$raw" in
-    ''|*[!0-9]*) ;;
-    *) echo "$raw"; return 0 ;;
-  esac
-  # GNU date.
-  if command -v date >/dev/null 2>&1; then
-    local out
-    out=$(date -d "$raw" +%s 2>/dev/null || true)
-    if [ -n "$out" ]; then echo "$out"; return 0; fi
-    # BSD date.
-    out=$(date -j -f "%Y-%m-%dT%H:%M:%SZ" "$raw" +%s 2>/dev/null || true)
-    if [ -n "$out" ]; then echo "$out"; return 0; fi
-    out=$(date -j -f "%Y-%m-%dT%H:%M:%S" "$raw" +%s 2>/dev/null || true)
-    if [ -n "$out" ]; then echo "$out"; return 0; fi
-  fi
-}
+# parse_epoch is provided by _date-parse.sh sourced above (R6-003).
 
 START_EPOCH=$(parse_epoch "$STARTED_AT")
 if [ -z "$START_EPOCH" ]; then
