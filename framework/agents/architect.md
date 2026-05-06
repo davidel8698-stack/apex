@@ -161,6 +161,18 @@ Analyze task dependencies within each phase:
 - Continue until all tasks assigned
 - Write WAVE_MAP.json with execution plan
 
+**Populate `owns_files` per task per OWNS-FILES-CONTRACT.md [R6-010].**
+For every task that issues Write or Edit, populate the `owns_files`
+field with the exact list of repository-relative paths the task is
+allowed to write within its wave. The contract — population rules,
+fast-path semantics, examples — lives at
+`framework/docs/OWNS-FILES-CONTRACT.md` (single source of truth, also
+referenced by `planner.md`). The downstream consumer is
+`framework/hooks/owner-guard.sh`, which reads the field at PreToolUse
+Write|Edit and refuses any write whose target is not listed. Read-only
+tasks (verify, audit, summarize) MAY omit the field; sole-task waves
+MAY use `["*"]`. See OWNS-FILES-CONTRACT.md for population rules.
+
 ## VERIFICATION LADDER [שיפור 2]
 Webhook/OAuth/Payment → D | Background job → C or D | API with logic → B or C
 File/schema/config → A | SELF-CORRECT if A assigned to behavioral task

@@ -77,7 +77,15 @@ Level 1-2: "✅ SPEC.md created. Review: .apex/SPEC.md — Correct? (y/edit/rest
 Level 3+: "✅ SPEC.md + Pre-build checklist created. [N] blocking items.
 Review: .apex/SPEC.md — Correct? (y/edit/restart)"
 
-## ONE-FILE-ONE-OWNER (owns_files) [R5-013]
+## ONE-FILE-ONE-OWNER (owns_files) [R5-013, R6-010]
+**Single source of truth: `framework/docs/OWNS-FILES-CONTRACT.md`.**
+The contract — what the field is, how to populate it, fast-path
+semantics, worked examples — lives in OWNS-FILES-CONTRACT.md.
+This block is belt-and-braces: planner-emitted artifacts that become
+WAVE_MAP inputs MUST follow the same contract; architect.md STEP 2
+finalizes WAVE_MAP.json and is the primary owner of the population
+directive (see OWNS-FILES-CONTRACT.md).
+
 The architect-produced `.apex/phases/<phase>/WAVE_MAP.json` declares a
 `tasks[]` array per wave. To enforce the spec invariant
 "One-file-one-owner עם git worktree isolation" + "Read-parallel,
@@ -88,7 +96,7 @@ The owner-guard hook (`framework/hooks/owner-guard.sh`, PreToolUse
 Write|Edit) reads `APEX_CURRENT_TASK_ID` + WAVE_MAP and refuses any
 write whose target is not in the active task's `owns_files`.
 
-Population rules:
+Population rules (full list in OWNS-FILES-CONTRACT.md):
 - For a sole-task wave, set `owns_files: ["*"]` to opt out of gating.
 - For a multi-task wave, every task that performs writes MUST list
   every file it touches; overlap between tasks within the same wave is
@@ -103,7 +111,7 @@ Population rules:
 When this agent emits planning output that becomes a WAVE_MAP, the
 field MUST be populated for every task that issues Write/Edit. The
 architect agent (which finalizes WAVE_MAP.json) inherits the same
-contract.
+contract — see OWNS-FILES-CONTRACT.md and architect.md STEP 2.
 
 ## ROUNDTABLE TRIGGER CLASSIFICATION [R5-024]
 While capturing requirements (Phase 2), tag any requirement (REQ-NNN) that

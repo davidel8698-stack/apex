@@ -308,6 +308,12 @@ copy_tree "$FRAMEWORK_ROOT/test-fixtures"   "$CLAUDE_ROOT/test-fixtures"
 # `_doc` field. Lives under framework/docs/ which is otherwise not
 # walked by sync; the explicit anchor here is the delivery contract.
 copy_file "$FRAMEWORK_ROOT/docs/MODULE-ECOSYSTEM.md" "$CLAUDE_ROOT/docs/MODULE-ECOSYSTEM.md"
+# R6-010: explicit delivery anchor for the owns_files population
+# contract doc. Single source of truth for `owns_files` semantics,
+# referenced by both architect.md STEP 2 and planner.md
+# ONE-FILE-ONE-OWNER. Owner-guard.sh (PreToolUse Write|Edit) is the
+# downstream consumer of the field this contract defines.
+copy_file "$FRAMEWORK_ROOT/docs/OWNS-FILES-CONTRACT.md" "$CLAUDE_ROOT/docs/OWNS-FILES-CONTRACT.md"
 
 # Top-level files
 copy_file "$FRAMEWORK_ROOT/apex-branding.md"        "$CLAUDE_ROOT/apex-branding.md"
