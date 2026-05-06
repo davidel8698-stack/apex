@@ -1,0 +1,5 @@
+1
+# R5-017 baseline. The single permitted hit is a quoted user intent pattern in
+# help.md routing table ("What should I do next" → /apex:next). It is the
+# question the *user* asks the framework, not the framework asking the user.
+# Increase only after a deliberate review.
