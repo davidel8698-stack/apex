@@ -17,8 +17,29 @@
           "wave_number": { "type": "integer", "minimum": 1 },
           "tasks": {
             "type": "array",
-            "items": { "type": "string" },
-            "minItems": 1
+            "minItems": 1,
+            "items": {
+              "oneOf": [
+                {
+                  "description": "Legacy task entry — bare task ID. Kept for backward compatibility with WAVE_MAP files generated before R5-013.",
+                  "type": "string"
+                },
+                {
+                  "description": "Object form (R5-013) — task ID plus optional ownership declaration. The owner-guard hook reads owns_files to enforce one-file-one-owner during parallel wave execution.",
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["id"],
+                  "properties": {
+                    "id": { "type": "string", "minLength": 1 },
+                    "owns_files": {
+                      "description": "R5-013: paths the task is allowed to write within this wave. Glob-friendly. Use [\"*\"] for sole-task waves to opt out of ownership gating. OPTIONAL during the R5-013 transition window — when absent, owner-guard advisory mode does not block.",
+                      "type": "array",
+                      "items": { "type": "string", "minLength": 1 }
+                    }
+                  }
+                }
+              ]
+            }
           }
         }
       },

@@ -277,6 +277,13 @@ copy_file "$FRAMEWORK_ROOT/hooks/_fix-plan-emit.sh" "$CLAUDE_ROOT/hooks/_fix-pla
 # against the manifest schema + agent.md frontmatter contract before
 # the module is registered or delivered.
 copy_file "$FRAMEWORK_ROOT/hooks/agent-lint.sh" "$CLAUDE_ROOT/hooks/agent-lint.sh"
+# R5-013: explicit delivery anchor for the one-file-one-owner guard.
+# The copy_tree call above already covers it, but the explicit line
+# documents the contract: owner-guard.sh is wired in settings.json as
+# PreToolUse Write|Edit and reads .apex/phases/<phase>/WAVE_MAP.json
+# at runtime, so it must reach ~/.claude/hooks/ before the live
+# settings.json invokes it.
+copy_file "$FRAMEWORK_ROOT/hooks/owner-guard.sh" "$CLAUDE_ROOT/hooks/owner-guard.sh"
 # R5-003: the .cjs guards load detection patterns from the test-fixtures
 # tree at runtime. The copy_tree call below covers it, but the explicit
 # anchor documents the contract: the security-patterns fixture is a

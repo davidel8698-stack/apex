@@ -41,8 +41,27 @@ $ARGUMENTS must contain a phase number. If empty:
          - current_unit: T.id
          - current_wave: W
 
+       ## OWNER-GUARD DISPATCH [R5-013]
+       Export APEX_CURRENT_TASK_ID="{T.id}" before invoking /apex:next.
+       This is the structural opt-in for the owner-guard PreToolUse
+       Write|Edit hook (`framework/hooks/owner-guard.sh`): when the
+       env var is set, the guard reads
+       .apex/phases/{phase}/WAVE_MAP.json and refuses any Write/Edit
+       whose target is not in the active task's `owns_files` list.
+       When unset, the guard fast-paths exit 0 — manual edits are
+       never gated. Spec anchors: "One-file-one-owner עם git worktree
+       isolation" + "Read-parallel, write-serial עם Vertical Slices
+       Enforcement."
+       export APEX_CURRENT_TASK_ID="{T.id}"
+
        Invoke /apex:next
        (This triggers the full executor -> critic -> verifier pipeline for the task)
+
+       ## OWNER-GUARD CLEANUP [R5-013]
+       After /apex:next returns (any verdict), unset APEX_CURRENT_TASK_ID
+       so the next iteration starts clean and ad-hoc writes between
+       tasks are not gated against the previous task's ownership.
+       unset APEX_CURRENT_TASK_ID
 
        Check result:
        - If task passed: continue to next task

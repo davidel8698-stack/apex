@@ -4,10 +4,11 @@
 developer can answer "how does this hook fire?" without cross-referencing
 `framework/settings.json` and 44 command `.md` files.
 
-**Total files:** 39 — 24 functional `.sh` hooks + 11 library `.sh` files
-(`_`-prefixed; R5-014 added `_fix-plan-emit.sh`) + 1 Python helper + 3
-CommonJS guards (R5-003: `prompt-guard.cjs`, `workflow-guard.cjs`,
-`security.cjs`). Category totals below sum to 39.
+**Total files:** 40 — 25 functional `.sh` hooks (R5-013 added
+`owner-guard.sh`) + 11 library `.sh` files (`_`-prefixed; R5-014 added
+`_fix-plan-emit.sh`) + 1 Python helper + 3 CommonJS guards (R5-003:
+`prompt-guard.cjs`, `workflow-guard.cjs`, `security.cjs`). Category
+totals below sum to 40.
 
 **Spec anchor:** `apex-spec.md` — "Hook system — 24+ hooks" and
 "Fail-loud, never fail-silent."
@@ -25,13 +26,14 @@ CommonJS guards (R5-003: `prompt-guard.cjs`, `workflow-guard.cjs`,
 
 ---
 
-## Auto-PreToolUse (6)
+## Auto-PreToolUse (7)
 
 | File | Matcher | Purpose |
 |---|---|---|
 | `destructive-guard.sh` | `Bash` | v7 hardened destructive command blocker — normalized matching, chained-command splitting. Exit 2 on rm -rf, force pushes, etc. |
 | `prompt-guard.sh` | `Write\|Edit\|Agent` | Prompt-injection detection (instruction override, role hijacking, hidden HTML, zero-width chars). Exit 2 on match. **Dual-runtime (R5-003):** `.cjs` preferred, `.sh` shim falls back to native Bash when node absent. Settings.json invocation is runtime-aware (`if command -v node ... node prompt-guard.cjs; else bash prompt-guard.sh; fi`). |
 | `path-guard.sh` | `Write\|Edit` | Path traversal and sensitive-file protection (.env, credentials, .git/*, parent-dir escapes). Exit 2 on match. |
+| `owner-guard.sh` | `Write\|Edit` | One-file-one-owner enforcement (R5-013). Reads `APEX_CURRENT_TASK_ID` + `.apex/phases/<phase>/WAVE_MAP.json`; blocks writes to paths outside the active task's `owns_files`. Fast-path exit 0 when `APEX_CURRENT_TASK_ID` is unset (manual edits never gated). Advisory mode by default (exit 1) per the human-decision flag in REMEDIATION-PLAN-R5.md §R5-013; set `APEX_OWNER_GUARD_BLOCKING=1` to upgrade to exit 2. Spec anchors: "One-file-one-owner עם git worktree isolation" + "Read-parallel, write-serial עם Vertical Slices Enforcement." |
 | `pre-task-snapshot.sh` | `Bash` | Git stash snapshot before task execution — enables per-task rollback. |
 | `quarantine-guard.sh` | `Read\|Bash` | Agent-aware file access control. When `APEX_ACTIVE_AGENT=auditor`, restrict reads to test files and `.apex/` state. Microsecond pass-through otherwise. |
 | `workflow-guard.sh` | `Read` | Workflow-recipe injection scanner (post-R-006 auto-wiring). Self-filters non-workflow paths. Also invoked explicitly by `/apex:workflow`. **Dual-runtime (R5-003):** `.cjs` preferred, `.sh` shim falls back to native Bash when node absent. |
@@ -147,14 +149,14 @@ available, and both fall back to the preserved Bash logic when not.
 
 | Category | Count |
 |---|---|
-| Auto-PreToolUse | 6 |
+| Auto-PreToolUse | 7 |
 | Auto-PostToolUse | 7 |
 | Command-Invoked / Event-Triggered | 13 |
 | Library — Sourced | 11 |
 | CommonJS — Node-runtime guards (R5-003) | 3 |
-| **Total** | **39** (R5-011: `tdad-index.sh` and `cross-phase-audit.sh` are dual-listed in Auto-PostToolUse / SubagentStop AND Command-Invoked; not double-counted in the total. R5-014: `_fix-plan-emit.sh` added to Library — Sourced.) |
+| **Total** | **40** (R5-011: `tdad-index.sh` and `cross-phase-audit.sh` are dual-listed in Auto-PostToolUse / SubagentStop AND Command-Invoked; not double-counted in the total. R5-014: `_fix-plan-emit.sh` added to Library — Sourced. R5-013: `owner-guard.sh` added to Auto-PreToolUse.) |
 
-Verify with: `ls framework/hooks/ | wc -l` → **39**.
+Verify with: `ls framework/hooks/ | wc -l` → **40**.
 
 **Delta from R-003 original acceptance criterion:** plan document referenced
 "28 files" based on a pre-Wave-1 count. Wave 1 R-005 added `_date-parse.sh`
@@ -163,8 +165,8 @@ Verify with: `ls framework/hooks/ | wc -l` → **39**.
 R5-003 added three CommonJS guards `prompt-guard.cjs`, `workflow-guard.cjs`,
 `security.cjs` (35). Wave 6 R5-009 added `_agent-dispatch.sh` (36). Wave 6
 R5-019 added `_learnings-emit.sh` (37). Wave 6 R5-021 added `agent-lint.sh`
-(38). Wave 7 R5-014 added `_fix-plan-emit.sh` (39). All files accounted for
-in the tables above.
+(38). Wave 7 R5-014 added `_fix-plan-emit.sh` (39). Wave 8 R5-013 added
+`owner-guard.sh` (40). All files accounted for in the tables above.
 
 ---
 

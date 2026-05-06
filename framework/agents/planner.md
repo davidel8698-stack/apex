@@ -77,6 +77,34 @@ Level 1-2: "✅ SPEC.md created. Review: .apex/SPEC.md — Correct? (y/edit/rest
 Level 3+: "✅ SPEC.md + Pre-build checklist created. [N] blocking items.
 Review: .apex/SPEC.md — Correct? (y/edit/restart)"
 
+## ONE-FILE-ONE-OWNER (owns_files) [R5-013]
+The architect-produced `.apex/phases/<phase>/WAVE_MAP.json` declares a
+`tasks[]` array per wave. To enforce the spec invariant
+"One-file-one-owner עם git worktree isolation" + "Read-parallel,
+write-serial עם Vertical Slices Enforcement," each task entry SHOULD
+populate the `owns_files: string[]` field with the exact list of
+repository-relative paths the task is allowed to write within its wave.
+The owner-guard hook (`framework/hooks/owner-guard.sh`, PreToolUse
+Write|Edit) reads `APEX_CURRENT_TASK_ID` + WAVE_MAP and refuses any
+write whose target is not in the active task's `owns_files`.
+
+Population rules:
+- For a sole-task wave, set `owns_files: ["*"]` to opt out of gating.
+- For a multi-task wave, every task that performs writes MUST list
+  every file it touches; overlap between tasks within the same wave is
+  a planning error (the wave should be split or one of the tasks moved
+  to a later wave).
+- Read-only tasks (verify, audit, summarize) may omit the field — the
+  guard's fast-path exits 0 when no writes occur.
+- Field is OPTIONAL during the R5-013 transition window (advisory
+  mode: missing field → guard does not block). After the transition
+  the field becomes required by `framework/schemas/WAVE_MAP.schema.json`.
+
+When this agent emits planning output that becomes a WAVE_MAP, the
+field MUST be populated for every task that issues Write/Edit. The
+architect agent (which finalizes WAVE_MAP.json) inherits the same
+contract.
+
 ## ROUNDTABLE TRIGGER CLASSIFICATION [R5-024]
 While capturing requirements (Phase 2), tag any requirement (REQ-NNN) that
 matches a roundtable trigger so the architect later sets

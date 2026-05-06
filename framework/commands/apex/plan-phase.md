@@ -49,6 +49,18 @@ $ARGUMENTS must contain a phase number. If empty:
    - .apex/phases/{phase}/PLAN_META.json must exist
    If missing: "Architect failed to produce required outputs. Review and retry."
 
+   ## ONE-FILE-ONE-OWNER VALIDATION [R5-013]
+   When .apex/phases/{phase}/WAVE_MAP.json exists, verify every wave
+   whose `tasks` length > 1 has `owns_files` populated for each task
+   that performs writes (per the planner's `## ONE-FILE-ONE-OWNER
+   (owns_files)` directive). Bare-string task entries are accepted in
+   advisory mode (owner-guard does not block when the field is
+   missing) but a multi-task wave with any unowned writer is a
+   planning gap — surface as: "⚠️ Wave {N} has multiple tasks but
+   task {id} declares no owns_files. owner-guard advisory mode will
+   not block, but parallel writes risk silent overwrites. Re-run
+   /apex:plan-phase or accept advisory mode."
+
 5. Display plan summary:
    "## Phase {phase} Plan Created
    Tasks: [count from PLAN_META]
