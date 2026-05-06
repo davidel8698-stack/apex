@@ -50,6 +50,17 @@ _state_update() {
       "$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date +%Y-%m-%dT%H:%M:%SZ)" \
       "${APEX_HOOK_SOURCE:-unknown}" \
       "$safe_expr" >> "${state_dir}/event-log.jsonl" 2>/dev/null || true
+    # R5-002: opt-in SQLite mirror. Fires only when APEX_SQLITE_MIRROR=1.
+    # Never blocks the canonical write; fail-loud-and-skip on missing CLI.
+    if [ "${APEX_SQLITE_MIRROR:-}" = "1" ]; then
+      local _apex_sqlite_hook
+      _apex_sqlite_hook="$(dirname "${BASH_SOURCE[0]}")/_state-sqlite.sh"
+      if [ -f "$_apex_sqlite_hook" ]; then
+        # shellcheck disable=SC1090
+        source "$_apex_sqlite_hook"
+        _state_sqlite_mirror "$state_file" "${state_dir}/event-log.jsonl" || true
+      fi
+    fi
   else
     rm -f "$tmp"
     local jq_msg

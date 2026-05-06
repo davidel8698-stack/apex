@@ -226,6 +226,10 @@ copy_tree "$FRAMEWORK_ROOT/agents"        "$CLAUDE_ROOT/agents"
 copy_modules_specialists
 copy_tree "$FRAMEWORK_ROOT/commands/apex" "$CLAUDE_ROOT/commands/apex"
 copy_tree "$FRAMEWORK_ROOT/hooks"         "$CLAUDE_ROOT/hooks"
+# R5-002: explicit delivery anchor for the opt-in SQLite mirror helper. The
+# copy_tree call above already covers it, but the explicit line documents
+# the contract: _state-sqlite.sh is part of the canonical install.
+copy_file "$FRAMEWORK_ROOT/hooks/_state-sqlite.sh" "$CLAUDE_ROOT/hooks/_state-sqlite.sh"
 copy_tree "$FRAMEWORK_ROOT/apex-skills"   "$CLAUDE_ROOT/apex-skills"
 copy_tree "$FRAMEWORK_ROOT/schemas"       "$CLAUDE_ROOT/schemas"
 copy_tree "$FRAMEWORK_ROOT/tests"           "$CLAUDE_ROOT/tests"

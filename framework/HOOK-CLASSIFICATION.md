@@ -4,8 +4,8 @@
 developer can answer "how does this hook fire?" without cross-referencing
 `framework/settings.json` and 44 command `.md` files.
 
-**Total files:** 31 — 23 functional `.sh` hooks + 7 library `.sh` files
-(`_`-prefixed) + 1 Python helper. Category totals below sum to 31.
+**Total files:** 32 — 23 functional `.sh` hooks + 8 library `.sh` files
+(`_`-prefixed) + 1 Python helper. Category totals below sum to 32.
 
 **Spec anchor:** `apex-spec.md` — "Hook system — 24+ hooks" and
 "Fail-loud, never fail-silent."
@@ -85,7 +85,7 @@ command `.md` files for exact invocation points.
 
 ---
 
-## Library — Sourced (7)
+## Library — Sourced (8)
 
 Files prefixed with `_` — utility libraries sourced by other hooks.
 **Never invoked directly.**
@@ -99,6 +99,7 @@ Files prefixed with `_` — utility libraries sourced by other hooks.
 | `_state-update.sh` | Atomic STATE.json update with error handling | Hooks that mutate STATE |
 | `_date-parse.sh` | `parse_epoch` — portable date→epoch (GNU → BSD → Python3 → Python2) | `phase-tag.sh`, `verify-learnings.sh` (post-R-005) |
 | `_dream-cycle-emit.sh` | `start \| complete \| fail` phases for memory-synthesis dream-cycle wraps; emits structured START/COMPLETE/FAIL JSONL with a correlation id (R5-023) | `/apex:next` (two invocation sites) |
+| `_state-sqlite.sh` | `_state_sqlite_mirror`, `_state_sqlite_status` — opt-in SQLite mirror over STATE.json + event-log.jsonl when `APEX_SQLITE_MIRROR=1` and `sqlite3` CLI present (R5-002). Fail-loud-and-skip when CLI absent. | `_state-update.sh` (conditional) |
 
 ---
 
@@ -109,10 +110,10 @@ Files prefixed with `_` — utility libraries sourced by other hooks.
 | Auto-PreToolUse | 6 |
 | Auto-PostToolUse | 5 |
 | Command-Invoked / Event-Triggered | 13 |
-| Library — Sourced | 7 |
-| **Total** | **31** |
+| Library — Sourced | 8 |
+| **Total** | **32** |
 
-Verify with: `ls framework/hooks/ | wc -l` → **31**.
+Verify with: `ls framework/hooks/ | wc -l` → **32**.
 
 **Delta from R-003 original acceptance criterion:** plan document referenced
 "28 files" based on a pre-Wave-1 count. Wave 1 R-005 added `_date-parse.sh`,

@@ -58,4 +58,21 @@ if [ -n "$MISSING" ]; then
   exit 2
 fi
 
+# R5-002: optional sqlite_mirror field shape validation. Tolerates absence.
+case "$FILE" in
+  */.apex/STATE.json)
+    if jq -e 'has("sqlite_mirror")' "$FILE" >/dev/null 2>&1; then
+      if ! jq -e '
+        .sqlite_mirror | type == "object"
+        and ((has("enabled") | not) or (.enabled | type == "boolean"))
+        and ((has("last_synced_at") | not) or (.last_synced_at == null) or (.last_synced_at | type == "string"))
+        and ((has("threshold_events") | not) or (.threshold_events | type == "number"))
+      ' "$FILE" >/dev/null 2>&1; then
+        echo "🚫 SCHEMA-DRIFT: $FILE sqlite_mirror has invalid shape (expected {enabled?: bool, last_synced_at?: string|null, threshold_events?: int})" >&2
+        exit 2
+      fi
+    fi
+    ;;
+esac
+
 exit 0

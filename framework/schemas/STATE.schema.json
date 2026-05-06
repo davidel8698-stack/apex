@@ -413,6 +413,16 @@
       "type": "object",
       "additionalProperties": { "type": "number" }
     },
+    "sqlite_mirror": {
+      "type": "object",
+      "description": "Optional bookkeeping for the opt-in SQLite mirror (R5-002). Absent in projects that do not enable APEX_SQLITE_MIRROR. See framework/docs/STATE-PLANE.md.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "last_synced_at": { "type": ["string", "null"], "format": "date-time" },
+        "threshold_events": { "type": "integer", "minimum": 0 }
+      }
+    },
     "self_heal": {
       "type": "object",
       "description": "Optional state for /apex:self-heal framework gap-closure loop. Initialized lazily by the orchestrator on first invocation; absent in projects that never run the self-heal loop.",
