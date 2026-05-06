@@ -1,0 +1,11 @@
+{
+  "name": "apex-healthcare",
+  "version": "0.0.0",
+  "owner": "apex-core-team",
+  "status": "stub",
+  "capabilities": ["healthcare"],
+  "agent_path": null,
+  "hooks": [],
+  "deps": [],
+  "notes": "Spec-named enterprise module, not yet implemented in R5. Scaffold-only: manifest + README. Future work: define agent.md with healthcare-domain invariants (HIPAA, PHI redaction, audit access, minimum-necessary disclosure, consent management)."
+}

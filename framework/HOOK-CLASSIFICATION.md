@@ -125,6 +125,14 @@ bringing the total to 29. All files accounted for in the tables above.
 
 ---
 
+## Module-contributed hooks
+
+**Count for R5: zero.** Per R5-001, the module ecosystem (`framework/modules/<name>/`) has the structural shape to advertise hook contributions via each module's `manifest.json` (`hooks[]` array, with `name`, `trigger`, optional `matcher`). For the R5 round, no module ships any hook of its own — every hook still lives directly under `framework/hooks/`. The live tree at `~/.claude/hooks/` remains flat: modules contribute, they do not host. As modules promote from `stub` to `active` and start contributing hooks, those entries get rolled into the category tables above (so a future reader does not have to inspect every manifest to answer "how does this hook fire?").
+
+**Verification:** `jq -r '.hooks | length' framework/modules/*/manifest.json` should return only zeros for R5.
+
+---
+
 ## How to add a new hook
 
 1. Create `framework/hooks/<name>.sh` (or `_<name>.sh` for library).

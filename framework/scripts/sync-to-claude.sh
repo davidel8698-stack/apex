@@ -68,6 +68,42 @@ copy_tree() {
   done < <(find "$src_dir" -type f -print0)
 }
 
+# copy_modules_specialists — Manifest-driven specialist delivery.
+#
+# Walks framework/modules/<name>/agent.md and copies each into the flat
+# ~/.claude/agents/specialist/<short>.md, where <short> is the module name
+# with the 'apex-' prefix stripped (apex-data -> data.md,
+# apex-test-architect -> test-architect.md). This preserves the dispatcher
+# contract: Task("data-specialist", ...) continues to resolve because Claude
+# Code reads agent frontmatter `name` for routing, while the filename layout
+# remains the pre-R5-001 flat shape that the runtime expects.
+#
+# Modules with no agent.md (stubs: apex-fintech, apex-healthcare, apex-builder,
+# apex-core) are skipped silently — they contribute nothing to the live tree
+# until promoted to active.
+copy_modules_specialists() {
+  local modules_root="$FRAMEWORK_ROOT/modules"
+  local dst_dir="$CLAUDE_ROOT/agents/specialist"
+  if [[ ! -d "$modules_root" ]]; then
+    log "skip (missing dir): ${modules_root#$FRAMEWORK_ROOT/}"
+    return
+  fi
+  local mod_dir mod_name short_name agent_src
+  for mod_dir in "$modules_root"/*/; do
+    [[ -d "$mod_dir" ]] || continue
+    mod_name="$(basename "$mod_dir")"
+    # Skip non-module entries (_schema, _registry.json sits at root not as a dir).
+    case "$mod_name" in
+      _*) continue ;;
+    esac
+    agent_src="$mod_dir/agent.md"
+    [[ -f "$agent_src" ]] || continue
+    # Strip leading 'apex-' to match the pre-migration flat-tree expectation.
+    short_name="${mod_name#apex-}"
+    copy_file "$agent_src" "$dst_dir/${short_name}.md"
+  done
+}
+
 # merge_apex_hooks — Surgically replace APEX hook wirings in ~/.claude/settings.json.
 #
 # Claude Code's settings.json has a nested hooks structure:
@@ -184,6 +220,10 @@ echo
 
 # Directory trees
 copy_tree "$FRAMEWORK_ROOT/agents"        "$CLAUDE_ROOT/agents"
+# R5-001: manifest-driven specialist delivery. Walks framework/modules/<name>/
+# and delivers each agent.md into the flat live tree at
+# ~/.claude/agents/specialist/<short>.md (apex- prefix stripped).
+copy_modules_specialists
 copy_tree "$FRAMEWORK_ROOT/commands/apex" "$CLAUDE_ROOT/commands/apex"
 copy_tree "$FRAMEWORK_ROOT/hooks"         "$CLAUDE_ROOT/hooks"
 copy_tree "$FRAMEWORK_ROOT/apex-skills"   "$CLAUDE_ROOT/apex-skills"

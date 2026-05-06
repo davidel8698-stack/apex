@@ -1,0 +1,19 @@
+{
+  "$schema_ref": "_schema/manifest.schema.json",
+  "version": "1.0.0",
+  "description": "Authoritative registry of APEX modules. Contains the eight spec-named modules from apex-spec.md (apex-core, apex-frontend, apex-data, apex-security, apex-test-architect, apex-fintech, apex-healthcare, apex-builder). Two additional migrated modules (apex-integration, apex-memory-synthesis) exist under framework/modules/ and are delivered by sync-to-claude.sh's manifest-driven traversal even though they are not part of the spec's canonical eight; they are listed in `additional_modules` below for discoverability.",
+  "modules": [
+    {"name": "apex-core",            "path": "apex-core",            "version": "0.1.0", "status": "core"},
+    {"name": "apex-frontend",        "path": "apex-frontend",        "version": "0.1.0", "status": "active"},
+    {"name": "apex-data",            "path": "apex-data",            "version": "0.1.0", "status": "active"},
+    {"name": "apex-security",        "path": "apex-security",        "version": "0.1.0", "status": "active"},
+    {"name": "apex-test-architect",  "path": "apex-test-architect",  "version": "0.1.0", "status": "active"},
+    {"name": "apex-fintech",         "path": "apex-fintech",         "version": "0.0.0", "status": "stub"},
+    {"name": "apex-healthcare",      "path": "apex-healthcare",      "version": "0.0.0", "status": "stub"},
+    {"name": "apex-builder",         "path": "apex-builder",         "version": "0.0.0", "status": "stub"}
+  ],
+  "additional_modules": [
+    {"name": "apex-integration",       "path": "apex-integration",       "version": "0.1.0", "status": "active", "rationale": "Pre-existing specialist (integration-specialist) not in the spec's canonical eight but required by the existing dispatcher contract; migrated into the module ecosystem in R5-001 to keep the layout uniform."},
+    {"name": "apex-memory-synthesis",  "path": "apex-memory-synthesis",  "version": "0.1.0", "status": "active", "rationale": "Pre-existing specialist (memory-synthesis dream-cycle agent) not in the spec's canonical eight but required by the existing dispatcher contract; migrated into the module ecosystem in R5-001 to keep the layout uniform."}
+  ]
+}

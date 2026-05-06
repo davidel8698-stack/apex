@@ -1,0 +1,12 @@
+{
+  "name": "apex-test-architect",
+  "version": "0.1.0",
+  "owner": "apex-core-team",
+  "status": "active",
+  "capabilities": ["test-architecture", "test-pyramid", "mutation-testing", "veto-power", "wave-0-mapping"],
+  "agent_path": "agent.md",
+  "hooks": [],
+  "deps": [],
+  "dispatch_aliases": ["test-architect"],
+  "notes": "Migrated from framework/agents/test-architect.md in R5-001. Spec lists `apex-test-architect` as a module, so it migrates from the core-engine root into the module ecosystem. Agent prompt body preserved byte-for-byte, including the veto-power language. Dispatch alias 'test-architect' matches the agent frontmatter `name` field used by Task() invocations from next.md."
+}

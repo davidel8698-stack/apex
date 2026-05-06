@@ -1,0 +1,11 @@
+{
+  "name": "apex-core",
+  "version": "0.1.0",
+  "owner": "apex-core-team",
+  "status": "core",
+  "capabilities": ["pipeline-orchestration", "core-engine"],
+  "agent_path": null,
+  "hooks": [],
+  "deps": [],
+  "notes": "Meta-module describing what counts as 'core' in APEX. Core does NOT migrate into framework/modules/ — the five core-engine agents (architect, auditor, critic, executor, planner, verifier) remain at framework/agents/, and the self-heal pipeline workers remain at framework/agents/specialist/{framework-auditor, remediation-planner, batch-scheduler, wave-executor, round-checker}.md. This manifest exists so the registry has an entry for 'apex-core' per the spec listing, and so future tooling can discover the core boundary."
+}

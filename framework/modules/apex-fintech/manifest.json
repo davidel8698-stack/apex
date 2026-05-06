@@ -1,0 +1,11 @@
+{
+  "name": "apex-fintech",
+  "version": "0.0.0",
+  "owner": "apex-core-team",
+  "status": "stub",
+  "capabilities": ["fintech"],
+  "agent_path": null,
+  "hooks": [],
+  "deps": [],
+  "notes": "Spec-named enterprise module, not yet implemented in R5. Scaffold-only: manifest + README. Future work: define agent.md with fintech-domain invariants (PCI-DSS scoping, idempotent transactions, audit-trail immutability, signed-amount conventions, etc.)."
+}

@@ -1,0 +1,12 @@
+{
+  "name": "apex-integration",
+  "version": "0.1.0",
+  "owner": "apex-core-team",
+  "status": "active",
+  "capabilities": ["integration", "oauth", "webhooks", "external-apis", "token-management"],
+  "agent_path": "agent.md",
+  "hooks": [],
+  "deps": [],
+  "dispatch_aliases": ["integration-specialist"],
+  "notes": "Migrated from framework/agents/specialist/integration.md in R5-001. Agent prompt body preserved byte-for-byte. Dispatch alias 'integration-specialist' matches the agent frontmatter `name` field used by Task() invocations."
+}

@@ -1,0 +1,12 @@
+{
+  "name": "apex-memory-synthesis",
+  "version": "0.1.0",
+  "owner": "apex-core-team",
+  "status": "active",
+  "capabilities": ["memory-synthesis", "dream-cycle", "session-consolidation"],
+  "agent_path": "agent.md",
+  "hooks": [],
+  "deps": [],
+  "dispatch_aliases": ["memory-synthesis"],
+  "notes": "Migrated from framework/agents/specialist/memory-synthesis.md in R5-001. Agent prompt body preserved byte-for-byte. Dispatch alias 'memory-synthesis' matches the agent frontmatter `name` field used by Task() invocations."
+}

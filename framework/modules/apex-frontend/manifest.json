@@ -1,0 +1,12 @@
+{
+  "name": "apex-frontend",
+  "version": "0.1.0",
+  "owner": "apex-core-team",
+  "status": "active",
+  "capabilities": ["frontend", "ui-ux", "component-architecture", "accessibility", "responsive-design"],
+  "agent_path": "agent.md",
+  "hooks": [],
+  "deps": [],
+  "dispatch_aliases": ["frontend-specialist"],
+  "notes": "Migrated from framework/agents/specialist/frontend.md in R5-001. Agent prompt body preserved byte-for-byte. Dispatch alias 'frontend-specialist' matches the agent frontmatter `name` field used by Task() invocations."
+}

@@ -1,0 +1,12 @@
+{
+  "name": "apex-data",
+  "version": "0.1.0",
+  "owner": "apex-core-team",
+  "status": "active",
+  "capabilities": ["data", "database-design", "migrations", "query-optimization"],
+  "agent_path": "agent.md",
+  "hooks": [],
+  "deps": [],
+  "dispatch_aliases": ["data-specialist"],
+  "notes": "Migrated from framework/agents/specialist/data.md in R5-001. Agent prompt body preserved byte-for-byte. Dispatch alias 'data-specialist' matches the agent frontmatter `name` field used by Task() invocations."
+}

@@ -1,0 +1,73 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://apex.dev/schemas/module-manifest.schema.json",
+  "title": "APEX Module Manifest",
+  "description": "Manifest contract for an APEX module under framework/modules/<name>/manifest.json. Manifest-driven plugin model: each module is independently versioned, owned, and discoverable. Submodules (separate git repos) are a future migration path; the manifest is the architectural commitment for R5.",
+  "type": "object",
+  "required": ["name", "version", "owner", "status", "capabilities"],
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Canonical module name. Convention: 'apex-<domain>' for domain modules, 'apex-core' for the core module.",
+      "pattern": "^apex-[a-z][a-z0-9-]*$"
+    },
+    "version": {
+      "type": "string",
+      "description": "SemVer-compatible version string.",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(-[A-Za-z0-9.-]+)?$"
+    },
+    "owner": {
+      "type": "string",
+      "description": "Free-text owner — usually the org / team / handle responsible for the module."
+    },
+    "status": {
+      "type": "string",
+      "description": "active = module is implemented and dispatchable; stub = scaffold only, not yet implemented; core = the meta-module that defines what 'core' means.",
+      "enum": ["active", "stub", "core"]
+    },
+    "capabilities": {
+      "type": "array",
+      "description": "Free-form capability tags advertised by this module (e.g., 'data', 'frontend', 'security', 'test-architecture').",
+      "items": {"type": "string"}
+    },
+    "agent_path": {
+      "type": ["string", "null"],
+      "description": "Path to the agent prompt body, relative to the manifest directory. Convention: 'agent.md'. Null for stubs and for apex-core."
+    },
+    "hooks": {
+      "type": "array",
+      "description": "List of hook contributions provided by this module. Each hook references a path under framework/hooks/ (the live tree remains flat; modules contribute, they do not host).",
+      "items": {
+        "type": "object",
+        "required": ["name", "trigger"],
+        "additionalProperties": false,
+        "properties": {
+          "name": {"type": "string"},
+          "trigger": {
+            "type": "string",
+            "enum": ["PreToolUse", "PostToolUse", "SessionStart", "SessionEnd", "SubagentStop", "PreCompact", "Command-Invoked", "Library-Sourced"]
+          },
+          "matcher": {"type": "string"}
+        }
+      }
+    },
+    "deps": {
+      "type": "array",
+      "description": "Other module names this module depends on. Resolved via _registry.json.",
+      "items": {
+        "type": "string",
+        "pattern": "^apex-[a-z][a-z0-9-]*$"
+      }
+    },
+    "dispatch_aliases": {
+      "type": "array",
+      "description": "Optional alias names a dispatcher Task(\"<name>\", ...) call may resolve to this module's agent. Lets the manifest stay aligned with the agent's frontmatter `name` field while documenting compatibility names.",
+      "items": {"type": "string"}
+    },
+    "notes": {
+      "type": "string",
+      "description": "Free-form notes for human readers (status caveats, migration history, etc.)."
+    }
+  }
+}

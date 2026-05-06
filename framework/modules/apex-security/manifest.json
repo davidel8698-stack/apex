@@ -1,0 +1,12 @@
+{
+  "name": "apex-security",
+  "version": "0.1.0",
+  "owner": "apex-core-team",
+  "status": "active",
+  "capabilities": ["security", "auth", "multi-tenancy", "encryption", "tenant-isolation"],
+  "agent_path": "agent.md",
+  "hooks": [],
+  "deps": [],
+  "dispatch_aliases": ["security-specialist"],
+  "notes": "Migrated from framework/agents/specialist/security.md in R5-001. Agent prompt body preserved byte-for-byte. Dispatch alias 'security-specialist' matches the agent frontmatter `name` field used by Task() invocations. Bootstrap-mode (per-project THREAT_MODEL.md generation) is wired in R5-020 (Wave 4)."
+}

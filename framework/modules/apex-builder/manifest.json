@@ -1,0 +1,11 @@
+{
+  "name": "apex-builder",
+  "version": "0.0.0",
+  "owner": "apex-core-team",
+  "status": "stub",
+  "capabilities": ["meta-framework", "module-creation"],
+  "agent_path": null,
+  "hooks": [],
+  "deps": [],
+  "notes": "Meta-framework for module creation (BMAD's Builder analog per spec). Scaffold-only in R5-001. Full `/apex:new-agent` validation (agent-lint, manifest-schema validation) lands in R5-021 (Wave 6); the module placeholder is created here so the discoverable shape exists."
+}
