@@ -11,6 +11,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 CORPUS="$REPO_ROOT/framework/test-fixtures/decision-mode-corpus.json"
 
+# R7-009: shared IO helpers (jq_lines for CRLF-safe read loops).
+# shellcheck source=_test-utils.sh
+[ -f "$SCRIPT_DIR/_test-utils.sh" ] && source "$SCRIPT_DIR/_test-utils.sh"
+
 if [ ! -f "$CORPUS" ]; then
   echo "FAIL: corpus not found at $CORPUS" >&2
   exit 1
@@ -87,9 +91,17 @@ declare -a MISSES=()
 # Parse corpus
 LEN=$(jq '.entries | length' "$CORPUS")
 for i in $(seq 0 $((LEN - 1))); do
-  desc=$(jq -r ".entries[$i].description" "$CORPUS")
-  expected=$(jq -r ".entries[$i].expected_mode" "$CORPUS")
-  id=$(jq -r ".entries[$i].id" "$CORPUS")
+  # R7-009: jq_lines strips any CR contamination from CRLF-tainted JSON
+  # so scalar comparisons below are not corrupted by trailing \r.
+  if command -v jq_lines >/dev/null 2>&1; then
+    desc=$(jq_lines ".entries[$i].description" "$CORPUS")
+    expected=$(jq_lines ".entries[$i].expected_mode" "$CORPUS")
+    id=$(jq_lines ".entries[$i].id" "$CORPUS")
+  else
+    desc=$(jq -r ".entries[$i].description" "$CORPUS")
+    expected=$(jq -r ".entries[$i].expected_mode" "$CORPUS")
+    id=$(jq -r ".entries[$i].id" "$CORPUS")
+  fi
 
   predicted=$(classify "$desc")
   TOTAL=$((TOTAL + 1))

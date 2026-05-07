@@ -29,6 +29,10 @@ CURSOR_SH="$REPO_ROOT/framework/scripts/sync-to-cursor.sh"
 MULTI_MD="$REPO_ROOT/framework/docs/MULTI-PLATFORM.md"
 CLAUDE_SH="$REPO_ROOT/framework/scripts/sync-to-claude.sh"
 
+# R7-009: shared IO helpers (jq_lines for CRLF-safe read loops).
+# shellcheck source=_test-utils.sh
+[ -f "$SCRIPT_DIR/_test-utils.sh" ] && source "$SCRIPT_DIR/_test-utils.sh"
+
 if ! command -v jq >/dev/null 2>&1; then
   echo "SKIP: jq not available — adapter manifest validation requires jq"
   exit 0

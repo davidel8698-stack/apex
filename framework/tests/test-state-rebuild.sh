@@ -17,6 +17,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 HOOK="$REPO_ROOT/framework/hooks/state-rebuild.sh"
 
+# R7-009: shared IO helpers (jq_lines for CRLF-safe read loops).
+# shellcheck source=_test-utils.sh
+[ -f "$SCRIPT_DIR/_test-utils.sh" ] && source "$SCRIPT_DIR/_test-utils.sh"
+
 if [ ! -f "$HOOK" ]; then
   echo "FAIL: state-rebuild.sh not found at $HOOK" >&2
   exit 1

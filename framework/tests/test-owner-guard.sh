@@ -32,6 +32,10 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 HOOKS_DIR="$REPO_ROOT/framework/hooks"
 GUARD="$HOOKS_DIR/owner-guard.sh"
 
+# R7-009: shared IO helpers (jq_lines for CRLF-safe read loops).
+# shellcheck source=_test-utils.sh
+[ -f "$SCRIPT_DIR/_test-utils.sh" ] && source "$SCRIPT_DIR/_test-utils.sh"
+
 if [ ! -f "$GUARD" ]; then
   echo "FAIL: owner-guard.sh not found at $GUARD" >&2
   exit 1

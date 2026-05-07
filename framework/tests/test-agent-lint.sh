@@ -24,6 +24,10 @@ NEW_AGENT_MD="$REPO_ROOT/framework/commands/apex/new-agent.md"
 HOOK_CLASS="$REPO_ROOT/framework/HOOK-CLASSIFICATION.md"
 SYNC_SH="$REPO_ROOT/framework/scripts/sync-to-claude.sh"
 
+# R7-009: shared IO helpers (jq_lines for CRLF-safe read loops).
+# shellcheck source=_test-utils.sh
+[ -f "$SCRIPT_DIR/_test-utils.sh" ] && source "$SCRIPT_DIR/_test-utils.sh"
+
 PASS=0
 FAIL=0
 ok()   { echo "  PASS: $1"; PASS=$((PASS+1)); }
@@ -317,9 +321,13 @@ if [ -f "$LIVE_REGISTRY" ]; then
     nope "C-18: _registry.json _doc missing stub-canonical contract sentence (R6-008)"
   fi
   R6008_FAIL=0
-  # Use jq with --raw-output and pipe through tr to strip any CR from
-  # Windows line endings, then iterate via process substitution.
-  R6008_NAMES=$(jq -r '((.modules // []) + (.additional_modules // []))[] | "\(.name)\t\(.path)\t\(.status)"' "$LIVE_REGISTRY" 2>/dev/null | tr -d '\r')
+  # R7-009: use jq_lines (from _test-utils.sh) to strip CR for Windows
+  # line endings, then iterate via process substitution.
+  if command -v jq_lines >/dev/null 2>&1; then
+    R6008_NAMES=$(jq_lines '((.modules // []) + (.additional_modules // []))[] | "\(.name)\t\(.path)\t\(.status)"' "$LIVE_REGISTRY" 2>/dev/null)
+  else
+    R6008_NAMES=$(jq -r '((.modules // []) + (.additional_modules // []))[] | "\(.name)\t\(.path)\t\(.status)"' "$LIVE_REGISTRY" 2>/dev/null | tr -d '\r')
+  fi
   while IFS=$'\t' read -r MNAME MPATH MSTATUS; do
     [ -z "$MNAME" ] && continue
     MDIR="$REPO_ROOT/framework/modules/$MPATH"
@@ -355,11 +363,19 @@ fi
 # literal counts.
 if [ -f "$REPO_ROOT/framework/modules/_registry.json" ]; then
   R7002_FAIL=0
-  # Iterate via process substitution; strip CR for Windows line endings.
-  R7002_NAMES=$(jq -r '
-    ((.modules // []) + (.additional_modules // []))[]
-    | "\(.name)\t\(.path)\t\(.status)"
-  ' "$REPO_ROOT/framework/modules/_registry.json" 2>/dev/null | tr -d '\r')
+  # R7-009: iterate via process substitution; strip CR for Windows line
+  # endings via jq_lines (from _test-utils.sh).
+  if command -v jq_lines >/dev/null 2>&1; then
+    R7002_NAMES=$(jq_lines '
+      ((.modules // []) + (.additional_modules // []))[]
+      | "\(.name)\t\(.path)\t\(.status)"
+    ' "$REPO_ROOT/framework/modules/_registry.json" 2>/dev/null)
+  else
+    R7002_NAMES=$(jq -r '
+      ((.modules // []) + (.additional_modules // []))[]
+      | "\(.name)\t\(.path)\t\(.status)"
+    ' "$REPO_ROOT/framework/modules/_registry.json" 2>/dev/null | tr -d '\r')
+  fi
   while IFS=$'\t' read -r MNAME MPATH MSTATUS; do
     [ -z "$MNAME" ] && continue
     # Skip stub modules (R6-005 fast-path) and core (dispatcher base).

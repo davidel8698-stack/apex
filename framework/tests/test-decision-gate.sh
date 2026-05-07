@@ -26,6 +26,10 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 HOOKS_DIR="$REPO_ROOT/framework/hooks"
 HOOK="$HOOKS_DIR/decision-gate.sh"
 
+# R7-009: shared IO helpers (jq_lines for CRLF-safe read loops).
+# shellcheck source=_test-utils.sh
+[ -f "$SCRIPT_DIR/_test-utils.sh" ] && source "$SCRIPT_DIR/_test-utils.sh"
+
 if [ ! -f "$HOOK" ]; then
   echo "FAIL: decision-gate.sh not found at $HOOK" >&2
   exit 1
