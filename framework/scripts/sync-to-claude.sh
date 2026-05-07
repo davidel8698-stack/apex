@@ -298,6 +298,11 @@ copy_file "$FRAMEWORK_ROOT/hooks/decision-gate.sh" "$CLAUDE_ROOT/hooks/decision-
 # runtime dependency, not just a test artifact.
 copy_file "$FRAMEWORK_ROOT/test-fixtures/security-patterns.json" "$CLAUDE_ROOT/test-fixtures/security-patterns.json"
 copy_tree "$FRAMEWORK_ROOT/apex-skills"   "$CLAUDE_ROOT/apex-skills"
+# R8-001: deliver the apex-workflows recipe library — _index.json + 30+
+# recipe .md files consumed at runtime by /apex:workflow. Sibling to
+# apex-skills tree-walk above. Spec anchor: "apex-workflows/ כ-library
+# of pre-built recipes" + "30+ מתכונים מוכנים".
+copy_tree "$FRAMEWORK_ROOT/apex-workflows" "$CLAUDE_ROOT/apex-workflows"
 copy_tree "$FRAMEWORK_ROOT/schemas"       "$CLAUDE_ROOT/schemas"
 copy_tree "$FRAMEWORK_ROOT/tests"           "$CLAUDE_ROOT/tests"
 copy_tree "$FRAMEWORK_ROOT/test-fixtures"   "$CLAUDE_ROOT/test-fixtures"
@@ -379,7 +384,7 @@ if [[ $CLEAN_MODE -eq 1 ]]; then
   # Build list of all files that SHOULD exist (from framework source)
   EXPECTED_FILES=$(mktemp)
   # Directory trees
-  for dir in agents commands/apex hooks apex-skills schemas tests test-fixtures; do
+  for dir in agents commands/apex hooks apex-skills apex-workflows schemas tests test-fixtures; do
     if [ -d "$FRAMEWORK_ROOT/$dir" ]; then
       find "$FRAMEWORK_ROOT/$dir" -type f -print0 | while IFS= read -r -d '' f; do
         echo "${f#$FRAMEWORK_ROOT/}" >> "$EXPECTED_FILES"
