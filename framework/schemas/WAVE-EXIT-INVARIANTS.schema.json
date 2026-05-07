@@ -1,0 +1,65 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "apex/schemas/WAVE-EXIT-INVARIANTS.schema.json",
+  "title": "APEX WAVE-EXIT-INVARIANTS.json",
+  "description": "Wave-exit invariants metadata artifact (one per wave per round). Lists invariants the wave-executor TEMPORARILY relaxed at wave close, plus the R-item slated to re-assert each. Future audits read this artifact to distinguish 'expected scope-bounded relaxation' from 'silent regression'. Spec anchors: 'Honest scope over marketing scope.' + 'Proof-of-process beats proof-of-promise.' (apex-spec.md, principles section).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["round", "wave_number", "wave_status", "exit_timestamp", "relaxed_invariants"],
+  "properties": {
+    "round": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Self-heal round number (R<N>) the wave belongs to."
+    },
+    "wave_number": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Wave number within the round (1-indexed, matches WAVES-R<N>.md)."
+    },
+    "wave_status": {
+      "type": "string",
+      "enum": ["DONE", "PARTIAL", "BLOCKED"],
+      "description": "Terminal status of the wave at exit. Mirrors WAVE-<X>-RESULT.md status field."
+    },
+    "exit_timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 timestamp captured by the wave-executor at wave close."
+    },
+    "relaxed_invariants": {
+      "type": "array",
+      "description": "Each element documents one invariant the wave temporarily relaxed and the future R-item slated to re-assert it. Empty array means the wave exited with all baseline invariants intact.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["invariant_id", "relaxation_reason", "reassertion_r_id", "reassertion_wave"],
+        "properties": {
+          "invariant_id": {
+            "type": "string",
+            "description": "Stable identifier for the relaxed invariant (e.g., 'TOTALS_INVARIANT', 'SYNC_DELIVERY_CONTRACT', 'COVERAGE_FLOOR'). Free-form; chosen for grep-ability."
+          },
+          "relaxation_reason": {
+            "type": "string",
+            "minLength": 1,
+            "description": "One-sentence rationale: why the wave could not enforce the invariant at exit. Must be falsifiable (a future auditor can verify the claim)."
+          },
+          "reassertion_r_id": {
+            "type": "string",
+            "pattern": "^R[0-9]+-[0-9]+$",
+            "description": "R-item slated to re-assert the invariant in a later wave/round (e.g., 'R9-002')."
+          },
+          "reassertion_wave": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Wave number in which the reassertion R-item is scheduled."
+          },
+          "evidence_anchor": {
+            "type": "string",
+            "description": "Optional pointer to evidence (path:anchor or commit hash) showing the relaxation is bounded and recoverable."
+          }
+        }
+      }
+    }
+  }
+}

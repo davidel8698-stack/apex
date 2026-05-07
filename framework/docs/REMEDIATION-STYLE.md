@@ -97,6 +97,26 @@ Any remediation that adds a new hook, agent, or top-level `framework/` file must
 
 ---
 
+## Rule: Wave-exit invariants metadata (R9-012)
+
+If a wave's verification gate cannot enforce one or more baseline invariants at exit (because the wave is mid-chain, or the responsible R-item is scheduled in a later wave), the wave-executor MUST emit a machine-readable artifact named `WAVE-<N>-EXIT-INVARIANTS.json` at wave close. The schema is `framework/schemas/WAVE-EXIT-INVARIANTS.schema.json` (delivered to `~/.claude/schemas/` by the existing `copy_tree schemas` line).
+
+The artifact lists, per relaxed invariant:
+
+1. `invariant_id` — stable, grep-able identifier (e.g., `TOTALS_INVARIANT`).
+2. `relaxation_reason` — one-sentence rationale (falsifiable by a future auditor).
+3. `reassertion_r_id` — the R-item slated to re-assert the invariant.
+4. `reassertion_wave` — the wave in which that R-item is scheduled.
+5. `evidence_anchor` — optional pointer to evidence the relaxation is bounded.
+
+**Why this matters:** R8 wave 1 exited with `PASS=734 TOTAL=479` (totals-invariant relaxed because R8-002 had landed the guard but R8-002's residue — the per-file aggregation drift — was not closed until R9-002 in the next round). Without an artifact, a future audit reading W1 in isolation would treat the exit state as a regression. "Honest scope" requires the relaxation be named at the exit moment.
+
+**Empty case:** A wave that exits with all baseline invariants intact MUST still emit the artifact, with `relaxed_invariants: []`. The artifact's presence is itself a Proof-of-process signal — its absence means the wave-executor skipped the gate, which is a separate audit finding.
+
+**Where the artifact lives:** Repo root or `.apex/phases/<phase>/`, alongside `WAVE-<X>-RESULT.md`. Path is convention; the schema is the contract.
+
+---
+
 ## Document structure (copy-paste skeleton)
 
 ```
