@@ -54,6 +54,25 @@ Created during planning and execution (per phase directory):
 | `.apex/TASK_MAP.md` | Task dependency map |
 | `.apex/TEST_MAP.txt` | Test coverage map |
 
+## Auto-Continuity Layer Files (v7.1)
+
+Transient flag and checkpoint files used by the Auto-Continuity Layer
+(memory-watchdog, turn-checkpoint, session-auto-resume, external watchdog).
+All are **lazily created** — absent on projects that have never tripped the
+relevant trigger. Consumers MUST tolerate absence.
+
+| File | Created By | Lifetime | Purpose |
+|------|------------|----------|---------|
+| `.apex/AUTO_PAUSE_REQUEST.flag` | `memory-watchdog.sh` | One-shot — deleted by `/apex:next` Step F.4 after consuming | Signal that an auto-pause is requested. Plain-text body holds the reason (memory_pressure, etc.) |
+| `.apex/SHUTDOWN_REQUEST.flag` | `apex-watchdog.ps1` (external) | One-shot — deleted by `/apex:next` Step F.4 after consuming | Signal from the external Windows watchdog asking the in-process orchestrator to do a graceful pause before forced kill |
+| `.apex/SESSION_BOOT.md` | `session-auto-resume.sh` (SessionStart) | Read by `/apex:resume` on next invocation; cleared after | Banner+payload describing the previous session's auto-pause reason and recommended next action. Always replaces previous content (not append) |
+| `.apex/TURN_CHECKPOINT.json` | `turn-checkpoint.sh` | Replaced every N tool calls during a long-running task; persists across sessions until next checkpoint | Fine-grained turn-level checkpoint enabling `/apex:recover` option 6 (continue-from-turn-checkpoint) |
+
+**Schema:** `.apex/TURN_CHECKPOINT.json` mirrors the `turn_checkpoint` block in
+`STATE.schema.json` (single-source). The other three files are plain-text /
+markdown — no formal schema; only a minimum required line ("REASON: ...") for
+the `.flag` files.
+
 ## Agent Prompt Structure — U-Shaped Attention Guidelines
 
 Spec anchor: "U-shaped attention awareness." (F-008)

@@ -47,5 +47,19 @@
     "evict_completed_task_context",
     "hard_rotate"
   ],
-  "capacity_tokens": 200000
+  "capacity_tokens": 200000,
+  "auto_continuity": {
+    "_doc": "v7.1 Auto-Continuity Layer — autonomous session continuity for unbounded long-running APEX projects. All fields optional with documented defaults.",
+    "bun_memory_threshold_mb": 2048,
+    "bun_memory_warn_pct": 70,
+    "bun_memory_debounce_samples": 3,
+    "memory_sample_interval_seconds": 30,
+    "turn_checkpoint_interval": 5,
+    "turn_checkpoint_freshness_minutes": 30,
+    "session_auto_resume": true,
+    "decision_gate_default_action_minutes": 10,
+    "decision_gate_default_action": "pause",
+    "max_consecutive_auto_pauses": 3,
+    "auto_pause_cooldown_minutes": 10
+  }
 }

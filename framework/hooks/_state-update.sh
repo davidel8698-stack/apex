@@ -112,3 +112,46 @@ _state_update() {
     return 1
   fi
 }
+
+# v7.1 Auto-Continuity Layer — emit a semantic event to .apex/event-log.jsonl
+# with arbitrary flat string key/value fields. Used by new hooks (memory-watchdog,
+# turn-checkpoint, session-auto-resume) for event types that don't fit the
+# canonical .field = "value" dual-emit pattern. Fire-and-forget, never blocks.
+#
+# Known event types (v7.1):
+#   memory_sample              — periodic Bun memory telemetry
+#   auto_pause_requested       — memory-watchdog requested a pause
+#   external_shutdown_requested — apex-watchdog.ps1 requested a shutdown
+#   turn_checkpoint_set        — turn-checkpoint.sh wrote TURN_CHECKPOINT.json
+#   session_auto_resumed       — session-auto-resume.sh detected auto-paused boot
+#
+# Usage:
+#   _emit_apex_event <event_type> [<state_dir>] [<key1> <val1> [<key2> <val2> ...]]
+#   state_dir defaults to .apex; pass "" to use the default while supplying key/values.
+#
+# Example:
+#   _emit_apex_event memory_sample .apex rss_mb 412 commit_mb 1834
+_emit_apex_event() {
+  if ! command -v jq >/dev/null 2>&1; then
+    return 0
+  fi
+  local event_type="$1"
+  local state_dir="${2:-.apex}"
+  [ -z "$state_dir" ] && state_dir=".apex"
+  shift 2 2>/dev/null || shift $#
+  local _ts_now
+  _ts_now="$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date +%Y-%m-%dT%H:%M:%SZ)"
+  local source="${APEX_HOOK_SOURCE:-unknown}"
+  local jq_args=(--arg ts "$_ts_now" --arg type "$event_type" --arg src "$source")
+  local filter='{ts:$ts,type:$type,source:$src}'
+  while [ $# -ge 2 ]; do
+    local k="$1" v="$2"
+    # Sanitize jq variable name — only allow alphanumeric and underscore
+    local safe_k
+    safe_k=$(printf '%s' "$k" | tr -c 'A-Za-z0-9_' '_')
+    jq_args+=(--arg "v_${safe_k}" "$v")
+    filter="${filter} + {\"${k}\":\$v_${safe_k}}"
+    shift 2
+  done
+  jq -c -n "${jq_args[@]}" "$filter" >> "${state_dir}/event-log.jsonl" 2>/dev/null || true
+}

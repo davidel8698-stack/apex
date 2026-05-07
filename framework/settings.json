@@ -58,6 +58,18 @@
         ]
       },
       {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": "bash ~/.claude/hooks/memory-watchdog.sh" }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": "bash ~/.claude/hooks/turn-checkpoint.sh" }
+        ]
+      },
+      {
         "matcher": "Write|Edit",
         "hooks": [
           { "type": "command", "command": "bash ~/.claude/hooks/schema-drift.sh" }
@@ -92,6 +104,11 @@
       {
         "hooks": [
           { "type": "command", "command": "bash ~/.claude/hooks/state-rebuild.sh" }
+        ]
+      },
+      {
+        "hooks": [
+          { "type": "command", "command": "bash ~/.claude/hooks/session-auto-resume.sh" }
         ]
       },
       {

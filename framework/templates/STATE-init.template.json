@@ -137,11 +137,29 @@
     "health_status": "green",
     "auto_paused": false,
     "auto_pause_reason": null,
+    "auto_resume_attempts": 0,
+    "memory": {
+      "last_sample_at": null,
+      "rss_mb": 0,
+      "commit_mb": 0,
+      "working_set_pct": 0,
+      "samples_taken": 0,
+      "high_water_mark_mb": 0,
+      "consecutive_over_threshold": 0
+    },
     "drift_indicators": {
       "spec_drift_count": 0,
       "circuit_breaker_triggers": 0,
       "reflexion_total_attempts": 0,
       "low_confidence_results": 0
     }
+  },
+  "turn_checkpoint": {
+    "ts": null,
+    "task_id": null,
+    "tool_call_index": 0,
+    "in_flight_edits": [],
+    "working_summary": null,
+    "last_completed_tool": null
   }
 }

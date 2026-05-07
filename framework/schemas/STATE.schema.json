@@ -363,7 +363,38 @@
           "enum": ["green", "yellow", "red"]
         },
         "auto_paused": { "type": "boolean" },
-        "auto_pause_reason": { "type": ["string", "null"] },
+        "auto_pause_reason": {
+          "type": ["string", "null"],
+          "description": "Reason for the most recent auto-pause. Conventional values (not enforced via enum to keep the field forward-compatible): memory_pressure | context_critical | health_red | decision_gate_timeout | external_watchdog | manual."
+        },
+        "auto_resume_attempts": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of consecutive auto-resume cycles (auto_paused → resume → auto_paused). Reset to 0 after a successful task completion. Optional — absent on projects predating Auto-Continuity Layer (v7.1)."
+        },
+        "memory": {
+          "type": "object",
+          "description": "In-process Bun runtime memory telemetry sampled by memory-watchdog.sh. Optional — absent on projects predating Auto-Continuity Layer (v7.1).",
+          "additionalProperties": false,
+          "required": [
+            "last_sample_at",
+            "rss_mb",
+            "commit_mb",
+            "working_set_pct",
+            "samples_taken",
+            "high_water_mark_mb",
+            "consecutive_over_threshold"
+          ],
+          "properties": {
+            "last_sample_at": { "type": ["string", "null"], "format": "date-time" },
+            "rss_mb": { "type": "number", "minimum": 0 },
+            "commit_mb": { "type": "number", "minimum": 0, "description": "Committed virtual memory (PrivateMemorySize on Windows). The OOM-relevant metric per the Bun crash post-mortem." },
+            "working_set_pct": { "type": "number", "minimum": 0, "maximum": 100 },
+            "samples_taken": { "type": "integer", "minimum": 0 },
+            "high_water_mark_mb": { "type": "number", "minimum": 0 },
+            "consecutive_over_threshold": { "type": "integer", "minimum": 0, "description": "Debounce counter — auto-pause fires only after N consecutive samples over threshold (default 3)." }
+          }
+        },
         "last_time_gate": { "type": ["string", "null"], "format": "date-time" },
         "drift_indicators": {
           "type": "object",
@@ -421,6 +452,42 @@
         "enabled": { "type": "boolean" },
         "last_synced_at": { "type": ["string", "null"], "format": "date-time" },
         "threshold_events": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "turn_checkpoint": {
+      "type": "object",
+      "description": "Auto-Continuity (v7.1) — fine-grained turn-level checkpoint persisted by turn-checkpoint.sh every N tool calls inside a long-running task. Optional — absent on projects predating Auto-Continuity Layer or before the first checkpoint of a task fires. Used by /apex:recover option 6 (continue-from-turn-checkpoint) and surfaced by /apex:resume when the timestamp is fresh.",
+      "additionalProperties": false,
+      "required": [
+        "ts",
+        "task_id",
+        "tool_call_index",
+        "in_flight_edits",
+        "working_summary",
+        "last_completed_tool"
+      ],
+      "properties": {
+        "ts": { "type": ["string", "null"], "format": "date-time" },
+        "task_id": { "type": ["string", "null"] },
+        "tool_call_index": { "type": "integer", "minimum": 0, "description": "Index inside the current task — mirrors circuit_breaker.total_tool_calls_this_task at checkpoint time." },
+        "in_flight_edits": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "operation", "started_at"],
+            "properties": {
+              "path": { "type": "string" },
+              "operation": { "type": "string", "enum": ["edit", "write", "read"] },
+              "started_at": { "type": "string", "format": "date-time" }
+            }
+          }
+        },
+        "working_summary": {
+          "type": ["string", "null"],
+          "description": "Self-contained natural-language summary of the in-flight task progress, written so a fresh session can resume without conversation context (see plan §4 insight ב)."
+        },
+        "last_completed_tool": { "type": ["string", "null"] }
       }
     },
     "self_heal": {

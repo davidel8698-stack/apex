@@ -81,6 +81,69 @@
       "minimum": 100000,
       "maximum": 1000000,
       "description": "Effective context window capacity in tokens. Default 200000."
+    },
+    "auto_continuity": {
+      "type": "object",
+      "description": "v7.1 Auto-Continuity Layer thresholds (memory-watchdog, turn-checkpoint, decision-gate-default). Optional — absent on projects predating Auto-Continuity Layer; consumers MUST fall back to documented defaults.",
+      "additionalProperties": true,
+      "properties": {
+        "_doc": { "type": "string" },
+        "bun_memory_threshold_mb": {
+          "type": "integer",
+          "minimum": 256,
+          "description": "Hard threshold (MB) for Bun PrivateMemorySize / Commit. Above this, memory-watchdog increments consecutive_over_threshold. Default 2048."
+        },
+        "bun_memory_warn_pct": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "description": "Soft threshold as percent of bun_memory_threshold_mb. Below the hard threshold but above this triggers a status banner. Default 70."
+        },
+        "bun_memory_debounce_samples": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Number of consecutive samples over threshold required before AUTO_PAUSE_REQUEST.flag is created. Prevents one-off spikes from triggering pause. Default 3."
+        },
+        "memory_sample_interval_seconds": {
+          "type": "integer",
+          "minimum": 5,
+          "description": "Minimum seconds between memory samples (memory-watchdog rides on PostToolUse but throttles itself). Default 30."
+        },
+        "turn_checkpoint_interval": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Frequency (in tool calls) at which turn-checkpoint.sh writes .apex/TURN_CHECKPOINT.json inside a long-running task. Default 5."
+        },
+        "turn_checkpoint_freshness_minutes": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Maximum age of TURN_CHECKPOINT.json in minutes for /apex:resume to surface a 'continue from checkpoint' prompt. Default 30."
+        },
+        "session_auto_resume": {
+          "type": "boolean",
+          "description": "When true (default), session-auto-resume.sh emits a SESSION_BOOT banner that instructs Claude to invoke /apex:resume on any new session where session.auto_paused == true."
+        },
+        "decision_gate_default_action_minutes": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Minutes the decision-gate waits for user input before applying decision_gate_default_action. Default 10."
+        },
+        "decision_gate_default_action": {
+          "type": "string",
+          "enum": ["pause", "continue", "resume"],
+          "description": "Default action for decision-gate timeout. Default 'pause' — safe, never silently continues a degraded session."
+        },
+        "max_consecutive_auto_pauses": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Breaker: after N consecutive auto-pause→auto-resume cycles within auto_pause_cooldown_minutes, halt and require manual intervention. Default 3."
+        },
+        "auto_pause_cooldown_minutes": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Window for max_consecutive_auto_pauses tracking. Default 10."
+        }
+      }
     }
   },
   "definitions": {

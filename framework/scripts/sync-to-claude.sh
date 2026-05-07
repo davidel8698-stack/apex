@@ -347,6 +347,11 @@ copy_file "$FRAMEWORK_ROOT/apex-model-routing.json" "$CLAUDE_ROOT/apex-model-rou
 copy_file "$FRAMEWORK_ROOT/CONTEXT_BUDGET.default.json" "$CLAUDE_ROOT/CONTEXT_BUDGET.default.json"
 copy_file "$FRAMEWORK_ROOT/scripts/self-test.sh"      "$CLAUDE_ROOT/scripts/self-test.sh"
 copy_file "$FRAMEWORK_ROOT/scripts/validate-state.sh" "$CLAUDE_ROOT/scripts/validate-state.sh"
+# v7.1 Auto-Continuity Layer D — optional Windows external watchdog. Always
+# copied to ~/.claude/scripts/; activation is opt-in via install-watchdog.ps1.
+copy_file "$FRAMEWORK_ROOT/scripts/apex-watchdog.ps1"     "$CLAUDE_ROOT/scripts/apex-watchdog.ps1"
+copy_file "$FRAMEWORK_ROOT/scripts/install-watchdog.ps1"  "$CLAUDE_ROOT/scripts/install-watchdog.ps1"
+copy_file "$FRAMEWORK_ROOT/scripts/README-watchdog.md"    "$CLAUDE_ROOT/scripts/README-watchdog.md"
 copy_file "$FRAMEWORK_ROOT/../CLAUDE-TEMPLATE.md"   "$CLAUDE_ROOT/CLAUDE-TEMPLATE.md"
 
 # settings.json merge (surgical — preserves user/GSD hooks)
@@ -382,6 +387,9 @@ if [[ $CLEAN_MODE -eq 1 ]]; then
   echo "apex-model-routing.json" >> "$EXPECTED_FILES"
   echo "scripts/self-test.sh" >> "$EXPECTED_FILES"
   echo "scripts/validate-state.sh" >> "$EXPECTED_FILES"
+  echo "scripts/apex-watchdog.ps1" >> "$EXPECTED_FILES"
+  echo "scripts/install-watchdog.ps1" >> "$EXPECTED_FILES"
+  echo "scripts/README-watchdog.md" >> "$EXPECTED_FILES"
   echo "CLAUDE-TEMPLATE.md" >> "$EXPECTED_FILES"
 
   # Scan deployed APEX directories for files NOT in the expected list
