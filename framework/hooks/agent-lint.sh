@@ -67,8 +67,13 @@ for _ in 1 2 3 4 5 6; do
 done
 
 # Fallbacks if walk-up didn't find them.
+# R8-003: install-side path (~/.claude/modules/_schema/manifest.schema.json)
+# is prepended so a `~/.claude/`-only install (no framework checkout)
+# resolves the schema first. Source-side fallbacks remain unchanged so
+# framework-tree invocations continue to work.
 if [ -z "$SCHEMA_PATH" ]; then
   for candidate in \
+      "$HOME/.claude/modules/_schema/manifest.schema.json" \
       "$(dirname "$0")/../modules/_schema/manifest.schema.json" \
       "$(dirname "$0")/../../framework/modules/_schema/manifest.schema.json" \
       "framework/modules/_schema/manifest.schema.json"; do

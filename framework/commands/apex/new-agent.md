@@ -90,11 +90,26 @@ Follow RESULT.json schema: status (pass|fail|partial), summary, files_changed.
 ## VALIDATION (R5-021)
 
 After scaffolding the module files, run the agent-lint hook to verify
-the contract before declaring success:
+the contract before declaring success.
+
+**Install-path-aware invocation (R8-003).** Prefer the install-side
+path on hosts that do not have the framework source-tree checked out.
+The framework-side path is the fallback for maintainers working in the
+APEX build repo:
 
 ```bash
-bash framework/hooks/agent-lint.sh framework/modules/apex-{AGENT_NAME}
-LINT_EXIT=$?
+# Install-side (preferred — works on every ~/.claude/ install):
+if [ -f ~/.claude/hooks/agent-lint.sh ] && [ -d ~/.claude/modules/apex-{AGENT_NAME} ]; then
+  bash ~/.claude/hooks/agent-lint.sh ~/.claude/modules/apex-{AGENT_NAME}
+  LINT_EXIT=$?
+# Framework-side (fallback for maintainers in the APEX build repo):
+elif [ -f framework/hooks/agent-lint.sh ]; then
+  bash framework/hooks/agent-lint.sh framework/modules/apex-{AGENT_NAME}
+  LINT_EXIT=$?
+else
+  echo "❌ agent-lint.sh not found at ~/.claude/ or framework/. Run sync-to-claude.sh first."
+  LINT_EXIT=1
+fi
 ```
 
 If `LINT_EXIT == 0`: scaffolding passed all contract checks (manifest

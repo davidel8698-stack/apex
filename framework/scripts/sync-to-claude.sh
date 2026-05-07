@@ -234,6 +234,16 @@ copy_tree "$FRAMEWORK_ROOT/agents"        "$CLAUDE_ROOT/agents"
 # and delivers each agent.md into the flat live tree at
 # ~/.claude/agents/specialist/<short>.md (apex- prefix stripped).
 copy_modules_specialists
+# R8-003: deliver the modules tree (registry + per-module manifest +
+# schema + agent.md) to ~/.claude/modules/ so agent-lint.sh and
+# /apex:new-agent can resolve the manifest schema and registry on a
+# ~/.claude/-only install (no framework checkout). The flatten above
+# stays — it is the dispatcher contract; this tree-walk is the
+# lint/registry contract. Two delivery paths, one source of truth.
+# Spec anchors: "Module Ecosystem כ-Extension Model" + "Platform, Not
+# Tool. ... Users must be able to create specialists we didn't
+# anticipate."
+copy_tree "$FRAMEWORK_ROOT/modules"       "$CLAUDE_ROOT/modules"
 copy_tree "$FRAMEWORK_ROOT/commands/apex" "$CLAUDE_ROOT/commands/apex"
 copy_tree "$FRAMEWORK_ROOT/hooks"         "$CLAUDE_ROOT/hooks"
 # R5-002: explicit delivery anchor for the opt-in SQLite mirror helper. The
@@ -384,7 +394,10 @@ if [[ $CLEAN_MODE -eq 1 ]]; then
   # Build list of all files that SHOULD exist (from framework source)
   EXPECTED_FILES=$(mktemp)
   # Directory trees
-  for dir in agents commands/apex hooks apex-skills apex-workflows schemas tests test-fixtures; do
+  # R8-003: `modules` added so the registry, manifest schema, and per-
+  # module README/agent.md/manifest.json files delivered by the new
+  # `copy_tree modules` line above are not flagged as orphans by --clean.
+  for dir in agents commands/apex hooks apex-skills apex-workflows modules schemas tests test-fixtures; do
     if [ -d "$FRAMEWORK_ROOT/$dir" ]; then
       find "$FRAMEWORK_ROOT/$dir" -type f -print0 | while IFS= read -r -d '' f; do
         echo "${f#$FRAMEWORK_ROOT/}" >> "$EXPECTED_FILES"
