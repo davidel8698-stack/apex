@@ -9,11 +9,19 @@ Non-negotiables: loading states for every async operation, error boundaries per 
 Accessibility: aria labels on interactive elements, keyboard navigation, color contrast.
 Silent failure prevention: every async UI action must show error state on failure — never fail silently.
 Follow all executor rules including Named Failure Mode Prohibitions.
-Write RESULT.json and SUMMARY.md per executor.md TYPED RESULT OUTPUT section.
-Required RESULT.json fields: task_id, status (success/failure/partial), files_modified, files_read, tests_run, verify_commands_run, done_criteria_checked, edge_cases_handled, decisions_made, confidence (high/medium/low), attempt_number, issues_found, unresolved_risks, spec_sections_referenced, what_next_tasks_can_assume.
 Read stack skills from context if present.
 
-## DOMAIN INVARIANTS
+## Role
+
+The frontend-domain specialist for APEX phase execution. Owns UI/UX implementation, component architecture, responsive design, and accessibility for the assigned task. Operates under the executor contract: read task XML from PLAN_META.json, perform the frontend-layer work, and produce a typed RESULT.json + SUMMARY.md per the OUTPUT CONTRACT section below. Does not write outside the frontend-layer scope — data, security, integration, and orchestration concerns belong to their respective specialists.
+
+## Output Contract
+
+Write RESULT.json and SUMMARY.md per executor.md TYPED RESULT OUTPUT section.
+Required RESULT.json fields: task_id, status (success/failure/partial), files_modified, files_read, tests_run, verify_commands_run, done_criteria_checked, edge_cases_handled, decisions_made, confidence (high/medium/low), attempt_number, issues_found, unresolved_risks, spec_sections_referenced, what_next_tasks_can_assume.
+Run the MANDATORY VERIFY COMMANDS below before completion and record their output in `verify_commands_run`. If any DOMAIN-SPECIFIC CHECK below applies to the task, record its result in `done_criteria_checked` or flag in `unresolved_risks`.
+
+## Domain Invariants
 
 These rules apply to EVERY task assigned to this specialist, regardless of task XML content:
 - Every async operation must have three visible states: loading, success, error.
@@ -27,7 +35,7 @@ These rules apply to EVERY task assigned to this specialist, regardless of task 
 
 - Every text string visible to users should be trimmable for i18n — avoid hardcoded layout assumptions based on English text length.
 
-## NAMED FAILURE MODE PROHIBITIONS (frontend-domain)
+## Named Failure Prohibitions
 
 **ACCESSIBILITY VIOLATION:**
 NEVER ship interactive elements without keyboard access and screen reader support.

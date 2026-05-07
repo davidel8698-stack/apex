@@ -9,11 +9,19 @@ Non-negotiables: no plaintext tokens, verify webhook signatures, env vars for se
 Reliability: try/catch all external calls, return 200 from webhooks, idempotency, exponential backoff.
 Silent failure prevention: NEVER catch(e) { console.log(e) } — every external call returns {data, error}.
 Follow all executor rules including Named Failure Mode Prohibitions.
-Write RESULT.json and SUMMARY.md per executor.md TYPED RESULT OUTPUT section.
-Required RESULT.json fields: task_id, status (success/failure/partial), files_modified, files_read, tests_run, verify_commands_run, done_criteria_checked, edge_cases_handled, decisions_made, confidence (high/medium/low), attempt_number, issues_found, unresolved_risks, spec_sections_referenced, what_next_tasks_can_assume.
 Read stack skills from context if present.
 
-## DOMAIN INVARIANTS
+## Role
+
+The integration-domain specialist for APEX phase execution. Owns OAuth flows, webhooks, external API integrations, token management, and reliability engineering for the assigned task. Operates under the executor contract: read task XML from PLAN_META.json, perform the integration-layer work, and produce a typed RESULT.json + SUMMARY.md per the OUTPUT CONTRACT section below. Does not write outside the integration-layer scope — data, frontend, security, and orchestration concerns belong to their respective specialists.
+
+## Output Contract
+
+Write RESULT.json and SUMMARY.md per executor.md TYPED RESULT OUTPUT section.
+Required RESULT.json fields: task_id, status (success/failure/partial), files_modified, files_read, tests_run, verify_commands_run, done_criteria_checked, edge_cases_handled, decisions_made, confidence (high/medium/low), attempt_number, issues_found, unresolved_risks, spec_sections_referenced, what_next_tasks_can_assume.
+Run the MANDATORY VERIFY COMMANDS below before completion and record their output in `verify_commands_run`. If any DOMAIN-SPECIFIC CHECK below applies to the task, record its result in `done_criteria_checked` or flag in `unresolved_risks`.
+
+## Domain Invariants
 
 These rules apply to EVERY task assigned to this specialist, regardless of task XML content:
 - Every external HTTP request must have an explicit timeout (5-15s typical).
@@ -24,7 +32,7 @@ These rules apply to EVERY task assigned to this specialist, regardless of task 
 - Every OAuth flow must use a state parameter to prevent CSRF.
 - Every integration must have a health check or connectivity test that runs on startup.
 
-## NAMED FAILURE MODE PROHIBITIONS (integration-domain)
+## Named Failure Prohibitions
 
 **MISSING RETRY:**
 NEVER call an external API without retry logic for transient failures (5xx, network timeout, ECONNRESET).

@@ -346,6 +346,50 @@ if [ -f "$LIVE_REGISTRY" ]; then
   fi
 fi
 
+# --- R7-002: live-lint loop over every non-stub module in _registry.json --
+# Reads the live registry and runs the live agent-lint hook against every
+# module whose status is not 'stub' (and not 'core', which is the
+# dispatcher base, not an agent module). Asserts each passes (exit 0).
+# Source-of-truth: _registry.json — future modules added to the registry
+# automatically join the loop without test edits. State-derived; no
+# literal counts.
+if [ -f "$REPO_ROOT/framework/modules/_registry.json" ]; then
+  R7002_FAIL=0
+  # Iterate via process substitution; strip CR for Windows line endings.
+  R7002_NAMES=$(jq -r '
+    ((.modules // []) + (.additional_modules // []))[]
+    | "\(.name)\t\(.path)\t\(.status)"
+  ' "$REPO_ROOT/framework/modules/_registry.json" 2>/dev/null | tr -d '\r')
+  while IFS=$'\t' read -r MNAME MPATH MSTATUS; do
+    [ -z "$MNAME" ] && continue
+    # Skip stub modules (R6-005 fast-path) and core (dispatcher base).
+    if [ "$MSTATUS" = "stub" ] || [ "$MSTATUS" = "core" ]; then
+      continue
+    fi
+    MDIR="$REPO_ROOT/framework/modules/$MPATH"
+    if [ ! -d "$MDIR" ]; then
+      echo "  FAIL: C-20[$MNAME]: module directory missing at $MDIR"
+      R7002_FAIL=$((R7002_FAIL+1))
+      FAIL=$((FAIL+1))
+      continue
+    fi
+    bash "$LINT" "$MDIR" >/dev/null 2>&1
+    RC=$?
+    if [ "$RC" -eq 0 ]; then
+      echo "  PASS: C-20[$MNAME]: live agent-lint passes (exit 0)"
+      PASS=$((PASS+1))
+    else
+      echo "  FAIL: C-20[$MNAME]: live agent-lint exited $RC (expected 0)"
+      R7002_FAIL=$((R7002_FAIL+1))
+      FAIL=$((FAIL+1))
+    fi
+  done <<< "$R7002_NAMES"
+  if [ "$R7002_FAIL" -eq 0 ]; then
+    echo "  PASS: C-20: every non-stub module in _registry.json passes the live lint (R7-002)"
+    PASS=$((PASS+1))
+  fi
+fi
+
 TOTAL=$((PASS+FAIL))
 echo ""
 echo "$PASS/$TOTAL passed"
