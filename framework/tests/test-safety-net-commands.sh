@@ -193,8 +193,14 @@ if [ "$RC4" -eq 0 ] && printf '%s' "$DIFF_OUTPUT" | grep -q "feat.txt"; then
 else
   nope "Case 4 [peer-review]: documented merge-base diff failed (rc=$RC4 trunk=$TRUNK output='$DIFF_OUTPUT')"
 fi
-if grep -qE 'git diff \$\(git merge-base HEAD main\)' "$PEER_MD"; then
-  ok "Case 4 [peer-review]: command body declares the documented merge-base diff expression"
+# R8-010: behavioral-floor assertion — the contract is "the command emits
+# a merge-base diff against the trunk", not the literal trunk name. The
+# previous literal-`main` grep pinned F-005 (peer-review's hardcoded
+# trunk) into the test surface so a master-default user could not be
+# served. Now the assertion accepts any merge-base expression: a literal
+# trunk OR R8-005's dynamic `$TRUNK` resolution.
+if grep -qE 'git merge-base HEAD' "$PEER_MD"; then
+  ok "Case 4 [peer-review]: command body declares a merge-base diff expression"
 else
   nope "Case 4 [peer-review]: command body missing the merge-base diff expression"
 fi
