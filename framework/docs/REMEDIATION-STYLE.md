@@ -75,6 +75,22 @@ Omitting any one produces drift (R2 omitted #1 for workflow-guard; R3 caught it)
 
 ---
 
+## Rule: Runtime data dependency
+
+Any remediation that adds a runtime block — banner, gate, hook, or agent prompt — that **reads from a directory or file path at runtime** must include an explicit "Runtime data dependency" subsection inside its Execution plan that:
+
+1. Names the path being read (e.g., `framework/adapters/<name>/adapter.json`, `~/.claude/docs/`).
+2. Confirms `framework/scripts/sync-to-claude.sh` already delivers that path to `~/.claude/`, OR enumerates the sync-strategy update required to make it do so.
+3. Names the test that asserts the runtime block can resolve the path on the install side (not just on the framework side).
+
+Example:
+
+> **Runtime data dependency:** the banner reads `~/.claude/adapters/<active>/adapter.json`. `sync-to-claude.sh` walks `framework/adapters/` (R6-017). Coverage asserted by `test-adapter-contracts.sh` case (e).
+
+Justification: catches R6-017-class regressions where a runtime read targets an undelivered directory and the runtime block silently degrades on the install side. Declaring the dependency up front in the plan makes the omission visible at plan-review time, not at execution time.
+
+---
+
 ## Rule: Sync-strategy review
 
 Any remediation that adds a new hook, agent, or top-level `framework/` file must verify that `framework/scripts/sync-to-claude.sh` will actually deliver it to `~/.claude/`. If not, the remediation must include a sync-strategy update.
