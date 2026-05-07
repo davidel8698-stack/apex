@@ -313,8 +313,20 @@ if [ "$FAIL" -ne 0 ]; then
     # not double-count an expected historical surfacing as a fresh FAIL.
     PASS=$((PASS+FAIL))
     FAIL=0
+    # R9-002: bridge private counters into harness globals once.
+    if declare -F harness_assert_local >/dev/null 2>&1; then
+      harness_assert_local "$PASS" "$FAIL" "test-plan-recipes"
+    fi
     exit 0
   fi
+  # R9-002: bridge private counters into harness globals once.
+  if declare -F harness_assert_local >/dev/null 2>&1; then
+    harness_assert_local "$PASS" "$FAIL" "test-plan-recipes"
+  fi
   exit 1
+fi
+# R9-002: bridge private counters into harness globals once.
+if declare -F harness_assert_local >/dev/null 2>&1; then
+  harness_assert_local "$PASS" "$FAIL" "test-plan-recipes"
 fi
 exit 0

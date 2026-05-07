@@ -188,6 +188,10 @@ assert_pass "sync-to-claude.sh delivers decision-gate.sh" \
 
 echo
 echo "=== Results: PASS=$PASS FAIL=$FAIL ==="
+# R9-002: bridge private counters into harness globals once.
+if declare -F harness_assert_local >/dev/null 2>&1; then
+  harness_assert_local "$PASS" "$FAIL" "test-decision-gate"
+fi
 if [ "$FAIL" -ne 0 ]; then
   exit 1
 fi

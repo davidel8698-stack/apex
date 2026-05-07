@@ -66,4 +66,8 @@ rm -rf "$SANDBOX"
 
 echo ""
 echo "Results: $PASS passed, $FAIL failed"
+# R9-002: bridge private counters into harness globals once.
+if declare -F harness_assert_local >/dev/null 2>&1; then
+  harness_assert_local "$PASS" "$FAIL" "test-start-memory-init"
+fi
 exit "$FAIL"

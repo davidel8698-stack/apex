@@ -47,4 +47,8 @@ run_case ".apex/ state allowed"                      ".apex/STATE.json"         
 
 echo ""
 echo "Results: $PASS passed, $FAIL failed"
+# R9-002: bridge private counters into harness globals once.
+if declare -F harness_assert_local >/dev/null 2>&1; then
+  harness_assert_local "$PASS" "$FAIL" "test-quarantine-regex"
+fi
 exit "$FAIL"

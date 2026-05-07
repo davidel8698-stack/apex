@@ -285,6 +285,10 @@ assert_pass "sync-to-claude.sh delivers _adapter-detect.sh" \
 
 echo
 echo "=== Results: PASS=$PASS FAIL=$FAIL ==="
+# R9-002: bridge private counters into harness globals once.
+if declare -F harness_assert_local >/dev/null 2>&1; then
+  harness_assert_local "$PASS" "$FAIL" "test-adapter-contracts"
+fi
 if [ "$FAIL" -ne 0 ]; then
   exit 1
 fi

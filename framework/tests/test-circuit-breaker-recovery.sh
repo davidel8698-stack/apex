@@ -152,4 +152,8 @@ assert_pass "recover.md mentions RECOVERY_MENU.md" "grep -q 'RECOVERY_MENU' '$RE
 
 echo ""
 echo "Results: $PASS passed, $FAIL failed"
+# R9-002: bridge private counters into harness globals once.
+if declare -F harness_assert_local >/dev/null 2>&1; then
+  harness_assert_local "$PASS" "$FAIL" "test-circuit-breaker-recovery"
+fi
 exit "$FAIL"
