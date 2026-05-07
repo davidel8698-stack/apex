@@ -147,6 +147,23 @@ harness_report() {
   echo ""
   echo "═══════════════════════════════════════════════"
   echo "  APEX self-test: $PASS/$TOTAL passed, $FAIL failed"
+  # R8-002: Totals-invariant guard — fail loud on counter inconsistency.
+  # If PASS + FAIL > TOTAL, the runner's per-file aggregation drifted
+  # (private-counter convention drift, double counting, missing
+  # harness_assert_corpus call site). Treat the run as INFRASTRUCTURE
+  # DEGRADED even when FAIL=0, because consumers (round-checker,
+  # /apex:start, /apex:health-check) read the aggregate banner as
+  # truth. Spec anchors: "Fail-loud, never fail-silent." +
+  # "Honest scope over marketing scope." + "Proof-of-process beats
+  # proof-of-promise." Exit code 99 is distinct from $FAIL so
+  # consumers can disambiguate "test failed" from "runner counters
+  # inconsistent" downstream.
+  if [ $((PASS + FAIL)) -gt "$TOTAL" ]; then
+    echo "  ❌ TOTALS INVARIANT VIOLATED: PASS=$PASS FAIL=$FAIL TOTAL=$TOTAL — runner reports inconsistent counters"
+    echo "  ❌ INFRASTRUCTURE DEGRADED (counters)"
+    echo "═══════════════════════════════════════════════"
+    exit 99
+  fi
   if [ "$FAIL" -gt 0 ]; then
     echo "  ❌ INFRASTRUCTURE DEGRADED"
   else

@@ -92,6 +92,16 @@ for test_file in "$TEST_DIR"/test-${PATTERN}.sh; do
     echo "  ⚠️  $TEST_NAME exited non-zero (rc=$subshell_rc) with no harness FAIL recorded — counted as 1 FAIL"
   fi
 
+  # R8-002: Per-file invariant warning. If a test file reports PASS
+  # + FAIL > TOTAL, its counters drifted (e.g., private-counter pattern
+  # not bridged to harness globals, or double counting). Surface the
+  # discrepancy so the failing file is identifiable; do NOT auto-correct
+  # (transparency over silent normalization). The aggregate-line guard
+  # in harness_report will fire on the cumulative line.
+  if [ $((SUB_PASS + SUB_FAIL)) -gt "$SUB_TOTAL" ]; then
+    echo "  ⚠️  $TEST_NAME: counters inconsistent (PASS=$SUB_PASS FAIL=$SUB_FAIL TOTAL=$SUB_TOTAL)"
+  fi
+
   CUM_PASS=$((CUM_PASS + SUB_PASS))
   CUM_FAIL=$((CUM_FAIL + SUB_FAIL))
   CUM_TOTAL=$((CUM_TOTAL + SUB_TOTAL))
