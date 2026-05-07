@@ -9,11 +9,21 @@
 #   3. A sandboxed sync (CLAUDE_ROOT=<tmp>) produces a docs/ directory
 #      whose file-count equals ls framework/docs/ | wc -l.
 #
+# R7-013 (extension, case C-7): explicit per-file contract assertion for
+# REMEDIATION-STYLE.md. The Self-Healing Loop section of apex-spec.md
+# names that doc as the remediation-planner authoring contract; F-013
+# is the spec-named tail of F-003 (the doc was referenced by the spec
+# but not delivered). C-7 ratifies the spec contract by naming the file
+# directly so a future regression in the tree walk cannot silently lose
+# this specific delivery.
+#
 # Source-of-truth: ls framework/docs/ — adding a new doc to the source
 # tree automatically adds it to the assertion without test edits.
 #
 # Spec anchors:
 #   "Information boundaries ARE the architecture."
+#   "Self-Healing Loop" section: remediation-planner "Authored under
+#     `framework/docs/REMEDIATION-STYLE.md`" (R7-013).
 #   Implicit framework->install delivery contract (R7 audit F-003).
 
 set -u
@@ -114,8 +124,22 @@ if [ -d "$TARGET_DOCS2" ]; then
   else
     nope "C-6: $MISSING file(s) missing in the sandboxed target"
   fi
+
+  # C-7 (R7-013): explicit per-file assertion for REMEDIATION-STYLE.md.
+  # The Self-Healing Loop section of apex-spec.md names this doc as the
+  # remediation-planner authoring contract; F-013 tracks the gap that
+  # the doc was referenced but not delivered. R7-003's tree walk closes
+  # the symptom in passing; this assertion ratifies the spec contract by
+  # naming the file directly so a future regression in the tree walk
+  # cannot silently lose this specific delivery.
+  if [ -f "$TARGET_DOCS2/REMEDIATION-STYLE.md" ]; then
+    ok "C-7: REMEDIATION-STYLE.md (spec-named planner authoring contract) reached <target>/docs/"
+  else
+    nope "C-7: REMEDIATION-STYLE.md NOT delivered to <target>/docs/ — spec-named planner contract gap (F-013)"
+  fi
 else
   nope "C-6: sandbox replay produced no target/docs/ to inspect"
+  nope "C-7: REMEDIATION-STYLE.md cannot be asserted — sandbox produced no target/docs/"
 fi
 rm -rf "$SANDBOX2"
 
