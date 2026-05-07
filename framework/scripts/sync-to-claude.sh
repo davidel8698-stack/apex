@@ -301,19 +301,25 @@ copy_tree "$FRAMEWORK_ROOT/apex-skills"   "$CLAUDE_ROOT/apex-skills"
 copy_tree "$FRAMEWORK_ROOT/schemas"       "$CLAUDE_ROOT/schemas"
 copy_tree "$FRAMEWORK_ROOT/tests"           "$CLAUDE_ROOT/tests"
 copy_tree "$FRAMEWORK_ROOT/test-fixtures"   "$CLAUDE_ROOT/test-fixtures"
+# R7-003: total tree-walk delivery for framework/docs/. Replaces the
+# per-doc copy_file anchor pattern that failed to scale across
+# R5/R6 — every new doc had to be remembered by the maintainer, and
+# discipline failed twice (F-003 in R7). The tree walk subsumes the
+# two existing per-doc anchors below (kept commented for traceability,
+# safe because copy_file is idempotent if a destination is overwritten
+# with identical content). Coverage asserted by
+# framework/tests/test-sync-doc-coverage.sh — file-count equality.
+copy_tree "$FRAMEWORK_ROOT/docs"          "$CLAUDE_ROOT/docs"
 
-# R6-002: explicit delivery anchor for the module-ecosystem
-# documented-interpretation doc. The doc closes the literal-wording
+# R6-002 (subsumed by R7-003 tree walk above; kept as comment for
+# traceability): the MODULE-ECOSYSTEM.md doc closes the literal-wording
 # residue surfaced by F-002 and is referenced by `_registry.json`'s
-# `_doc` field. Lives under framework/docs/ which is otherwise not
-# walked by sync; the explicit anchor here is the delivery contract.
-copy_file "$FRAMEWORK_ROOT/docs/MODULE-ECOSYSTEM.md" "$CLAUDE_ROOT/docs/MODULE-ECOSYSTEM.md"
-# R6-010: explicit delivery anchor for the owns_files population
-# contract doc. Single source of truth for `owns_files` semantics,
-# referenced by both architect.md STEP 2 and planner.md
-# ONE-FILE-ONE-OWNER. Owner-guard.sh (PreToolUse Write|Edit) is the
-# downstream consumer of the field this contract defines.
-copy_file "$FRAMEWORK_ROOT/docs/OWNS-FILES-CONTRACT.md" "$CLAUDE_ROOT/docs/OWNS-FILES-CONTRACT.md"
+# description text. The R7-003 tree walk above delivers it.
+# copy_file "$FRAMEWORK_ROOT/docs/MODULE-ECOSYSTEM.md" "$CLAUDE_ROOT/docs/MODULE-ECOSYSTEM.md"
+# R6-010 (subsumed by R7-003 tree walk above; kept as comment for
+# traceability): the OWNS-FILES-CONTRACT.md doc is the single source of
+# truth for `owns_files` semantics. The R7-003 tree walk above delivers it.
+# copy_file "$FRAMEWORK_ROOT/docs/OWNS-FILES-CONTRACT.md" "$CLAUDE_ROOT/docs/OWNS-FILES-CONTRACT.md"
 # R6-011: explicit delivery anchor for the frozen STATE.json init
 # template consumed by state-rebuild.sh as the schema-complete base
 # before overlaying event-log-derived semantic-event fields. The
