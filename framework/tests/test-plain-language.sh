@@ -56,10 +56,22 @@ JARGON_TERMS="Nyquist Validation Layer|TDAD\b|AST-KB|Phantom Verification|phanto
 if [ -d "$FW_COMMANDS" ]; then
   TOTAL_HITS=0
   VIOLATIONS=""
-  # Targets for the R5-015 sweep:
-  for f in next.md help.md status.md forensics.md walkthrough.md health-check.md; do
-    FILE="$FW_COMMANDS/$f"
+  # R6-015: extended scope from the R5-015 starter set (6 files) to every
+  # user-facing command file (state-derived count from
+  # `ls framework/commands/apex/*.md`). Excluded:
+  #   - Underscore-prefixed helpers (_debate.md, _roundtable.md): internal
+  #     orchestration primitives invoked by other commands; not surfaced
+  #     directly to users. Intentionally technical.
+  # All other commands are in scope, including the 6 originally-scanned
+  # files (preservation contract: still scanned, still pass).
+  SCAN_COUNT=0
+  for FILE in "$FW_COMMANDS"/*.md; do
     [ -f "$FILE" ] || continue
+    base=$(basename "$FILE")
+    case "$base" in
+      _*) continue ;;  # exclude underscore-prefixed helpers
+    esac
+    SCAN_COUNT=$((SCAN_COUNT + 1))
     # Find lines containing any jargon term.
     while IFS= read -r line; do
       # Strip leading line number/context. Skip empty.
@@ -68,19 +80,22 @@ if [ -d "$FW_COMMANDS" ]; then
       if printf '%s' "$line" | grep -qE "$JARGON_TERMS"; then
         if ! printf '%s' "$line" | grep -q "("; then
           TOTAL_HITS=$((TOTAL_HITS + 1))
-          VIOLATIONS="$VIOLATIONS\n  $f: $(printf '%s' "$line" | head -c 120)"
+          VIOLATIONS="$VIOLATIONS\n  $base: $(printf '%s' "$line" | head -c 120)"
         fi
       fi
     done < "$FILE"
   done
 
   TOTAL=$((TOTAL + 1))
-  # Baseline budget: after the R5-015 sweep we expect very few bare hits.
-  # 5 is a conservative ceiling — anything above means the sweep regressed
-  # or new jargon was introduced without parens-form treatment.
-  BUDGET=5
+  # R6-015 ratchet: budget lowered from 5 to 3. The lower bound is set by
+  # what the codebase passes today after the R5-015 sweep + R6-006 / R6-016
+  # numbered-proposal fixes + the post-R6-015 jargon translations in
+  # fast.md / quick.md. Future rounds ratchet further.
+  # R7 target: BUDGET=1
+  # R8 target: BUDGET=0
+  BUDGET=3
   if [ "$TOTAL_HITS" -le "$BUDGET" ]; then
-    echo "  ✅ R5-015-b: bare-jargon hits in user-facing command files = $TOTAL_HITS (budget: $BUDGET)"
+    echo "  ✅ R5-015-b: bare-jargon hits in $SCAN_COUNT user-facing command files = $TOTAL_HITS (budget: $BUDGET)"
     PASS=$((PASS + 1))
   else
     echo "  ❌ R5-015-b: bare-jargon hits = $TOTAL_HITS (budget: $BUDGET)"
