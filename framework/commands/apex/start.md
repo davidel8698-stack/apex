@@ -96,7 +96,22 @@ esac
 
 ## INFRASTRUCTURE SELF-TEST
 bash ~/.claude/scripts/self-test.sh 2>&1
-If exit code > 0: "⚠️ APEX infrastructure degraded — $EXIT test(s) failed. Run /apex:health-check."
+EXIT=$?
+# R9-014: three-arm exit-code branching so consumers do not mis-frame
+# exit 99 (counters inconsistent — runner-aggregate guard fired) as
+# "$EXIT test(s) failed". Spec anchor: "Fail-loud, never fail-silent"
+# without "fail-loud-incorrectly".
+case "$EXIT" in
+  0)
+    : "infrastructure clean — no banner needed."
+    ;;
+  99)
+    echo "⚠️ APEX runner counters inconsistent (exit 99) — diagnose with: bash ~/.claude/scripts/self-test.sh 2>&1 | grep 'counters inconsistent'. Run /apex:health-check."
+    ;;
+  *)
+    echo "⚠️ APEX infrastructure degraded — $EXIT test(s) failed. Run /apex:health-check."
+    ;;
+esac
 
 Check .apex/STATE.json. If exists: "Project in progress. /apex:next or /apex:resume." Stop.
 

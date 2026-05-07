@@ -88,12 +88,22 @@ Expected: 0a/0b/0c/0d all PASS. Any FAIL blocks the rest of health-check.
 ```bash
 bash ~/.claude/scripts/self-test.sh 2>&1
 SELFTEST_EXIT=$?
-if [ "$SELFTEST_EXIT" -gt 0 ]; then
-  echo "❌ TEST 0e FAIL: $SELFTEST_EXIT infrastructure test(s) failed"
-  echo "   Run 'bash ~/.claude/scripts/self-test.sh' for details"
-else
-  echo "✅ TEST 0e PASS: all infrastructure mechanisms verified"
-fi
+# R9-014: three-arm exit-code branching so consumers do not mis-frame
+# exit 99 (counters inconsistent — runner-aggregate guard fired) as
+# "$SELFTEST_EXIT infrastructure test(s) failed". Spec anchor:
+# "Fail-loud, never fail-silent" without "fail-loud-incorrectly".
+case "$SELFTEST_EXIT" in
+  0)
+    echo "✅ TEST 0e PASS: all infrastructure mechanisms verified"
+    ;;
+  99)
+    echo "❌ TEST 0e FAIL (counters inconsistent): runner reported PASS+FAIL > TOTAL — diagnose with: bash ~/.claude/scripts/self-test.sh 2>&1 | grep 'counters inconsistent'"
+    ;;
+  *)
+    echo "❌ TEST 0e FAIL: $SELFTEST_EXIT infrastructure test(s) failed"
+    echo "   Run 'bash ~/.claude/scripts/self-test.sh' for details"
+    ;;
+esac
 ```
 
 ### TEST 0f: Schema Validation [Round 3.4 — D-1 to D-5]
