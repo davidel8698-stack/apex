@@ -118,3 +118,15 @@ harness_report() {
   echo "═══════════════════════════════════════════════"
   exit "$FAIL"
 }
+
+# R7-001: subshell-isolation sidecar.
+# Writes the current PASS/FAIL/TOTAL/SKIP counters to the file named in
+# $HARNESS_COUNTERS_FILE so a parent shell can aggregate them after the
+# subshell exits. Safe to call multiple times; idempotent. Used by
+# self-test.sh to wrap each per-test `source` in a subshell whose `exit`
+# does not terminate the runner loop.
+harness_export_counters() {
+  local target="${HARNESS_COUNTERS_FILE:-}"
+  [ -n "$target" ] || return 0
+  printf '%s %s %s %s\n' "${PASS:-0}" "${FAIL:-0}" "${TOTAL:-0}" "${SKIP:-0}" > "$target"
+}
