@@ -159,6 +159,10 @@ if [ -d "$AGENTS_DIR" ]; then
   USHAPE_FAIL=0
   for agent_file in "$AGENTS_DIR"/*.md "$AGENTS_DIR"/specialist/*.md; do
     [ -f "$agent_file" ] || continue
+    # Skip non-framework agents (e.g. user-installed GSD ecosystem) — we only
+    # enforce U-shape on agents the APEX framework owns. Mirrors the gsd-*
+    # protection in framework/scripts/sync-to-claude.sh (--clean mode).
+    case "$(basename "$agent_file")" in gsd-*) continue ;; esac
     TOTAL_LINES=$(wc -l < "$agent_file")
     TOP_CUTOFF=$(( TOTAL_LINES / 5 ))
     BOTTOM_START=$(( TOTAL_LINES - TOTAL_LINES / 5 ))
@@ -206,7 +210,9 @@ fi
 echo "✅ TEST 0i-a PASS: Color Discipline section exists"
 
 # 0i-b: ✅ never used with uncertainty language in command .md files
-MISUSE=$(grep -rl "✅" ~/.claude/commands/apex/*.md 2>/dev/null | while read f; do
+# Note: skip health-check.md itself — tests must not test their own definition
+# (line 210 of this file contains both ✅ and the uncertainty regex literal).
+MISUSE=$(grep -rl "✅" ~/.claude/commands/apex/*.md 2>/dev/null | grep -v health-check.md | while read f; do
   grep -n "✅" "$f" | grep -iE "(should|seems|expect|believe|probably|likely|appears)" && echo "  in: $f"
 done)
 if [ -n "$MISUSE" ]; then
