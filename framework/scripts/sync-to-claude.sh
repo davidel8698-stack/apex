@@ -365,6 +365,13 @@ copy_file "$FRAMEWORK_ROOT/apex-branding.md"        "$CLAUDE_ROOT/apex-branding.
 copy_file "$FRAMEWORK_ROOT/apex-design-notes.md"    "$CLAUDE_ROOT/apex-design-notes.md"
 copy_file "$FRAMEWORK_ROOT/apex-learnings.md"       "$CLAUDE_ROOT/apex-learnings.md"
 copy_file "$FRAMEWORK_ROOT/apex-model-routing.json" "$CLAUDE_ROOT/apex-model-routing.json"
+# R9-001: bootstrap templates for /apex:start (Two-Tier Methodology) and
+# threat-model-bootstrap. Consumers cite these by stable absolute path
+# (~/.claude/<name>); preserve the top-level layout — do not move under
+# a templates/ subdir.
+copy_file "$FRAMEWORK_ROOT/APEX-TEMPLATE.md"          "$CLAUDE_ROOT/APEX-TEMPLATE.md"
+copy_file "$FRAMEWORK_ROOT/PROJECT-APEX-TEMPLATE.md"  "$CLAUDE_ROOT/PROJECT-APEX-TEMPLATE.md"
+copy_file "$FRAMEWORK_ROOT/THREAT_MODEL-TEMPLATE.md"  "$CLAUDE_ROOT/THREAT_MODEL-TEMPLATE.md"
 copy_file "$FRAMEWORK_ROOT/CONTEXT_BUDGET.default.json" "$CLAUDE_ROOT/CONTEXT_BUDGET.default.json"
 copy_file "$FRAMEWORK_ROOT/scripts/self-test.sh"      "$CLAUDE_ROOT/scripts/self-test.sh"
 copy_file "$FRAMEWORK_ROOT/scripts/validate-state.sh" "$CLAUDE_ROOT/scripts/validate-state.sh"
@@ -409,6 +416,10 @@ if [[ $CLEAN_MODE -eq 1 ]]; then
   echo "apex-design-notes.md" >> "$EXPECTED_FILES"
   echo "apex-learnings.md" >> "$EXPECTED_FILES"
   echo "apex-model-routing.json" >> "$EXPECTED_FILES"
+  # R9-001: templates land at install root and must not appear as orphans.
+  echo "APEX-TEMPLATE.md" >> "$EXPECTED_FILES"
+  echo "PROJECT-APEX-TEMPLATE.md" >> "$EXPECTED_FILES"
+  echo "THREAT_MODEL-TEMPLATE.md" >> "$EXPECTED_FILES"
   echo "scripts/self-test.sh" >> "$EXPECTED_FILES"
   echo "scripts/validate-state.sh" >> "$EXPECTED_FILES"
   echo "scripts/apex-watchdog.ps1" >> "$EXPECTED_FILES"
