@@ -63,6 +63,43 @@ assert_jq() {
   fi
 }
 
+# R8-009: corpus-style aggregation bridge.
+#
+# Three corpus tests (test-decision-mode.sh, test-proposals.sh,
+# test-roundtable-classifier.sh) use private CORRECT/TOTAL counters
+# because the spec's accuracy-floor pattern (e.g., 80%+ on a corpus)
+# does not map naturally to per-row PASS/FAIL. Without this helper the
+# harness globals stay at zero for those tests and the per-file summary
+# reports `PASS=0 FAIL=0` even when 80 corpus rows ran.
+#
+# Signature: harness_assert_corpus <correct> <total> <msg> <threshold_pct>
+# Semantics:
+#   - TOTAL += total
+#   - PASS  += correct
+#   - if (correct * 100 / total) < threshold_pct:
+#       FAIL += (total - correct), prints accuracy-breach diagnostic
+#     else:
+#       FAIL unchanged, prints accuracy-met diagnostic
+#
+# Rationale: mirrors the accuracy-floor semantics — a 95%-correct corpus
+# is a passing test even though 5% of rows missed. Per-row honesty
+# (always FAIL the misses) would break the spec's accuracy-floor pattern.
+harness_assert_corpus() {
+  local correct="$1" total="$2" msg="$3" threshold_pct="$4"
+  TOTAL=$((TOTAL + total))
+  PASS=$((PASS + correct))
+  local pct=0
+  if [ "$total" -gt 0 ]; then
+    pct=$(( correct * 100 / total ))
+  fi
+  if [ "$pct" -lt "$threshold_pct" ]; then
+    echo "  ❌ $msg (accuracy ${pct}% < ${threshold_pct}% floor): $correct/$total"
+    FAIL=$((FAIL + (total - correct)))
+  else
+    echo "  ✅ $msg ($correct/$total at or above ${threshold_pct}% floor)"
+  fi
+}
+
 coverage_scan() {
   echo ""
   echo "━━━ Coverage Scan ━━━"

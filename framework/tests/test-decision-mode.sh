@@ -133,6 +133,12 @@ if [ ${#MISSES[@]} -gt 0 ]; then
   done
 fi
 
+# R8-009: bridge private CORRECT/TOTAL counters into harness globals so
+# the per-file summary line reports actual corpus size instead of 0/0.
+if command -v harness_assert_corpus >/dev/null 2>&1; then
+  harness_assert_corpus "$CORRECT" "$TOTAL" "decision-mode classifier corpus" 90
+fi
+
 if [ "$PCT" -lt 90 ]; then
   echo ""
   echo "FAIL: accuracy $PCT% is below threshold (90%)"

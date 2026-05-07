@@ -126,10 +126,28 @@ if [ ${#MISSES[@]} -gt 0 ]; then
   done
 fi
 
-if [ "$CORRECT" -ne "$TOTAL" ]; then
+# R8-009: snapshot the local TOTAL before the harness bridge below
+# overwrites it (the helper increments the global TOTAL); the
+# subsequent equality check uses the snapshot.
+LOCAL_TOTAL="$TOTAL"
+
+if [ "$CORRECT" -ne "$LOCAL_TOTAL" ]; then
+  # Bridge corpus counters before exit so per-file summary is honest.
+  if command -v harness_assert_corpus >/dev/null 2>&1; then
+    harness_assert_corpus "$CORRECT" "$LOCAL_TOTAL" "roundtable classifier corpus" 100
+  fi
   echo ""
-  echo "FAIL: classifier disagrees with corpus on $((TOTAL - CORRECT)) entries"
+  echo "FAIL: classifier disagrees with corpus on $((LOCAL_TOTAL - CORRECT)) entries"
   exit 1
+fi
+
+# R8-009: bridge private CORRECT/TOTAL counters into harness globals so
+# the per-file summary line reports actual corpus size instead of 0/0.
+# Threshold 100 mirrors this test's "exact agreement" gate — anything
+# less than 100% rolls the misses into FAIL. Helper MUST be called
+# after the equality gate above (it overwrites the global TOTAL).
+if command -v harness_assert_corpus >/dev/null 2>&1; then
+  harness_assert_corpus "$CORRECT" "$LOCAL_TOTAL" "roundtable classifier corpus" 100
 fi
 
 echo "  PASS — exact agreement"

@@ -55,13 +55,18 @@ count_violations_in_file() {
 }
 
 TOTAL=0
+SCANNED_FILES=0
+CLEAN_FILES=0
 declare -a OFFENDING_FILES=()
 
 for f in "$CMD_DIR"/*.md; do
   [ -f "$f" ] || continue
+  SCANNED_FILES=$((SCANNED_FILES + 1))
   v=$(count_violations_in_file "$f")
   if [ "$v" -gt 0 ]; then
     OFFENDING_FILES+=("$(basename "$f"):$v")
+  else
+    CLEAN_FILES=$((CLEAN_FILES + 1))
   fi
   TOTAL=$((TOTAL + v))
 done
@@ -89,11 +94,29 @@ if [ ${#OFFENDING_FILES[@]} -gt 0 ]; then
   done
 fi
 
-if [ "$TOTAL" -gt "$BASELINE" ]; then
+VIOLATION_COUNT="$TOTAL"
+if [ "$VIOLATION_COUNT" -gt "$BASELINE" ]; then
+  # R8-009: bridge corpus counters into harness globals before exit.
+  # Note: helper increments harness TOTAL by SCANNED_FILES, overwriting
+  # the local violation count — VIOLATION_COUNT preserves it for the
+  # diagnostic below.
+  if command -v harness_assert_corpus >/dev/null 2>&1; then
+    harness_assert_corpus "$CLEAN_FILES" "$SCANNED_FILES" "PROPOSALS_MODE clean-file ratio" 80
+  fi
   echo ""
-  echo "FAIL: forbidden-pattern count ($TOTAL) exceeds baseline ($BASELINE)."
+  echo "FAIL: forbidden-pattern count ($VIOLATION_COUNT) exceeds baseline ($BASELINE)."
   echo "      Either fix the new question(s) or update $BASELINE_FILE deliberately."
   exit 1
+fi
+
+# R8-009: bridge corpus counters into harness globals so the per-file
+# summary line reports actual scanned-file count. Total = command files
+# scanned; correct = files with zero forbidden patterns. Threshold 80%
+# reflects "the bulk of command files must be clean" while allowing
+# legacy/edge-case files baseline-pinned. Helper MUST run after the
+# local TOTAL-vs-BASELINE comparison (helper writes to TOTAL global).
+if command -v harness_assert_corpus >/dev/null 2>&1; then
+  harness_assert_corpus "$CLEAN_FILES" "$SCANNED_FILES" "PROPOSALS_MODE clean-file ratio" 80
 fi
 
 echo "  PASS: count is at or below baseline"
