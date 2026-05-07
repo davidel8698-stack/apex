@@ -4,8 +4,10 @@
 #   1. Hook exits 0 when STATE.json already exists (no-op).
 #   2. Hook produces STATE.json from a fixture event log when STATE.json
 #      is missing.
-#   3. STATE.json contains at least `current_phase` and `decision_mode`
-#      derived from the JSONL.
+#   3. STATE.json contains at least `current_phase` derived from the JSONL.
+#      (R7-005: decision_mode is no longer overlaid on STATE.json — it is
+#       read from PLAN_META.json on a per-task basis. The semantic event
+#       continues to be emitted to event-log.jsonl by _state-update.sh.)
 #   4. Idempotency: running rebuild twice yields byte-identical STATE.json.
 #   5. Unknown event types are tolerated (no error).
 
@@ -83,7 +85,8 @@ assert_pass "rebuild exits 0 when reconstruction runs"  "[ $EXIT_B -eq 0 ]"
 assert_pass "STATE.json was created"                    "[ -f '$SBB/.apex/STATE.json' ]"
 assert_pass "STATE.json is valid JSON"                  "jq . '$SBB/.apex/STATE.json' >/dev/null"
 assert_pass "current_phase derived from JSONL"          "[ \"\$(jq -r '.current_phase' '$SBB/.apex/STATE.json')\" = '02' ]"
-assert_pass "decision_mode derived from JSONL"          "[ \"\$(jq -r '.decision_mode' '$SBB/.apex/STATE.json')\" = 'balanced' ]"
+# R7-005: decision_mode is no longer overlaid on STATE.json.
+assert_pass "decision_mode not in rebuilt STATE.json"   "! jq -e 'has(\"decision_mode\")' '$SBB/.apex/STATE.json' >/dev/null 2>&1"
 assert_pass "rebuilt_from_event_log marker present"     "[ \"\$(jq -r '.rebuilt_from_event_log' '$SBB/.apex/STATE.json')\" = 'true' ]"
 
 # Idempotency
@@ -138,7 +141,10 @@ rm -f "$SBE/.apex/STATE.json"
 EXIT_E=$?
 assert_pass "R6-004: rebuild from real event log exits 0"      "[ $EXIT_E -eq 0 ]"
 assert_pass "R6-004: rebuilt current_phase reflects last emit" "[ \"\$(jq -r '.current_phase' '$SBE/.apex/STATE.json')\" = '03' ]"
-assert_pass "R6-004: rebuilt decision_mode reflects last emit" "[ \"\$(jq -r '.decision_mode' '$SBE/.apex/STATE.json')\" = 'fast' ]"
+# R7-005: decision_mode is no longer overlaid on STATE.json (orphan field
+# removed; consumers read decision_mode from PLAN_META.json). The
+# decision_mode_set event is still emitted to event-log.jsonl above.
+assert_pass "R7-005: rebuilt STATE has no decision_mode field" "! jq -e 'has(\"decision_mode\")' '$SBE/.apex/STATE.json' >/dev/null 2>&1"
 assert_pass "R6-004: rebuilt complexity_level reflects emit"   "[ \"\$(jq -r '.complexity_level' '$SBE/.apex/STATE.json')\" = '4' ]"
 rm -rf "$SBE"
 
@@ -171,14 +177,16 @@ EXIT_F=$?
 assert_pass "R6-011: rebuild from empty log exits 0"           "[ $EXIT_F -eq 0 ]"
 assert_pass "R6-011: rebuilt STATE.json was created"           "[ -f '$SBF/.apex/STATE.json' ]"
 # Count the canonical top-level keys (after stripping the forensic markers
-# added by state-rebuild.sh: rebuilt_from_event_log, rebuild_source, and the
-# decision_mode field that pre-dates the schema). 37 are required; the
-# template populates 37 + 1 optional (mutation_scores) = 38 canonical keys.
-KEY_COUNT=$(jq 'del(.rebuilt_from_event_log, .rebuild_source, .decision_mode) | keys | length' "$SBF/.apex/STATE.json" 2>/dev/null)
+# added by state-rebuild.sh: rebuilt_from_event_log, rebuild_source).
+# R7-005: decision_mode is no longer added to the rebuilt STATE.json so the
+# pre-validation strip no longer needs to mask it; schema sync is honest.
+# 37 are required; the template populates 37 + 1 optional (mutation_scores)
+# = 38 canonical keys.
+KEY_COUNT=$(jq 'del(.rebuilt_from_event_log, .rebuild_source) | keys | length' "$SBF/.apex/STATE.json" 2>/dev/null)
 assert_pass "R6-011: rebuilt STATE has >= 37 canonical fields" "[ ${KEY_COUNT:-0} -ge 37 ]"
 # Strict-schema validation on the rebuilt STATE (after stripping forensic markers).
 REB_TMP="$(mktemp).json"
-jq 'del(.rebuilt_from_event_log, .rebuild_source, .decision_mode)' "$SBF/.apex/STATE.json" > "$REB_TMP"
+jq 'del(.rebuilt_from_event_log, .rebuild_source)' "$SBF/.apex/STATE.json" > "$REB_TMP"
 bash "$VALIDATOR" "$SCHEMA" "$REB_TMP" >/dev/null 2>&1
 assert_pass "R6-011: rebuilt STATE strict-validates against schema" "[ $? -eq 0 ]"
 rm -f "$REB_TMP"

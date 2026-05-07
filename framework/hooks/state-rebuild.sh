@@ -80,8 +80,13 @@ if [ -z "$TEMPLATE" ]; then
 fi
 
 # Derive overlay values from the event log (semantic events emitted by R6-004).
+# R7-005: decision_mode is intentionally NOT overlaid on STATE.json. It is not
+# declared in STATE.schema.json (additionalProperties:false) and no consumer
+# reads it from the top level of STATE.json — `decision_mode` is read from
+# PLAN_META.json on a per-task basis instead. The semantic event continues
+# to be emitted by _state-update.sh and recorded in event-log.jsonl; only
+# the orphan top-level rebuild assignment is dropped.
 CURRENT_PHASE=""
-DECISION_MODE=""
 COMPLEXITY_LEVEL=""
 COMPLEXITY_NAME=""
 
@@ -91,12 +96,6 @@ if [ -f "$EVENT_LOG" ]; then
     [ .[] | select((.type // "") == "phase_set") | (.current_phase // empty) ] | last // empty
   ' "$EVENT_LOG" 2>/dev/null)
   [ -n "$P" ] && CURRENT_PHASE="$P"
-
-  # decision_mode: last `decision_mode_set` event with .decision_mode field.
-  D=$(jq -rs '
-    [ .[] | select((.type // "") == "decision_mode_set") | (.decision_mode // empty) ] | last // empty
-  ' "$EVENT_LOG" 2>/dev/null)
-  [ -n "$D" ] && DECISION_MODE="$D"
 
   # complexity: last `complexity_set` event.
   CL=$(jq -rs '
@@ -128,7 +127,6 @@ PROJECT_NAME="$(basename "$ROOT")"
 jq -S \
   --arg project          "$PROJECT_NAME" \
   --arg current_phase    "$CURRENT_PHASE" \
-  --arg decision_mode    "$DECISION_MODE" \
   --arg complexity_level "$COMPLEXITY_LEVEL" \
   --arg complexity_name  "$COMPLEXITY_NAME" \
   '
@@ -138,8 +136,7 @@ jq -S \
     | .project = $project
     # Overlay current_phase if derived (else keep template default null).
     | (if ($current_phase | length) > 0 then .current_phase = $current_phase else . end)
-    # Overlay decision_mode (template has no field; add optional sibling for downstream readers).
-    | (if ($decision_mode | length) > 0 then .decision_mode = $decision_mode else . end)
+    # R7-005: decision_mode is NOT overlaid here — see top-of-file comment.
     # Overlay complexity_level (integer); fall back to template value if empty.
     | (if ($complexity_level | length) > 0 then .complexity_level = ($complexity_level | tonumber) else . end)
     # Overlay complexity_name if derived (else keep template default "").
@@ -152,5 +149,5 @@ jq -S \
     exit 0
   }
 
-echo "state-rebuild: reconstructed $STATE_FILE (current_phase=${CURRENT_PHASE:-<default>}, decision_mode=${DECISION_MODE:-<default>})" >&2
+echo "state-rebuild: reconstructed $STATE_FILE (current_phase=${CURRENT_PHASE:-<default>})" >&2
 exit 0
