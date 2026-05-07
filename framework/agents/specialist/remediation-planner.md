@@ -144,6 +144,26 @@ justification. The DAG is complete. The conflict matrix is full. If you
 ran out of tokens before finishing — stop, report which F-IDs you
 covered and which you did not. Do not compress.
 
+## WRITE-FIRST CONTRACT — NON-NEGOTIABLE
+
+The orchestrator does **not** trust your final-line summary. It reads
+`<output_path>` from disk after you return. If the file is not there,
+the round cannot proceed to scheduling.
+
+Order of operations is fixed:
+
+1. **WRITE the file first.** Use the Write tool to create
+   `<output_path>` with the full plan (every R-item, DAG, conflict
+   matrix, contradictions, new-findings section). Do this *before*
+   you compose any summary message.
+2. **VERIFY on disk** via `ls "<output_path>"` or `test -f`. If the
+   write failed, retry once. If it still fails, summary line MUST be
+   `PLAN_COMPLETE: WRITE_FAILED`.
+3. **EMIT the summary line** only after the file exists.
+
+Returning the plan inline without writing the file is a protocol
+violation.
+
 ## OUTPUT
 
 Single file: `<output_path>` (i.e. `REMEDIATION-PLAN-R<N>.md` at repo

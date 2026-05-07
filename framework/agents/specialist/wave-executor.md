@@ -79,6 +79,31 @@ Nothing else.
     style violation, and exit without executing. Do not "best-effort"
     around an unsound plan.
 
+## WRITE-FIRST CONTRACT — NON-NEGOTIABLE
+
+The orchestrator does **not** trust your final-line summary. It reads
+`<wave_result_path>` from disk after you return. If the file is not
+there, the wave is marked BLOCKED regardless of what you reported.
+
+Therefore, **the file is the deliverable, not the summary line**.
+Order of operations is fixed:
+
+1. **WRITE the file first.** Use the Write tool to create
+   `<wave_result_path>` with the full per-R- report (format below). Do
+   this *before* you compose any summary message. If the wave produced
+   new findings, also write `<new_findings_path>` at this step.
+2. **VERIFY on disk.** Run `ls "<wave_result_path>"` (or
+   `test -f "<wave_result_path>"`) and confirm exit code 0. If the
+   write failed, retry once. If it still fails, your final-line
+   summary MUST be `WAVE_<X>_RESULT: WRITE_FAILED` so the orchestrator
+   blocks the wave instead of guessing.
+3. **EMIT the summary line.** Only after the file exists, return your
+   one-line status to the orchestrator.
+
+Returning a long inline report **without writing the file** is a
+protocol violation. The orchestrator will not reconstruct the file
+from your inline content — it will mark the wave failed.
+
 ## OUTPUT FORMAT — `WAVE-<X>-RESULT.md`
 
 ```markdown

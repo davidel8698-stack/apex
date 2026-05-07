@@ -111,6 +111,28 @@ halt the loop on this signal.
 Output written, status decided. If you ran out of tokens — stop,
 record what you analyzed and what you did not. Do not compress.
 
+## WRITE-FIRST CONTRACT — NON-NEGOTIABLE
+
+The orchestrator does **not** trust your final-line summary. It reads
+`<output_path>` from disk to decide whether to close the loop or
+spawn round R<N+1>. If the file is not there, the orchestrator cannot
+make that decision and will halt the loop in a paused state.
+
+Order of operations is fixed:
+
+1. **WRITE the file first.** Use the Write tool to create
+   `<output_path>` with the full closure report (status, coverage,
+   severity breakdown, spec anchors, new findings, trajectory,
+   recommendation; plus seed list when CONTINUE). Do this *before*
+   you compose any summary message.
+2. **VERIFY on disk** via `ls "<output_path>"`. If the write failed,
+   retry once. If it still fails, summary line MUST be
+   `CLOSURE_COMPLETE: WRITE_FAILED`.
+3. **EMIT the summary line** only after the file exists.
+
+Returning the closure inline without writing the file is a protocol
+violation.
+
 ## OUTPUT
 
 Single file: `<output_path>` (i.e. `ROUND-R<N>-CLOSURE.md` at repo

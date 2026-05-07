@@ -36,6 +36,69 @@ If empty (cwd is not a git repo): output a clear error and exit. All
 artifact reads/writes use `$REPO_ROOT/<filename>` for the round
 artifacts.
 
+## BREAKER COUNTER MANAGEMENT
+
+`circuit-breaker.sh` increments `STATE.circuit_breaker.total_tool_calls_this_task`
+on every Bash PostToolUse. The counter caps at
+`max_tool_calls_per_task` (default 80, often bumped to 400). A
+self-heal round legitimately spans 5 sub-agents × multiple waves —
+far more total Bash invocations than fit in a single per-task budget.
+
+**Each step transition (A→B, B→C, C→D, D→E, E→next-round) AND each
+wave boundary inside Step D is a fresh "task" from the breaker's
+perspective.** Reset the breaker counters at every such transition
+using this snippet (call it `RESET_BREAKER`):
+
+```
+source framework/hooks/_state-update.sh
+APEX_HOOK_SOURCE=self-heal _state_update '
+  .circuit_breaker.total_tool_calls_this_task = 0
+  | .circuit_breaker.consecutive_no_change_actions = 0
+  | .circuit_breaker.last_file_hash = null
+  | .circuit_breaker.triggered = false
+  | .circuit_breaker.trigger_reason = null
+'
+```
+
+Reset points (mandatory):
+- After First-Run Initialization, before Step A
+- After persisting `current_step = "plan"` (entering Step B)
+- After persisting `current_step = "schedule"` (entering Step C)
+- After persisting `current_step = "execute" | current_wave = 1` (entering Step D, first wave)
+- Before each subsequent wave inside Step D (after `current_wave += 1`)
+- After persisting `current_step = "check"` (entering Step E)
+- At the start of each new round in the main loop (after incrementing `current_round`)
+
+The `consecutive_no_change_actions` and `last_file_hash` reset is also
+included because audit/plan/schedule/check sub-agents legitimately do
+not change source files (they only write artifacts at repo root,
+which depending on filter rules may not register as "changes" to the
+breaker's `git diff HEAD` snapshot). Without resetting, the no-change
+breaker would also trip falsely.
+
+**This does NOT raise the per-unit cap or weaken the breaker.** Each
+unit (step or wave) still gets its own 400-call budget. The breaker
+still fires if a single unit genuinely runs away.
+
+## POST-TASK FILE VERIFICATION
+
+After every `Task()` invocation in this orchestrator, verify the
+expected output file is on disk before trusting the agent's
+final-line summary. If the file is missing:
+
+1. Mark the corresponding step or wave as **BLOCKED** in STATE.
+2. Do **not** reconstruct the file from the agent's inline content —
+   that masks the protocol violation and trains agents to skip the
+   file write.
+3. For Step D wave failures: break the wave sub-loop and proceed to
+   Step E with `partial_round=true`. The round-checker will see the
+   missing wave result and surface it as DEFERRED.
+4. For Steps A/B/C/E: halt the round (`status = "halted"`,
+   `trigger_reason = "agent did not write <expected_file>"`) and
+   exit. The user reruns `/apex:self-heal` after investigating.
+
+Verification is a single Read or `test -f` call. Cheap, mandatory.
+
 ## FIRST-RUN INITIALIZATION
 
 If `--resume` was NOT passed, run this initialization before Step A.
@@ -107,6 +170,8 @@ While `STATE.self_heal.status == "running"`:
   Skip if the audit file already exists at
   `$REPO_ROOT/apex-audit-findings-R<N>.md` (resume case).
 
+  **Run RESET_BREAKER** (see Breaker Counter Management).
+
   ```
   AUDIT_CONTEXT = {
     spec_path: "$REPO_ROOT/apex-spec.md",
@@ -119,14 +184,21 @@ While `STATE.self_heal.status == "running"`:
        model=resolve_model("framework-auditor"))
   ```
 
-  After return: parse the agent's final-line summary
-  (`AUDIT_COMPLETE: ... | findings=<n> | P0=<n> P1=<n> ...`). Update
-  `STATE.self_heal.current_step = "plan"` and persist. Then call
-  `bash framework/hooks/context-monitor.sh`. If it signals at the 70%
-  threshold, persist STATE and exit cleanly with a "context rotation
-  needed — type /apex:resume to continue" message.
+  **POST-TASK VERIFICATION**: confirm
+  `$REPO_ROOT/apex-audit-findings-R<N>.md` exists on disk. If missing
+  → halt the round per Post-Task File Verification rules. Do not
+  proceed to Step B.
+
+  After return (and file verified): parse the agent's final-line
+  summary (`AUDIT_COMPLETE: ... | findings=<n> | P0=<n> P1=<n> ...`).
+  Update `STATE.self_heal.current_step = "plan"` and persist. Then
+  call `bash framework/hooks/context-monitor.sh`. If it signals at
+  the 70% threshold, persist STATE and exit cleanly with a "context
+  rotation needed — type /apex:resume to continue" message.
 
   ### Step B — Plan (if current_step == "plan")
+
+  **Run RESET_BREAKER**.
 
   ```
   PLAN_CONTEXT = {
@@ -139,10 +211,16 @@ While `STATE.self_heal.status == "running"`:
        model=resolve_model("remediation-planner"))
   ```
 
+  **POST-TASK VERIFICATION**: confirm
+  `$REPO_ROOT/REMEDIATION-PLAN-R<N>.md` exists. If missing → halt the
+  round.
+
   Parse final-line summary. Update `current_step = "schedule"`,
   persist, context-monitor check.
 
   ### Step C — Schedule (if current_step == "schedule")
+
+  **Run RESET_BREAKER**.
 
   ```
   SCHEDULER_CONTEXT = {
@@ -153,6 +231,9 @@ While `STATE.self_heal.status == "running"`:
   Task("batch-scheduler", SCHEDULER_CONTEXT,
        model=resolve_model("batch-scheduler"))
   ```
+
+  **POST-TASK VERIFICATION**: confirm `$REPO_ROOT/WAVES-R<N>.md`
+  exists. If missing → halt the round.
 
   Parse final-line summary. Update `current_step = "execute"`,
   `current_wave = 1`, persist, context-monitor check.
@@ -166,6 +247,10 @@ While `STATE.self_heal.status == "running"`:
 
     Skip if `$REPO_ROOT/WAVE-<W>-RESULT.md` already exists with
     `Wave status: DONE` (resume case).
+
+    **Run RESET_BREAKER** before each wave invocation. Each wave gets
+    a fresh per-task budget of 400 tool calls. The breaker still
+    fires if a single wave genuinely runs away.
 
     ```
     WAVE_CONTEXT = {
@@ -181,20 +266,31 @@ While `STATE.self_heal.status == "running"`:
          model=resolve_model("wave-executor"))
     ```
 
+    **POST-TASK VERIFICATION**: confirm
+    `$REPO_ROOT/WAVE-<W>-RESULT.md` exists on disk. If missing —
+    regardless of what the agent's final-line summary said — treat
+    the wave as BLOCKED. Do NOT reconstruct the file from the agent's
+    inline content. Mark `WAVE_<W>_RESULT: WRITE_FAILED` in the event
+    log, set `partial_round = true`, break the wave sub-loop, proceed
+    to Step E.
+
     Parse final-line summary
     (`WAVE_<W>_RESULT: ... | status=DONE|BLOCKED|PARTIAL | ...`).
 
-    - If `status == DONE`: increment `current_wave`, persist,
-      context-monitor check, continue loop.
+    - If `status == DONE` AND file exists: increment `current_wave`,
+      persist, context-monitor check, continue loop.
     - If `status == BLOCKED` or `PARTIAL`: break the wave sub-loop,
       proceed to Step E with `partial_round` flag in the closer's
       context. Do NOT mark the round as failed yet — the
       `round-checker` decides closure verdict.
+    - If summary is `WAVE_<W>_RESULT: WRITE_FAILED`: same as BLOCKED.
 
   After all waves processed (or break): update `current_step = "check"`,
   persist.
 
   ### Step E — Closure check (if current_step == "check")
+
+  **Run RESET_BREAKER**.
 
   Collect all wave-result paths and new-findings paths from this round:
   `$REPO_ROOT/WAVE-<X>-RESULT.md` for X from 1 to last completed,
@@ -216,6 +312,11 @@ While `STATE.self_heal.status == "running"`:
   Task("round-checker", CLOSER_CONTEXT,
        model=resolve_model("round-checker"))
   ```
+
+  **POST-TASK VERIFICATION**: confirm
+  `$REPO_ROOT/ROUND-R<N>-CLOSURE.md` exists. If missing → halt the
+  round (`status = "halted"`, `trigger_reason = "round-checker did
+  not write closure"`).
 
   Parse final-line summary
   (`CLOSURE_COMPLETE: ... | status=CLOSED|CONTINUE | trajectory=... | p01=<n>`).
@@ -253,7 +354,8 @@ While `STATE.self_heal.status == "running"`:
         - `current_wave = null`
         - If `closure.p01 == 0`: `consecutive_clean_rounds += 1`
           else: `consecutive_clean_rounds = 0`
-      Persist. Loop continues with the next round.
+      Persist. **Run RESET_BREAKER** before continuing the main loop.
+      Loop continues with the next round.
 
 End of main loop.
 
