@@ -24,7 +24,20 @@ If no completed tasks in current phase: "❌ No completed work to review. Comple
 
 1. Collect the diff for the current phase:
    ```
-   git diff $(git merge-base HEAD main)..HEAD
+   # R8-005: dynamic trunk detection — first-hour usability on master-default
+   # hosts (Windows, mirrored repos, older `git init`) requires resolving the
+   # trunk before the merge-base call. origin/HEAD is the most reliable
+   # source; main/master fallback covers fresh local-only repos. Without
+   # detection, `git merge-base HEAD main` emits a git-internal error on
+   # master-default hosts ("fatal: Not a valid object name 'main'") instead
+   # of a user-friendly fix-plan.
+   TRUNK=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')
+   if [ -z "$TRUNK" ]; then
+     if git rev-parse --verify --quiet main >/dev/null 2>&1; then TRUNK=main
+     elif git rev-parse --verify --quiet master >/dev/null 2>&1; then TRUNK=master
+     else echo "❌ peer-review: unable to detect trunk branch — set origin/HEAD or rename your default branch to main/master." >&2; exit 1; fi
+   fi
+   git diff $(git merge-base HEAD "$TRUNK")..HEAD
    ```
    If diff is too large (>500 lines): summarize by file with change counts.
 
