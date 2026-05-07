@@ -133,6 +133,11 @@ LOCAL_TOTAL="$TOTAL"
 
 if [ "$CORRECT" -ne "$LOCAL_TOTAL" ]; then
   # Bridge corpus counters before exit so per-file summary is honest.
+  # R9-011: threshold 100 mirrors the equality gate above (CORRECT ==
+  # LOCAL_TOTAL) — roundtable classifier requires exact agreement per
+  # spec "Verification universal". Drift between this call-site
+  # threshold and the inequality gate is asserted by
+  # `test-corpus-thresholds.sh` meta-test.
   if command -v harness_assert_corpus >/dev/null 2>&1; then
     harness_assert_corpus "$CORRECT" "$LOCAL_TOTAL" "roundtable classifier corpus" 100
   fi
@@ -146,6 +151,8 @@ fi
 # Threshold 100 mirrors this test's "exact agreement" gate — anything
 # less than 100% rolls the misses into FAIL. Helper MUST be called
 # after the equality gate above (it overwrites the global TOTAL).
+# R9-011: anti-drift — call-site threshold 100 must equal the
+# equality-gate constant above; asserted by test-corpus-thresholds.sh.
 if command -v harness_assert_corpus >/dev/null 2>&1; then
   harness_assert_corpus "$CORRECT" "$LOCAL_TOTAL" "roundtable classifier corpus" 100
 fi

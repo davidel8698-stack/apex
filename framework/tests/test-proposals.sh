@@ -100,6 +100,11 @@ if [ "$VIOLATION_COUNT" -gt "$BASELINE" ]; then
   # Note: helper increments harness TOTAL by SCANNED_FILES, overwriting
   # the local violation count — VIOLATION_COUNT preserves it for the
   # diagnostic below.
+  # R9-011: threshold 80 reflects PROPOSALS_MODE clean-file ratio per
+  # spec "Verification universal" — the bulk of command files must be
+  # clean while allowing legacy/edge-case files baseline-pinned.
+  # Drift between this call-site threshold and the documented
+  # PROPOSALS_THRESHOLD constant is asserted by `test-corpus-thresholds.sh`.
   if command -v harness_assert_corpus >/dev/null 2>&1; then
     harness_assert_corpus "$CLEAN_FILES" "$SCANNED_FILES" "PROPOSALS_MODE clean-file ratio" 80
   fi
@@ -115,6 +120,11 @@ fi
 # reflects "the bulk of command files must be clean" while allowing
 # legacy/edge-case files baseline-pinned. Helper MUST run after the
 # local TOTAL-vs-BASELINE comparison (helper writes to TOTAL global).
+# R9-011: threshold 80 mirrors the violation-baseline policy above —
+# PROPOSALS_MODE clean-file ratio per spec "Proof-of-process beats
+# proof-of-promise". Drift between this call-site threshold and the
+# violation-vs-baseline gate above is asserted by `test-corpus-
+# thresholds.sh` meta-test.
 if command -v harness_assert_corpus >/dev/null 2>&1; then
   harness_assert_corpus "$CLEAN_FILES" "$SCANNED_FILES" "PROPOSALS_MODE clean-file ratio" 80
 fi

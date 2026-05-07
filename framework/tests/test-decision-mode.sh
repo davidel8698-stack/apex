@@ -135,6 +135,10 @@ fi
 
 # R8-009: bridge private CORRECT/TOTAL counters into harness globals so
 # the per-file summary line reports actual corpus size instead of 0/0.
+# R9-011: threshold 90 mirrors the local gate below — decision-mode
+# accuracy floor per spec "Verification universal, not TDD universal".
+# Drift between this call-site threshold (90) and the gate threshold
+# `PCT -lt 90` is asserted by `test-corpus-thresholds.sh` meta-test.
 if command -v harness_assert_corpus >/dev/null 2>&1; then
   harness_assert_corpus "$CORRECT" "$TOTAL" "decision-mode classifier corpus" 90
 fi
