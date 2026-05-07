@@ -58,7 +58,7 @@ Source: `framework/settings.json` entries under `.hooks.PreToolUse[]` (each entr
 |---|---|---|
 | `post-write.sh` | `Write\|Edit` | Secret detection on written source files (BLOCKING — exit 2 on high-confidence match). |
 | `schema-drift.sh` | `Write\|Edit` | Validates `.apex/` JSON state files against expected schemas after every write. |
-| `ast-kb-check.sh` | `Write\|Edit` | AST/KB hallucination gate — import validation. Advisory (exit 1, not 2). |
+| `ast-kb-check.sh` | `Write\|Edit` | AST/KB hallucination gate — import validation. Advisory (exit 1, not 2). Rationale: dynamic-import resolution produces high false-positives; signal consumed by critic.md, which makes the actual block decision. |
 | `phantom-check.sh` | `Write` | Blocks phase advancement when SUMMARY.md contains uncertainty language (e.g., "should work", "might pass"). |
 | `circuit-breaker.sh` | `Bash` | v7 total tool-call cap + enhanced loop detection. Interrupts runaway sessions. |
 | `ci-scan.sh` | `Write\|Edit` | Supply-chain vector scanner for `.github/workflows/*.yml` (R5-010). Self-filtered: parses Claude Code hook stdin payload, exits 0 fast when the touched path is outside `.github/workflows/`. Exit 2 on detected vectors (unpinned actions, secret exposure, write-all permissions, unsafe `pull_request_target`). Also retains command-invoked usage. |

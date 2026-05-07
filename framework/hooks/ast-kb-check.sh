@@ -2,6 +2,8 @@
 set -u
 # AST-KB Hallucination Gate — import validation hook
 # Hook type: PostToolUse (Write|Edit) — ADVISORY only (exit 1, never exit 2)
+# Rationale: dynamic-import resolution produces high false-positives;
+# advisory feeds critic.md, which decides on block.
 #
 # Validates that imported modules exist in the project or installed packages.
 # 19.7% of AI-generated imports reference non-existent modules (USENIX research).
