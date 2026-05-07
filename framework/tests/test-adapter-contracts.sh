@@ -129,33 +129,25 @@ NON_CC_COUNT=$(find "$ADAPTERS_DIR" -mindepth 2 -maxdepth 2 -name 'adapter.json'
 assert_pass "at least one non-Claude-Code adapter exists" \
   "[ \"$NON_CC_COUNT\" -ge 1 ]"
 
-# --- R6-009: Parity invariant -------------------------------------------
+# --- R6-009 / R7-004: Parity invariant ------------------------------------
 # For every surface in claude-code/adapter.json:.delivers, the surface
 # must appear in every other adapter's (.delivers + .deferred) — either
 # the adapter delivers it or it explicitly defers it. A new claude-code
 # delivery surface that no other adapter has acknowledged is a multi-
 # platform-from-day-one regression, not silent drift.
 #
-# Naming-alias normalization (R6-009): cursor's `.deferred` uses
-# descriptive feature-ids ("apex-skills", "settings.json-merge") while
-# claude-code's `.delivers` uses canonical surface names ("skills",
-# "settings"). The aliases are documented in adapter-contract.md
-# §"Field semantics" (deferred is "free-form list of feature ids"). We
-# normalise both lists through the same alias table before set
-# comparison so the invariant fires only on REAL omissions.
+# R7-004: cursor's .deferred entries were renamed to the canonical
+# surface names declared in claude-code/.delivers, so the prior alias
+# normalisation is no longer needed; we compare strings directly.
+# Future adapters MUST also use canonical surface names.
 echo
-echo "[invariant] R6-009: every claude-code delivery surface is acknowledged on every other adapter"
+echo "[invariant] R6-009/R7-004: every claude-code delivery surface is acknowledged on every other adapter"
 
+# Strip CR (Windows line endings) and trim whitespace; no alias rewriting.
 normalize_surface() {
-  # Strip CR (Windows line endings) and trim whitespace before mapping.
   local raw="${1//$'\r'/}"
   raw="${raw## }"; raw="${raw%% }"
-  case "$raw" in
-    apex-skills) echo "skills" ;;
-    settings.json-merge) echo "settings" ;;
-    settings.json) echo "settings" ;;
-    *) echo "$raw" ;;
-  esac
+  echo "$raw"
 }
 
 # Build canonical (normalized) list of claude-code delivers.

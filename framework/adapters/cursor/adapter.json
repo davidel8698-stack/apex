@@ -19,6 +19,6 @@
     "convention": "frontmatter-name",
     "notes": "Cursor reads `.cursor/rules/*.md` with a similar frontmatter shape; agent dispatch by frontmatter `name:` carries."
   },
-  "deferred": ["hooks", "apex-skills", "settings.json-merge"],
+  "deferred": ["hooks", "skills", "settings"],
   "delivers": ["agents", "commands"]
 }
