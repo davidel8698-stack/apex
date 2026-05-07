@@ -9,6 +9,15 @@ set -u
 # the expected message. If verification fails, exits 2 (fail-loud) so
 # /apex:next can decide whether to proceed without a snapshot.
 #
+# Self-filter (R8-008): when invoked via Claude Code's PreToolUse Bash
+# matcher, the hook reads the stdin envelope and skips the snapshot
+# when the user's command begins with `git status|log|show|diff|stash`.
+# These are read-only or stash-management invocations whose intent is
+# inspection or stash-list manipulation; a per-task auto-snapshot would
+# clutter the stash list and risk colliding with user-named stashes.
+# Standalone CLI invocations (no stdin envelope) continue to fire the
+# snapshot — preserving the manual-rollback contract.
+#
 # Usage: bash pre-task-snapshot.sh [task_id]
 
 source "$(dirname "$0")/_require-jq.sh"
@@ -16,6 +25,38 @@ require_jq
 source "$(dirname "$0")/_state-update.sh"
 
 export APEX_HOOK_SOURCE="pre-task-snapshot"
+
+# --- R8-008: Self-filter on stdin envelope -----------------------------
+# When invoked from settings.json's PreToolUse Bash matcher, Claude Code
+# pipes a JSON envelope to stdin: {"tool_input":{"command":"<user cmd>"}}.
+# Extract `.tool_input.command` and skip the snapshot when the command's
+# first git subcommand is `status`, `log`, `show`, `diff`, or `stash`
+# (read-only or stash-management — cannot mutate working tree, snapshot
+# would be noise). Direct CLI invocation (no envelope on stdin) falls
+# through to the snapshot path, preserving the standalone contract.
+if [ ! -t 0 ]; then
+  STDIN_ENV_BUF=$(cat 2>/dev/null || true)
+  if [ -n "$STDIN_ENV_BUF" ] && command -v jq >/dev/null 2>&1; then
+    USER_CMD=$(echo "$STDIN_ENV_BUF" | jq -r '.tool_input.command // empty' 2>/dev/null || true)
+    if [ -n "$USER_CMD" ]; then
+      # Strip leading whitespace; capture the first two tokens.
+      CMD_TRIM="${USER_CMD#"${USER_CMD%%[![:space:]]*}"}"
+      FIRST_TOK="${CMD_TRIM%% *}"
+      REST_AFTER_FIRST="${CMD_TRIM#"$FIRST_TOK"}"
+      REST_TRIM="${REST_AFTER_FIRST#"${REST_AFTER_FIRST%%[![:space:]]*}"}"
+      SECOND_TOK="${REST_TRIM%% *}"
+      if [ "$FIRST_TOK" = "git" ]; then
+        case "$SECOND_TOK" in
+          status|log|show|diff|stash)
+            # Skip snapshot — read-only or stash-management subcommand.
+            exit 0
+            ;;
+        esac
+      fi
+    fi
+  fi
+fi
+# --- end R8-008 self-filter --------------------------------------------
 
 # Validate STATE.json against schema before snapshot (soft mode — warn, don't block)
 if [ -f .apex/STATE.json ] && [ -f ~/.claude/schemas/STATE.schema.json ] && [ -f ~/.claude/scripts/validate-state.sh ]; then
