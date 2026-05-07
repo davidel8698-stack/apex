@@ -508,6 +508,103 @@ Expected: 0l-a/0l-b/0l-c/0l-d/0l-e all PASS. Drift means sync-to-claude.sh
 was not run after self-heal additions, or agent files were edited away
 from their contracts.
 
+### TEST 0m: Auto-Continuity Layer Registration [v7.1]
+Verify the four Auto-Continuity components are deployed and the platform
+detector returns sensible memory readings.
+```bash
+# 0m-a: three new hooks deployed
+ACL_HOOKS="memory-watchdog turn-checkpoint session-auto-resume"
+ACL_MISSING=""
+for h in $ACL_HOOKS; do
+  HF="$HOME/.claude/hooks/$h.sh"
+  if [ ! -f "$HF" ]; then
+    ACL_MISSING="$ACL_MISSING $h(missing)"
+    continue
+  fi
+  if ! head -1 "$HF" | grep -q '#!.*bash'; then
+    ACL_MISSING="$ACL_MISSING $h(no-shebang)"
+  fi
+done
+if [ -n "$ACL_MISSING" ]; then
+  echo "❌ TEST 0m-a FAIL: Auto-Continuity hook issues:$ACL_MISSING"
+  exit 1
+fi
+echo "✅ TEST 0m-a PASS: all 3 Auto-Continuity hooks deployed"
+
+# 0m-b: platform-detect helper deployed
+PD="$HOME/.claude/hooks/_require-platform-detect.sh"
+if [ ! -f "$PD" ]; then
+  echo "❌ TEST 0m-b FAIL: _require-platform-detect.sh not deployed"
+  exit 1
+fi
+echo "✅ TEST 0m-b PASS: _require-platform-detect.sh deployed"
+
+# 0m-c: settings.json registers hooks in correct order
+SETTINGS="$HOME/.claude/settings.json"
+if [ -f "$SETTINGS" ]; then
+  # circuit-breaker MUST appear before memory-watchdog before turn-checkpoint
+  ORDER=$(jq -r '.hooks.PostToolUse[] | select(.matcher=="Bash") | .hooks[0].command' "$SETTINGS" 2>/dev/null | paste -sd ' ')
+  if echo "$ORDER" | grep -qE 'circuit-breaker.*memory-watchdog.*turn-checkpoint'; then
+    echo "✅ TEST 0m-c PASS: PostToolUse:Bash hook ordering is correct"
+  else
+    echo "❌ TEST 0m-c FAIL: hook ordering wrong (must be circuit-breaker -> memory-watchdog -> turn-checkpoint)"
+    echo "    actual: $ORDER"
+    exit 1
+  fi
+  # SessionStart must include session-auto-resume
+  SS=$(jq -r '.hooks.SessionStart[].hooks[0].command' "$SETTINGS" 2>/dev/null | grep -c session-auto-resume)
+  if [ "$SS" -ge 1 ]; then
+    echo "✅ TEST 0m-c2 PASS: session-auto-resume registered in SessionStart"
+  else
+    echo "❌ TEST 0m-c2 FAIL: session-auto-resume not in SessionStart"
+    exit 1
+  fi
+fi
+
+# 0m-d: STATE.schema includes session.memory + turn_checkpoint
+SCHEMA="$HOME/.claude/schemas/STATE.schema.json"
+if [ -f "$SCHEMA" ]; then
+  if jq -e '.properties.session.properties.memory' "$SCHEMA" >/dev/null 2>&1 \
+     && jq -e '.properties.turn_checkpoint' "$SCHEMA" >/dev/null 2>&1; then
+    echo "✅ TEST 0m-d PASS: STATE schema includes session.memory + turn_checkpoint"
+  else
+    echo "❌ TEST 0m-d FAIL: STATE schema missing Auto-Continuity fields"
+    exit 1
+  fi
+fi
+
+# 0m-e: CONTEXT_BUDGET.default.json includes auto_continuity block
+DEFAULT_BUDGET="$HOME/.claude/CONTEXT_BUDGET.default.json"
+if [ -f "$DEFAULT_BUDGET" ]; then
+  if jq -e '.auto_continuity.bun_memory_threshold_mb' "$DEFAULT_BUDGET" >/dev/null 2>&1; then
+    echo "✅ TEST 0m-e PASS: CONTEXT_BUDGET.default.json includes auto_continuity"
+  else
+    echo "❌ TEST 0m-e FAIL: auto_continuity block missing"
+    exit 1
+  fi
+fi
+
+# 0m-f: cross-platform memory sample returns numeric "<rss> <commit>" pair
+PD_SAMPLE=$(bash -c "source '$PD' 2>/dev/null && sample_bun_memory_mb 2>/dev/null" 2>/dev/null)
+if echo "$PD_SAMPLE" | grep -qE '^[0-9]+ [0-9]+$'; then
+  echo "✅ TEST 0m-f PASS: sample_bun_memory_mb returned: $PD_SAMPLE"
+else
+  echo "⚠️  TEST 0m-f SOFT-FAIL: sample returned '$PD_SAMPLE' (platform sampler may be misconfigured; not a fatal error)"
+fi
+
+# 0m-g: external watchdog scripts are present (Windows-only, optional)
+WS="$HOME/.claude/scripts/apex-watchdog.ps1"
+WI="$HOME/.claude/scripts/install-watchdog.ps1"
+if [ -f "$WS" ] && [ -f "$WI" ]; then
+  echo "✅ TEST 0m-g PASS: external watchdog scripts deployed"
+else
+  echo "ℹ️  TEST 0m-g INFO: external watchdog not deployed (optional Windows component)"
+fi
+```
+Expected: 0m-a/0m-b/0m-c/0m-d/0m-e all PASS. 0m-f may soft-fail on
+unsupported platforms; 0m-g is informational only (the external watchdog
+is an optional Windows-only enhancement).
+
 ## CLEANUP
 ```bash
 rm -rf "$HEALTH_DIR"
@@ -520,5 +617,5 @@ If any failures:
 Failed: [list with test IDs]
 Fix: update failing agent's system prompt, re-run /apex:health-check"
 
-If all pass: "✅ All agents healthy — TEST 0 environment + schema validation + color discipline + self-heal registration + 12 agent tests passed"
+If all pass: "✅ All agents healthy — TEST 0 environment + schema validation + color discipline + self-heal registration + Auto-Continuity Layer (v7.1) + 12 agent tests passed"
 </context>

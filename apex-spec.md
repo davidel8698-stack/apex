@@ -269,6 +269,100 @@ user-validated instruction into the APEX agent template. The
 `framework-auditor` is distinct from the existing test-only `auditor`
 agent (which retains its filesystem quarantine to test files).
 
+## Auto-Continuity Layer (v7.1)
+
+APEX is designed to run autonomously for days. The Auto-Continuity Layer
+closes the last gap that prevented this: **runtime crashes** (most commonly
+Bun OOM after many hours of accumulated process memory) used to require
+manual user intervention to restart and resume. Auto-Continuity makes the
+recovery automatic — the user sees "session ended, new session resumed
+on its own" rather than "crash, lost work, restart manually".
+
+The layer is **purely additive** — pause/resume/recover commands continue
+to work manually. Every component fails-soft and is independently optional:
+the system degrades gracefully if any one part is missing.
+
+### Four-layer architecture
+
+| Layer | Component | Trigger | What it does |
+|-------|-----------|---------|--------------|
+| **A** | `session-auto-resume.sh` (SessionStart hook) | Fresh Claude Code session starts | If `STATE.session.auto_paused == true` or fresh `TURN_CHECKPOINT.json` exists, write `.apex/SESSION_BOOT.md` banner and emit instruction-to-stdout that Claude reads in initial context, prompting `/apex:resume` |
+| **B** | `turn-checkpoint.sh` (PostToolUse:Bash hook) | Every N tool calls inside a task (default 5) | Atomically writes `.apex/TURN_CHECKPOINT.json` mirroring `STATE.turn_checkpoint`, enabling `/apex:recover` option 6 (continue-from-turn-checkpoint). Coarser than per-call, finer than per-task. |
+| **C** | `memory-watchdog.sh` (PostToolUse:Bash hook) | Every PostToolUse, throttled to a sample interval (default 30s) | Samples Bun process commit memory (`PrivateMemorySize64` on Windows, `VmSize` on Linux, `RSS` on macOS). After N consecutive samples over threshold (default 3 over 2048MB), creates `.apex/AUTO_PAUSE_REQUEST.flag`. `/apex:next` Step F.4 consumes the flag and runs `/apex:pause` cleanly. |
+| **D** | `apex-watchdog.ps1` (Windows external process) | Optional — installed via `install-watchdog.ps1` as a Scheduled Task | Monitors Claude Code from outside the runtime. Survives Bun OOM. Writes `.apex/SHUTDOWN_REQUEST.flag` on threshold trip; force-kills after grace period; auto-respawns Claude Code in the project directory after exit. |
+
+### Lifecycle
+
+```
+running session
+    │
+    │  (memory grows)
+    ▼
+memory-watchdog samples each 30s ─── threshold tripped 3x ──┐
+                                                            ▼
+                                       .apex/AUTO_PAUSE_REQUEST.flag
+                                                            │
+                                              /apex:next Step F.4 reads it
+                                                            │
+                                                   runs /apex:pause
+                                                            │
+                                              session.auto_paused = true
+                                                            │
+                                                       SESSION END
+                                                            │
+                                                  (Claude Code respawns,
+                                                   either by user or by
+                                                   external watchdog)
+                                                            │
+                                                       SESSION START
+                                                            │
+                              session-auto-resume hook reads STATE.session
+                                                            │
+                                  detects auto_paused -> writes SESSION_BOOT.md
+                                                            │
+                                       Claude reads SESSION_BOOT, runs /apex:resume
+                                                            │
+                                              session.auto_paused = false
+                                                            │
+                                                  back to running session
+```
+
+The cycle is observable end-to-end through `event-log.jsonl`:
+`memory_sample` × N → `auto_pause_requested` → `auto_paused` → (session
+boundary) → `session_auto_resumed`.
+
+### Configuration (CONTEXT_BUDGET.json `auto_continuity` block)
+
+| Field | Default | Purpose |
+|-------|---------|---------|
+| `bun_memory_threshold_mb` | 2048 | OOM-relevant threshold (commit, not RSS) |
+| `bun_memory_warn_pct` | 70 | Warn-level percent of threshold (banner only) |
+| `bun_memory_debounce_samples` | 3 | Consecutive samples over threshold before flag |
+| `memory_sample_interval_seconds` | 30 | Throttle for sampling on PostToolUse |
+| `turn_checkpoint_interval` | 5 | Checkpoint every N tool calls |
+| `turn_checkpoint_freshness_minutes` | 30 | `/apex:resume` shows checkpoint if newer than this |
+| `session_auto_resume` | true | Master toggle for SessionStart auto-resume banner |
+| `decision_gate_default_action_minutes` | 10 | Reserved for future use |
+| `max_consecutive_auto_pauses` | 3 | Breaker — halt after this many in a row |
+| `auto_pause_cooldown_minutes` | 10 | Window for the breaker |
+
+### Forensics & breakers
+
+- All sampling and pause-request events are logged to `.apex/event-log.jsonl`.
+- High-water mark of memory is preserved in `STATE.session.memory.high_water_mark_mb`
+  across the session (resets on `/apex:resume`).
+- An auto-resume loop breaker (`session.auto_resume_attempts`) prevents infinite
+  pause-resume cycles — after `max_consecutive_auto_pauses` within
+  `auto_pause_cooldown_minutes`, the system halts and surfaces a manual prompt.
+
+### Out of scope (deferred)
+
+- macOS / Linux external watchdog parity (Layer D is Windows-only for now)
+- Multi-project parallel watchdog (one project per scheduled task)
+- Cloud-resident state (everything stays local)
+- Mid-tool-call atomic recovery (turn-checkpoint is the granularity contract;
+  per-call recovery is intentionally not pursued)
+
 ## המיתוג שמייצר את הפער הקטגורי
 
 APEX מגדיר קטגוריה דרך שתים-עשרה עמדות:

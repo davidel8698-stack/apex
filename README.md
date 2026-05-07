@@ -83,10 +83,11 @@ apex/
 ├── framework/                  Core framework — the deliverable
 │   ├── commands/apex/          44 slash commands
 │   ├── agents/                 8 core + 4 specialist agents
-│   ├── hooks/                  29 shell scripts (security, state, workflow)
+│   ├── hooks/                  32 shell scripts (security, state, workflow, Auto-Continuity v7.1)
 │   ├── apex-skills/            10 stack-specific skill templates
 │   ├── apex-workflows/         30+ pre-built workflow recipes
 │   ├── schemas/                JSON schemas (STATE, RESULT, PLAN_META…)
+│   ├── scripts/                Utility scripts incl. apex-watchdog.ps1 (Windows external watchdog)
 │   ├── settings.json           Hook configuration
 │   ├── tests/                  Framework self-tests
 │   └── docs/                   Internal documentation
@@ -94,6 +95,25 @@ apex/
 ├── APEX Research Project/      Research briefs informing the design
 └── scripts/                    Utility scripts
 ```
+
+### Auto-Continuity (v7.1) — runs forever without you watching
+
+For autonomous long-running projects (3+ days), APEX includes a four-layer
+Auto-Continuity system that survives Bun OOM, idle sessions, and crashes —
+without manual intervention. Three layers run inside Claude Code automatically;
+a fourth (optional, Windows-only) is an external PowerShell watchdog that
+respawns Claude Code if the runtime dies completely.
+
+To install the optional external watchdog (Windows):
+
+```powershell
+cd path\to\APEX\framework\scripts
+pwsh -File install-watchdog.ps1 -Mode install -ProjectPath "C:\path\to\my-project"
+```
+
+See [`framework/scripts/README-watchdog.md`](framework/scripts/README-watchdog.md)
+for full details. APEX's in-process layers (memory-watchdog, turn-checkpoint,
+session-auto-resume) work without it.
 
 ---
 

@@ -25,9 +25,22 @@ Read .apex/STATE.json
    - status: "paused"
    - context.last_pause: now
    - context.estimated_context_usage_pct: current estimate
+   - session.auto_paused: true (so SessionStart auto-resume hook fires next session)
+   - session.auto_pause_reason: keep existing if set by /apex:next Step F.4
+       (memory_pressure / external_watchdog / health_red); else "manual"
+
+   ## TURN-CHECKPOINT MERGE [v7.1 Auto-Continuity]
+   If `.apex/TURN_CHECKPOINT.json` exists:
+     Read it. The `task_id`, `tool_call_index`, and `last_completed_tool`
+     are already mirrored in STATE.turn_checkpoint by turn-checkpoint.sh.
+     If the orchestrator has a fresher view of working_summary
+     (e.g. just-finished analysis text), update STATE.turn_checkpoint.working_summary
+     before snapshot. Otherwise leave the existing value.
+     Do NOT delete TURN_CHECKPOINT.json — /apex:resume on next session may
+     consume it for option 6 (continue-from-turn-checkpoint).
 
 2. Log pause event:
-   bash ~/.claude/hooks/session-log.sh "auto_pause" "עבודה מושהית — [stage]/[phase]/[unit]"
+   bash ~/.claude/hooks/session-log.sh "auto_pause" "עבודה מושהית — [stage]/[phase]/[unit] (reason: [auto_pause_reason or manual])"
 
 3. Backup state:
    bash ~/.claude/hooks/pre-compact.sh

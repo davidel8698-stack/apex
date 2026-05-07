@@ -33,6 +33,32 @@ Every output ends with the signature line.
 If `.apex/STATE.json` is missing AND `.apex/event-log.jsonl` exists:
   Run `bash ~/.claude/hooks/state-rebuild.sh` first. The hook reconstructs STATE.json from the disk-resident event log + phase summaries (spec: "State derives from disk."). If reconstruction succeeds, proceed below. If STATE.json is still missing after the rebuild attempt, fall through to `/apex:start` rather than reading a non-existent file.
 
+## SESSION BOOT BANNER [v7.1 Auto-Continuity]
+If `.apex/SESSION_BOOT.md` exists:
+  Read it. The boot banner was written by `session-auto-resume.sh` on
+  SessionStart and identifies *why* the previous session ended (memory_pressure,
+  external_watchdog, health_red, etc.). Render its Hebrew banner to the user
+  inside a soft frame. After resume completes successfully (auto_paused → false),
+  delete the file: `rm .apex/SESSION_BOOT.md` so the next session does not
+  re-display a stale banner.
+
+## TURN-CHECKPOINT SURFACING [v7.1 Auto-Continuity]
+If `.apex/TURN_CHECKPOINT.json` exists:
+  Read its `ts` and compute age in minutes.
+  If age < `auto_continuity.turn_checkpoint_freshness_minutes` (default 30) AND
+     STATE.session.auto_paused was true (previous session ended mid-task):
+    Display in user's configured language with proposals_mode formatting:
+    "📍 נמצאה נקודת checkpoint תוך-task מה-[ts]:
+       משימה: [task_id], אחרי [tool_call_index] קריאות-כלי
+
+     אפשרויות:
+     1. [recommended] /apex:next — להמשיך עם רענון של reflexion counter
+     2. /apex:recover — לבחור באופציה (6) ולהמשיך *מ*ה-checkpoint עם
+                        prior progress מוזרק לexecutor brief
+     3. (התעלם) /apex:next ולהתחיל את המשימה מחדש מאפס"
+  If checkpoint is older than threshold, just reset:
+    Delete TURN_CHECKPOINT.json (stale — no longer trustworthy).
+
 1. Read .apex/STATE.json
 2. Read .apex/COMPLEXITY.md (level + pipeline)
 3. Read .apex/SPEC.md summary (first 3 sections only)

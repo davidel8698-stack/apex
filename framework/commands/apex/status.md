@@ -93,6 +93,19 @@ Extract and substitute into Section 6 template:
     Consecutive failures, rotations
     Last checkpoint tag + time ago
 
+  AUTO-CONTINUITY [v7.1] (only render if STATE.session.memory exists AND samples_taken > 0):
+    Memory bar: 20-char bar from STATE.session.memory.working_set_pct (commit relative to threshold)
+    Bun memory: STATE.session.memory.commit_mb MB / threshold MB
+    High-water mark: STATE.session.memory.high_water_mark_mb MB
+    Samples taken this session: STATE.session.memory.samples_taken
+    If consecutive_over_threshold > 0: render warning hint "⚠ N consecutive samples over threshold — auto-pause approaching"
+    Turn checkpoint (only render if STATE.turn_checkpoint.ts not null):
+      Last checkpoint: STATE.turn_checkpoint.ts (humanized as "N min ago")
+      Task: STATE.turn_checkpoint.task_id @ tool call STATE.turn_checkpoint.tool_call_index
+      Last completed tool: STATE.turn_checkpoint.last_completed_tool
+    If STATE.session.auto_paused == true: render auto-pause banner above cockpit:
+      "🛑 Auto-paused: STATE.session.auto_pause_reason — run /apex:resume to continue."
+
   AUTOPILOT:
     State: ENABLED/DISABLED/PAUSED from STATE.autopilot.enabled and paused_reason
     Mode from STATE.autopilot.mode

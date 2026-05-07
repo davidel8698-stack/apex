@@ -59,6 +59,37 @@ Adapt all user-facing output in this command:
 - senior: concise, use technical terms freely, focus on what changed
 - architect: terse, assume full context, focus on trade-offs and risks
 
+## AUTO-PAUSE REQUEST CHECK — RUNS FIRST [v7.1 Auto-Continuity Layer]
+Spec anchor: "Auto-Continuity — autonomous session continuity."
+Fires before decision-gate so a pending memory/external pause request is
+honored immediately without waiting for the 60–90 minute cadence.
+
+Read .apex/AUTO_PAUSE_REQUEST.flag (memory-watchdog-initiated) and
+.apex/SHUTDOWN_REQUEST.flag (external-watchdog-initiated). Either present
+means a layer below requested a graceful pause.
+
+If `.apex/AUTO_PAUSE_REQUEST.flag` exists:
+  Read flag content for `REASON:` line (default: memory_pressure).
+  Update STATE.session: auto_paused = true, auto_pause_reason = [REASON].
+  bash ~/.claude/hooks/session-log.sh "auto_pause" "[REASON]"
+  Display in user's configured language (from CLAUDE.md User Profile):
+  "🛑 השהיה אוטומטית — [REASON]
+   הסשן ייסגר באופן מסודר. סשן חדש יחזור עם /apex:resume אוטומטית."
+  Source and follow ~/.claude/commands/apex/pause.md.
+  rm .apex/AUTO_PAUSE_REQUEST.flag
+  STOP.
+
+If `.apex/SHUTDOWN_REQUEST.flag` exists:
+  Read flag content for `REASON:` line (default: external_watchdog).
+  Update STATE.session: auto_paused = true, auto_pause_reason = "external_watchdog".
+  bash ~/.claude/hooks/session-log.sh "auto_pause" "external watchdog requested shutdown"
+  Display in user's configured language:
+  "🛑 בקשת כיבוי מ-watchdog חיצוני.
+   שומר state ויוצא בצורה מסודרת."
+  Source and follow ~/.claude/commands/apex/pause.md.
+  rm .apex/SHUTDOWN_REQUEST.flag
+  STOP.
+
 ## DECISION GATE — TOP OF CYCLE [R5-016]
 Spec anchor: "Decision gates פר 60-90 דקות." The decision-gate hook
 is the structural enforcement of the time-cadence checkpoint —

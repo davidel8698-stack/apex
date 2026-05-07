@@ -20,7 +20,8 @@ Merge rule: v6 wins on conflict. "unchanged" = use v5. "updated/redesigned" = us
   commands/apex/     11 slash command .md files
   agents/            8 core agent .md files
   agents/specialist/ 4 specialist agent .md files
-  hooks/             13 shell scripts
+  hooks/             16 shell scripts (incl. memory-watchdog, turn-checkpoint, session-auto-resume — v7.1 Auto-Continuity)
+  scripts/           apex-watchdog.ps1, install-watchdog.ps1 (optional Windows external watchdog)
   apex-skills/       stack-specific skill files
   apex-learnings.md  learning accumulator
   settings.json      hook configuration

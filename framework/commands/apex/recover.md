@@ -37,6 +37,15 @@ If `.apex/STATE.json` is missing (corruption, accidental delete, fresh-clone-aft
   Offer the user a "Reconstruct from event log" option that runs `bash ~/.claude/hooks/state-rebuild.sh`. The hook is idempotent and fail-soft — if reconstruction is impossible, it exits 0 without writing a partial file. After it runs successfully, STATE.json reappears with at least `current_phase` and `decision_mode` populated from the event log; control then returns to the standard menu (steps 1–3 below).
   Spec anchor: "State derives from disk."
 
+## TURN-CHECKPOINT AWARENESS [v7.1 Auto-Continuity]
+Before showing the menu, check `.apex/TURN_CHECKPOINT.json`. If it exists,
+read its `task_id`, `tool_call_index`, `ts`, and `last_completed_tool`.
+Compute its age in minutes from `ts`. If the age is below
+`auto_continuity.turn_checkpoint_freshness_minutes` from
+`.apex/CONTEXT_BUDGET.json` (default 30 minutes), surface option 6 below
+(`Continue from turn checkpoint`) and mark it [recommended] when the lock
+exists *and* the checkpoint task_id matches `STATE.current_unit`.
+
 1. Check .apex/STATE.json.lock
 2. No lock: "No crash. /apex:next to continue. Or /apex:resume for fresh session."
 3. Lock exists, process dead:
@@ -45,8 +54,26 @@ If `.apex/STATE.json` is missing (corruption, accidental delete, fresh-clone-aft
    (2) Retry with reflexion (keeps failure context)
    (3) Mark failed, skip to next unit
    (4) Mark manually complete
-   (5) Revert to last phase tag and re-plan [שיפור 23]"
+   (5) Revert to last phase tag and re-plan [שיפור 23]
+   (6) Continue from turn checkpoint [v7.1 — only when fresh TURN_CHECKPOINT.json exists]
+       Reads .apex/TURN_CHECKPOINT.json: resumes the in-flight task at
+       tool_call_index N+1, restoring working_summary into the executor's
+       initial brief. Closer recovery point than option (1) — you keep
+       the work done in the first N tool calls of the task. Choose this
+       when the checkpoint timestamp is recent (< 30 min) and the task_id
+       matches the interrupted unit."
    Handle, update STATE, remove lock.
+
+   If user selects (6):
+     Read TURN_CHECKPOINT.json fully.
+     Set STATE.current_unit = checkpoint.task_id (already true in normal flow).
+     Inject checkpoint.working_summary into the executor brief as
+       "PRIOR PROGRESS" section (the executor agent will see this in its
+       Zone 2 task context).
+     Reset reflexion.current_unit_attempts to 0 (fresh attempt with prior
+       context, not a retry — the prior tool calls succeeded).
+     Update STATE.session: consecutive_failures = 0, health_status = "green".
+     Source and follow ~/.claude/commands/apex/next.md.
 
    ## DORA RECOVERY TRACKING [R-011]
    After successful recovery (options 1-4):
