@@ -114,11 +114,16 @@ assert_pass "next.md invokes decision-gate before CONTEXT OVERFLOW CHECK" \
   "awk '/decision-gate.sh/{a=NR} /## CONTEXT OVERFLOW CHECK/{b=NR} END{exit !(a>0 && b>0 && a<b)}' '$NEXT_MD'"
 
 # 3. HOOK-CLASSIFICATION.md lists it
+# R7-011: assertion is now state-derived — the section header count and
+# the totals-table count must agree with each other (the file-system
+# vs. doc cardinality check lives in test-hook-classification.sh).
 HOOK_CLASS="$REPO_ROOT/framework/HOOK-CLASSIFICATION.md"
 assert_pass "HOOK-CLASSIFICATION.md lists decision-gate.sh" \
   "grep -q 'decision-gate.sh' '$HOOK_CLASS'"
-assert_pass "HOOK-CLASSIFICATION.md Command-Invoked count is 14" \
-  "grep -q 'Command-Invoked / Event-Triggered (14)' '$HOOK_CLASS' || grep -q '| Command-Invoked / Event-Triggered | 14 |' '$HOOK_CLASS'"
+HC_HEADER_COUNT=$(grep -oE '## Command-Invoked / Event-Triggered \(([0-9]+)\)' "$HOOK_CLASS" | grep -oE '[0-9]+' | head -1)
+HC_TABLE_COUNT=$(grep -oE '\| Command-Invoked / Event-Triggered \| ([0-9]+) \|' "$HOOK_CLASS" | grep -oE '[0-9]+' | head -1)
+assert_pass "HOOK-CLASSIFICATION.md Command-Invoked count agrees with itself (header == totals table)" \
+  "[ -n '$HC_HEADER_COUNT' ] && [ '$HC_HEADER_COUNT' = '$HC_TABLE_COUNT' ]"
 
 # 4. Elapsed=65min, complexity 4 (60min interval) → fires
 SANDBOX_FIRE=$(run_sandbox)
