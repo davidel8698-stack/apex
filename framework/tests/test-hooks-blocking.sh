@@ -18,18 +18,33 @@ assert_exit 2 "$EXIT" "A-3a: post-write exits 2 on TypeScript errors"
 rm -f tsconfig.json bad.ts out.txt
 
 # A-3b: post-write passes valid TS (needs working tsc environment)
-# Create minimal package.json + install typescript for isolated tsc
-if command -v npx &>/dev/null; then
+# R7-014: pre-flight `npx tsc --version` so the case is deterministic
+# regardless of host tooling state. The original case shipped a fresh
+# `npm install --save-dev typescript` inside the sandbox; on hosts
+# where the install failed (network, registry, sandbox isolation) the
+# case reported a misleading FAIL or PASS. The hardening:
+#   1. Pre-flight `npx tsc --version` first. If tsc is not reachable,
+#      SKIP cleanly with an explicit reason — never silently FAIL.
+#   2. If tsc IS reachable, skip the in-sandbox `npm install` (we
+#      already have a working tsc) and run the assertion directly
+#      against a valid TS fixture.
+#   3. Asserts a determinate property of the artifact (post-write
+#      hook's exit code on valid TS) — not the host's install
+#      capability.
+if command -v npx &>/dev/null && npx tsc --version >/dev/null 2>&1; then
   echo '{"compilerOptions":{"strict":true,"noEmit":true,"skipLibCheck":true,"module":"commonjs","target":"es2020"}}' > tsconfig.json
   echo '{"private":true}' > package.json
-  npm install --save-dev typescript 2>/dev/null >&2
   echo 'const x: number = 42;' > good.ts
   bash "$HOOKS_DIR/post-write.sh" good.ts >out.txt 2>&1; EXIT=$?
   assert_exit 0 "$EXIT" "A-3b: post-write exits 0 on valid TypeScript"
   rm -rf tsconfig.json good.ts out.txt package.json package-lock.json node_modules
 else
   SKIP=$((SKIP + 1)); TOTAL=$((TOTAL + 1))
-  echo "  ⏭️  A-3b: skipped (npx not available)"
+  if command -v npx &>/dev/null; then
+    echo "  ⏭️  A-3b: SKIPPED (typescript runtime unavailable in sandbox; npx present but \`npx tsc --version\` failed — environment skip, not a hook FAIL)"
+  else
+    echo "  ⏭️  A-3b: SKIPPED (npx not on PATH — environment skip, not a hook FAIL)"
+  fi
 fi
 
 # A-3c: post-write skips without tsconfig (G-4 guard)
