@@ -145,6 +145,31 @@ harness_assert_local() {
   TOTAL=$((TOTAL + local_total))
 }
 
+# R10-002: intentional-no-test taxonomy lookup.
+#
+# Returns 0 if the basename argument appears as a non-comment line in
+# framework/tests/_intentional-no-test.txt (exact match, after
+# trimming whitespace), otherwise non-zero. Comment lines (starting
+# with `#`) and blank lines are ignored. The taxonomy file is
+# expected at "$TEST_DIR/_intentional-no-test.txt" (set by
+# harness_setup); when absent (e.g., older install), the function
+# returns non-zero so coverage_scan retains pre-R10-002 behaviour.
+#
+# Spec anchors: "Honest scope over marketing scope." +
+#   "Verification universal, not TDD universal." +
+#   "Proof-of-process beats proof-of-promise."
+_is_exempt() {
+  local basename="$1"
+  local taxonomy="${TEST_DIR}/_intentional-no-test.txt"
+  [ -f "$taxonomy" ] || return 1
+  # grep -Fxq: fixed-string, full-line, quiet match. The taxonomy
+  # file's non-comment lines are basenames (no surrounding whitespace
+  # by format contract; grep -Fxq is exact).
+  grep -v '^[[:space:]]*#' "$taxonomy" 2>/dev/null \
+    | grep -v '^[[:space:]]*$' \
+    | grep -Fxq "$basename"
+}
+
 coverage_scan() {
   echo ""
   echo "━━━ Coverage Scan ━━━"
@@ -164,6 +189,8 @@ coverage_scan() {
     local HOOK_NAME=$(basename "$hook" .sh)
     [[ "$HOOK_NAME" == _* ]] && continue
     if ! grep -rq "$HOOK_NAME" "$TEST_DIR"/test-*.sh 2>/dev/null; then
+      # R10-002: skip components named in _intentional-no-test.txt.
+      _is_exempt "$HOOK_NAME.sh" && continue
       echo "  ⚠️  UNTESTED HOOK: $HOOK_NAME.sh"
       UNTESTED=$((UNTESTED + 1))
     fi
@@ -181,6 +208,8 @@ coverage_scan() {
     local HOOK_NAME=$(basename "$hook" .cjs)
     [[ "$HOOK_NAME" == _* ]] && continue
     if ! grep -rq "$HOOK_NAME" "$TEST_DIR"/test-*.sh 2>/dev/null; then
+      # R10-002: taxonomy exemption (same semantics as .sh branch).
+      _is_exempt "$HOOK_NAME.cjs" && continue
       echo "  ⚠️  UNTESTED HOOK: $HOOK_NAME.cjs"
       UNTESTED=$((UNTESTED + 1))
     fi
@@ -191,6 +220,8 @@ coverage_scan() {
     local CMD_NAME=$(basename "$cmd" .md)
     [[ "$CMD_NAME" == _* ]] && continue
     if ! grep -rq "$CMD_NAME" "$TEST_DIR"/test-*.sh 2>/dev/null; then
+      # R10-002: taxonomy exemption (same semantics as .sh branch).
+      _is_exempt "$CMD_NAME.md" && continue
       echo "  ⚠️  UNTESTED COMMAND: $CMD_NAME.md"
       UNTESTED=$((UNTESTED + 1))
     fi
@@ -200,6 +231,8 @@ coverage_scan() {
     [ -f "$schema" ] || continue
     local SCHEMA_NAME=$(basename "$schema")
     if ! grep -rq "$SCHEMA_NAME" "$TEST_DIR"/test-*.sh 2>/dev/null; then
+      # R10-002: taxonomy exemption (same semantics as .sh branch).
+      _is_exempt "$SCHEMA_NAME" && continue
       echo "  ⚠️  UNTESTED SCHEMA: $SCHEMA_NAME"
       UNTESTED=$((UNTESTED + 1))
     fi

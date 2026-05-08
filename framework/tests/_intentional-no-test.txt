@@ -1,0 +1,100 @@
+# R10-002: Intentional-no-test taxonomy.
+#
+# Format:
+#   - One basename per line (with extension).
+#   - Comment lines start with `#` and document the rationale for the
+#     entry on the immediately FOLLOWING non-comment line. The
+#     coverage_scan exemption check ignores comment lines and matches
+#     basenames literally.
+#
+# Categories (per REMEDIATION-PLAN-R10.md R10-002 question 10):
+#   (a) user-paste-driven prose with no machine contract — slash
+#       commands whose body is prompt-engineering text consumed by
+#       Claude Code at runtime; correctness is measured by user
+#       outcome, not by an executable assertion.
+#   (b) documentation-only schema with no machine contract — JSON
+#       schemas referenced only by docs, not loaded or validated by
+#       any hook or script at runtime.
+#   (c) deferred for a later R-item — currently empty.
+#
+# Adding an entry:
+#   1. Pick a category (a/b/c) and document it in the rationale comment.
+#   2. Place a `#`-prefixed rationale line, then the basename on the
+#      next non-comment line.
+#   3. The runner banner ⚠️ count drops by one on the next self-test run.
+#
+# Removing an entry (when a real test is authored):
+#   1. Add the test under framework/tests/test-<name>.sh.
+#   2. Delete the entry's rationale comment + basename here.
+#   3. The runner banner ⚠️ count is unchanged (the new test now
+#      provides coverage; the entry no longer needs an exemption).
+#
+# Spec anchors:
+#   "Verification universal, not TDD universal. Test architecture is
+#     its own discipline with veto power."
+#   "Honest scope over marketing scope."
+#   "Proof-of-process beats proof-of-promise."
+
+# (a) /apex:discuss-phase — user-facing reflection prompt; body is
+#     prose for Claude to consume at runtime (no machine contract).
+discuss-phase.md
+
+# (a) /apex:execute-phase — orchestration prompt that delegates to
+#     existing phase-execution agents/hooks; correctness is asserted
+#     by the underlying hook tests (test-wiring.sh, test-hooks-*.sh).
+execute-phase.md
+
+# (a) /apex:gen-skill — user-paste skill scaffolder prompt; body is
+#     prose template that Claude populates per the skill request.
+gen-skill.md
+
+# (a) /apex:milestone-summary — user-facing summary prompt; produces
+#     prose output for the user, no executable contract to assert.
+milestone-summary.md
+
+# (a) /apex:new-workspace — user-facing workspace bootstrap prompt;
+#     correctness is measured by the resulting STATE.json which is
+#     itself covered by test-start-memory-init.sh and test-state-
+#     rebuild.sh.
+new-workspace.md
+
+# (a) /apex:pause-work — user-facing pause/checkpoint prompt; the
+#     underlying state writes are covered by hook tests (turn-
+#     checkpoint, etc.).
+pause-work.md
+
+# (a) /apex:plan-phase — user-facing planning prompt; body is prose
+#     for Claude. The PLAN_META.json schema produced downstream is
+#     covered by test-schemas.sh.
+plan-phase.md
+
+# (a) /apex:refine — user-facing refinement prompt; body is prose
+#     consumed by Claude at runtime.
+refine.md
+
+# (a) /apex:resume-work — user-facing resume prompt; the underlying
+#     session-auto-resume hook IS covered by hook tests.
+resume-work.md
+
+# (a) /apex:review-backlog — user-facing backlog review prompt; body
+#     is prose for Claude; the backlog file format itself is not yet
+#     a typed artifact.
+review-backlog.md
+
+# (a) /apex:session-report — user-facing session-report prompt; body
+#     is prose for Claude.
+session-report.md
+
+# (a) /apex:ui-review — user-facing UI review prompt; body is prose
+#     for Claude (the agent's review heuristics are not a machine
+#     contract).
+ui-review.md
+
+# (b) WAVE_MAP.schema.json — documentation-only JSON schema for the
+#     wave-map artifact format. Loaded by humans (auditors, planners)
+#     reading the format spec; no hook or script validates against it
+#     at runtime today. The R9-012 WAVE-EXIT-INVARIANTS schema sits
+#     beside it; that one IS covered by tests via the EXIT-trap
+#     meta-test (R9-013). Re-classify if a runtime validator is wired
+#     for WAVE_MAP.json.
+WAVE_MAP.schema.json
