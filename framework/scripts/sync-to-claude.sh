@@ -483,8 +483,36 @@ if [[ $CLEAN_MODE -eq 1 ]]; then
     log "No orphaned APEX files found. ~/.claude/ is clean."
   else
     log "Found ${#ORPHANS[@]} orphaned APEX file(s):"
+    # R10-004 (F-106): per-orphan classification tag.
+    #
+    # Each orphan is annotated at print time with one of three tags so a
+    # non-technical user can triage without understanding APEX rename
+    # history:
+    #   [flatten]       — agents/specialist/*.md path. Defensive tag:
+    #                     after R10-003, the EXPECTED_FILES builder
+    #                     flattens these and they should NOT surface.
+    #                     If this tag ever fires on a real install, the
+    #                     EXPECTED_FILES builder has regressed.
+    #   [legacy-rename] — known historical residue from R6-014's hook
+    #                     rename (hooks/prompt-guard.cjs and
+    #                     hooks/workflow-guard.cjs). Safe to delete.
+    #   [unknown]       — any other path. Investigate before deleting.
+    #
+    # The tag is print-only. The deletion loop below continues to use
+    # $orphan (the rel-path), NEVER the annotated print line.
     for orphan in "${ORPHANS[@]}"; do
-      echo "  🗑️  $CLAUDE_ROOT/$orphan"
+      case "$orphan" in
+        agents/specialist/*.md)
+          tag="[flatten]"
+          ;;
+        hooks/prompt-guard.cjs|hooks/workflow-guard.cjs)
+          tag="[legacy-rename]"
+          ;;
+        *)
+          tag="[unknown]"
+          ;;
+      esac
+      echo "  🗑️  $tag $CLAUDE_ROOT/$orphan"
     done
     echo
     read -p "[clean] Delete these files? (y/N) " confirm
