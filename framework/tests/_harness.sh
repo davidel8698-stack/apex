@@ -150,12 +150,38 @@ coverage_scan() {
   echo "━━━ Coverage Scan ━━━"
   local UNTESTED=0
 
+  # R9-004: enable nullglob locally so an empty match on either *.sh
+  # or *.cjs collapses to no iteration instead of falling through to
+  # the literal pattern. Restore prior shopt state on function exit so
+  # other harness consumers (corpus tests, runner aggregation) are
+  # unaffected.
+  local _prev_nullglob
+  _prev_nullglob=$(shopt -p nullglob)
+  shopt -s nullglob
+
   for hook in "$HOOKS_DIR"/*.sh; do
     [ -f "$hook" ] || continue
     local HOOK_NAME=$(basename "$hook" .sh)
     [[ "$HOOK_NAME" == _* ]] && continue
     if ! grep -rq "$HOOK_NAME" "$TEST_DIR"/test-*.sh 2>/dev/null; then
       echo "  ⚠️  UNTESTED HOOK: $HOOK_NAME.sh"
+      UNTESTED=$((UNTESTED + 1))
+    fi
+  done
+
+  # R9-004: parallel iteration over the .cjs defense-in-depth trio
+  # (apex-prompt-guard.cjs, apex-workflow-guard.cjs, security.cjs)
+  # named in apex-spec.md Failure 9 treatment. The basename-without-
+  # extension is grep-matched tolerantly so a test referencing either
+  # `apex-prompt-guard` or `apex-prompt-guard.cjs` is accepted.
+  # Preserves the _* private-hook prefix-skip identically to the .sh
+  # branch above.
+  for hook in "$HOOKS_DIR"/*.cjs; do
+    [ -f "$hook" ] || continue
+    local HOOK_NAME=$(basename "$hook" .cjs)
+    [[ "$HOOK_NAME" == _* ]] && continue
+    if ! grep -rq "$HOOK_NAME" "$TEST_DIR"/test-*.sh 2>/dev/null; then
+      echo "  ⚠️  UNTESTED HOOK: $HOOK_NAME.cjs"
       UNTESTED=$((UNTESTED + 1))
     fi
   done
@@ -185,6 +211,10 @@ coverage_scan() {
   else
     echo "  ✅ All components have test coverage"
   fi
+
+  # R9-004: restore prior nullglob state so the harness's local shopt
+  # change does not leak into downstream consumers.
+  eval "$_prev_nullglob"
 }
 
 harness_report() {
