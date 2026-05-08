@@ -65,4 +65,18 @@ Present findings as a chronological timeline:
 ## NO SPECULATIVE CLAIMS
 Only report what the data shows. Do not invent causes not supported by the timeline.
 If data is insufficient, say: "Insufficient data to determine root cause. Consider checking [source]."
+
+## Standalone fallback
+If `/apex:forensics` cannot run inside Claude (session crashed, environment
+unavailable, or you are reconstructing history outside the IDE), invoke the
+standalone debugger directly from a shell:
+
+  `python ~/.claude/apex-debug.py [--state .apex/STATE.json] [--log .apex/SESSION-LOG.md]`
+
+The standalone tool reads the same `.apex/` artifacts (STATE.json,
+SESSION-LOG.md, phases/*/RESULT.json, CRITIC.md) and emits a timeline
+report identical in shape to the in-Claude command. This is the
+"Standalone debugging discipline" pathway from APEX Failure 1 — the
+tool is delivered to `~/.claude/apex-debug.py` by `sync-to-claude.sh`
+and must remain reachable on a cold install.
 </context>
