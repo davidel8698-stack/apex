@@ -1,5 +1,28 @@
 #!/usr/bin/env bash
 # APEX Self-Test Harness — assert helpers, setup/teardown, coverage scanner.
+#
+# # RESERVED NAMESPACE — namespace contract (R10-008, F-105)
+#
+# The four globals below — PASS, FAIL, TOTAL, SKIP — are harness-owned.
+# They aggregate runner totals across every test file sourced by
+# self-test.sh. Bash has no lexical scoping at file scope, so a test
+# file that re-declares any of these names at file scope silently
+# collides with the harness counter. R9-002's harness_assert_local
+# protects its call sites by snapshotting positionally before the
+# assertion, but the broader test-author contract is:
+#
+#   do NOT name your file-scope locals PASS, FAIL, TOTAL, or SKIP.
+#
+# Use any other name (e.g., LOCAL_PASS, ROW_TOTAL, expected_pass) for
+# per-file accounting. The harness will treat its own globals as the
+# single source of truth for the runner banner.
+#
+# Enforcement: framework/tests/test-harness-namespace.sh greps every
+# test-*.sh file for new file-scope declarations of these four names
+# and fails the runner if a file outside the historical allow-list
+# (the cohort that shadowed before R10-008 landed) introduces fresh
+# shadowing. The allow-list is state-derived, not literal: removing a
+# legacy shadowing test shrinks the allow-list automatically.
 
 PASS=0; FAIL=0; TOTAL=0; SKIP=0
 
