@@ -418,6 +418,28 @@ if [[ $CLEAN_MODE -eq 1 ]]; then
       done
     fi
   done
+  # R10-003 (F-104): mirror copy_modules_specialists' flatten-path
+  # delivery into EXPECTED_FILES. The directory-tree loop above only
+  # captures source-tree paths, but copy_modules_specialists synthesizes
+  # destination paths at agents/specialist/<short>.md (where <short> is
+  # the module name with the leading 'apex-' stripped — see line 112).
+  # Without this sibling loop, those 6 active flatten outputs surface as
+  # orphan candidates in --clean mode, which is a false-positive class
+  # that risks user-driven self-deletion. The derivation rule MUST mirror
+  # copy_modules_specialists exactly; re-deriving differently would
+  # silently un-cover or over-cover.
+  if [ -d "$FRAMEWORK_ROOT/modules" ]; then
+    for mod_dir in "$FRAMEWORK_ROOT"/modules/*/; do
+      [ -d "$mod_dir" ] || continue
+      mod_name="$(basename "$mod_dir")"
+      case "$mod_name" in
+        _*) continue ;;
+      esac
+      [ -f "$mod_dir/agent.md" ] || continue
+      short_name="${mod_name#apex-}"
+      echo "agents/specialist/${short_name}.md" >> "$EXPECTED_FILES"
+    done
+  fi
   # Top-level files
   echo "apex-branding.md" >> "$EXPECTED_FILES"
   echo "apex-design-notes.md" >> "$EXPECTED_FILES"
