@@ -25,26 +25,32 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 HOOK="$REPO_ROOT/framework/hooks/pre-task-snapshot.sh"
 
-PASS=0
-FAIL=0
-SKIP=0
-ok()   { echo "  ✅ $1"; PASS=$((PASS+1)); }
-nope() { echo "  ❌ $1"; FAIL=$((FAIL+1)); }
-skip() { echo "  ⏭  $1"; SKIP=$((SKIP+1)); }
+# R11-003 (F-115): rename file-scope counters off the harness namespace
+# (PASS/FAIL/TOTAL/SKIP are harness-owned per R10-008's # RESERVED
+# NAMESPACE block). The bridge at the bottom of this file passes
+# LOCAL_PASS/LOCAL_TOTAL to harness_assert_corpus, which additively
+# increments the harness counters once — closing the double-count gap
+# that produced the pre-R11-003 cumulative 820/903 banner.
+LOCAL_PASS=0
+LOCAL_FAIL=0
+LOCAL_SKIP=0
+ok()   { echo "  ✅ $1"; LOCAL_PASS=$((LOCAL_PASS+1)); }
+nope() { echo "  ❌ $1"; LOCAL_FAIL=$((LOCAL_FAIL+1)); }
+skip() { echo "  ⏭  $1"; LOCAL_SKIP=$((LOCAL_SKIP+1)); }
 
 echo "=== R8-008: pre-task-snapshot self-filter test ==="
 
 # 0. Sanity.
 if [ ! -f "$HOOK" ]; then
   nope "0: pre-task-snapshot.sh missing at $HOOK"
-  echo "$PASS/$((PASS+FAIL)) passed (skipped: $SKIP)"
+  echo "$LOCAL_PASS/$((LOCAL_PASS+LOCAL_FAIL)) passed (skipped: $LOCAL_SKIP)"
   exit 1
 fi
 ok "0: pre-task-snapshot.sh exists"
 
 if ! command -v jq >/dev/null 2>&1; then
   skip "1-3: jq not on PATH — self-filter requires jq for envelope parse"
-  echo "$PASS/$((PASS+FAIL)) passed (skipped: $SKIP)"
+  echo "$LOCAL_PASS/$((LOCAL_PASS+LOCAL_FAIL)) passed (skipped: $LOCAL_SKIP)"
   exit 0
 fi
 
@@ -170,12 +176,17 @@ cleanup
 
 # Bridge to harness globals so per-file summary reflects the actual
 # assertion count (close the F-009 family on this file specifically).
+# R11-003 (F-115): the local counters now live under LOCAL_* so the
+# call site here is the SOLE place where per-row counts cross into the
+# harness namespace — additively, via harness_assert_corpus only. This
+# closes the double-count gap that produced the pre-R11-003 cumulative
+# banner 83-unit gap.
 if declare -F harness_assert_corpus >/dev/null 2>&1; then
-  TOT=$((PASS + FAIL))
-  harness_assert_corpus "$PASS" "$TOT" "pre-task-snapshot self-filter" 100
+  LOCAL_TOTAL=$((LOCAL_PASS + LOCAL_FAIL))
+  harness_assert_corpus "$LOCAL_PASS" "$LOCAL_TOTAL" "pre-task-snapshot self-filter" 100
 fi
 
-TOTAL=$((PASS+FAIL))
+LOCAL_TOTAL=$((LOCAL_PASS+LOCAL_FAIL))
 echo ""
-echo "$PASS/$TOTAL passed (skipped: $SKIP)"
-[ "$FAIL" -eq 0 ]
+echo "$LOCAL_PASS/$LOCAL_TOTAL passed (skipped: $LOCAL_SKIP)"
+[ "$LOCAL_FAIL" -eq 0 ]
