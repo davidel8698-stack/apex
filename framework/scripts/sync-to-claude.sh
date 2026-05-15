@@ -365,6 +365,15 @@ copy_file "$FRAMEWORK_ROOT/apex-branding.md"        "$CLAUDE_ROOT/apex-branding.
 copy_file "$FRAMEWORK_ROOT/apex-design-notes.md"    "$CLAUDE_ROOT/apex-design-notes.md"
 copy_file "$FRAMEWORK_ROOT/apex-learnings.md"       "$CLAUDE_ROOT/apex-learnings.md"
 copy_file "$FRAMEWORK_ROOT/apex-model-routing.json" "$CLAUDE_ROOT/apex-model-routing.json"
+# R11-002 (F-112): explicit delivery anchor for the Defense-in-Depth
+# mechanism-to-file mapping document. framework/hooks/_security-common.sh
+# references this file by name in its header comment; without delivery
+# to the install root, that reference fails to resolve on a
+# ~/.claude/-only install. R10-001's regression guard auto-asserts
+# delivery once this line lands. Spec anchors: "Defense-in-Depth
+# Security Layer..." (Failure 9 treatment list) + "Schema sync as
+# contract." + "APEX must be transparent to itself."
+copy_file "$FRAMEWORK_ROOT/security-policy.md"      "$CLAUDE_ROOT/security-policy.md"
 # R9-006: standalone session-timeline reconstruction tool. Failure 1
 # treatment names "Standalone debugging discipline דרך __main__.py";
 # the script must be reachable from the install root so users can
@@ -445,6 +454,11 @@ if [[ $CLEAN_MODE -eq 1 ]]; then
   echo "apex-design-notes.md" >> "$EXPECTED_FILES"
   echo "apex-learnings.md" >> "$EXPECTED_FILES"
   echo "apex-model-routing.json" >> "$EXPECTED_FILES"
+  # R11-002 (F-112): mirror the explicit copy_file delivery of
+  # security-policy.md so post-delivery --clean does not flag it as
+  # orphan. Sibling to the copy_file line in the explicit-delivery
+  # cluster above. Spec anchor: "Schema sync as contract."
+  echo "security-policy.md" >> "$EXPECTED_FILES"
   # R9-006: standalone debugging tool lands at install root and must
   # not appear as orphan to --clean.
   echo "apex-debug.py" >> "$EXPECTED_FILES"
