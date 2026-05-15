@@ -93,8 +93,23 @@ ui-review.md
 # (b) WAVE_MAP.schema.json — documentation-only JSON schema for the
 #     wave-map artifact format. Loaded by humans (auditors, planners)
 #     reading the format spec; no hook or script validates against it
-#     at runtime today. The R9-012 WAVE-EXIT-INVARIANTS schema sits
-#     beside it; that one IS covered by tests via the EXIT-trap
-#     meta-test (R9-013). Re-classify if a runtime validator is wired
-#     for WAVE_MAP.json.
+#     at runtime today. WAVE-EXIT-INVARIANTS.schema.json (R9-012) is a
+#     separately-named sibling schema with its own category-(b) entry
+#     below; despite the shared "EXIT" token in the file name, it has
+#     no relation to R9-013's EXIT-trap meta-test, which scans bash
+#     `trap EXIT` declarations in framework/tests/test-*.sh files and
+#     does NOT load any JSON schema. Re-classify if a runtime validator
+#     is wired for WAVE_MAP.json.
 WAVE_MAP.schema.json
+
+# (b) WAVE-EXIT-INVARIANTS.schema.json — documentation-only JSON schema
+#     authored by R9-012 to formalize the wave-exit invariants contract
+#     produced by /apex:next at wave-complete time. Loaded by humans
+#     (planners, auditors) reading the format spec; no hook or script
+#     validates against it at runtime today. The shared "EXIT" token in
+#     its filename is unrelated to R9-013's EXIT-trap meta-test
+#     (test-harness-exit-trap.sh), which scans bash `trap EXIT`
+#     declarations and does NOT load any JSON schema — the two
+#     artifacts are separately-named-but-unrelated. Re-classify if a
+#     runtime validator is wired for the wave-exit invariants artifact.
+WAVE-EXIT-INVARIANTS.schema.json
