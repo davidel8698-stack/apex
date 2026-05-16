@@ -67,6 +67,10 @@ Nothing else.
 
 8. **Forbidden to touch `apex-spec.md`.** If you think the spec is
    wrong — record in NEW-FINDINGS, do not edit it.
+   *Exception:* when `REMEDIATION-PLAN-R<N>.md` explicitly anchors an
+   R-item to an `apex-spec.md` edit AND that anchor is byte-disjoint
+   from existing prose AND preserves verbatim every other headline of
+   the spec, the wave-executor may make the plan-authorized edit.
 
 9. **Forbidden to touch `apex-audit-findings-R<N>.md` or
    `REMEDIATION-PLAN-R<N>.md`.** These are read-only inputs for the
