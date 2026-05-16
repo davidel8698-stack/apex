@@ -42,6 +42,29 @@ APEX is engineered around nine distinct failure modes that kill AI coding projec
 
 See [apex-spec.md](apex-spec.md) for the full specification.
 
+### Claim 6 — "The First Framework That Improves DORA"
+
+> Baseline: **DORA 2024** found AI adoption correlates with -7.2%
+> delivery stability (N ≈ 39K respondents). Method: opt-in telemetry
+> via `framework/hooks/dora-collect.sh` (forward-reference, Phase 12
+> M16.1) computing the four DORA metrics (Deployment Frequency, Lead
+> Time, Change Failure Rate, MTTR) on a rolling 28-day window;
+> aggregated as median-of-medians across opted-in projects. N target:
+> ≥ 50 projects × ≥ 6 months telemetry by 2027-Q2 (rephrase deadline
+> 2027-Q3). Divergence band: "above industry mean on 3 of 4 metrics,
+> 4th not worse than mean by >1σ". **Honesty contract:** APEX commits
+> to publish the measurement methodology
+> (`framework/docs/CLAIMS-MEASUREMENT.md`), the data-collection
+> pipeline (`dora-collect.sh`, forward-reference), and the rolling
+> sample as it accrues. If the published metric diverges from the
+> claimed target after the N-and-timeline budget is exhausted, APEX
+> rephrases the claim within 30 days of publication. Cross-link:
+> `framework/PRIVACY-POLICY.md` (forward-reference).
+
+See [`framework/docs/CLAIMS-MEASUREMENT.md`](framework/docs/CLAIMS-MEASUREMENT.md)
+for the full methodology SSoT covering all three measurement-backed
+aspirational claims.
+
 ---
 
 ## Quick start

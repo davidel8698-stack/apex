@@ -380,6 +380,95 @@ APEX מגדיר קטגוריה דרך שתים-עשרה עמדות:
 11. **"Dual-Mode: Collaborator AND Replacement"** — לא אחד מוחלט. לקהל לא-טכני, APEX מחליף את החלטות הקוד שהוא לא יכול לקבל, ומשתף פעולה עם החלטות המוצר שרק הוא יכול לקבל. אף competitor לא מכיר בהבחנה הזו.
 12. **"Platform, Not Tool. Free Forever at the Core."** — מודל ה-core free של BMAD עם monetization באזור ה-enterprise. ה-ecosystem של APEX ניתן להרחבה ע"י הקהילה דרך `/apex:new-agent`, ו-apex-core לא ננעל מאחורי paywall לעולם. זו עמדה שאי אפשר להעתיק בלי לסתור monetization model קיים.
 
+### Claim measurement context (R13-007)
+
+Three of the twelve headline claims above are paired with measurement
+infrastructure per User Decision #4 (R12-era, carried forward to R13).
+The full methodology — baseline, method, N target, timeline,
+divergence band — lives in `framework/docs/CLAIMS-MEASUREMENT.md`
+(the methodology SSoT). Each strengthened claim block below preserves
+its headline verbatim and appends the body inline. A single canonical
+Honesty Contract paragraph binds APEX to publishing the methodology,
+the data-collection pipeline (`framework/PRIVACY-POLICY.md` and
+`framework/hooks/dora-collect.sh` are Phase 12 M16.1 deliverables —
+forward-reference banner applies), and the rolling sample as it
+accrues.
+
+**Claim 6 — "The First Framework That Improves DORA"** (headline
+preserved verbatim from item 6 above).
+
+> Baseline: **DORA 2024** found AI adoption correlates with -7.2%
+> delivery stability (N ≈ 39K respondents). Method: opt-in telemetry
+> via `framework/hooks/dora-collect.sh` (forward-reference, Phase 12
+> M16.1) computing the four DORA metrics (Deployment Frequency, Lead
+> Time, Change Failure Rate, MTTR) on a rolling 28-day window;
+> aggregated as median-of-medians across opted-in projects. N target:
+> ≥ 50 projects × ≥ 6 months telemetry by 2027-Q2 (rephrase deadline
+> 2027-Q3). Divergence band: "above industry mean on 3 of 4 metrics,
+> 4th not worse than mean by >1σ". **Honesty contract:** APEX commits
+> to publish the measurement methodology
+> (`framework/docs/CLAIMS-MEASUREMENT.md`), the data-collection
+> pipeline (`dora-collect.sh`, forward-reference), and the rolling
+> sample as it accrues. If the published metric diverges from the
+> claimed target after the N-and-timeline budget is exhausted, APEX
+> rephrases the claim within 30 days of publication. Cross-link:
+> `framework/PRIVACY-POLICY.md` (forward-reference).
+
+**Claim — "First-hour, first-session usability is non-negotiable"**
+(principle-line preserved verbatim from §"UX לקהל לא-טכני" above and
+from `apex-design-notes.md`).
+
+> Baseline: empirical study of non-technical users on AI coding
+> assistants (R5 §3.B internal survey, N=22) reported a median 4.5
+> hours to first successful end-to-end deliverable. Method: opt-in
+> First-Hour-Telemetry event stream
+> (`framework/hooks/first-hour-telemetry.sh`, forward-reference Phase
+> 12 M16.1 sub-deliverable). Operationalized success criterion: within
+> 60 wall-clock minutes of `/apex:start`, the user produces at least
+> one verified-and-committed task (PLAN.md exists, at least one task
+> with `verify_level` ∈ {A,B,C,D}, at least one commit on `main`,
+> `STATE.json.current_phase` populated). N target: ≥ 100 sessions
+> across ≥ 30 distinct users by 2027-Q1 (rephrase deadline 2027-Q2).
+> Divergence band: ≥ 70% first-hour success rate. **Honesty contract:**
+> APEX commits to publish the measurement methodology
+> (`framework/docs/CLAIMS-MEASUREMENT.md`), the data-collection
+> pipeline (`dora-collect.sh`, forward-reference), and the rolling
+> sample as it accrues. If the published metric diverges from the
+> claimed target after the N-and-timeline budget is exhausted, APEX
+> rephrases the claim within 30 days of publication. Cross-link:
+> `framework/PRIVACY-POLICY.md` (forward-reference).
+
+**Claim 10 — "The First Framework Hardened Against Its Own Files"**
+(headline preserved verbatim from item 10 above).
+
+> Baseline: R5 §6 enumerated 9 documented incidents across 2024–2025
+> in which framework-internal files (CLAUDE.md templates, agent
+> prompts, state schemas) were used as prompt-injection vectors
+> against AI coding tools. Method: **annual third-party security
+> audit** against the OWASP LLM Top-10 prompt-injection / supply-chain
+> criteria; auditor independence enforced by audit-timeline addendum
+> (audit-firm rotation every 3 years; audit-firm name and report-
+> checksum published in `.github/SECURITY.md`). Audit reports archived
+> at `framework/docs/audits/AUDIT-<YYYY>.md` (lazy-created on first
+> audit landing). N target: ≥ 2 consecutive annual audits with no
+> Critical/High prompt-injection or supply-chain findings; first audit
+> 2027-Q2, second audit 2028-Q2 (rephrase deadline 2028-Q3).
+> Divergence band: any Critical/High prompt-injection or supply-chain
+> finding within the 2-audit budget triggers rephrase. **Honesty
+> contract:** APEX commits to publish the measurement methodology
+> (`framework/docs/CLAIMS-MEASUREMENT.md`), the data-collection
+> pipeline (`dora-collect.sh`, forward-reference), and the rolling
+> sample as it accrues. If the published metric diverges from the
+> claimed target after the N-and-timeline budget is exhausted, APEX
+> rephrases the claim within 30 days of publication. Cross-link:
+> `framework/PRIVACY-POLICY.md` (forward-reference).
+
+> **"First Framework" footnote:** Claims 6 and 10 are scoped to the
+> comparison frame of **open, multi-platform, config-as-code coding-
+> agent frameworks** (BMAD / SuperAGI / AutoGen / Phidata / OpenDevin).
+> Primacy is NOT claimed against closed-source vendor offerings whose
+> internal mechanisms are not publicly auditable.
+
 ## במהות
 
 APEX אינו רק כלי שעוזר לכתוב קוד. הוא **מערכת engineering autonomous שמחזיקה את עצמה ישרה** לאורך פרויקט שלם, **בתחום מוצהר וברור**, **לקהל מוצהר וברור** (לא-מתכנתים), **בשני modes מותאמים** (collaborator בהחלטות מוצר, replacement בהחלטות טכניות), **ב-scale שמותאם אוטומטית** ממהלך bug fix של חמש דקות ועד enterprise system של חודשים, דרך 9 שכבות הגנה כנגד 9 כשלים מובחנים, בעלות נמוכה ב-70-90%, **בחוויית שימוש שמשתמש לא-טכני יכול להצליח איתה בסשן ובשעה הראשונה**, **שלא דורשת ממנו לענות על שאלות פתוחות אלא רק לבחור בין הצעות**, **שלא מאלצת אותו לדבאג כשמשהו נשבר**, **שמנהלת אותו דרך menu של workflows מוכנים וקריאה של "מה אתה רוצה לעשות?" ולא דרך dashboard של toggles**, **שמאפשרת לו לשאול שאלות בשפה טבעית במקום לזכור שמות של commands**, **שתותאם את הרמה שלה אוטומטית לרמת הפרויקט**, **עם test architecture שהיא discipline נפרדת עם זכות veto**, **עם roundtable של specialists להחלטות ארכיטקטוניות מורכבות**, **עם module ecosystem שקהילה יכולה להרחיב**, **עם test infrastructure שממופה לפני קוד נכתב**, **עם auditor שלעולם לא נוגע ב-implementation**, **עם domain-specific contracts**, **עם proof-of-process חי**, **עם honest scope statement**, **עם threat model project-specific**, **עם Defense-in-Depth על הקבצים של עצמה**, **עם monetization שלא פוגע באמון (core free forever)**, **ועם framework-to-platform transition** — עם הכרה כנה שהסוכן (Claude) הוא רכיב fallible, **שגם המשתמש האנושי כפוף ל-Automation Bias**, **שגם ה-existence של קובץ אינה הוכחה לתוכן שלו**, **שגם graceful degradation היא סיבה לכישלון**, **שגם marketing קל הופך לאובדן אמון**, **שגם horizontal layer planning שובר write-serial**, **שגם generic security check מפספס threats פרויקט-ספציפיים**, **שגם AI שמודד tests יטה את הקוד לעבור tests סותרים**, **שגם הקבצים שAPEX יוצר בעצמו הופכים לפרומפט מורעל**, **שגם tool סגור יגיע ל-plateau אבל platform פתוחה תתפתח לנצח**, **ושגם הטוב ביותר מבין ה-AI ב-architecture אבל המשתמש מבין הכי טוב ב-product** — ולכן צריך מעקות בטיחות ברמת filesystem, content, schema, scope, ו-prompt injection, חוזים structurally enforced, adversarial verification עם cross-model decoupling וגם cross-AI external review וגם specialist roundtable, cost-awareness, U-shaped context engineering, Phase-Gating, strict mode, vertical slice enforcement, test/implementation quarantine עם veto power, dual-mode operation, scale-adaptive classification, ו-UX שלא רק **לא מציף** את המשתמש אלא גם **לא דורש ממנו ידע שאין לו**, **לא משאיר אותו לדבאג**, **לא מאלץ אותו להבין הגדרות**, **לא דורש ממנו לזכור שמות של commands**, **לא מחליט בשבילו במקומות שהוא המומחה**, **ולא נועל אותו מאחורי paywall כשהוא צריך עזרה**. לא הוראות וכוונות טובות, אלא **mechanism design שמניח טעות גם של ה-AI, גם של האדם, גם של ה-naive verification, גם של ה-environment, גם של ה-marketing, גם של ה-decomposition, גם של ה-generic security, גם של ה-test isolation, גם של ה-state files עצמם, גם של ה-monolithic architecture, וגם של ההנחה ש-AI יכול להחליף את המשתמש בכל דבר — כברירת מחדל** ובונה את כל המערכת סביב היכולת לזהות טעות לפני שהיא הופכת לנזק ולסייע למשתמש בדיוק בדברים שהוא לא יכול, בלי לקחת ממנו בדברים שהוא כן יכול — בעלות שמאפשרת לעבוד ברצינות, בקצב שמשתמש אנושי יכול לעקוב אחריו, בחוויה שלא דורשת ידע טכני, בפלטפורמה לבחירת המשתמש, בתחום שמוצהר במפורש, בליבה חינמית לנצח, **ובתוצאה הנדסית שמתרחבת לטובה לאורך הפרויקט במקום לקרוס תחת המשקל של עצמה** — והכל מוכח דרך פרויקטים פתוחים שכל אחד יכול לבדוק, וניתן להרחבה ע"י כל אחד שמבין דומיין שאנחנו לא הכרנו.
