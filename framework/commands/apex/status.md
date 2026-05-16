@@ -37,6 +37,64 @@ Adapt dashboard commentary (per `framework/docs/PLAIN-LANGUAGE-MAPPING.md` — p
 - junior: add brief tooltips for non-obvious metrics (EvoScore, DORA, mutation kill rate)
 - senior/architect: display raw metrics only (current behavior)
 
+## CONTEXT HEALTH BLOCK (R13-006 — RENDER ABOVE COCKPIT)
+Render the R2-C212 eight-metric Context Health block BEFORE the Cockpit
+Dashboard. This is the primary user-inspection summary per "First-hour
+usability" (apex-spec.md axis 4) and R2-C213 (user-facing indicators).
+The block is ADDITIVE — existing cockpit sections (autonomy ladder,
+DORA, autopilot, learnings, session health) remain UNCHANGED below.
+
+### Data source
+Invoke `bash ~/.claude/hooks/context-monitor.sh --health-json` to obtain
+the 8-metric JSON snapshot. The output validates against
+`~/.claude/schemas/HEALTH_METRICS.schema.json`. Parse the JSON with `jq`.
+
+For the stale-reference rate row, invoke
+`bash ~/.claude/hooks/verify-learnings.sh 2>/dev/null` and `grep` for
+the `APEX_HEALTH_JSON {...}` line, then `jq -r .stale_reference_rate`.
+
+### Terminal-capability detection (color vs text fallback)
+Before rendering, run `tput colors 2>/dev/null || echo 0`. If the
+result is `0` or `8` or empty (or `$NO_COLOR` is set), render text
+labels `[OK]`, `[WARN]`, `[CRIT]`, `[N/A]`, `[UNMEASURED]` in place of
+the color glyphs 🟢 / 🟡 / 🔴 / ⚪. The 8 metric lines themselves are
+plain ASCII (tree-drawing characters ├── └── are NOT colored). RTL
+terminals (Hebrew session) render text labels by default to avoid
+ANSI-bidi corruption.
+
+### Render template (substitute placeholders from health-json output)
+Print 8 metric lines plus a header. The exact form is:
+```
+Context Health: {gauge_glyph} {gauge.pct}% (target {gauge.target_pct}%, hard {gauge.hard_pct}%)
+├── Budget by zone:    stable_prefix {sp.used/1000}K/{sp.budget/1000}K · task_context {tc.used/1000}K/{tc.budget/1000}K · working_memory {wm.used/1000}K/{wm.budget/1000}K · gen_reserve {gr.reserved/1000}K (reserved)
+├── Cache efficiency:  {cache_label} ({cache.hit_rate_pct}% hit rate, {cache.hits} hits / {cache.calls} calls)
+├── Last rotation:     {last_rotation.at} ({last_rotation.ago_minutes} min ago) — {last_rotation.reason}
+├── Last mask:         {last_mask.at} ({last_mask.ago_minutes} min ago) — {last_mask.blocks_masked} stale tool-results
+├── Drift indicators:  ▢ spec={drift.spec_drift_count}  ▢ cb={drift.circuit_breaker_triggers}  ▢ reflexion={drift.reflexion_attempts}/{drift.reflexion_attempts_max}  ▢ low_conf={drift.low_confidence_results}
+├── Quality (rolling): {quality.status_label}
+└── ALERTS:            {alerts | join(", ") | "none" if empty}
+```
+
+### Stub-rendering rules (R13-006 acceptance criteria)
+- `gauge.status == "unmeasured"` (pre-R12-001 STATE, total_input=0):
+  render `Context Health: 🟡 unmeasured (run /apex:next to wire counter)`
+  and OMIT the percentage / threshold tail.
+- `gauge.status == "ok"`: glyph 🟢 (or `[OK]` in text mode).
+- `gauge.status == "warn"`: glyph 🟡 (or `[WARN]`).
+- `gauge.status == "crit"`: glyph 🔴 (or `[CRIT]`).
+- `cache_efficiency.status == "n/a"`: render "Cache efficiency:  n/a"
+  (cache adapter does not report cache_hits/cache_writes).
+- `last_rotation.at == null`: render "Last rotation:     never".
+- `last_mask.at == null`: render "Last mask:         never".
+- `quality_rolling.status == "n/a"`: render
+  "Quality (rolling): n/a (Phase 12 M16 pending)".
+- `alerts == []`: render "ALERTS:            none".
+
+### Existing-sections regression invariant
+The Cockpit Dashboard rendering below (autonomy ladder, DORA, autopilot,
+learnings, session health, token economy) MUST still render verbatim.
+The Context Health block is PREPENDED; nothing is removed.
+
 ## DATA GATHERING
 Read .apex/STATE.json
 

@@ -1,0 +1,209 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "apex/schemas/HEALTH_METRICS.schema.json",
+  "title": "APEX HEALTH_METRICS.json",
+  "description": "8-metric Context Health snapshot emitted by context-monitor.sh health-json mode and rendered by /apex:status (R2-C212 dashboard, R2-C213 indicators). Spec anchors: 'First-hour usability.' (apex-spec.md axis 4); R2-C212 (HIGH 5/5) 'Context Health Dashboard (8 metric categories with alert thresholds)'; R2-C213 (HIGH 5/5) 'User-facing indicators: context-fill gauge, last rotation timestamp, stale-state warnings, memory freshness, verification confidence'. Each top-level property maps to exactly one of the 8 R2-C212 metric categories; consumers MUST NOT add 9th categories without spec amendment.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "gauge",
+    "budget_by_zone",
+    "cache_efficiency",
+    "last_rotation",
+    "last_mask",
+    "drift_indicators",
+    "quality_rolling",
+    "alerts"
+  ],
+  "properties": {
+    "gauge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "pct", "target_pct", "hard_pct"],
+      "description": "Metric 1/8 — context-fill gauge (R2-C213). status='unmeasured' when STATE.tokens.total_input is 0 (counter unwired); 'ok'/'warn'/'crit' otherwise relative to thresholds.",
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["ok", "warn", "crit", "unmeasured"]
+        },
+        "pct": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "maximum": 200,
+          "description": "Integer percent of effective capacity; null when status='unmeasured'."
+        },
+        "target_pct": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "description": "Proactive-compact threshold (default 55 from CONTEXT_BUDGET.json)."
+        },
+        "hard_pct": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "description": "Hard-rotate threshold (default 70 from CONTEXT_BUDGET.json)."
+        }
+      }
+    },
+    "budget_by_zone": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stable_prefix", "task_context", "working_memory", "gen_reserve"],
+      "description": "Metric 2/8 — per-zone token allocation snapshot. Each zone is {used, budget} except gen_reserve which is reserved-only.",
+      "properties": {
+        "stable_prefix": { "$ref": "#/definitions/zone" },
+        "task_context":  { "$ref": "#/definitions/zone" },
+        "working_memory":{ "$ref": "#/definitions/zone" },
+        "gen_reserve": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["reserved"],
+          "properties": {
+            "reserved": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Reserved generation headroom in tokens."
+            }
+          }
+        }
+      }
+    },
+    "cache_efficiency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "hit_rate_pct", "hits", "calls"],
+      "description": "Metric 3/8 — prompt-cache hit rate (R13-004 data source). status='n/a' for adapters without prompt-caching support.",
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["ok", "warn", "crit", "n/a"]
+        },
+        "hit_rate_pct": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "maximum": 100
+        },
+        "hits": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "calls": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "last_rotation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["at", "ago_minutes", "reason"],
+      "description": "Metric 4/8 — last rotation timestamp + reason (R13-005 data source, R2-C213 indicator). at=null and ago_minutes=null when no rotation has occurred yet.",
+      "properties": {
+        "at": {
+          "type": ["string", "null"],
+          "description": "ISO-8601 UTC timestamp or null for 'never'."
+        },
+        "ago_minutes": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        },
+        "reason": {
+          "type": ["string", "null"],
+          "description": "rotation_reason free-form tag (phase_boundary, hard_rotate, etc.) or null."
+        }
+      }
+    },
+    "last_mask": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["at", "ago_minutes", "blocks_masked"],
+      "description": "Metric 5/8 — last observation-masking event (R13-002 data source). at=null when no mask has occurred yet.",
+      "properties": {
+        "at": {
+          "type": ["string", "null"],
+          "description": "STATE.context.last_mask_at; null for 'never'."
+        },
+        "ago_minutes": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        },
+        "blocks_masked": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Stale tool-result blocks masked at last invocation."
+        }
+      }
+    },
+    "drift_indicators": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "spec_drift_count",
+        "circuit_breaker_triggers",
+        "reflexion_attempts",
+        "reflexion_attempts_max",
+        "low_confidence_results"
+      ],
+      "description": "Metric 6/8 — drift indicator snapshot (R13-005 data source). Mirrors STATE.session.drift_indicators (or STATE.drift_indicators for legacy projects).",
+      "properties": {
+        "spec_drift_count": { "type": "integer", "minimum": 0 },
+        "circuit_breaker_triggers": { "type": "integer", "minimum": 0 },
+        "reflexion_attempts": { "type": "integer", "minimum": 0 },
+        "reflexion_attempts_max": { "type": "integer", "minimum": 0 },
+        "low_confidence_results": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "quality_rolling": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status"],
+      "description": "Metric 7/8 — rolling task-quality + verifier-confidence (Phase 12 M16 deliverable). status='n/a' renders 'n/a (Phase 12 M16 pending)' until M16 lands.",
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["ok", "warn", "crit", "n/a"]
+        },
+        "tasks_window": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        },
+        "tasks_total": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        },
+        "verifier_confidence": {
+          "type": ["string", "null"],
+          "enum": ["low", "medium", "high", null]
+        }
+      }
+    },
+    "alerts": {
+      "type": "array",
+      "description": "Metric 8/8 — alert items (empty array = none). Each item is a short user-facing string; ordered most-severe first.",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  },
+  "definitions": {
+    "zone": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["used", "budget"],
+      "properties": {
+        "used": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Tokens used in this zone."
+        },
+        "budget": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Token budget for this zone (from CONTEXT_BUDGET.json zone_budgets)."
+        }
+      }
+    }
+  }
+}

@@ -143,5 +143,24 @@ else
   echo "✅ All citations valid | HOT: $HOT_COUNT/30 | WARM: $WARM_COUNT/100"
 fi
 
+# R13-006 (F-306): emit a single-line JSON metric the
+# Context Health dashboard (/apex:status) consumes for the
+# 'drift_indicators' / stale-state row. Total = HOT + WARM (COLD is
+# archived and intentionally excluded from the freshness rate);
+# stale_count = STALE (citation file-not-found) only — decay and
+# missing-evidence are separate gauges. Rate is integer percent.
+# Emission is unconditional so the consumer can parse a stable line
+# regardless of pass/fail state. Prefix `APEX_HEALTH_JSON ` makes
+# the line grep-able for the status renderer without interleaving
+# with the human-readable summary lines above.
+TIER_TOTAL=$((HOT_COUNT + WARM_COUNT))
+if [ "$TIER_TOTAL" -gt 0 ]; then
+  STALE_RATE=$(( STALE * 100 / TIER_TOTAL ))
+else
+  STALE_RATE=0
+fi
+printf 'APEX_HEALTH_JSON {"stale_reference_rate":%s,"stale_count":%s,"hot_count":%s,"warm_count":%s}\n' \
+  "$STALE_RATE" "$STALE" "$HOT_COUNT" "$WARM_COUNT"
+
 if [ "$ISSUES" -gt 0 ] || [ "$HOT_COUNT" -gt 30 ] || [ "$WARM_COUNT" -gt 100 ]; then exit 1; fi
 exit 0
