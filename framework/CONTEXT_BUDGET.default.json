@@ -34,6 +34,10 @@
   "rotation_triggers": [
     {"type": "utilization_pct", "value": 70, "action": "hard_rotate"},
     {"type": "utilization_pct", "value": 55, "action": "proactive_compact"},
+    {"type": "phase_boundary", "action": "proactive_compact"},
+    {"type": "task_batch", "value": 6, "action": "warn_and_compact"},
+    {"type": "time_minutes", "value": 40, "action": "warn_and_compact"},
+    {"type": "recovery_density", "value": 3, "action": "hard_rotate"},
     {"type": "pattern", "pattern": "repeated_tool_errors", "action": "warn_and_compact"}
   ],
   "per_agent_limits": {

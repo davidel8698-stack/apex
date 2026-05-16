@@ -52,7 +52,10 @@
         "additionalProperties": false,
         "required": ["type", "action"],
         "properties": {
-          "type": { "type": "string" },
+          "type": {
+            "type": "string",
+            "description": "R13-005 (F-305): Trigger type — one of utilization_pct, phase_boundary, task_batch, time_minutes, recovery_density, or pattern (legacy). The enum is documented in framework/hooks/_rotation-decide.sh; unrecognized types are skipped (no crash, log event rotation.trigger.unknown). Backward-compatible: `pattern` remains supported for the legacy `repeated_tool_errors` entry."
+          },
           "value": { "type": ["number", "integer"] },
           "action": { "type": "string" },
           "pattern": { "type": "string" },

@@ -414,7 +414,8 @@
             "spec_drift_count": { "type": "integer", "minimum": 0 },
             "circuit_breaker_triggers": { "type": "integer", "minimum": 0 },
             "reflexion_total_attempts": { "type": "integer", "minimum": 0 },
-            "low_confidence_results": { "type": "integer", "minimum": 0 }
+            "low_confidence_results": { "type": "integer", "minimum": 0 },
+            "recovery_density": { "type": "integer", "minimum": 0, "default": 0, "description": "R13-005 (F-305): Count of recent same-test recovery attempts (R2-C091: 'same test 3+ times' TDAD failure signal). Used by _rotation-decide.sh as the `recovery_density` trigger type. Additive, default 0; absent on projects predating R13-005." }
           }
         }
       }

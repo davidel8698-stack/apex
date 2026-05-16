@@ -134,10 +134,45 @@ If "WARNING_OVERFLOW":
     Else:
       bash ~/.claude/hooks/_dream-cycle-emit.sh fail "$DC_CID" "memory-synthesis agent returned exit $DC_RC"
     bash ~/.claude/hooks/session-log.sh "dream_cycle" "Dream-cycle before context compact — ${ESTIMATED_PCT}% usage, [MEMORY_FILE_COUNT] memory files"
-  If STATE.session exists AND (STATE.session.tasks_completed - STATE.session.tasks_since_last_rotation) >= 4:
-    bash ~/.claude/hooks/session-log.sh "rotate" "סיבוב הקשר יזום — ${ESTIMATED_PCT}% שימוש"
-    Save state, run /compact, update STATE.session.total_context_rotations++, STATE.session.tasks_since_last_rotation = STATE.session.tasks_completed
-  Else: run /compact, continue.
+  # R13-005 (F-305): Replaced task-count proxy with real-% consumer of
+  # CONTEXT_BUDGET.rotation_triggers[]. Source the library and dispatch
+  # on its returned action. HALT-priority guard inside the library
+  # ensures rotation never fires while circuit-breaker is active
+  # (R2 safety contract).
+  source ~/.claude/hooks/_rotation-decide.sh
+  ROTATION_ACTION=$(apex_rotation_decide ".apex/STATE.json" "$HOME/.claude/CONTEXT_BUDGET.default.json")
+  Case "$ROTATION_ACTION" in
+    proactive_compact)
+      # Soft compaction. Routes through pre-compact.sh which invokes
+      # observation-mask.sh first (R13-002 mask-before-compact sequence),
+      # then falls through to /compact as the safety net.
+      bash ~/.claude/hooks/session-log.sh "rotate" "סיבוב הקשר יזום (proactive) — ${ESTIMATED_PCT}% שימוש"
+      bash ~/.claude/hooks/pre-compact.sh || true
+      Save state, run /compact, update STATE.session.total_context_rotations++, STATE.session.tasks_since_last_rotation = STATE.session.tasks_completed
+      ;;
+    warn_and_compact)
+      # Event-log warning + soft compaction (same routing as proactive).
+      bash ~/.claude/hooks/session-log.sh "rotate" "אזהרה: ${ROTATION_ACTION} — ${ESTIMATED_PCT}% שימוש"
+      bash ~/.claude/hooks/pre-compact.sh || true
+      Save state, run /compact, update STATE.session.total_context_rotations++, STATE.session.tasks_since_last_rotation = STATE.session.tasks_completed
+      ;;
+    hard_rotate)
+      # Hard rotation. Take an atomic pre-rotation snapshot via
+      # pre-task-snapshot + turn-checkpoint, then route to /apex:resume.
+      bash ~/.claude/hooks/session-log.sh "rotate" "סיבוב הקשר קשיח (hard_rotate) — ${ESTIMATED_PCT}% שימוש"
+      bash ~/.claude/hooks/pre-task-snapshot.sh || true
+      bash ~/.claude/hooks/turn-checkpoint.sh || true
+      "⚠️ Hard rotation. Run /apex:resume to continue."
+      STOP.
+      ;;
+    noop|*)
+      # No trigger fired. Fall back to a minimal /compact pass for the
+      # WARNING_OVERFLOW branch (we are already inside the
+      # CONTEXT OVERFLOW CHECK block). The library returns `noop` when
+      # circuit-breaker is HALT-active — HALT outranks rotation.
+      run /compact, continue.
+      ;;
+  esac
 
 ## SESSION GUARDIAN — AUTO-INIT FOR EXISTING PROJECTS
 If STATE.session does NOT exist:

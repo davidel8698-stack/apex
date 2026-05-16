@@ -120,7 +120,7 @@ command `.md` files for exact invocation points.
 
 ---
 
-## Library — Sourced (14)
+## Library — Sourced (15)
 
 Files prefixed with `_` — utility libraries sourced by other hooks.
 **Never invoked directly.**
@@ -141,6 +141,7 @@ Files prefixed with `_` — utility libraries sourced by other hooks.
 | `_fix-plan-emit.sh` | `emit_fix_plan [--also-write-recovery-menu] <source> <reason> <context> [<cmd -- desc>...]` — writes structured `.apex/FIX_PLAN.md` with sections Reason / Context / Recommended commands / How to undo. Generalizes R5-005's RECOVERY_MENU.md prototype (R5-014). Best-effort: failure to write does not mask the caller's exit-2. The `--also-write-recovery-menu` flag mirrors the file at `.apex/RECOVERY_MENU.md` for circuit-breaker.sh's W1 backward-compat contract. Spec anchor: "Failure produces a fix plan, never a 'go debug it'." | `path-guard.sh`, `destructive-guard.sh`, `workflow-guard.sh` (shim), `quarantine-guard.sh`, `schema-drift.sh`, `phantom-check.sh`, `post-write.sh`, `circuit-breaker.sh` |
 | `_adapter-detect.sh` | `apex_adapter_active` (and CLI subcommand `active`) — returns the active APEX adapter name. Detection priority: `.apex/adapter` sidecar → `APEX_ADAPTER` env → `CURSOR_*` env heuristic → default `claude-code`. Powers the runtime adapter-honesty banner (R6-017). Spec anchors: "Multi-platform from day one." + "Honestly Scoped, Not Universally Promised." | `framework/commands/apex/start.md` (ADAPTER HONESTY BANNER block), `framework/commands/apex/onboard.md` (ADAPTER HONESTY BANNER block) |
 | `_require-platform-detect.sh` | `detect_apex_platform` (sets `APEX_PLATFORM=windows\|macos\|linux\|unknown`) + `sample_bun_memory_mb` (echoes `<rss_mb> <commit_mb>` for the ancestor Bun/Claude Code process; always exits 0 with `0 0` + stderr warning on failure). v7.1 cross-platform memory sampling helpers. Fail-soft contract: never block, throttle is the caller's job. | `memory-watchdog.sh` |
+| `_rotation-decide.sh` | `apex_rotation_decide <state_file> <budget_file>` — returns one of `proactive_compact \| warn_and_compact \| hard_rotate \| noop` by reading `STATE.context.estimated_context_usage_pct` (post-R12-001) and iterating `CONTEXT_BUDGET.rotation_triggers[]` in priority order (array index = priority; first match wins). Supports trigger types `utilization_pct`, `phase_boundary`, `task_batch`, `time_minutes`, `recovery_density`; `pattern` is legacy-skipped; unknown types are skipped with an event-log line. **HALT-priority guard**: returns `noop` regardless of pressure when `STATE.session.drift_indicators.circuit_breaker_triggers > 0` or `STATE.circuit_breaker.triggered == true`. Fail-safe: missing inputs or jq absence → `noop`. R13-005 (F-305). | `/apex:next` Step F (CONTEXT OVERFLOW CHECK → rotation dispatch) |
 
 ---
 
@@ -177,9 +178,9 @@ available, and both fall back to the preserved Bash logic when not.
 | Auto-PreToolUse | 7 |
 | Auto-PostToolUse | 9 |
 | Command-Invoked / Event-Triggered | 16 |
-| Library — Sourced | 14 |
+| Library — Sourced | 15 |
 | CommonJS — Node-runtime guards (R5-003) | 3 |
-| **Total** | **48** (R5-011: `tdad-index.sh` and `cross-phase-audit.sh` are dual-listed in Auto-PostToolUse / SubagentStop AND Command-Invoked; not double-counted in the total. R5-014: `_fix-plan-emit.sh` added to Library — Sourced. R5-013: `owner-guard.sh` added to Auto-PreToolUse. R5-016: `decision-gate.sh` added to Command-Invoked. R6-017: `_adapter-detect.sh` added to Library — Sourced. v7.1 added Auto-Continuity Layer: `memory-watchdog.sh` and `turn-checkpoint.sh` to Auto-PostToolUse, `session-auto-resume.sh` to Command-Invoked / SessionStart, `_require-platform-detect.sh` to Library — Sourced. R12-001 added `_tokens-update.sh` to Library — Sourced; R13-001 closed the doc/disk cardinality gap. R13-002 added `observation-mask.sh` to Command-Invoked / Event-Triggered, invoked by `pre-compact.sh` before the `/compact` fall-through.) |
+| **Total** | **49** (R5-011: `tdad-index.sh` and `cross-phase-audit.sh` are dual-listed in Auto-PostToolUse / SubagentStop AND Command-Invoked; not double-counted in the total. R5-014: `_fix-plan-emit.sh` added to Library — Sourced. R5-013: `owner-guard.sh` added to Auto-PreToolUse. R5-016: `decision-gate.sh` added to Command-Invoked. R6-017: `_adapter-detect.sh` added to Library — Sourced. v7.1 added Auto-Continuity Layer: `memory-watchdog.sh` and `turn-checkpoint.sh` to Auto-PostToolUse, `session-auto-resume.sh` to Command-Invoked / SessionStart, `_require-platform-detect.sh` to Library — Sourced. R12-001 added `_tokens-update.sh` to Library — Sourced; R13-001 closed the doc/disk cardinality gap. R13-002 added `observation-mask.sh` to Command-Invoked / Event-Triggered, invoked by `pre-compact.sh` before the `/compact` fall-through. R13-005 added `_rotation-decide.sh` to Library — Sourced, sourced by `/apex:next` Step F as the rotation-decision control-flow gate consumer of `CONTEXT_BUDGET.rotation_triggers[]`.) |
 
 Verify with: `ls framework/hooks/ | wc -l` (the file-system count is the
 authority; the **Total** cell above must equal what `wc -l` returns and is
@@ -210,6 +211,16 @@ silently outpace the paragraph. R13-002 added `observation-mask.sh`
 fall-through to `/compact`, implementing the extractive masking design
 spec'd in `apex-design-notes.md` and closing F-302 (three-places
 contract: hook file + invocation in `pre-compact.sh` + this row).
+R13-005 added `_rotation-decide.sh` (49) — the rotation-decision
+control-flow gate library sourced by `/apex:next` Step F as a real
+consumer of `CONTEXT_BUDGET.rotation_triggers[]`, replacing the
+task-count proxy `tasks_since_last_rotation >= 4`. Returns one of
+`proactive_compact | warn_and_compact | hard_rotate | noop` driven by
+`STATE.context.estimated_context_usage_pct` (post-R12-001) plus
+structured trigger types (`utilization_pct`, `phase_boundary`,
+`task_batch`, `time_minutes`, `recovery_density`); HALT-priority guard
+honors `circuit_breaker_triggers`. Closes F-305 (three-places contract:
+hook file + invocation in `/apex:next` Step F + this row).
 All files accounted for in the tables above.
 
 ---
