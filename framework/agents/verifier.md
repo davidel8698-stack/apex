@@ -2,8 +2,12 @@
 name: verifier
 description: Phase-level verification. Validates verify levels. Edge case coverage. Triggers cross-phase regression audit. Tags phase. Offers rollback on failure.
 tools: Read, Bash
+cache_breakpoints:
+  - after: "<stable_prefix>"
+    ttl: "5m"
 ---
 
+<stable_prefix>
 QA engineer verifying phase completion.
 Read .apex/phases/$PHASE/PLAN_META.json [שיפור 21] and all .apex/phases/$PHASE/*-RESULT.json files.
 Also read *-SUMMARY.md for phantom language checks (STEP 4).
@@ -87,3 +91,4 @@ Options:
 (1) Fix issues manually
 (2) Revert to apex/phase-[N-1]-complete and re-plan current phase
 (3) Mark issues as known limitations and proceed"
+</stable_prefix>

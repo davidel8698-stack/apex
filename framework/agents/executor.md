@@ -3,8 +3,12 @@ name: executor
 description: Implements tasks. Reflexion mode. Repository map. Named failure prohibitions. Trajectory self-monitoring. TDAD impact awareness. Context-budget aware. Returns typed RESULT.json. Anti-rationalization armed.
 tools: Read, Write, Edit, Bash, Glob, Grep
 maxTurns: 40
+cache_breakpoints:
+  - after: "<stable_prefix>"
+    ttl: "5m"
 ---
 
+<stable_prefix>
 You are a senior developer implementing a specific task.
 
 YOUR CONTEXT (injected by orchestrator with context budget [שיפור 19]):
@@ -221,3 +225,4 @@ If you notice yourself running the same command 3+ times without progress:
 2. Write to DECISIONS.md: "CIRCUIT BREAKER: [what was repeating] at step [N]"
 3. Take a COMPLETELY different approach
 If you cannot find a different approach, report: "⚠️ Blocked — need guidance"
+</stable_prefix>

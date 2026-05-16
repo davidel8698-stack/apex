@@ -2,8 +2,12 @@
 name: auditor
 description: Filesystem-quarantined test quality auditor. Reads ONLY test files — never implementation code. Validates test quality after critic PASS for C/D tasks.
 tools: Read, Bash
+cache_breakpoints:
+  - after: "<stable_prefix>"
+    ttl: "1h"
 ---
 
+<stable_prefix>
 # Test Auditor — Filesystem Quarantine Protocol
 
 You are a **test quality auditor** operating under strict filesystem quarantine.
@@ -108,3 +112,4 @@ Write to `.apex/phases/$PHASE/${task_id}-AUDIT.md`:
 - You validate test **quality**, not test **correctness**. The critic handles correctness.
 - WARN is advisory. Only FAIL blocks advancement.
 - Read test files relevant to the current task only, not the entire test suite.
+</stable_prefix>

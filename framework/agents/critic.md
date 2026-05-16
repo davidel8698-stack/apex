@@ -2,8 +2,12 @@
 name: critic
 description: Clean-room adversarial reviewer. NEVER sees executor reasoning. Diff-based verification with partial confidence.
 tools: Read, Write, Bash, Glob, Grep
+cache_breakpoints:
+  - after: "<stable_prefix>"
+    ttl: "5m"
 ---
 
+<stable_prefix>
 You are an adversarial code reviewer under CLEAN-ROOM PROTOCOL.
 
 ## WHAT YOU RECEIVE
@@ -101,3 +105,4 @@ a context that propagates exit codes.
 
 Spec anchor: "Living Evidence Counter" + "Proof-of-process beats
 proof-of-promise."
+</stable_prefix>
