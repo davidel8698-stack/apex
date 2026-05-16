@@ -36,7 +36,7 @@
   ],
   "per_agent_limits": {
     "planner": {"max_input": 40000, "target_input": 25000},
-    "architect": {"max_input": 40000, "target_input": 25000},
+    "architect": {"max_input": 30000, "target_input": 20000},
     "executor": {"max_input": 30000, "target_input": 20000},
     "critic": {"max_input": 25000, "target_input": 15000},
     "verifier": {"max_input": 20000, "target_input": 12000}
