@@ -256,6 +256,12 @@ agents transcribed from the user-validated 6-instruction protocol:
    consecutive rounds produce 0 P0/P1 findings and no open NEW-FINDINGS
    of P0/P1 severity remain. Safety cap: `--max-rounds N` (default 10).
    Divergence (P0+P1 growing by >2 between rounds) halts and escalates.
+   When the round was halted mid-execution, `round-checker` runs in
+   degraded HALTED mode (`APEX_ROUND_HALTED=true` or
+   `STATE.self_heal.last_round_status == "HALTED"`) and produces the
+   closure with `status: HALTED`, so the typed-artifact contract is
+   honored even when the wave-executor never reached round-checker
+   under normal flow.
 
 All round artifacts live at repo root and follow the .gitignore patterns
 already established (`apex-audit-findings-*.md`, `REMEDIATION-PLAN-*.md`,

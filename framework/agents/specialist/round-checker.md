@@ -28,6 +28,40 @@ R<N+1> is required.
 - `consecutive_clean_rounds_before` — integer; how many consecutive
   clean rounds preceded this round (from `STATE.self_heal`).
 
+## DEGRADED HALTED-FROM-OUTSIDE MODE [R13-008]
+
+If invoked with `APEX_ROUND_HALTED=true` (or
+`STATE.self_heal.last_round_status == "HALTED"`), the round did NOT
+complete its normal wave execution. The typed-artifact contract still
+applies — `ROUND-R<N>-CLOSURE.md` MUST be produced — but the inputs
+are partial: not every wave has a `WAVE-<X>-RESULT.md`, and the
+remediation-plan's R-ID set was not fully executed.
+
+In degraded HALTED mode:
+
+1. Read `STATE.self_heal.trigger_reason` for the partial-landing
+   inventory (what landed, what halted mid-execution, what never
+   started).
+2. For every R-ID in `REMEDIATION-PLAN-R<N>.md`, classify the disposition
+   from disk evidence (commit log, file state) into one of:
+   `LANDED`, `PARTIAL`, `NOT-STARTED`, `BLOCKED`.
+3. Emit `ROUND-R<N>-CLOSURE.md` with `Status: HALTED` (replacing the
+   normal `CLOSED` / `CONTINUE TO R<N+1>` binary), include a
+   `Generated-By: round-checker (degraded HALTED mode)` header line,
+   and populate the existing sections (Coverage, Severity breakdown,
+   Spec anchors still uncovered, Trajectory, Recommendation) on
+   best-effort terms using the partial-landing inventory.
+4. Recommendation MUST be `Run R<N+1> with seed audit focused on:
+   [un-landed R-IDs from this round]`. The HALT itself is the seed
+   signal — the next round inherits R12's backlog under rotated R-IDs.
+5. Trajectory comparison still runs against `R<N-1>` if its closure
+   exists; otherwise mark `STAGNANT (unknown — degraded HALTED mode)`.
+
+This branch closes the F-308 gap: prior rounds used an orchestrator-
+authored synthetic stub when the wave-executor halted before
+round-checker ran. The typed-artifact contract is now honored even in
+HALTED state — `round-checker` itself produces the closure.
+
 ## PROCESS
 
 1. **Coverage check:** every F-ID in the audit received treatment?
