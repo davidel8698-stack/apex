@@ -1,0 +1,53 @@
+# R14-007: Intentional-buggy-recipe allow-list.
+#
+# Purpose:
+#   Some REMEDIATION-PLAN-R<N>.md files preserve verbatim a grep recipe
+#   whose regex is itself buggy. Those recipes are kept as historical
+#   documentation of the pre-fix state — they document the bug-class
+#   that the corresponding R-item closed. The R7-008 meta-test
+#   (framework/tests/test-plan-recipes.sh) is authored to detect such
+#   bug-classes; without this allow-list, the historical recipe would
+#   surface as a FAIL in the runner banner forever, mixing with
+#   actionable FAILs from future plans.
+#
+# Mechanism (mirrors R10-002's _intentional-no-test.txt):
+#   - One allow-list entry per non-comment line.
+#   - Entry format:
+#       <plan-file-basename> <recipe-anchor-substring> <one-line-reason>
+#     The plan-file-basename is matched literally (e.g.,
+#     REMEDIATION-PLAN-R6.md). The recipe-anchor-substring is a
+#     distinctive substring of the buggy grep payload; if the runner's
+#     candidate FAIL matches BOTH the plan basename and contains the
+#     substring, the FAIL is reclassified to WARN.
+#   - Comment lines start with `#`. Blank lines are ignored.
+#
+# Adding an entry:
+#   1. Confirm the recipe is genuinely "historical-buggy-as-documentation"
+#      — i.e. the bug-class is closed in the codebase but the recipe is
+#      preserved verbatim in the archived plan.
+#   2. Pick a distinctive substring from the recipe's grep payload that
+#      will not collide with other recipes (e.g., a unique identifier
+#      from the closed bug like "prompt-guard|workflow-guard").
+#   3. Append the line below; add a `#`-prefixed rationale comment
+#      immediately above it.
+#   4. Re-run framework/tests/test-plan-recipes.sh — the entry should
+#      move from FAIL=1 to WARN=1.
+#
+# Removing an entry:
+#   1. Only remove when the corresponding plan file is itself removed
+#      (e.g., aggressive archive cleanup). Editing the plan to fix the
+#      recipe is FORBIDDEN — archived plans are read-only per the
+#      audit-historical-record contract.
+#
+# Spec anchors:
+#   "Fail-loud, never fail-silent." — actionable FAILs only in the
+#   runner banner; historical surfacing reclassified to WARN so the
+#   FAIL count remains a true regression indicator.
+#   "Proof-of-process beats proof-of-promise." — the historical recipe
+#   stays visible (WARN) for auditability rather than being suppressed.
+
+# R6-018 retroactive — pre-fix anchor-alternation grep `^|\s(prompt-guard|workflow-guard)\.cjs`
+# preserved as documentation of the closed bug. The H3 anchor-alternation
+# heuristic correctly flags the recipe; the allow-list reclassifies it to
+# WARN so the runner banner FAIL count stays clean for new regressions.
+REMEDIATION-PLAN-R6.md prompt-guard|workflow-guard

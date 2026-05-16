@@ -56,6 +56,59 @@ ok()   { echo "  PASS: $1"; PASS=$((PASS+1)); }
 nope() { echo "  FAIL: $1"; FAIL=$((FAIL+1)); }
 warn() { echo "  WARN: $1"; WARN=$((WARN+1)); }
 
+# R14-007: load the intentional-buggy-recipe allow-list. Each non-comment
+# line has the form `<plan-basename> <recipe-anchor-substring> <reason...>`
+# (whitespace-separated, reason may contain spaces and runs to EOL). A
+# candidate FAIL is reclassified to WARN when its plan basename matches
+# the entry's first token AND its recipe payload contains the entry's
+# second token as a substring. The allow-list file is optional; absent
+# file == empty list (no reclassification).
+ALLOWLIST_FILE="$SCRIPT_DIR/_intentional-buggy-recipe.txt"
+ALLOWLIST_LOADED=0
+# Parallel arrays. Bash 3.2-compatible (no associative arrays).
+ALLOWLIST_PLANS=()
+ALLOWLIST_ANCHORS=()
+ALLOWLIST_REASONS=()
+if [ -f "$ALLOWLIST_FILE" ]; then
+  while IFS= read -r al_line || [ -n "$al_line" ]; do
+    # Skip blank lines and comment lines.
+    case "$al_line" in
+      ''|'#'*) continue ;;
+    esac
+    # First whitespace-delimited token: plan basename.
+    al_plan="${al_line%%[[:space:]]*}"
+    al_rest="${al_line#"$al_plan"}"
+    al_rest="${al_rest#"${al_rest%%[![:space:]]*}"}"
+    # Second whitespace-delimited token: anchor substring.
+    al_anchor="${al_rest%%[[:space:]]*}"
+    al_reason="${al_rest#"$al_anchor"}"
+    al_reason="${al_reason#"${al_reason%%[![:space:]]*}"}"
+    [ -n "$al_plan" ] && [ -n "$al_anchor" ] || continue
+    ALLOWLIST_PLANS+=("$al_plan")
+    ALLOWLIST_ANCHORS+=("$al_anchor")
+    ALLOWLIST_REASONS+=("${al_reason:-historical-buggy-recipe}")
+    ALLOWLIST_LOADED=$((ALLOWLIST_LOADED+1))
+  done < "$ALLOWLIST_FILE"
+fi
+
+# Return 0 (true) when (plan basename, recipe payload) is allow-listed.
+# Echoes the reason on stdout when matched; silent on miss.
+is_allowlisted_recipe() {
+  local plan_bn="$1" payload="$2"
+  local i
+  for i in "${!ALLOWLIST_PLANS[@]}"; do
+    if [ "$plan_bn" = "${ALLOWLIST_PLANS[$i]}" ]; then
+      case "$payload" in
+        *"${ALLOWLIST_ANCHORS[$i]}"*)
+          printf '%s' "${ALLOWLIST_REASONS[$i]}"
+          return 0
+          ;;
+      esac
+    fi
+  done
+  return 1
+}
+
 echo "=== R7-008: REMEDIATION-PLAN-R*.md grep-recipe correctness meta-test ==="
 
 # C-0: at least one plan file is present at repo root (sanity floor).
@@ -190,6 +243,22 @@ for plan in "$REPO_ROOT"/REMEDIATION-PLAN-R*.md; do
       MATCH_COUNT=$(grep -cE -- "$payload" "$LOREM_FIXTURE" 2>/dev/null | head -1 | tr -dc '0-9')
       MATCH_COUNT=${MATCH_COUNT:-0}
       if [ "${MATCH_COUNT:-0}" -ge "$LOREM_LINES" ] 2>/dev/null; then
+        # R14-007: consult the intentional-buggy-recipe allow-list. When
+        # the (plan basename, payload) pair is allow-listed, the obvious-
+        # bug surfacing is reclassified from FAIL → WARN so the runner
+        # banner FAIL count remains a true regression indicator. The
+        # historical bug stays visible as a WARN for auditability.
+        al_reason="$(is_allowlisted_recipe "$PLAN_BN" "$payload" || true)"
+        if [ -n "$al_reason" ]; then
+          warn "$PLAN_BN: H3 anchor-alternation '$payload' matches every line ($MATCH_COUNT/$LOREM_LINES) — (allowlist) $al_reason"
+          ANCHOR_ALT_HITS=$((ANCHOR_ALT_HITS+1))
+          # R6-018 detection: confirm by content (retroactive sentinel
+          # remains satisfied even when the FAIL is reclassified to WARN).
+          if [[ "$payload" == *"prompt-guard"* ]] && [[ "$payload" == *"workflow-guard"* ]]; then
+            R6_018_DETECTED=1
+          fi
+          continue
+        fi
         nope "$PLAN_BN: H3 anchor-alternation bug — '$payload' matches every line of fixture ($MATCH_COUNT/$LOREM_LINES). Predicate=$predicate."
         ANCHOR_ALT_HITS=$((ANCHOR_ALT_HITS+1))
         PLAN_FAIL=$((PLAN_FAIL+1))
