@@ -136,6 +136,14 @@ else
   ok "C-0: no REMEDIATION-PLAN-R*.md at repo root (gitignored per \`.gitignore\`; vacuously PASS — nothing to verify in fresh-clone scenarios)"
   echo
   echo "=== Results: PASS=$PASS FAIL=$FAIL WARN=$WARN ==="
+  # R15-001 (F-503 atomic close): bridge private counters into harness
+  # globals so the runner's `harness_export_counters` honesty guard sees
+  # PASS=1 FAIL=0 TOTAL=1 instead of PASS=1 FAIL=0 TOTAL=0 (which would
+  # re-trip the derivative `counters inconsistent` WARN in self-test.sh).
+  # Mirrors the bridge call at the bottom of this file.
+  if declare -F harness_assert_local >/dev/null 2>&1; then
+    harness_assert_local "$PASS" "$FAIL" "test-plan-recipes"
+  fi
   exit 0
 fi
 
