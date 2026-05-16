@@ -258,7 +258,7 @@ If no:
      comprehension_gates: {current_gate_required: null}
      tdad: {index_built: false, last_indexed: null, total_nodes: 0}
      context: {current_session_phase: null, session_start_time: now, estimated_context_usage_pct: 0, last_compact: null, rotation_history: [], observation_masking_active: true}
-     tokens: {total_input: 0, total_output: 0, framework_overhead: 0, overhead_pct: 0, productive: 0, by_phase: {}, by_agent: {}, by_task: {}}
+     tokens: {total_input: 0, total_output: 0, framework_overhead: 0, overhead_pct: 0, productive: 0, cache_hits: 0, cache_writes: 0, session_start_at: null, session_baseline_total: 0, by_phase: {}, by_agent: {}, by_task: {}}  # R12-001 — cache_hits/cache_writes/session_start_at/session_baseline_total mirror STATE-init.template.json + STATE.schema.json (three-place contract)
      phase_tags: {}
      stack_skills: []
      dora: {lead_time_avg: null, deployment_freq: null, change_failure_rate: null, recovery_time_avg: null, phases_failed: 0, _last_failure_at: null, last_updated: null}

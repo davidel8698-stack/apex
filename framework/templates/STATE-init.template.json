@@ -64,6 +64,10 @@
     "framework_overhead": 0,
     "overhead_pct": 0,
     "productive": 0,
+    "cache_hits": 0,
+    "cache_writes": 0,
+    "session_start_at": null,
+    "session_baseline_total": 0,
     "by_phase": {},
     "by_agent": {},
     "by_task": {}
