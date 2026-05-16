@@ -4,21 +4,26 @@
 developer can answer "how does this hook fire?" without cross-referencing
 `framework/settings.json` and 44 command `.md` files.
 
-**Total files:** state-derived — verify with
-`ls framework/hooks/ | wc -l` (the file-system count is the authority).
-At the time of writing this section the count is 46, comprising 28
-functional `.sh` hooks (R5-013 added `owner-guard.sh`; R5-016 added
-`decision-gate.sh`; v7.1 added `memory-watchdog.sh`,
-`turn-checkpoint.sh`, `session-auto-resume.sh`) + 13 library `.sh`
-files (`_`-prefixed; R5-014 added `_fix-plan-emit.sh`; R6-017 added
-`_adapter-detect.sh`; v7.1 added `_require-platform-detect.sh`) + 1
+**Total files:** state-derived — the file-system count is the
+authority. The count is N where
+`N = ls framework/hooks/ | wc -l`; the Category Totals table below
+re-derives the same value, and the CI assertion in
+`framework/tests/test-hook-classification.sh` (R7-011) re-runs the
+derivation on every push, FAILing on doc/filesystem drift so future
+additions cannot silently outpace this paragraph. The composition is
+state-derived from the table rows below: functional `.sh` hooks (R5-013
+added `owner-guard.sh`; R5-016 added `decision-gate.sh`; v7.1 added
+`memory-watchdog.sh`, `turn-checkpoint.sh`, `session-auto-resume.sh`) +
+library `.sh` files (`_`-prefixed; R5-014 added `_fix-plan-emit.sh`;
+R6-017 added `_adapter-detect.sh`; v7.1 added
+`_require-platform-detect.sh`; R12-001 added `_tokens-update.sh`) + 1
 Python helper + 3 CommonJS guards (R5-003: `apex-prompt-guard.cjs`,
 `apex-workflow-guard.cjs`, `security.cjs`; R6-014 prefixed the two
-ported guards with `apex-` to match the spec literal naming). Category
-totals below sum to the verified count. The CI assertion in
-`framework/tests/test-hook-classification.sh` (R7-011) re-derives the
-count on every run and FAILs on doc/filesystem drift, so future
-additions cannot silently outpace this paragraph.
+ported guards with `apex-` to match the spec literal naming). R13-001
+removed every literal count from this paragraph so future hook
+additions only require adding a row to the appropriate category table
+and bumping the Category Totals cells — the prose no longer carries a
+drift-prone literal.
 
 **Spec anchor:** `apex-spec.md` — "Hook system — 24+ hooks" and
 "Fail-loud, never fail-silent."
@@ -114,7 +119,7 @@ command `.md` files for exact invocation points.
 
 ---
 
-## Library — Sourced (13)
+## Library — Sourced (14)
 
 Files prefixed with `_` — utility libraries sourced by other hooks.
 **Never invoked directly.**
@@ -126,6 +131,7 @@ Files prefixed with `_` — utility libraries sourced by other hooks.
 | `_security-common.sh` | `_sec_normalize`, `_sec_pattern_match`, `_sec_block` — shared security primitives | All 5 guard hooks (prompt/path/workflow/destructive/quarantine) |
 | `_state-read.sh` | Point-in-time STATE.json snapshot for consistent reads within one invocation | Hooks that read STATE multiple times |
 | `_state-update.sh` | Atomic STATE.json update with error handling | Hooks that mutate STATE |
+| `_tokens-update.sh` | `apex_tokens_update <agent> <in> <out> [cache_r] [cache_c]` — atomically increments `.tokens.*` fields in `.apex/STATE.json` using the rename-temp atomic-write pattern. Library exposing the narrow token-accumulation contract that runs on every SubagentStop event (R12-001). Writes `STATE.tokens.*` via rename-temp atomic-write pattern. | `subagent-stop.sh` (R12-001 partial landing; wired via `source "$(dirname "$0")/_tokens-update.sh"`) |
 | `_date-parse.sh` | `parse_epoch` — portable date→epoch (GNU → BSD → Python3 → Python2) | `phase-tag.sh`, `verify-learnings.sh` (post-R-005) |
 | `_dream-cycle-emit.sh` | `start \| complete \| fail` phases for memory-synthesis dream-cycle wraps; emits structured START/COMPLETE/FAIL JSONL with a correlation id (R5-023) | `/apex:next` (two invocation sites) |
 | `_state-sqlite.sh` | `_state_sqlite_mirror`, `_state_sqlite_status` — opt-in SQLite mirror over STATE.json + event-log.jsonl when `APEX_SQLITE_MIRROR=1` and `sqlite3` CLI present (R5-002). Fail-loud-and-skip when CLI absent. | `_state-update.sh` (conditional) |
@@ -170,12 +176,12 @@ available, and both fall back to the preserved Bash logic when not.
 | Auto-PreToolUse | 7 |
 | Auto-PostToolUse | 9 |
 | Command-Invoked / Event-Triggered | 15 |
-| Library — Sourced | 13 |
+| Library — Sourced | 14 |
 | CommonJS — Node-runtime guards (R5-003) | 3 |
-| **Total** | **46** (R5-011: `tdad-index.sh` and `cross-phase-audit.sh` are dual-listed in Auto-PostToolUse / SubagentStop AND Command-Invoked; not double-counted in the total. R5-014: `_fix-plan-emit.sh` added to Library — Sourced. R5-013: `owner-guard.sh` added to Auto-PreToolUse. R5-016: `decision-gate.sh` added to Command-Invoked. R6-017: `_adapter-detect.sh` added to Library — Sourced. v7.1 added Auto-Continuity Layer: `memory-watchdog.sh` and `turn-checkpoint.sh` to Auto-PostToolUse, `session-auto-resume.sh` to Command-Invoked / SessionStart, `_require-platform-detect.sh` to Library — Sourced.) |
+| **Total** | **47** (R5-011: `tdad-index.sh` and `cross-phase-audit.sh` are dual-listed in Auto-PostToolUse / SubagentStop AND Command-Invoked; not double-counted in the total. R5-014: `_fix-plan-emit.sh` added to Library — Sourced. R5-013: `owner-guard.sh` added to Auto-PreToolUse. R5-016: `decision-gate.sh` added to Command-Invoked. R6-017: `_adapter-detect.sh` added to Library — Sourced. v7.1 added Auto-Continuity Layer: `memory-watchdog.sh` and `turn-checkpoint.sh` to Auto-PostToolUse, `session-auto-resume.sh` to Command-Invoked / SessionStart, `_require-platform-detect.sh` to Library — Sourced. R12-001 added `_tokens-update.sh` to Library — Sourced; R13-001 closed the doc/disk cardinality gap.) |
 
 Verify with: `ls framework/hooks/ | wc -l` (the file-system count is the
-authority; the **46** figure above must equal what `wc -l` returns and is
+authority; the **Total** cell above must equal what `wc -l` returns and is
 re-asserted on every CI run by `framework/tests/test-hook-classification.sh`,
 R7-011).
 
@@ -192,8 +198,13 @@ R5-019 added `_learnings-emit.sh` (37). Wave 6 R5-021 added `agent-lint.sh`
 R6 W6 R6-017 added `_adapter-detect.sh` (42). v7.1 (2026-05) added the
 Auto-Continuity Layer: `memory-watchdog.sh` (Layer C, 43),
 `turn-checkpoint.sh` (Layer B, 44), `session-auto-resume.sh` (Layer A,
-45), and the helper library `_require-platform-detect.sh` (46). All
-files accounted for
+45), and the helper library `_require-platform-detect.sh` (46). R12-001
+added `_tokens-update.sh` (47) — the token-counter library sourced by
+`subagent-stop.sh`. R13 corrective edit (R13-001): `_tokens-update.sh`
+library added to filesystem by partial R12-001 landing; this row closes
+the cardinality contract gap (R7-011) and the prose-count was
+refactored to state-derived form so future hook additions cannot
+silently outpace the paragraph. All files accounted for
 in the tables above.
 
 ---
