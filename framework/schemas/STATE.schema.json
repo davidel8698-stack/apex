@@ -167,6 +167,7 @@
         "session_start_time": { "type": "string", "format": "date-time" },
         "estimated_context_usage_pct": { "type": "number", "minimum": 0, "maximum": 100 },
         "last_compact": { "type": ["string", "null"], "format": "date-time" },
+        "last_mask_at": { "type": ["string", "null"], "format": "date-time", "description": "R13-002 (F-302): Wall-clock timestamp of the most recent observation-mask.sh fire. Optional — null until the first soft-rotation or Stop event triggers masking. Surfaced in the R13-006 dashboard alongside last_compact." },
         "observation_masking_active": { "type": "boolean" },
         "rotation_history": {
           "type": "array",
@@ -201,6 +202,10 @@
         "total_output": { "type": "integer", "minimum": 0 },
         "framework_overhead": { "type": "integer", "minimum": 0 },
         "overhead_pct": { "type": "number", "minimum": 0 },
+        "cache_hits": { "type": "integer", "minimum": 0, "default": 0, "description": "R12-001 (F-201): Count of SubagentStop events that reported a non-zero usage.cache_read_input_tokens. Hit-rate = cache_hits / (cache_hits + cache_writes)." },
+        "cache_writes": { "type": "integer", "minimum": 0, "default": 0, "description": "R12-001 (F-201): Count of SubagentStop events that reported a non-zero usage.cache_creation_input_tokens. Used together with cache_hits to compute the prompt-cache hit rate." },
+        "session_start_at": { "type": ["string", "null"], "format": "date-time", "description": "R12-001 (F-201): Wall-clock timestamp of the first apex_tokens_update call of the current session. Used by R12-006 dashboard to distinguish session-scoped deltas from project-lifetime accumulation. Optional — null until first SubagentStop fires." },
+        "session_baseline_total": { "type": "integer", "minimum": 0, "default": 0, "description": "R12-001 (F-201): Snapshot of (total_input + total_output) immediately BEFORE the first apex_tokens_update call of the current session. Session-scoped delta = current_total - session_baseline_total. Optional — 0 until first SubagentStop fires." },
         "by_phase": {
           "type": "object",
           "additionalProperties": {

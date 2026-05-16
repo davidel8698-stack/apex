@@ -75,7 +75,7 @@ Source: `framework/settings.json` entries under `.hooks.PostToolUse[]` (each ent
 
 ---
 
-## Command-Invoked / Event-Triggered (15)
+## Command-Invoked / Event-Triggered (16)
 
 Hooks that fire via explicit invocation from command `.md` files, from other
 hooks, or from Claude Code lifecycle events.
@@ -112,6 +112,7 @@ in addition to the new auto-wirings.)
 | `agent-lint.sh` | `/apex:new-agent` (post-scaffold validation, R5-021) | Validates that a generated module under `framework/modules/<name>/` conforms to the manifest schema (R5-001) and the agent prompt conventions (frontmatter complete: name/description/tools; required sections: Role, Domain Invariants, Named Failure Prohibitions, Output Contract; no registry collision). On failure, writes a `FIX_PLAN.md` listing every issue with concrete fix steps and exits 2; on success, exits 0. |
 | `decision-gate.sh` | `/apex:next` (top of cycle, R5-016) | User-visible 60/90-minute decision gate. Reads `STATE.session.started_at` + `STATE.session.last_time_gate` + `STATE.complexity_level`. Fires when elapsed >= 60 min AND cadence interval has elapsed since last gate (90/75/60 min by complexity 1-2/3/4+). On fire: writes `.apex/FIX_PLAN.md` with three options (continue / /apex:pause / /apex:resume), updates `STATE.session.last_time_gate` (debounce), and exits 1. On non-fire: exits 0 silently. Spec anchor: "Decision gates פר 60-90 דקות." |
 | `session-auto-resume.sh` | SessionStart event (auto-wired v7.1, after `state-rebuild.sh`, before `verify-learnings.sh`) | v7.1 Auto-Continuity Layer A — detects when the previous session was auto-paused or has a fresh turn-checkpoint, and writes `.apex/SESSION_BOOT.md` + emits a stdout banner instructing Claude to invoke `/apex:resume` in the new session. Closes the auto-pause→auto-resume cycle without manual intervention. Always exit 0; no-op if `.apex/STATE.json` missing or session not auto_paused. Side effects: replaces `.apex/SESSION_BOOT.md`, appends `session_auto_resumed` event to event-log. |
+| `observation-mask.sh` | `pre-compact.sh` (invoked first; fall-through to `/compact` is the safety net) | R13-002 (F-302) — extractive observation masking. Reads the executor transcript (`APEX_TRANSCRIPT_PATH` env, fallback `.apex/event-log.jsonl`), identifies tool-result blocks older than `working_memory.masking_window_turns` (default 3), and replaces each with a single-line stub `[masked: <tool> at turn <N>, re-read from disk if needed]`. Updates `STATE.context.last_mask_at`; emits `observation.mask.fired` / `observation.mask.fallback` / `observation.mask.bypassed` / `observation.mask.stub` to event-log. Fail-safe: transcript missing → exit 0 (never blocks the pipeline). Idempotent on already-masked blocks. CRLF-safe (R7-009 contract). Bypass: `STATE.context.observation_masking_active = false`. |
 
 **Note:** Grep across `framework/commands/apex/` returns 51 invocation sites
 across 15 command files — `/apex:next` alone invokes 34 of these. See the
@@ -175,10 +176,10 @@ available, and both fall back to the preserved Bash logic when not.
 |---|---|
 | Auto-PreToolUse | 7 |
 | Auto-PostToolUse | 9 |
-| Command-Invoked / Event-Triggered | 15 |
+| Command-Invoked / Event-Triggered | 16 |
 | Library — Sourced | 14 |
 | CommonJS — Node-runtime guards (R5-003) | 3 |
-| **Total** | **47** (R5-011: `tdad-index.sh` and `cross-phase-audit.sh` are dual-listed in Auto-PostToolUse / SubagentStop AND Command-Invoked; not double-counted in the total. R5-014: `_fix-plan-emit.sh` added to Library — Sourced. R5-013: `owner-guard.sh` added to Auto-PreToolUse. R5-016: `decision-gate.sh` added to Command-Invoked. R6-017: `_adapter-detect.sh` added to Library — Sourced. v7.1 added Auto-Continuity Layer: `memory-watchdog.sh` and `turn-checkpoint.sh` to Auto-PostToolUse, `session-auto-resume.sh` to Command-Invoked / SessionStart, `_require-platform-detect.sh` to Library — Sourced. R12-001 added `_tokens-update.sh` to Library — Sourced; R13-001 closed the doc/disk cardinality gap.) |
+| **Total** | **48** (R5-011: `tdad-index.sh` and `cross-phase-audit.sh` are dual-listed in Auto-PostToolUse / SubagentStop AND Command-Invoked; not double-counted in the total. R5-014: `_fix-plan-emit.sh` added to Library — Sourced. R5-013: `owner-guard.sh` added to Auto-PreToolUse. R5-016: `decision-gate.sh` added to Command-Invoked. R6-017: `_adapter-detect.sh` added to Library — Sourced. v7.1 added Auto-Continuity Layer: `memory-watchdog.sh` and `turn-checkpoint.sh` to Auto-PostToolUse, `session-auto-resume.sh` to Command-Invoked / SessionStart, `_require-platform-detect.sh` to Library — Sourced. R12-001 added `_tokens-update.sh` to Library — Sourced; R13-001 closed the doc/disk cardinality gap. R13-002 added `observation-mask.sh` to Command-Invoked / Event-Triggered, invoked by `pre-compact.sh` before the `/compact` fall-through.) |
 
 Verify with: `ls framework/hooks/ | wc -l` (the file-system count is the
 authority; the **Total** cell above must equal what `wc -l` returns and is
@@ -204,8 +205,12 @@ added `_tokens-update.sh` (47) — the token-counter library sourced by
 library added to filesystem by partial R12-001 landing; this row closes
 the cardinality contract gap (R7-011) and the prose-count was
 refactored to state-derived form so future hook additions cannot
-silently outpace the paragraph. All files accounted for
-in the tables above.
+silently outpace the paragraph. R13-002 added `observation-mask.sh`
+(48) — the Stop+soft-rotation hook that runs before `pre-compact.sh`
+fall-through to `/compact`, implementing the extractive masking design
+spec'd in `apex-design-notes.md` and closing F-302 (three-places
+contract: hook file + invocation in `pre-compact.sh` + this row).
+All files accounted for in the tables above.
 
 ---
 

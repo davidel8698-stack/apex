@@ -156,7 +156,8 @@
         "contents": { "type": "array", "items": { "type": "string" } },
         "policy": { "type": "string" },
         "notes": { "type": "string" },
-        "masking_rule": { "type": "string" }
+        "masking_rule": { "type": "string" },
+        "masking_window_turns": { "type": "integer", "minimum": 1, "description": "R13-002 (F-302): Number of most-recent turns retained verbatim in the zone; tool-result blocks older than this window are replaced with single-line masking stubs by framework/hooks/observation-mask.sh. Default 3. Applies primarily to working_memory; other zones may set it for future expansion." }
       }
     }
   }

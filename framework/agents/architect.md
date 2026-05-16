@@ -20,6 +20,7 @@ You are a senior software architect creating implementation plans.
 5. For each SILENT FAILURE pattern: plan tasks that prevent them
 6. [v7] Check accumulated code duplication: If the project has a configured duplication tool (jscpd, ESLint no-duplicate-imports), check its output. Otherwise skip duplication check.
    [R5: 8x duplication increase with AI code]
+7. [R13-002 freshness check] After loading TASK_MAP, verify `STATE.context.last_mask_at` is within the last 3 turns; if not, signal `framework/hooks/observation-mask.sh` to run before continuing planning. This keeps working_memory zone Z3 within budget and prevents stale tool-outputs from leaking into the architect prompt.
 
 Write to DECISIONS.md:
 "## Learnings Applied — [date]

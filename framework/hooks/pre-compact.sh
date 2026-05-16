@@ -28,11 +28,30 @@ if [ -n "$PHASE" ] && [ -f ".apex/phases/$PHASE/PLAN.md" ]; then
   fi
 fi
 
+# R13-002 (F-302): Observation masking runs FIRST. Mask stale tool-result
+# blocks out of the executor transcript BEFORE Claude Code's /compact step
+# runs (Claude Code invokes /compact AFTER this PreCompact hook completes).
+# Sequence is load-bearing per plan §"Inversion risk": if /compact ran first,
+# the stale tool-results would already be summarized into the rolled-up
+# transcript and the masking pass would deliver 0% benefit.
+#
+# Fail-safe: the mask hook itself never blocks (returns 0 on missing
+# transcript). pre-compact.sh's fall-through to /compact is the safety net.
+MASK_HOOK="$(dirname "$0")/observation-mask.sh"
+if [ -x "$MASK_HOOK" ] || [ -f "$MASK_HOOK" ]; then
+  # observation-mask before /compact — sequence is load-bearing (R13-002).
+  bash "$MASK_HOOK" || true
+fi
+
 # v7: Log observation masking stats for tracking [R2]
 if [ "$STATE_BACKUP_OK" = true ] && [ -f .apex/STATE.json ]; then
   AGENT_CALLS=$(jq -r '[.tokens.by_agent | to_entries[]? | .value.calls] | add // 0' .apex/STATE.json 2>/dev/null || echo 0)
   echo "APEX: State backed up $TIMESTAMP | $AGENT_CALLS agent calls this session"
-  echo "R2: Observation masking active — old tool outputs should be re-read, not cached."
+  # R13-002: mask hook ran above. /compact (Claude Code built-in) is the
+  # post-mask fall-through that runs after this hook returns; keep this
+  # line as the operator-visible signal that masking-before-compact is
+  # the pipeline order.
+  echo "R13-002: Observation masking ran before /compact — stale tool outputs replaced with disk re-read stubs."
 elif [ "$STATE_BACKUP_OK" = true ]; then
   echo "APEX: State backed up $TIMESTAMP"
 else

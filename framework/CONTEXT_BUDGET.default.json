@@ -15,7 +15,9 @@
     "working_memory": {
       "budget_tokens": 60000,
       "contents": ["Tool outputs", "Agent responses", "Intermediate results"],
-      "policy": "Observation masking after task. Compact on threshold."
+      "policy": "Observation masking after task. Compact on threshold.",
+      "masking_rule": "delete_after_n_turns",
+      "masking_window_turns": 3
     },
     "generation_reserve": {
       "budget_tokens": 60000,
