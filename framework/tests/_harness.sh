@@ -96,21 +96,39 @@ assert_jq() {
 # reports `PASS=0 FAIL=0` even when 80 corpus rows ran.
 #
 # Signature: harness_assert_corpus <correct> <total> <msg> <threshold_pct>
-# Semantics:
+# Semantics (R10-009, F-109 — alias-aware, mirrors harness_assert_local):
 #   - TOTAL += total
-#   - PASS  += correct
+#   - PASS is NOT re-incremented: the four corpus tests
+#     (test-decision-mode.sh, test-pre-task-snapshot.sh,
+#     test-proposals.sh, test-roundtable-classifier.sh) maintain a
+#     file-scope `correct` (or equivalent) counter that bash, having
+#     no lexical scoping at file scope, aliases to the harness global
+#     PASS by the time this helper is called. Re-adding `correct` to
+#     PASS double-counts every passing corpus row and produces a
+#     dishonest banner (e.g., `PASS=775 TOTAL=815` when the real
+#     count is `775/775`). The fix is to drop the re-add line so
+#     PASS reflects the single source of truth.
 #   - if (correct * 100 / total) < threshold_pct:
 #       FAIL += (total - correct), prints accuracy-breach diagnostic
 #     else:
 #       FAIL unchanged, prints accuracy-met diagnostic
+#     The FAIL increment uses an independent expression (`total -
+#     correct`) and is genuinely additive, not aliased — so the
+#     accuracy-breach branch stays correct verbatim.
 #
 # Rationale: mirrors the accuracy-floor semantics — a 95%-correct corpus
 # is a passing test even though 5% of rows missed. Per-row honesty
 # (always FAIL the misses) would break the spec's accuracy-floor pattern.
+# The aliasing pattern matches R9-002's harness_assert_local treatment;
+# two helpers in the same file with two different aliasing models was
+# the live drift that R10-009 closes.
 harness_assert_corpus() {
   local correct="$1" total="$2" msg="$3" threshold_pct="$4"
   TOTAL=$((TOTAL + total))
-  PASS=$((PASS + correct))
+  # R10-009 (F-109): PASS is NOT re-added here. The caller's
+  # file-scope `correct` is alias-shadowing the harness global PASS,
+  # so PASS already holds `correct` by the time we are called. See
+  # the docstring above for the alias-aware semantics rationale.
   local pct=0
   if [ "$total" -gt 0 ]; then
     pct=$(( correct * 100 / total ))
