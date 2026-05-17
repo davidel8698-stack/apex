@@ -19,6 +19,61 @@ if [ "$VERIFY_LEVEL" != "C" ] && [ "$VERIFY_LEVEL" != "D" ]; then
   exit 0
 fi
 
+# --- R16-622M: scope-creep block ---------------------------------------
+# Spec anchor (IMP-022): "framework/agents/critic.md ו-framework/hooks/
+# mutation-gate.sh חייבים לזהות scope-creep: task XML קצר (<2000 תווים)
+# ו-diff גדול (>200 שורות) — flag." Critic-side R-622C flags after the
+# fact; this PreToolUse-style check stops the mutation before it lands.
+#
+# Threshold (matches R-622C critic sibling):
+#   task_xml_chars < 2000  AND  diff_lines > 200  →  scope-creep block.
+#
+# Task XML location convention: .apex/phases/<phase>/<task_id>/task.xml
+# (per IMP-001 plan); fall back to .apex/phases/<phase>/<task_id>/TASK.md
+# when XML not used; if neither present, the check is skipped (cannot
+# evaluate the premise without task input).
+#
+# Diff measurement: lines added + lines removed from `git diff HEAD~1`
+# restricted to source files (same set the mutation tool would see).
+SCOPE_TASK_XML=""
+if [ -n "$TASK_ID" ] && [ -f .apex/STATE.json ] && command -v jq >/dev/null 2>&1; then
+  SCOPE_CURRENT_PHASE=$(jq -r '.current_phase // empty' .apex/STATE.json 2>/dev/null || echo "")
+  if [ -n "$SCOPE_CURRENT_PHASE" ]; then
+    for candidate in \
+      ".apex/phases/$SCOPE_CURRENT_PHASE/$TASK_ID/task.xml" \
+      ".apex/phases/$SCOPE_CURRENT_PHASE/$TASK_ID/TASK.md" \
+      ".apex/phases/$SCOPE_CURRENT_PHASE/$TASK_ID.xml"; do
+      if [ -f "$candidate" ]; then
+        SCOPE_TASK_XML="$candidate"
+        break
+      fi
+    done
+  fi
+fi
+if [ -n "$SCOPE_TASK_XML" ]; then
+  SCOPE_XML_CHARS=$(wc -c < "$SCOPE_TASK_XML" 2>/dev/null | tr -d ' ')
+  SCOPE_DIFF_LINES=$(git diff HEAD~1 --shortstat 2>/dev/null | grep -oE '[0-9]+ insertion|[0-9]+ deletion' | grep -oE '[0-9]+' | awk '{s+=$1} END {print s+0}')
+  : "${SCOPE_XML_CHARS:=0}"
+  : "${SCOPE_DIFF_LINES:=0}"
+  if [ "$SCOPE_XML_CHARS" -lt 2000 ] && [ "$SCOPE_DIFF_LINES" -gt 200 ]; then
+    echo "🚫 MUTATION GATE: scope-creep detected (task XML chars=$SCOPE_XML_CHARS < 2000 AND diff lines=$SCOPE_DIFF_LINES > 200)" >&2
+    echo "   The mutation is large relative to the task scope. Refactor the task into smaller subtasks," >&2
+    echo "   or add an explicit scope expansion in the task XML before re-running this gate." >&2
+    if [ -f "$(dirname "$0")/_fix-plan-emit.sh" ] && command -v emit_fix_plan >/dev/null 2>&1; then
+      emit_fix_plan \
+        "mutation-gate" \
+        "Scope-creep block: task XML is shorter than 2000 chars but diff exceeds 200 lines." \
+        "Task: $TASK_ID — xml_chars=$SCOPE_XML_CHARS, diff_lines=$SCOPE_DIFF_LINES, source=$SCOPE_TASK_XML" \
+        "/apex:forensics -- review the diff against the task description" \
+        "/apex:rollback -- revert the oversized mutation" \
+        "/apex:recover -- split the work into smaller tasks and re-plan" \
+        2>/dev/null || true
+    fi
+    exit 2
+  fi
+fi
+# --- end R16-622M ------------------------------------------------------
+
 # Detect changed files from latest commit
 CHANGED_FILES=$(git diff --name-only HEAD~1 2>/dev/null | grep -E '\.(ts|tsx|js|jsx|py)$')
 if [ -z "$CHANGED_FILES" ]; then
