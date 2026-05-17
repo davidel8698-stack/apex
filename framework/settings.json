@@ -88,6 +88,12 @@
         ]
       },
       {
+        "matcher": "Bash|Write|Edit",
+        "hooks": [
+          { "type": "command", "command": "bash ~/.claude/hooks/scratchpad-monitor.sh" }
+        ]
+      },
+      {
         "matcher": "Write|Edit",
         "hooks": [
           { "type": "command", "command": "bash ~/.claude/hooks/ci-scan.sh" }
