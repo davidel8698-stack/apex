@@ -228,6 +228,99 @@ else
 fi
 echo
 
+# --- R16-636: first-deployment gate -----------------------------------
+# Spec anchor (IMP-036): "APEX חייב לאכוף first-deployment gate לפני
+# שגרסת framework חדשה מותקנת." Before any copy_tree / copy_file lands,
+# run framework/tests/run-all.sh and compare against the previous
+# install's snapshot at ~/.claude/install-snapshots/. Gate condition:
+# new install must have >= previous PASS count AND zero net-new FAIL.
+#
+# First-ever install (no snapshot directory) skips the gate — it has
+# nothing to compare against. --dry-run and --skip-settings also skip
+# the gate (preview / surgical-settings paths must not block on test
+# regressions). --clean is informational and does not deploy, so it
+# also skips.
+#
+# Bypass: APEX_SKIP_FIRST_DEPLOYMENT_GATE=1 lets a maintainer override
+# the gate explicitly (e.g., when an unrelated test breakage is
+# triaged separately).
+run_first_deployment_gate() {
+  local snapshots_dir="$CLAUDE_ROOT/install-snapshots"
+  local runner="$FRAMEWORK_ROOT/tests/run-all.sh"
+
+  if [[ "${APEX_SKIP_FIRST_DEPLOYMENT_GATE:-0}" == "1" ]]; then
+    log "first-deployment gate: SKIPPED (APEX_SKIP_FIRST_DEPLOYMENT_GATE=1)"
+    return 0
+  fi
+  if [[ $DRY_RUN -eq 1 || $CLEAN_MODE -eq 1 ]]; then
+    return 0
+  fi
+  if [[ ! -f "$runner" ]]; then
+    log "first-deployment gate: SKIPPED (runner missing: ${runner#$FRAMEWORK_ROOT/})"
+    return 0
+  fi
+
+  log "first-deployment gate: running framework/tests/run-all.sh ..."
+  local new_json
+  new_json=$(bash "$runner" --json 2>/dev/null || true)
+  if [[ -z "$new_json" ]]; then
+    log "first-deployment gate: runner produced no output — gate SKIPPED."
+    return 0
+  fi
+
+  local new_passed new_failed
+  if command -v jq >/dev/null 2>&1; then
+    new_passed=$(echo "$new_json" | jq -r '.passed // 0' 2>/dev/null || echo 0)
+    new_failed=$(echo "$new_json" | jq -r '.failed // 0' 2>/dev/null || echo 0)
+  else
+    new_passed=$(echo "$new_json" | sed -n 's/.*"passed":\([0-9]*\).*/\1/p')
+    new_failed=$(echo "$new_json" | sed -n 's/.*"failed":\([0-9]*\).*/\1/p')
+    : "${new_passed:=0}"
+    : "${new_failed:=0}"
+  fi
+  log "first-deployment gate: new run — passed=$new_passed failed=$new_failed"
+
+  mkdir -p "$snapshots_dir" 2>/dev/null || true
+  local prev_snapshot=""
+  if [[ -d "$snapshots_dir" ]]; then
+    prev_snapshot=$(ls -t "$snapshots_dir"/*.json 2>/dev/null | head -1 || true)
+  fi
+
+  if [[ -z "$prev_snapshot" ]]; then
+    log "first-deployment gate: first-ever install (no prior snapshot) — gate PASSES by definition."
+  else
+    local prev_passed prev_failed
+    if command -v jq >/dev/null 2>&1; then
+      prev_passed=$(jq -r '.passed // 0' "$prev_snapshot" 2>/dev/null || echo 0)
+      prev_failed=$(jq -r '.failed // 0' "$prev_snapshot" 2>/dev/null || echo 0)
+    else
+      prev_passed=$(sed -n 's/.*"passed":\([0-9]*\).*/\1/p' "$prev_snapshot")
+      prev_failed=$(sed -n 's/.*"failed":\([0-9]*\).*/\1/p' "$prev_snapshot")
+      : "${prev_passed:=0}"
+      : "${prev_failed:=0}"
+    fi
+    log "first-deployment gate: prior run — passed=$prev_passed failed=$prev_failed (snapshot: ${prev_snapshot##*/})"
+    # Pre-install gate: new install must have >= previous PASS count
+    # AND new install must have 0 net-new FAIL (i.e., new_failed <= prev_failed).
+    if [[ "$new_passed" -lt "$prev_passed" ]] || [[ "$new_failed" -gt "$prev_failed" ]]; then
+      log "ERROR: first-deployment gate BLOCKED — regression detected."
+      log "       prior:  passed=$prev_passed failed=$prev_failed"
+      log "       new:    passed=$new_passed failed=$new_failed"
+      log "       Set APEX_SKIP_FIRST_DEPLOYMENT_GATE=1 to bypass after triage."
+      exit 2
+    fi
+    log "first-deployment gate: PASS (no regression vs prior install)."
+  fi
+
+  # Record the new snapshot for the next install to compare against.
+  local ts
+  ts=$(date +%Y%m%d-%H%M%S)
+  echo "$new_json" > "$snapshots_dir/$ts.json" 2>/dev/null || true
+}
+
+run_first_deployment_gate
+echo
+
 # Directory trees
 copy_tree "$FRAMEWORK_ROOT/agents"        "$CLAUDE_ROOT/agents"
 # R5-001: manifest-driven specialist delivery. Walks framework/modules/<name>/
