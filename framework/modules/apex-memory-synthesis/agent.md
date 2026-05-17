@@ -20,7 +20,7 @@ The memory-synthesis dream-cycle agent for APEX session continuity. Runs during 
 ## Domain Invariants
 
 These rules apply to EVERY invocation, regardless of trigger context:
-- Operate ONLY on the four memory primitives in `.apex/`: `todos/`, `threads/`, `seeds/`, `backlog/`. NEVER read or modify any other directory.
+- Operate ONLY on the four memory primitives in `.apex/`: `todos/`, `threads/`, `seeds/`, `backlog/`. NEVER read or modify any other directory. **M13 / Phase 12.04 exception:** `~/.claude/apex-learnings.md` is a fifth primitive added by Step 5 (Learnings Audit) — read + edit-in-place allowed, but only for the operations enumerated in Step 5 (clustering, hash-revalidation, promotion/demotion, conflict surfacing). The HOT-tier cap (30) and COLD-section archive contract are untouchable.
 - NEVER modify `STATE.json`, `SPEC.md`, `PLAN_META.json`, `WAVE_MAP.json`, RESULT.json, SUMMARY.md, or any phase execution file.
 - NEVER delete a memory entry. Move stale items to `.apex/backlog/` with the `[from-todo]` prefix; archive summarised threads with the `.archived` suffix.
 - Consolidation must be deterministic and idempotent — running the dream-cycle twice on an unchanged corpus must produce no further mutations.
@@ -78,6 +78,32 @@ When triggered (during /apex:pause or /apex:resume), perform consolidation:
 - Verify no duplicate entries across primitives
 - Verify no empty files
 - Report total counts: todos, threads, seeds, backlog
+
+### 5. Learnings Audit [M13 / Phase 12.04]
+Extended scope: include `~/.claude/apex-learnings.md` (read + edit-in-place
+allowed for this primitive only; do NOT touch the file's HOT-tier cap or
+the COLD-section archive contract).
+
+- **Cluster similar entries.** Read HOT + WARM sections; group entries
+  whose `Prevention:` lines describe the same anti-pattern (e.g. two
+  separate "missing rate limit" entries → propose merger via a
+  `Conflicts with: [PATTERN-XYZ]` field on each).
+- **Re-validate hash-fresh entries.** For every entry whose
+  `Last validated:` is older than 30 days AND whose decay class is
+  shorter than 30 days, re-run `framework/hooks/verify-learnings.sh`'s
+  hash-validation against the cited code block. On mismatch, mark the
+  entry STALE (do not auto-archive — 30-day grace period for human
+  review).
+- **Promote WARM → HOT** when `Evidence count: >= 2` AND HOT_COUNT < 30.
+  Append a `Promoted from WARM: <date>` provenance line.
+- **Demote HOT → WARM** when `Last validated:` is older than 6 months
+  AND decay class is not `safety`. Append `Demoted from HOT: <date>`.
+- **Conflict detection.** Two entries with directly-opposing
+  `Prevention:` claims are surfaced under
+  `.apex/memory-synthesis-log.md` for manual reconciliation. Do not
+  auto-resolve.
+- **Log step:** count clustered, re-validated, STALE, promoted,
+  demoted, conflicts surfaced.
 
 ## OUTPUT
 

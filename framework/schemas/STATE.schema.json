@@ -68,7 +68,7 @@
     },
     "autonomy": {
       "type": "object",
-      "description": "Per-verify-level autonomy ladder tracking",
+      "description": "Autonomy ladder tracking. by_verify_level is the v7 baseline (kept for backward compatibility). by_task_class is the v8 M08 dimension — per-task-class ladder driven by PLAN_META.task_class (A/B/C/D). track_d_modal_state tracks the M08.1 plain-language-modal rate-limit + batch queue. Both ladders read PLAN_META.is_irreversible_now to force the Track D path dynamically.",
       "required": ["by_verify_level"],
       "additionalProperties": false,
       "properties": {
@@ -114,6 +114,70 @@
               }
             }
           }
+        },
+        "by_task_class": {
+          "type": "object",
+          "description": "M08 per-task-class ladder (Phase 12.02). A: escalate after 5 clean → level 2 (Trusted). B: escalate after 7-8 clean → level 2 (Trusted cap). C: NO auto-escalation, permanent Supervised (level cap=0). D: NO auto-escalation EVER, hard cap=0. high_rework_streak tracks consecutive >50%-manual-correction attempts (de-escalation trigger at 2). critic_disagreements_recent counts critic-disagreement events in the last 4 hours (de-escalation trigger at 2-3).",
+          "additionalProperties": false,
+          "required": ["A", "B", "C", "D"],
+          "properties": {
+            "A": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["level", "consecutive_successes", "high_rework_streak", "critic_disagreements_recent"],
+              "properties": {
+                "level": { "type": "integer", "minimum": 0, "maximum": 2 },
+                "consecutive_successes": { "type": "integer", "minimum": 0 },
+                "high_rework_streak": { "type": "integer", "minimum": 0 },
+                "critic_disagreements_recent": { "type": "integer", "minimum": 0 }
+              }
+            },
+            "B": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["level", "consecutive_successes", "high_rework_streak", "critic_disagreements_recent"],
+              "properties": {
+                "level": { "type": "integer", "minimum": 0, "maximum": 2 },
+                "consecutive_successes": { "type": "integer", "minimum": 0 },
+                "high_rework_streak": { "type": "integer", "minimum": 0 },
+                "critic_disagreements_recent": { "type": "integer", "minimum": 0 }
+              }
+            },
+            "C": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["level", "consecutive_successes", "high_rework_streak", "critic_disagreements_recent"],
+              "properties": {
+                "level": { "type": "integer", "minimum": 0, "maximum": 0, "description": "Track C is permanent Supervised — level pinned at 0; consecutive_successes counted for telemetry only." },
+                "consecutive_successes": { "type": "integer", "minimum": 0 },
+                "high_rework_streak": { "type": "integer", "minimum": 0 },
+                "critic_disagreements_recent": { "type": "integer", "minimum": 0 }
+              }
+            },
+            "D": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["level", "consecutive_successes", "high_rework_streak", "critic_disagreements_recent"],
+              "properties": {
+                "level": { "type": "integer", "minimum": 0, "maximum": 0, "description": "Track D hard cap — level pinned at 0; auto-escalation prohibited regardless of consecutive_successes." },
+                "consecutive_successes": { "type": "integer", "minimum": 0 },
+                "high_rework_streak": { "type": "integer", "minimum": 0 },
+                "critic_disagreements_recent": { "type": "integer", "minimum": 0 }
+              }
+            }
+          }
+        },
+        "track_d_modal_state": {
+          "type": "object",
+          "description": "M08.1 plain-language-modal state (Phase 12.02). modals_today counts modals fired in the rolling 24h. last_modal_at is the wall-clock timestamp of the most recent fire (used for the 30-min rate-limit). pending_count is the queue depth in .apex/pending_track_d.json. digest_mode is set true when modals_today exceeds the budget (3 in 4 hours) — subsequent events log to event-log.jsonl as MAJOR instead of firing modals.",
+          "additionalProperties": false,
+          "required": ["modals_today", "last_modal_at", "pending_count", "digest_mode"],
+          "properties": {
+            "modals_today": { "type": "integer", "minimum": 0 },
+            "last_modal_at": { "type": ["string", "null"], "format": "date-time" },
+            "pending_count": { "type": "integer", "minimum": 0 },
+            "digest_mode": { "type": "boolean" }
+          }
         }
       }
     },
@@ -135,9 +199,30 @@
     },
     "comprehension_gates": {
       "type": "object",
+      "description": "M09 risk-based comprehension gate state (Phase 12.05). current_gate_required is the legacy v7 field (string or null) — kept for backward compat with pre-M09 STATE files. history[] is the new v8 per-gate record: every gate fire writes a structured entry capturing gate_id, phase, track (task_class), depth, response (explain / defer / skip), timestamp, format ('gen-comp' for the R5 4-question pattern). The `additionalProperties: boolean` clause is kept so legacy `phase_<N>: true` per-phase boolean flags still validate during the v8 transition.",
       "required": ["current_gate_required"],
       "properties": {
-        "current_gate_required": { "type": ["string", "null"] }
+        "current_gate_required": { "type": ["string", "null"] },
+        "history": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["gate_id", "phase", "track", "depth", "response", "timestamp", "format"],
+            "properties": {
+              "gate_id": { "type": "string" },
+              "phase": { "type": "string" },
+              "track": { "type": "string", "enum": ["A", "B", "C", "D"] },
+              "depth": { "type": "integer", "minimum": 0, "maximum": 3 },
+              "response": { "type": "string", "enum": ["explain", "defer", "skip"] },
+              "timestamp": { "type": "string", "format": "date-time" },
+              "format": { "type": "string", "enum": ["gen-comp", "legacy-loc"] },
+              "explanation_text": { "type": "string", "description": "Optional — the explain-response text body when response='explain'. Captured by next.md gate-state persistence block." },
+              "duration_sec": { "type": "integer", "minimum": 0, "description": "Optional — actual gate duration; populated post-response by next.md if measured." },
+              "criticality_score": { "type": "number", "description": "Optional — computed criticality of the file set; 0..1." }
+            }
+          }
+        }
       },
       "additionalProperties": { "type": "boolean" }
     },
@@ -149,6 +234,25 @@
         "index_built": { "type": "boolean" },
         "last_indexed": { "type": ["string", "null"], "format": "date-time" },
         "total_nodes": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "severity": {
+      "type": "object",
+      "description": "M10 severity tier tracking (Phase 12.06). critical_budget_window is the rolling list of RFC 3339 timestamps for the last 12 hours of CRITICAL emits — when length ≥ 4, _emit_apex_event.sh fires a follow-up MAJOR 'budget exceeded' notice. digest_state tracks the background-digest-hook cadence — last_digest_at is the cutoff for the next digest pass; pending_minor_count is informational (renderable in /apex:status).",
+      "additionalProperties": false,
+      "properties": {
+        "critical_budget_window": {
+          "type": "array",
+          "items": { "type": "string", "format": "date-time" }
+        },
+        "digest_state": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "last_digest_at": { "type": ["string", "null"], "format": "date-time" },
+            "pending_minor_count": { "type": "integer", "minimum": 0 }
+          }
+        }
       }
     },
     "context": {

@@ -87,4 +87,46 @@ Run final verification across all phases, then create a release tag if everythin
 
 7. Log event:
    bash ~/.claude/hooks/session-log.sh "ship" "Project shipped as {version}"
+
+8. **M18.1 DORA delta emission (additive — existing steps 1–7 are untouchable):**
+   Refresh `.apex/DORA.json` from the git-log engine and capture a
+   ship-time snapshot so a future cohort report can correlate ship
+   events with DORA deltas.
+
+   ```
+   # Snapshot the prior DORA reading (if present) before regeneration.
+   PRIOR_DORA=""
+   if [ -f .apex/DORA.json ]; then
+     PRIOR_DORA=$(cat .apex/DORA.json)
+   fi
+
+   # Regenerate against the post-tag state (the release tag from step 5
+   # is now visible to the engine if it matches APEX_DORA_DEPLOY_TAG_PATTERN
+   # — by default release/*; users who tag as v1.0.0 should set
+   # APEX_DORA_DEPLOY_TAG_PATTERN="v*" before invoking).
+   bash framework/hooks/dora-collect.sh 2>/dev/null || true
+   ```
+
+   Append a ship-event line to `.apex/event-log.jsonl` carrying the
+   prior and current DORA-quartet headline numbers, so M16.1's
+   telemetry pipeline (task 12.09 — forward-reference; not wired
+   here) can later compute deltas against the ship-event timeline:
+
+   ```
+   if [ -f .apex/DORA.json ]; then
+     CURRENT_DORA=$(cat .apex/DORA.json)
+     TS=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+     printf '{"ts":"%s","severity":"MINOR","hook":"ship","type":"dora.ship_delta","version":"%s","prior":%s,"current":%s}\n' \
+       "$TS" "{version}" \
+       "${PRIOR_DORA:-null}" \
+       "$CURRENT_DORA" >> .apex/event-log.jsonl 2>/dev/null || true
+   fi
+   ```
+
+   Failure of either command is **non-blocking** — `/apex:ship` MUST
+   complete successfully even if DORA collection fails (the engine is
+   instrumentation, not a release gate).
+
+   Methodology + committed definitions: `framework/docs/CLAIMS-MEASUREMENT.md`
+   §"DORA measurement engine".
 </context>

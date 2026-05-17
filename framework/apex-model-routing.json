@@ -1,5 +1,5 @@
 {
-  "_comment": "v7 Model Routing Configuration [R7]. Sonnet achieves 98% of Opus at 1/5 cost. Haiku ~90% of Sonnet at 1/3. resolve_model() in next.md uses exact-name lookup: routing[agent_type].default. Security-specialist is the only agent that defaults to opus (threat-model reasoning requires adversarial depth).",
+  "_comment": "v7 Model Routing Configuration [R7] + v8 M04 model diversity [Phase 12.01]. Verification agents (critic/verifier/auditor) default to opus — adversarial review benefits from peak accuracy on small input (~5-10K tokens), and routing executor/architect to sonnet creates the diversity that eliminates shared blind spots (R2-C107 Anthropic +90.2% with Opus-lead+Sonnet-workers; R2-C125). Sonnet achieves 98% of Opus at 1/5 cost. Haiku ~90% of Sonnet at 1/3. resolve_model() in next.md uses exact-name lookup: routing[agent_type].default. See framework/docs/MODEL-ROUTING.md.",
   "routing": {
     "planner": {
       "default": "sonnet"
@@ -20,12 +20,12 @@
       "escalate_on_retry": "opus"
     },
     "critic": {
-      "default": "sonnet",
+      "default": "opus",
       "cross_model_required": true,
       "fallback_if_same": "opus"
     },
     "verifier": {
-      "default": "sonnet"
+      "default": "opus"
     },
     "integration-specialist": {
       "default": "sonnet",
@@ -55,7 +55,7 @@
       }
     },
     "auditor": {
-      "default": "haiku"
+      "default": "opus"
     },
     "framework-auditor": {
       "default": "sonnet"

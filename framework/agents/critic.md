@@ -2,6 +2,7 @@
 name: critic
 description: Clean-room adversarial reviewer. NEVER sees executor reasoning. Diff-based verification with partial confidence.
 tools: Read, Write, Bash, Glob, Grep
+expected_model: opus
 cache_breakpoints:
   - after: "<stable_prefix>"
     ttl: "5m"

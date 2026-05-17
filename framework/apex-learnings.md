@@ -17,7 +17,7 @@ below baseline (22.22% vs 26.26%). Failure knowledge is +14.3% more valuable.
 ## HOT (max 30 — always loaded into architect context)
 
 <!-- Entries here must have: Seen in: 2+ projects, Status: ACTIVE, Confidence: VALIDATED+
-     v7 format [R6]:
+     v8 format [Phase 12.04 / M13]:
 
 ### [PATTERN-001] Missing error handling in API routes
 - **Severity:** P1
@@ -27,6 +27,23 @@ below baseline (22.22% vs 26.26%). Failure knowledge is +14.3% more valuable.
 - **Detection:** `grep -r "export async function" src/app/api | wc -l` vs `grep -r "try {" src/app/api | wc -l`
 - **Prevention:** Every API route must have try/catch returning {error, data}
 - **Citation:** project-A/src/app/api/auth/login/route.ts:45
+
+     ── M13 provenance fields (Phase 12.04, R2 §9 missing piece #6) ──
+- **Source agent:** critic                       <!-- critic | auditor | architect | human | memory-synthesis -->
+- **Created:** 2026-04-02T08:14:00Z              <!-- RFC 3339 of first emit -->
+- **Last validated:** 2026-05-17T03:00:00Z       <!-- RFC 3339 of last verify-learnings hash check -->
+- **Code hash:** sha256:0e7f2a…b91c              <!-- SHA-256 of cited code block at emit time; mismatch on re-validate → STALE -->
+- **Scope:** PROJECT                              <!-- PROJECT | ORG | GLOBAL — controls cross-project promotion eligibility -->
+- **Invalidates on:** file_change                 <!-- file_change | version_change | period | manual -->
+
+     Provenance semantics:
+     - Missing `Source agent:` → treated as "unknown provenance" (advisory; trust ceiling = WARM).
+     - Missing `Code hash:` → "no validation possible" (advisory; hash-validation skipped, decay-only).
+     - `Last validated:` is rewritten by verify-learnings.sh on every clean re-check.
+     - STALE entries (hash mismatch) live for a 30-day grace period before auto-archive to COLD —
+       false-positive guard for legitimate refactors that don't change semantic meaning.
+     - Backup retention: pre-compact.sh writes `.apex/backups/apex-learnings_TIMESTAMP.md`;
+       keep last 10 backups, older auto-pruned.
 
      Decay classes [v7, R6]:
      safety (auth, RLS, crypto) → never auto-decay

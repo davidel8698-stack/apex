@@ -95,6 +95,38 @@ If STATE.session exists AND STATE.session.auto_paused == true:
       low_confidence_results: 0
     }
 
+## ROTATION-NOTE INGESTION [M14 / Phase 12.08]
+# When the previous session ended via /apex:next's rotation dispatch,
+# pre-rotation-snapshot.sh wrote 4 atomic artifacts including a
+# ROTATION-NOTE-<timestamp>.md under .apex/phases/<phase>/. Load that
+# note PREFERENTIALLY over DECISIONS.md for the immediate "what was I
+# doing" context. DECISIONS.md remains the historical record.
+ROTATION_NOTE=""
+if command -v git >/dev/null 2>&1; then
+  # Find the most recent apex/rotation/* tag and the matching note.
+  LATEST_ROTATION_TAG=$(git tag --list 'apex/rotation/*' 2>/dev/null | sort -r | head -1)
+  if [ -n "$LATEST_ROTATION_TAG" ]; then
+    # Tag format: apex/rotation/<TS_FILE>-<phase> → derive the note path.
+    TS_PART=$(echo "$LATEST_ROTATION_TAG" | sed -E 's|^apex/rotation/(.*)-[^-]+$|\1|')
+    PHASE_PART=$(echo "$LATEST_ROTATION_TAG" | sed -E 's|^apex/rotation/.*-([^-]+)$|\1|')
+    CANDIDATE=".apex/phases/${PHASE_PART}/ROTATION-NOTE-${TS_PART}.md"
+    if [ -f "$CANDIDATE" ]; then
+      ROTATION_NOTE="$CANDIDATE"
+    fi
+  fi
+fi
+
+If ROTATION_NOTE is non-empty:
+  Display: "🔄 Resuming from rotation snapshot ${LATEST_ROTATION_TAG}"
+  Read $ROTATION_NOTE and inject the body into the resume context
+  AS THE PRIMARY "what was I doing" source. DECISIONS.md still loaded
+  for historical context but secondary to the note.
+  bash ~/.claude/hooks/session-log.sh "resume_from_rotation" "Loaded ROTATION-NOTE: ${ROTATION_NOTE}"
+Else:
+  # No rotation snapshot → fall through to legacy resume path (loads
+  # DECISIONS.md + most-recent SUMMARY.md as before).
+  bash ~/.claude/hooks/session-log.sh "resume_no_rotation_note" "No apex/rotation/* tag found — legacy resume path"
+
 ## SESSION UPDATE
 If STATE.session exists:
   Update STATE.session: total_context_rotations++, tasks_since_last_rotation = STATE.session.tasks_completed

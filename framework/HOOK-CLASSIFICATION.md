@@ -75,7 +75,7 @@ Source: `framework/settings.json` entries under `.hooks.PostToolUse[]` (each ent
 
 ---
 
-## Command-Invoked / Event-Triggered (16)
+## Command-Invoked / Event-Triggered (21)
 
 Hooks that fire via explicit invocation from command `.md` files, from other
 hooks, or from Claude Code lifecycle events.
@@ -112,7 +112,12 @@ in addition to the new auto-wirings.)
 | `agent-lint.sh` | `/apex:new-agent` (post-scaffold validation, R5-021) | Validates that a generated module under `framework/modules/<name>/` conforms to the manifest schema (R5-001) and the agent prompt conventions (frontmatter complete: name/description/tools; required sections: Role, Domain Invariants, Named Failure Prohibitions, Output Contract; no registry collision). On failure, writes a `FIX_PLAN.md` listing every issue with concrete fix steps and exits 2; on success, exits 0. |
 | `decision-gate.sh` | `/apex:next` (top of cycle, R5-016) | User-visible 60/90-minute decision gate. Reads `STATE.session.started_at` + `STATE.session.last_time_gate` + `STATE.complexity_level`. Fires when elapsed >= 60 min AND cadence interval has elapsed since last gate (90/75/60 min by complexity 1-2/3/4+). On fire: writes `.apex/FIX_PLAN.md` with three options (continue / /apex:pause / /apex:resume), updates `STATE.session.last_time_gate` (debounce), and exits 1. On non-fire: exits 0 silently. Spec anchor: "Decision gates פר 60-90 דקות." |
 | `session-auto-resume.sh` | SessionStart event (auto-wired v7.1, after `state-rebuild.sh`, before `verify-learnings.sh`) | v7.1 Auto-Continuity Layer A — detects when the previous session was auto-paused or has a fresh turn-checkpoint, and writes `.apex/SESSION_BOOT.md` + emits a stdout banner instructing Claude to invoke `/apex:resume` in the new session. Closes the auto-pause→auto-resume cycle without manual intervention. Always exit 0; no-op if `.apex/STATE.json` missing or session not auto_paused. Side effects: replaces `.apex/SESSION_BOOT.md`, appends `session_auto_resumed` event to event-log. |
+| `comprehension-gate.sh` | `/apex:next` (PASS path, phase boundary OR 60-min cadence) | M09 (Phase 12.05) risk-based generation-then-comprehension gate. Depth by task_class: A=0 (skipped), B=1 file, C/D=2 files + 1 integration point. Renders the R5 4-question protocol (What does this code do? / What invariant matters? / What could break? / How would you modify it?). Responses: explain (mandatory text), defer (auto-fires next boundary), skip (requires --force; logs cognitive_debt.skip event; STRUCTURALLY UNAVAILABLE for Track D). Exit codes: 0=pass (explain or defer), 1=skip-refused or Track-D-skip-attempt, 2=invocation error. |
+| `pre-rotation-snapshot.sh` | `/apex:next` rotation dispatch (proactive_compact, warn_and_compact, hard_rotate) | M14 (Phase 12.08) atomic 4-artifact pre-rotation snapshot: (1) STATE.json fresh canonical write, (2) DECISIONS.md flush from `.apex/pending_decisions.json`, (3) git tag `apex/rotation/<TS>-<phase>`, (4) ROTATION-NOTE-<TS>.md with Done/Next/Issues sections. Safe-or-noop: any step failure aborts the rotation; ROTATION-NOTE failure after tag creation rolls back the tag. Tag retention: keep last 50. Exit codes: 0=4 artifacts written, 1=artifact failure, 2=invocation error. resume.md reads the most-recent ROTATION-NOTE preferentially over DECISIONS.md. |
+| `background-digest-hook.sh` | `/apex:next` (soft-rotation trigger, 45-min cadence); `/apex:status` (on-demand `--digest`) | M10 (Phase 12.06) MINOR-event digest emitter. Reads `.apex/event-log.jsonl`, filters `severity == "MINOR"` since `STATE.severity.digest_state.last_digest_at`, groups by `(hook, what)`, emits top-5 most-frequent + total count. Updates `STATE.severity.digest_state.last_digest_at`. Exit codes: 0 = digest emitted (zero or more events), 1 = invocation error, 2 = jq required and absent. |
+| `track-d-modal.sh` | `/apex:next` (STEP G when task_class=="D") | M08.1 (Phase 12.02) plain-language Hebrew/English modal for Track D events. Default Enter = `לא, עצור` (decline — safe). Rate-limited ≤1/30 min; excess batches to `.apex/pending_track_d.json`; digest mode after 3 modals/day. `is_irreversible_now=true` bypasses batching. Exit codes: 0=approved, 1=declined, 2=batched/digested, 3=invocation error (caller fails safe to Supervised). |
 | `observation-mask.sh` | `pre-compact.sh` (invoked first; fall-through to `/compact` is the safety net) | R13-002 (F-302) — extractive observation masking. Reads the executor transcript (`APEX_TRANSCRIPT_PATH` env, fallback `.apex/event-log.jsonl`), identifies tool-result blocks older than `working_memory.masking_window_turns` (default 3), and replaces each with a single-line stub `[masked: <tool> at turn <N>, re-read from disk if needed]`. Updates `STATE.context.last_mask_at`; emits `observation.mask.fired` / `observation.mask.fallback` / `observation.mask.bypassed` / `observation.mask.stub` to event-log. Fail-safe: transcript missing → exit 0 (never blocks the pipeline). Idempotent on already-masked blocks. CRLF-safe (R7-009 contract). Bypass: `STATE.context.observation_masking_active = false`. |
+| `dora-collect.sh` | `/apex:milestone-summary`, `/apex:ship` (Phase 12.12) | M18.1 DORA Measurement Engine. Extracts the DORA quartet (Deployment Frequency, Lead Time, Change Failure Rate, MTTR) from `git log` alone and writes `.apex/DORA.json` (schema v1, atomic via rename-temp). Configurable tag patterns via env (`APEX_DORA_DEPLOY_TAG_PATTERN` default `release/*`, `APEX_DORA_DEPLOY_TAG_PATTERN_ALT` default `deploy/*`); rolling window via `APEX_DORA_WINDOW_DAYS` (default 28). CFR uses the per-commit proxy (`per_commit_proxy`) — documented in `framework/docs/CLAIMS-MEASUREMENT.md` §"DORA measurement engine" with rejected alternatives. MTTR uses the `next_forward_tag_after_revert` heuristic; limitations documented. Exit codes: 0=DORA.json written, 1=no commits / git unavailable, 2=invocation error (no .apex/). |
 
 **Note:** Grep across `framework/commands/apex/` returns 51 invocation sites
 across 15 command files — `/apex:next` alone invokes 34 of these. See the
@@ -120,7 +125,7 @@ command `.md` files for exact invocation points.
 
 ---
 
-## Library — Sourced (15)
+## Library — Sourced (16)
 
 Files prefixed with `_` — utility libraries sourced by other hooks.
 **Never invoked directly.**
@@ -142,6 +147,7 @@ Files prefixed with `_` — utility libraries sourced by other hooks.
 | `_adapter-detect.sh` | `apex_adapter_active` (and CLI subcommand `active`) — returns the active APEX adapter name. Detection priority: `.apex/adapter` sidecar → `APEX_ADAPTER` env → `CURSOR_*` env heuristic → default `claude-code`. Powers the runtime adapter-honesty banner (R6-017). Spec anchors: "Multi-platform from day one." + "Honestly Scoped, Not Universally Promised." | `framework/commands/apex/start.md` (ADAPTER HONESTY BANNER block), `framework/commands/apex/onboard.md` (ADAPTER HONESTY BANNER block) |
 | `_require-platform-detect.sh` | `detect_apex_platform` (sets `APEX_PLATFORM=windows\|macos\|linux\|unknown`) + `sample_bun_memory_mb` (echoes `<rss_mb> <commit_mb>` for the ancestor Bun/Claude Code process; always exits 0 with `0 0` + stderr warning on failure). v7.1 cross-platform memory sampling helpers. Fail-soft contract: never block, throttle is the caller's job. | `memory-watchdog.sh` |
 | `_rotation-decide.sh` | `apex_rotation_decide <state_file> <budget_file>` — returns one of `proactive_compact \| warn_and_compact \| hard_rotate \| noop` by reading `STATE.context.estimated_context_usage_pct` (post-R12-001) and iterating `CONTEXT_BUDGET.rotation_triggers[]` in priority order (array index = priority; first match wins). Supports trigger types `utilization_pct`, `phase_boundary`, `task_batch`, `time_minutes`, `recovery_density`; `pattern` is legacy-skipped; unknown types are skipped with an event-log line. **HALT-priority guard**: returns `noop` regardless of pressure when `STATE.session.drift_indicators.circuit_breaker_triggers > 0` or `STATE.circuit_breaker.triggered == true`. Fail-safe: missing inputs or jq absence → `noop`. R13-005 (F-305). | `/apex:next` Step F (CONTEXT OVERFLOW CHECK → rotation dispatch) |
+| `_emit_apex_event.sh` | `apex_emit_event SEVERITY HOOK_NAME WHAT WHERE WHY [DEDUP_KEY] [NEXT_ACTIONS_JSON]` — M10 central event emitter (Phase 12.06). Routes by severity: CRITICAL → stdout + event-log + CRITICAL-budget tracker (4th-in-12h triggers follow-up MAJOR); MAJOR → event-log + /apex:status flag (silent); MINOR → event-log only (digest hook reaps). 5-min dedup window on `(hook, severity, dedup_key)`. Replaces the ad-hoc `echo "🚫 ..." >&2 ; exit 2` patterns across the 50 hooks; hook rewrite is a documented follow-up. See `framework/docs/SEVERITY-REGISTRY.md` for the per-hook classification table. | New hooks; future per-hook rewrites under Phase 12.06 follow-up |
 
 ---
 
@@ -177,10 +183,10 @@ available, and both fall back to the preserved Bash logic when not.
 |---|---|
 | Auto-PreToolUse | 7 |
 | Auto-PostToolUse | 9 |
-| Command-Invoked / Event-Triggered | 16 |
-| Library — Sourced | 15 |
+| Command-Invoked / Event-Triggered | 21 |
+| Library — Sourced | 16 |
 | CommonJS — Node-runtime guards (R5-003) | 3 |
-| **Total** | **49** (R5-011: `tdad-index.sh` and `cross-phase-audit.sh` are dual-listed in Auto-PostToolUse / SubagentStop AND Command-Invoked; not double-counted in the total. R5-014: `_fix-plan-emit.sh` added to Library — Sourced. R5-013: `owner-guard.sh` added to Auto-PreToolUse. R5-016: `decision-gate.sh` added to Command-Invoked. R6-017: `_adapter-detect.sh` added to Library — Sourced. v7.1 added Auto-Continuity Layer: `memory-watchdog.sh` and `turn-checkpoint.sh` to Auto-PostToolUse, `session-auto-resume.sh` to Command-Invoked / SessionStart, `_require-platform-detect.sh` to Library — Sourced. R12-001 added `_tokens-update.sh` to Library — Sourced; R13-001 closed the doc/disk cardinality gap. R13-002 added `observation-mask.sh` to Command-Invoked / Event-Triggered, invoked by `pre-compact.sh` before the `/compact` fall-through. R13-005 added `_rotation-decide.sh` to Library — Sourced, sourced by `/apex:next` Step F as the rotation-decision control-flow gate consumer of `CONTEXT_BUDGET.rotation_triggers[]`.) |
+| **Total** | **55** (R5-011: `tdad-index.sh` and `cross-phase-audit.sh` are dual-listed in Auto-PostToolUse / SubagentStop AND Command-Invoked; not double-counted in the total. R5-014: `_fix-plan-emit.sh` added to Library — Sourced. R5-013: `owner-guard.sh` added to Auto-PreToolUse. R5-016: `decision-gate.sh` added to Command-Invoked. R6-017: `_adapter-detect.sh` added to Library — Sourced. v7.1 added Auto-Continuity Layer: `memory-watchdog.sh` and `turn-checkpoint.sh` to Auto-PostToolUse, `session-auto-resume.sh` to Command-Invoked / SessionStart, `_require-platform-detect.sh` to Library — Sourced. R12-001 added `_tokens-update.sh` to Library — Sourced; R13-001 closed the doc/disk cardinality gap. R13-002 added `observation-mask.sh` to Command-Invoked / Event-Triggered, invoked by `pre-compact.sh` before the `/compact` fall-through. R13-005 added `_rotation-decide.sh` to Library — Sourced, sourced by `/apex:next` Step F as the rotation-decision control-flow gate consumer of `CONTEXT_BUDGET.rotation_triggers[]`. Phase 12.12 (M18.1) added `dora-collect.sh` to Command-Invoked / Event-Triggered, invoked by `/apex:milestone-summary` and `/apex:ship` to extract the DORA quartet from `git log` into `.apex/DORA.json`.) |
 
 Verify with: `ls framework/hooks/ | wc -l` (the file-system count is the
 authority; the **Total** cell above must equal what `wc -l` returns and is
@@ -221,6 +227,22 @@ structured trigger types (`utilization_pct`, `phase_boundary`,
 `task_batch`, `time_minutes`, `recovery_density`); HALT-priority guard
 honors `circuit_breaker_triggers`. Closes F-305 (three-places contract:
 hook file + invocation in `/apex:next` Step F + this row).
+Phase 12.02 (M08.1) added `track-d-modal.sh` (50) — the plain-language
+Hebrew/English Track D modal, invoked by `/apex:next` STEP G when
+task_class=="D". Phase 12.06 (M10) added `_emit_apex_event.sh` (51,
+library — central severity router with CRITICAL-budget tracker and
+5-min dedup) and `background-digest-hook.sh` (52, command-invoked —
+45-min MINOR digest reaper). See `framework/docs/SEVERITY-REGISTRY.md`
+for the per-hook severity classification table and the documented
+follow-up backlog for rewriting the 50 pre-existing hooks to emit
+via the new library. Phase 12.05 (M09) added `comprehension-gate.sh`
+(53, command-invoked — risk-based generation-then-comprehension gate;
+task-class-driven depth A=0/B=1/C-D=2; replaces the v7 LOC-based gate
+in next.md). Phase 12.08 (M14) added `pre-rotation-snapshot.sh` (54,
+command-invoked — atomic 4-artifact rotation capture: STATE +
+DECISIONS flush + git tag + ROTATION-NOTE; safe-or-noop on failure;
+tag retention=50). resume.md reads the most-recent ROTATION-NOTE
+preferentially over DECISIONS.md.
 All files accounted for in the tables above.
 
 ---

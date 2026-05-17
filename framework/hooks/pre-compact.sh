@@ -28,6 +28,25 @@ if [ -n "$PHASE" ] && [ -f ".apex/phases/$PHASE/PLAN.md" ]; then
   fi
 fi
 
+# M13 (Phase 12.04): back up apex-learnings.md alongside STATE + PLAN.
+# Retention: keep the last 10 backups; older auto-pruned. Advisory failure
+# mode — a missed learnings backup does not block compaction.
+LEARNINGS_BACKUP_OK=true
+LEARNINGS_SRC="$HOME/.claude/apex-learnings.md"
+if [ -f "$LEARNINGS_SRC" ]; then
+  if cp "$LEARNINGS_SRC" ".apex/backups/apex-learnings_$TIMESTAMP.md" 2>/dev/null; then
+    # Prune oldest beyond retention=10. Sort by mtime, drop newest 10, rm the rest.
+    # `ls -1t` lists newest first; `tail -n +11` skips the first 10.
+    OLD_BACKUPS=$(ls -1t .apex/backups/apex-learnings_*.md 2>/dev/null | tail -n +11)
+    if [ -n "$OLD_BACKUPS" ]; then
+      echo "$OLD_BACKUPS" | xargs -r rm -f 2>/dev/null
+    fi
+  else
+    echo "⚠️ Failed to back up apex-learnings.md" >&2
+    LEARNINGS_BACKUP_OK=false
+  fi
+fi
+
 # R13-002 (F-302): Observation masking runs FIRST. Mask stale tool-result
 # blocks out of the executor transcript BEFORE Claude Code's /compact step
 # runs (Claude Code invokes /compact AFTER this PreCompact hook completes).
@@ -60,6 +79,9 @@ fi
 
 if [ "$PLAN_BACKUP_OK" = false ]; then
   echo "⚠️ APEX: PLAN.md backup failed — proceeding (recoverable)" >&2
+fi
+if [ "$LEARNINGS_BACKUP_OK" = false ]; then
+  echo "⚠️ APEX: apex-learnings.md backup failed — proceeding (advisory)" >&2
 fi
 
 # STATE.json backup is critical — block compaction if it failed

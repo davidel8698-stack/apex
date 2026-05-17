@@ -161,6 +161,111 @@ If both a trigger rule and an anti-rule fire, the trigger rule wins. Write
 `## Roundtable trigger — <task-id>` section to `DECISIONS.md` naming the
 firing rule(s) and a one-sentence rationale.
 
+## STEP 1.10: Task-Class Classification [M08 / Phase 12.02]
+For each task in PLAN_META.json, assign `task_class` in `{A, B, C, D}`.
+The class drives the per-task-class autonomy ladder in `next.md` (Track
+A = Trusted after 5 clean, Track B = Trusted after 7-8 clean, Track C =
+permanent Supervised, Track D = irreversible — never auto-escalate).
+
+**Source of truth.** `framework/docs/RISK-KEYWORDS.md` is the single
+keyword vocabulary. Match case-insensitive substring against each
+task's `name`, `spec_ref` joined, and `files[]` joined. Code fences
+and block-quote lines are ignored (the file documents the masking).
+
+**Classification rule** (apply in order; conservative-higher wins on
+tie):
+
+1. **D — Irreversible.** `is_irreversible == true` OR `verify_level
+   == "D"` OR any Class D keyword matches (`deploy`, `prod`,
+   `force-push`, `drop table`, `truncate`, `rotate secret`, `email
+   blast`, `terms of service` publication, telemetry-collection
+   change, …). Track D NEVER auto-escalates; the user-approval modal
+   fires before execution.
+2. **C — High risk.** Else if `verify_level == "C"` OR any Class C
+   keyword matches (`auth`, `authentication`, `payment`, `PII`,
+   `schema change`, `migration`, `public API`, `RBAC`, `multi-tenant`,
+   `cross-cutting`, …). Track C is permanent Supervised — no
+   auto-escalation, mandatory plan review.
+3. **A — Low risk.** Else if every match is from the Class A keyword
+   set (`docs:`, `style:`, `lint:`, `format:`, `bump`, `lockfile`,
+   `test fixture`, …) AND `verify_level == "A"`. Track A escalates
+   after 5 clean tasks (rework ≤20%).
+4. **B — Medium risk (default).** Else Track B. Escalates after 7-8
+   clean tasks. The conservative default — when in doubt, choose B
+   rather than A.
+
+**Conservative-default rules** (from RISK-KEYWORDS.md):
+- Multi-match → highest class wins. `style:` (→A) + `auth` (→C) is C.
+- Domain noun beats verb. A template *change* is C (auth surface);
+  an email *blast* is D (mass send).
+- Architect uncertainty → bump up. Sub-threshold classification
+  confidence promotes to the next-higher class.
+- `is_irreversible_now: true` in PLAN_META overrides static class to
+  D at runtime (set on PLAN_META tasks where THIS invocation is
+  irreversible — e.g., a generally-reversible flag flip that THIS
+  time kills live traffic).
+
+**Output.** Write `task_class` (and `is_irreversible_now: false`
+unless dynamically true) into each task object in PLAN_META.json.
+Append a `## Task-class summary` block to `DECISIONS.md` with the A/B/C/D
+counts and any task that crossed class boundaries during classification
+(e.g., bumped from B → C because a Class C keyword matched in `files[]`).
+
+**Auditor review.** After PLAN.md generation, the auditor re-runs the
+keyword match independently and writes to
+`.apex/phases/<phase>/AUDIT-CLASS.json`. If auditor classifies higher
+than architect on any task → bump that task to auditor's class (the
+conservative-higher rule applies symmetrically between classifiers).
+Auditor-lower mismatches feed M16 telemetry for keyword-list tuning,
+but do NOT downgrade architect's classification.
+
+## STEP 1.11: Task-Type Classification [M12 / Phase 12.03]
+For each task in PLAN_META.json, assign `task_type` in `{new_code, bug_fix,
+code_review, refactor, test_writing, frontend}`. The type drives per-task
+context-load profiles in `framework/CONTEXT_BUDGET.default.json` →
+`profiles[task_type]`. Orthogonal to `task_class` (M08) — a task can be
+`task_class=C` AND `task_type=bug_fix`.
+
+**Source of truth.** The task-type vocabulary section of
+`framework/docs/RISK-KEYWORDS.md`. Match keywords against task's `name`,
+`spec_ref`, and `files[]`. Conservative-default rules apply (multi-match
+→ pick by hybrid rule below; uncertainty → default to `new_code`).
+
+**Classification rule** (apply in order):
+
+1. **`bug_fix`** wins over everything else when any of: `bug:`,
+   `fix:`, `regression`, `crash`, `panic`, `wrong result`,
+   `off-by-one`, `null deref` matches. **Hybrid bug-in-new-feature
+   defaults to bug_fix** (smaller context wins; less waste —
+   PLAN.md task 12.03 §10).
+2. **`code_review`** when: `review PR`, `LGTM`, `code review`,
+   `audit`, `walk through changes`.
+3. **`refactor`** when: `refactor:`, `rename`, `extract`, `inline`,
+   `consolidate`, `simplify`, `restructure`, `move to`, `split file`.
+4. **`test_writing`** when: `add test`, `new test`, `test coverage`,
+   `cover edge case`, `integration test`, `e2e test`, `mutation test`,
+   `property test`. Implies `test-architect` pre-load.
+5. **`frontend`** when: `UI`, `component`, `style`, `CSS`,
+   `Tailwind`, `shadcn`, `React`, `Vue`, `Svelte`, `view`, `template`,
+   `layout`, `responsive`, `accessibility`, `a11y`, `WCAG`, `ARIA`.
+   Implies `apex-frontend` module pre-load.
+6. **`new_code`** otherwise (conservative default).
+
+**Output.** Write `task_type` into each task object in PLAN_META.json.
+Append a `## Task-type summary` block to `DECISIONS.md` with the
+new_code / bug_fix / code_review / refactor / test_writing / frontend
+counts.
+
+**Per-profile cache invalidation.** Each profile materializes a
+distinct stable_prefix for the agent prompt — Anthropic prompt caching
+is keyed by exact prefix bytes. Switching profiles mid-session pays the
+prefix-write cost once per profile per model. The trade-off (worse
+cache hit rate vs better context fit) is acceptable per
+R2-C130 (SWE-Pruner 23-38% context reduction improved success
+absolute, not just per-token). See `framework/docs/TASK-TYPE-PROFILES.md`
+for the full mapping table and `framework/docs/PROMPT-CACHING.md` for
+the cache-key contract.
+
 ## STEP 2: Generate WAVE_MAP.json [שיפור 22]
 Analyze task dependencies within each phase:
 - Tasks with NO dependencies on other tasks in same phase → Wave 1

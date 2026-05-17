@@ -54,6 +54,50 @@
     "hard_rotate"
   ],
   "capacity_tokens": 200000,
+  "profiles": {
+    "_doc": "M12 task-type profiles (Phase 12.03). Each profile names the content slices a given task_type should load into the executor prompt and the slices it should EXCLUDE. Architect Step 1.11 assigns task_type per task; next.md loads `profiles[task_type]` merged over `profiles.default` when invoking executor / specialist. See framework/docs/TASK-TYPE-PROFILES.md.",
+    "default": {
+      "include": ["task_xml", "acceptance_criteria", "spec_excerpts", "files_modified"],
+      "exclude": [],
+      "preload_modules": []
+    },
+    "new_code": {
+      "_purpose": "Greenfield implementation — needs architecture context + interface contracts.",
+      "include": ["architecture_docs", "interface_contracts", "style_guide", "code_examples"],
+      "exclude": ["full_implementation_history"],
+      "preload_modules": []
+    },
+    "bug_fix": {
+      "_purpose": "Localized correction — needs the failure signal, not the system.",
+      "include": ["failing_tests", "stack_traces", "execution_path", "minimal_dependencies"],
+      "exclude": ["broad_architecture_docs", "unrelated_modules"],
+      "preload_modules": []
+    },
+    "code_review": {
+      "_purpose": "Adversarial review — clean-room contract enforced architecturally; profile reinforces.",
+      "include": ["spec_excerpts", "diff", "test_results", "surrounding_functions"],
+      "exclude": ["implementer_reasoning", "executor_summary_md"],
+      "preload_modules": []
+    },
+    "refactor": {
+      "_purpose": "Shape-preserving change — needs the dependency graph and impact surface.",
+      "include": ["dependency_graph", "impact_set", "current_tests"],
+      "exclude": ["unrelated_files", "broad_architecture_docs"],
+      "preload_modules": []
+    },
+    "test_writing": {
+      "_purpose": "Test authoring — needs implementation contracts and the test-architect TEST_PLAN.",
+      "include": ["impl_contracts", "test_conventions", "existing_tests", "coverage_report"],
+      "exclude": ["broad_architecture_docs"],
+      "preload_modules": ["test-architect"]
+    },
+    "frontend": {
+      "_purpose": "UI work — design context + component hierarchy + style guide; backend excluded.",
+      "include": ["design_context", "component_hierarchy", "style_guide", "design_tokens"],
+      "exclude": ["backend_modules", "database_schema", "infra_config"],
+      "preload_modules": ["apex-frontend"]
+    }
+  },
   "auto_continuity": {
     "_doc": "v7.1 Auto-Continuity Layer — autonomous session continuity for unbounded long-running APEX projects. All fields optional with documented defaults.",
     "bun_memory_threshold_mb": 2048,

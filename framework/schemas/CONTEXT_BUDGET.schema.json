@@ -85,6 +85,23 @@
       "maximum": 1000000,
       "description": "Effective context window capacity in tokens. Default 200000."
     },
+    "profiles": {
+      "type": "object",
+      "description": "M12 task-type profiles (Phase 12.03). Each named profile is a content-include/exclude bundle keyed by PLAN_META task.task_type. Optional — when absent, the executor / specialist falls back to the default zone allocation. The architect's Step 1.11 assigns task_type per task; next.md loads `profiles[task_type]` merged over `profiles.default` when present.",
+      "additionalProperties": {
+        "$ref": "#/definitions/profile"
+      },
+      "properties": {
+        "_doc": { "type": "string" },
+        "default": { "$ref": "#/definitions/profile" },
+        "new_code": { "$ref": "#/definitions/profile" },
+        "bug_fix": { "$ref": "#/definitions/profile" },
+        "code_review": { "$ref": "#/definitions/profile" },
+        "refactor": { "$ref": "#/definitions/profile" },
+        "test_writing": { "$ref": "#/definitions/profile" },
+        "frontend": { "$ref": "#/definitions/profile" }
+      }
+    },
     "auto_continuity": {
       "type": "object",
       "description": "v7.1 Auto-Continuity Layer thresholds (memory-watchdog, turn-checkpoint, decision-gate-default). Optional — absent on projects predating Auto-Continuity Layer; consumers MUST fall back to documented defaults.",
@@ -150,6 +167,18 @@
     }
   },
   "definitions": {
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "A named task-type content-load profile (M12 / Phase 12.03). include[] names slice categories to load (e.g., 'architecture_docs', 'failing_tests'); exclude[] names slices to omit; preload_modules[] names framework/modules/<name> directories whose agent prompts should be preloaded.",
+      "properties": {
+        "_purpose": { "type": "string" },
+        "_doc": { "type": "string" },
+        "include": { "type": "array", "items": { "type": "string" } },
+        "exclude": { "type": "array", "items": { "type": "string" } },
+        "preload_modules": { "type": "array", "items": { "type": "string" } }
+      }
+    },
     "zone": {
       "type": "object",
       "additionalProperties": false,

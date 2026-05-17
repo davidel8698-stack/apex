@@ -143,27 +143,51 @@ If "WARNING_OVERFLOW":
   ROTATION_ACTION=$(apex_rotation_decide ".apex/STATE.json" "$HOME/.claude/CONTEXT_BUDGET.default.json")
   Case "$ROTATION_ACTION" in
     proactive_compact)
-      # Soft compaction. Routes through pre-compact.sh which invokes
-      # observation-mask.sh first (R13-002 mask-before-compact sequence),
-      # then falls through to /compact as the safety net.
+      # Soft compaction. M14 (Phase 12.08): pre-rotation-snapshot runs FIRST
+      # (4 atomic artifacts: STATE / DECISIONS flush / git tag / ROTATION-NOTE).
+      # On snapshot failure (exit != 0) abort rotation — safe-or-noop.
+      # Then pre-compact.sh runs observation-mask.sh + /compact as before.
       bash ~/.claude/hooks/session-log.sh "rotate" "סיבוב הקשר יזום (proactive) — ${ESTIMATED_PCT}% שימוש"
-      bash ~/.claude/hooks/pre-compact.sh || true
-      Save state, run /compact, update STATE.session.total_context_rotations++, STATE.session.tasks_since_last_rotation = STATE.session.tasks_completed
+      bash ~/.claude/hooks/pre-rotation-snapshot.sh "proactive_compact"
+      SNAPSHOT_EXIT=$?
+      If SNAPSHOT_EXIT != 0:
+        bash ~/.claude/hooks/session-log.sh "rotate_abort" "pre-rotation-snapshot failed (exit ${SNAPSHOT_EXIT}); rotation skipped"
+        "🚫 Rotation aborted: pre-rotation snapshot failed. Continuing without compaction."
+        # Continue with the task — rotation was a hint, not a requirement.
+      Else:
+        bash ~/.claude/hooks/pre-compact.sh || true
+        Save state, run /compact, update STATE.session.total_context_rotations++, STATE.session.tasks_since_last_rotation = STATE.session.tasks_completed
       ;;
     warn_and_compact)
       # Event-log warning + soft compaction (same routing as proactive).
       bash ~/.claude/hooks/session-log.sh "rotate" "אזהרה: ${ROTATION_ACTION} — ${ESTIMATED_PCT}% שימוש"
-      bash ~/.claude/hooks/pre-compact.sh || true
-      Save state, run /compact, update STATE.session.total_context_rotations++, STATE.session.tasks_since_last_rotation = STATE.session.tasks_completed
+      bash ~/.claude/hooks/pre-rotation-snapshot.sh "warn_and_compact"
+      SNAPSHOT_EXIT=$?
+      If SNAPSHOT_EXIT != 0:
+        bash ~/.claude/hooks/session-log.sh "rotate_abort" "pre-rotation-snapshot failed (exit ${SNAPSHOT_EXIT}); rotation skipped"
+        "🚫 Rotation aborted: pre-rotation snapshot failed. Continuing without compaction."
+      Else:
+        bash ~/.claude/hooks/pre-compact.sh || true
+        Save state, run /compact, update STATE.session.total_context_rotations++, STATE.session.tasks_since_last_rotation = STATE.session.tasks_completed
       ;;
     hard_rotate)
-      # Hard rotation. Take an atomic pre-rotation snapshot via
-      # pre-task-snapshot + turn-checkpoint, then route to /apex:resume.
+      # Hard rotation. M14: pre-rotation-snapshot FIRST (atomic 4-artifact
+      # capture). On snapshot success, proceed with pre-task-snapshot +
+      # turn-checkpoint and route to /apex:resume. On snapshot failure,
+      # abort — never lose state.
       bash ~/.claude/hooks/session-log.sh "rotate" "סיבוב הקשר קשיח (hard_rotate) — ${ESTIMATED_PCT}% שימוש"
-      bash ~/.claude/hooks/pre-task-snapshot.sh || true
-      bash ~/.claude/hooks/turn-checkpoint.sh || true
-      "⚠️ Hard rotation. Run /apex:resume to continue."
-      STOP.
+      bash ~/.claude/hooks/pre-rotation-snapshot.sh "hard_rotate"
+      SNAPSHOT_EXIT=$?
+      If SNAPSHOT_EXIT != 0:
+        bash ~/.claude/hooks/session-log.sh "rotate_abort" "pre-rotation-snapshot failed (exit ${SNAPSHOT_EXIT}); hard rotation refused"
+        "🚫 Hard rotation REFUSED: pre-rotation snapshot failed. State not preserved; continuing in-session."
+        # Do not STOP — falling through to the next task is safer than
+        # aborting work with no snapshot.
+      Else:
+        bash ~/.claude/hooks/pre-task-snapshot.sh || true
+        bash ~/.claude/hooks/turn-checkpoint.sh || true
+        "⚠️ Hard rotation. Run /apex:resume to continue."
+        STOP.
       ;;
     noop|*)
       # No trigger fired. Fall back to a minimal /compact pass for the
@@ -504,22 +528,76 @@ If STATE.spec_version is non-empty AND file .apex/SPEC.md exists:
     (Advisory only — do not block execution)
 
 ## STEP G: Autonomy Check + Execute
-Read task verify_level from PLAN_META.json
+Read task verify_level, task_class, is_irreversible, is_irreversible_now from PLAN_META.json.
 
 ## STRICT MODE OVERRIDE
 If STATE.strict_mode == true:
   Override verify_level to "D" for this task (runtime only — PLAN_META unchanged).
-  bash ~/.claude/hooks/session-log.sh "strict_mode" "STRICT MODE — משימה ${NEXT_UNIT} מוגברת ל-verify_level D"
+  Override task_class to "D" for this task (runtime only).
+  bash ~/.claude/hooks/session-log.sh "strict_mode" "STRICT MODE — משימה ${NEXT_UNIT} מוגברת ל-verify_level D + task_class D"
 
 ## DECISION MODE ENFORCEMENT [F-005]
-Read task decision_mode from PLAN_META.json (default: "replacement" if field absent)
+Read task decision_mode from PLAN_META.json (default: "replacement" if field absent).
 If decision_mode == "collaborator":
   EFFECTIVE_LEVEL = 0
   bash ~/.claude/hooks/session-log.sh "decision_mode" "COLLABORATOR MODE — task ${NEXT_UNIT} forces approval (decision_mode=collaborator)"
   Skip to approval prompt below.
-Else (decision_mode == "replacement" or absent):
+
+## TRACK D DYNAMIC OVERRIDE [M08 / Phase 12.02]
+If is_irreversible_now == true:
+  # Architect flagged this specific invocation as irreversible at runtime
+  # (e.g., a generally reversible flag flip that THIS time kills live traffic).
+  # Force Track D path regardless of static task_class.
+  EFFECTIVE_TASK_CLASS = "D"
+  bash ~/.claude/hooks/session-log.sh "track_d_dynamic" "Task ${NEXT_UNIT} is_irreversible_now=true — Track D enforced this invocation"
+Else:
+  EFFECTIVE_TASK_CLASS = task_class (default "B" when field absent — conservative)
+
+## AUTONOMY LADDER LOOKUP [M08 / Phase 12.02]
+# v8 model: per-task-class ladder with hard caps + de-escalation triggers.
+# v7 by_verify_level retained for backward compatibility — when STATE.autonomy.by_task_class
+# is absent (legacy STATE), fall back to by_verify_level so pre-v8 STATE files keep working.
+If STATE.autonomy.by_task_class exists AND EFFECTIVE_TASK_CLASS is non-empty:
+  TASK_AUTONOMY = STATE.autonomy.by_task_class[EFFECTIVE_TASK_CLASS]
+  # Per-class caps:
+  #   A → cap 2 (Trusted after 5 clean — full auto)
+  #   B → cap 2 (Trusted after 7-8 clean — full auto)
+  #   C → cap 0 (permanent Supervised — never auto-escalate, mandatory plan review)
+  #   D → cap 0 (NO auto-escalation EVER; hard cap)
+  case "$EFFECTIVE_TASK_CLASS" in
+    A) AUTONOMY_CAP=2 ;;
+    B) AUTONOMY_CAP=2 ;;
+    C) AUTONOMY_CAP=0 ;;
+    D) AUTONOMY_CAP=0 ;;
+  esac
+  EFFECTIVE_LEVEL=$(min $TASK_AUTONOMY.level $AUTONOMY_CAP)
+Else:
+  # v7 fallback path — no by_task_class in STATE, use by_verify_level.
   TASK_AUTONOMY = STATE.autonomy.by_verify_level[verify_level]
   EFFECTIVE_LEVEL = min(TASK_AUTONOMY.level, cap) where caps: A→2, B→2, C→1, D→0
+
+## TRACK D MODAL [M08.1 / Phase 12.02]
+If EFFECTIVE_TASK_CLASS == "D":
+  # Track D NEVER auto-executes. Fire the plain-language modal — batching
+  # + rate-limiting handled by the hook. The hook returns:
+  #   exit 0 → user said "כן" (yes, proceed) — set EFFECTIVE_LEVEL=1
+  #   exit 1 → user said "לא" (no, stop) — set STATE.status="pending_approval", STOP
+  #   exit 2 → modal deferred to digest (rate-limited or batched) — same as exit 1, STOP
+  #   exit 3 → hook unavailable or modal infrastructure failed — treat as exit 1 (fail safe to Supervised)
+  bash ~/.claude/hooks/track-d-modal.sh "${NEXT_UNIT}" "${task.description:-${NEXT_UNIT}}" "${is_irreversible_now:-false}"
+  MODAL_EXIT=$?
+  case "$MODAL_EXIT" in
+    0) EFFECTIVE_LEVEL=1 ;;  # User approved — proceed this once. Does not escalate ladder.
+    1|2)
+      STATE.status = "pending_approval"
+      bash ~/.claude/hooks/session-log.sh "track_d_modal" "Task ${NEXT_UNIT} Track D modal declined or deferred (exit ${MODAL_EXIT})"
+      STOP.
+      ;;
+    *)
+      bash ~/.claude/hooks/session-log.sh "track_d_modal_error" "Modal hook unavailable (exit ${MODAL_EXIT}) — failing safe to Supervised"
+      EFFECTIVE_LEVEL=0  # Show approval prompt below.
+      ;;
+  esac
 
 If EFFECTIVE_LEVEL == 0: show plan + "Proceed? (y/n/edit)"
 If EFFECTIVE_LEVEL >= 1: execute automatically
@@ -651,6 +729,28 @@ PASS:
   If consecutive_successes >= 5: level++ (up to cap), reset counter.
     Append P3 notification: "Autonomy escalated for [level]"
 
+  ## PER-TASK-CLASS LADDER UPDATE [M08 / Phase 12.02]
+  # Update the v8 by_task_class counters in parallel with by_verify_level.
+  # Per-class promotion thresholds differ: A=5, B=7-8 (we use 7), C/D=cap=0 (no promotion ever).
+  If STATE.autonomy.by_task_class exists AND task_class is non-empty:
+    STATE.autonomy.by_task_class[task_class].consecutive_successes++
+    case "$task_class" in
+      A) PROMOTION_THRESHOLD=5; CLASS_CAP=2 ;;
+      B) PROMOTION_THRESHOLD=7; CLASS_CAP=2 ;;
+      C) PROMOTION_THRESHOLD=999; CLASS_CAP=0 ;;  # Track C never auto-escalates
+      D) PROMOTION_THRESHOLD=999; CLASS_CAP=0 ;;  # Track D hard cap
+    esac
+    If STATE.autonomy.by_task_class[task_class].consecutive_successes >= PROMOTION_THRESHOLD AND
+       STATE.autonomy.by_task_class[task_class].level < CLASS_CAP:
+      STATE.autonomy.by_task_class[task_class].level++
+      STATE.autonomy.by_task_class[task_class].consecutive_successes = 0
+      Append P3 notification: "Task-class ${task_class} autonomy escalated to level ${STATE.autonomy.by_task_class[task_class].level}"
+      bash ~/.claude/hooks/session-log.sh "autonomy_escalate" "Task-class ${task_class}: level→${STATE.autonomy.by_task_class[task_class].level}"
+
+    # De-escalation reset on clean pass: clear high_rework_streak and critic_disagreements_recent.
+    STATE.autonomy.by_task_class[task_class].high_rework_streak = 0
+    # critic_disagreements_recent is time-windowed (4h), decay handled out-of-band — don't reset here.
+
   ## SESSION CHECKPOINT
   If STATE.session exists:
     TASK_TAG="apex/task-${current_phase}-${NEXT_UNIT}-complete"
@@ -763,6 +863,32 @@ PARTIAL:
 FAIL:
   ATTEMPTS = STATE.reflexion.current_unit_attempts + 1
   STATE.autonomy.by_verify_level[verify_level].consecutive_successes = 0
+
+  ## PER-TASK-CLASS DE-ESCALATION [M08 / Phase 12.02]
+  # De-escalation triggers (any one → immediate level reset):
+  #   - critical regression (RESULT.json critical flag)
+  #   - security vulnerability (specialist=security AND verify_level=D AND verdict=FAIL)
+  #   - 2 consecutive high-rework (>50% manual correction in last 2 attempts)
+  #   - 2-3 critic disagreements within 4h short window
+  If STATE.autonomy.by_task_class exists AND task_class is non-empty:
+    STATE.autonomy.by_task_class[task_class].consecutive_successes = 0
+    HIGH_REWORK = $(jq -r '.high_rework // false' "${RESULT_JSON}")  # set by executor when >50% of diff is manual correction
+    If HIGH_REWORK == "true":
+      STATE.autonomy.by_task_class[task_class].high_rework_streak++
+    CRITIC_DISAGREE = $(jq -r '.critic_disagreement // false' "${CRITIC_MD_SIDECAR}")  # set by critic when partial-confidence
+    If CRITIC_DISAGREE == "true":
+      STATE.autonomy.by_task_class[task_class].critic_disagreements_recent++
+    # Trigger conditions:
+    If CRITICAL == true OR
+       STATE.autonomy.by_task_class[task_class].high_rework_streak >= 2 OR
+       STATE.autonomy.by_task_class[task_class].critic_disagreements_recent >= 2:
+      OLD_LEVEL=${STATE.autonomy.by_task_class[task_class].level}
+      STATE.autonomy.by_task_class[task_class].level = 0
+      STATE.autonomy.by_task_class[task_class].high_rework_streak = 0
+      STATE.autonomy.by_task_class[task_class].critic_disagreements_recent = 0
+      If OLD_LEVEL > 0:
+        bash ~/.claude/hooks/session-log.sh "autonomy_deescalate" "Task-class ${task_class}: level ${OLD_LEVEL}→0 (trigger: critical=${CRITICAL}, high_rework_streak=${STATE.autonomy.by_task_class[task_class].high_rework_streak}, critic_disagreements=${STATE.autonomy.by_task_class[task_class].critic_disagreements_recent})"
+        Append P1 notification: "🔻 Autonomy de-escalated for task-class ${task_class} (back to Supervised)"
 
   ## SESSION UPDATE (FAIL)
   If STATE.session exists:
@@ -883,25 +1009,53 @@ PASS:
   If STATE.session exists:
     bash ~/.claude/hooks/session-log.sh "phase_complete" "שלב ${current_phase} הושלם — ${N} משימות, ${STATE.session.tasks_failed} כישלונות"
 
-  ## COMPREHENSION GATE
+  ## COMPREHENSION GATE [M09 / Phase 12.05]
+  # v8 risk-based generation-then-comprehension gate. Replaces the v7
+  # LOC-based gate (top 3 largest diffs → y/explain/skip). The new gate:
+  #   - selects files by CRITICALITY (high-risk-domain keywords from
+  #     RISK-KEYWORDS.md + critic-disagreed files + central-architectural
+  #     files) — NOT by LOC
+  #   - scales DEPTH by task_class: A=0 (skipped), B=1 file, C/D=2 files + 1 integration point
+  #   - mandates the 4-question explain protocol (R5 §3 Anthropic 86% recall vs 24% baseline)
+  #   - fires at phase boundary OR after 60 min mid-phase, whichever first
+  #   - allows 'explain' / 'defer' / 'skip(--force)'; skip emits cognitive_debt event
+  #   - 'skip' is STRUCTURALLY UNAVAILABLE for Track D — the hook refuses
   STATE.comprehension_gates.current_gate_required = "phase_" + current_phase
-  LARGEST_DIFFS = top 3 changed files by diff size since phase start
-  Render soft frame (Section 3.C) with:
-    "▽  COMPREHENSION GATE — Phase [N]
-     Largest changes:
-       ● [file1] — [one-sentence explanation]
-       ● [file2] — [one-sentence explanation]
-       ● [file3] — [one-sentence explanation]
-     Does this match your understanding?   (y / explain / skip)"
 
-  'y' → record, mark passed. 'explain' → user writes understanding, record (deep mode).
-  'skip' → record, mark skipped. P2: "Cognitive debt risk." NOT available for verify_level D.
+  # Resolve effective task_class for THIS phase's most-recent task as the
+  # gate driver (the phase boundary fires after the last task; that task's
+  # task_class drives gate depth). Fallback to verify_level when M08
+  # task_class absent (legacy PLAN_META).
+  GATE_TRACK="${task_class:-${verify_level}}"
 
-  ## COMPREHENSION GATE STATE PERSISTENCE
-  If response == 'y' or 'explain':
-    STATE.comprehension_gates["phase_" + current_phase] = true
-  If response == 'skip':
-    STATE.comprehension_gates["phase_" + current_phase] = false
+  # Invoke the new hook. The hook handles file selection (criticality
+  # scoring), prompt rendering, response capture, and STATE.history append.
+  bash ~/.claude/hooks/comprehension-gate.sh "${current_phase}" "${GATE_TRACK}"
+  GATE_EXIT=$?
+
+  ## COMPREHENSION GATE STATE PERSISTENCE [M09 / Phase 12.05]
+  # comprehension-gate.sh writes STATE.comprehension_gates.history[].
+  # The v7 per-phase boolean is kept for backward compat with downstream
+  # consumers that still read it.
+  case "$GATE_EXIT" in
+    0)
+      # 'explain' or 'defer' — both pass the gate (defer = pending,
+      # auto-fires at next boundary).
+      STATE.comprehension_gates["phase_" + current_phase] = true
+      ;;
+    1)
+      # Skip without --force OR Track D skip attempt (structurally
+      # prohibited). Mark gate as failed.
+      STATE.comprehension_gates["phase_" + current_phase] = false
+      bash ~/.claude/hooks/session-log.sh "comprehension_gate_fail" "Phase ${current_phase} gate failed or refused"
+      ;;
+    *)
+      # Hook infrastructure error — log + treat as pending (do not
+      # advance without explicit user decision).
+      bash ~/.claude/hooks/session-log.sh "comprehension_gate_error" "Phase ${current_phase} hook returned exit ${GATE_EXIT}"
+      STATE.comprehension_gates["phase_" + current_phase] = false
+      ;;
+  esac
   STATE.comprehension_gates.current_gate_required = null
 
   "🔄 RECOMMENDED: /apex:resume for fresh context. Or 'continue'."

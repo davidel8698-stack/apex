@@ -8,6 +8,93 @@ Read .apex/STATE.json → proposals_mode.
 If proposals_mode == true: NEVER ask open-ended questions in this command.
 Instead, present numbered proposals with a recommended default marked [recommended].
 
+## STATUS VIEW SELECTION [M11 / Phase 12.07]
+Resolve which view to render in this order:
+
+1. **Argument scan.** If the invocation includes `--verbose` →
+   STATUS_VIEW="verbose". If it includes `--detailed` →
+   STATUS_VIEW="detailed". Otherwise STATUS_VIEW="default".
+2. **User-preference override.** If `.apex/STATUS_PREFS.json` exists
+   and its `default_view` field is one of `default | detailed |
+   verbose`, and the invocation did NOT pass a `--verbose` /
+   `--detailed` flag, set STATUS_VIEW to the preference.
+   **CLI flag always wins over saved preference** (this rule resolves
+   the precedence ambiguity — `--verbose` overrides a saved
+   `default_view: "default"`, never the reverse).
+3. **Auto-surface on anomaly.** When STATUS_VIEW=="default" AND
+   ANY of the following hold, promote STATUS_VIEW to "detailed"
+   and append an `🔔 anomaly auto-surfaced` line at the top of the
+   output. The promotion is persistent for THIS invocation only.
+   - `STATE.session.drift_indicators.spec_drift_count > 0`
+   - `STATE.session.drift_indicators.circuit_breaker_triggers > 0`
+   - `STATE.session.drift_indicators.low_confidence_results > 0`
+   - `STATE.session.consecutive_failures > 0`
+   - `STATE.quality.current_drift_pct > 5` when M16 wires this field
+   - Most-recent event-log.jsonl entry has `severity == "CRITICAL"`
+     (M10 / Phase 12.06 wires the severity tier).
+4. **Render branch.**
+   - STATUS_VIEW=="default" → render the **5-SIGNAL DEFAULT VIEW**
+     block below ONLY. Skip the full cockpit + context health
+     blocks entirely.
+   - STATUS_VIEW=="detailed" → render the 5-signal header AS A
+     SUMMARY, then the Context Health block, then the cockpit (full
+     autonomy ladder + DORA + autopilot panels). Skip the LEARNINGS
+     LIVING-EVIDENCE deep block.
+   - STATUS_VIEW=="verbose" → render everything, as today (no
+     change from pre-M11 behavior).
+
+## 5-SIGNAL DEFAULT VIEW (M11)
+When STATUS_VIEW=="default", emit ONLY these 5 lines (no frame,
+plain ASCII, ≤80 cols). Each maps to a STATE.json field; missing
+fields render `N/A`.
+
+```
+Phase {STATE.current_phase}/{STATE.phases_total} — {phase_goal_from_PLAN.md_first_line_or_dash}
+Autonomy: {autonomy_label}   ({autonomy_reason})
+Task: {STATE.current_unit} — {task_status_label}
+Last verify: {last_verdict_label}   ({verify_link_or_dash})
+Context: {gauge_pct}% {gauge_glyph}   ({gauge.status_label})
+```
+
+Field resolution:
+- `phase_goal_from_PLAN.md_first_line_or_dash` — grep the first
+  `## Phase goal` line from `.apex/phases/{current_phase}/PLAN.md`
+  if present; otherwise `—`.
+- `autonomy_label` — derive from `STATE.autonomy.by_task_class` if
+  present, else `by_verify_level`. Format: `Trusted for {class}
+  ({consecutive_successes} clean)` when level>=1; `Supervised
+  ({class})` when level==0.
+- `autonomy_reason` — one-line plain-language summary
+  ("8 clean B-runs", "permanent Supervised — Track C", etc.).
+- `task_status_label` — derive from `STATE.status` mapped to
+  plain language: `active` → `Building`, `critic_needed` →
+  `Reviewing`, `pending_approval` → `Waiting for review`,
+  `blocked` → `Blocked`, etc.
+- `last_verdict_label` — read the most recent
+  `.apex/phases/*/[unit]-CRITIC.md` `Verdict:` line, fallback to
+  `—`.
+- `gauge_pct`, `gauge_glyph`, `gauge.status_label` — read from the
+  same `context-monitor.sh --health-json` call documented in the
+  CONTEXT HEALTH BLOCK section below.
+
+If the auto-surface trigger fired in step 3, prepend a single
+`🔔 anomaly auto-surfaced: {reason_string}` line before the 5
+signals AND fall through to STATUS_VIEW=="detailed" rendering
+(skip back to the cockpit block).
+
+After the 5 signals (and only when STATUS_VIEW=="default"), append
+one tip line: `(run /apex:status --detailed for the full panel)`.
+Then skip directly to the signature line. Do NOT render the Context
+Health block, the Cockpit, the Glass Cockpit header, or the
+inline-hint block.
+
+## STATUS_PREFS.json (optional, M11)
+Format: `{ "default_view": "default" | "detailed" | "verbose" }`.
+Location: `.apex/STATUS_PREFS.json`. The file is OPTIONAL; absence
+means STATUS_VIEW resolution falls through to argument scan +
+anomaly detection. Schema-wise, the file is treated as a free-form
+JSON object with one known key; unknown keys are ignored.
+
 ## VISUAL IDENTITY
 Read ~/.claude/apex-branding.md before producing output.
 Render Section 6 (The Cockpit Dashboard) verbatim — substitute placeholders with live values from STATE.json.

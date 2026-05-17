@@ -248,6 +248,172 @@ each pending claim-timeline when a deadline is within 90 days).
 
 ---
 
+## DORA measurement engine (M18.1) — implementation contract
+
+This section is the operational counterpart to the four-metric
+definitions above. It records the **one definition** the measurement
+engine commits to per metric (DORA literature offers multiple), the
+**rejected alternatives** (so a future reader knows the choice was
+deliberate, not accidental), and the **heuristic limitations** the
+engine necessarily inherits from working off a git log alone.
+
+### Engine surface
+
+- **Collector:** `framework/hooks/dora-collect.sh` — extracts the
+  quartet from `git log` + STATE events. Idempotent, safe-or-noop.
+- **Output:** `.apex/DORA.json` — schema-coherent JSON written
+  atomically (rename-temp pattern).
+- **Configurable inputs (env):**
+  - `APEX_DORA_DEPLOY_TAG_PATTERN` (default: `release/*`)
+  - `APEX_DORA_DEPLOY_TAG_PATTERN_ALT` (default: `deploy/*`) — second
+    accepted pattern; either matches.
+  - `APEX_DORA_WINDOW_DAYS` (default: `28`) — rolling window.
+- **Renderers:** `/apex:milestone-summary` (display), `/apex:ship`
+  (telemetry delta — forward-ref to M16.1 wiring).
+- **Anonymization:** the engine writes raw values to `.apex/DORA.json`
+  (local-only). Any telemetry upload is M16.1's surface and applies
+  the anonymization filter there. M18.1 itself does not transmit.
+
+### Per-metric committed definition + rejected alternatives
+
+**1. Deployment Frequency (DF) — committed definition.**
+- *Engine measurement:* count of tags matching the deploy-tag patterns
+  (`release/*` or `deploy/*` by default), per the rolling
+  `APEX_DORA_WINDOW_DAYS` window, normalized to deploys-per-week.
+- *Rejected alternative:* count of `/apex:ship` invocations from
+  `.apex/event-log.jsonl`. **Rejected because** projects often deploy
+  without `/apex:ship` (manual tag push, CI pipeline), so tag-counting
+  is the more robust ground truth. The `/apex:ship` event count is a
+  forward-ref enrichment for M16.1 telemetry but not the headline
+  number.
+- *Rejected alternative:* count of merges to `main`. **Rejected
+  because** merge-to-main and deploy are not synonymous (trunk-based
+  flows merge many times per deploy; release-branch flows merge once
+  per deploy). Tag count is the deploy signal both flows agree on.
+
+**2. Lead Time for Changes (LT) — committed definition.**
+- *Engine measurement:* for each deploy tag in the window, find the
+  earliest commit on the branch (or commit-ancestry chain ending at
+  the tag) that is not already an ancestor of the previous deploy
+  tag. Lead time = `tag_commit_time - first_new_commit_time`.
+  Aggregated as the **median** across deploys in the window.
+- *Rejected alternative:* time from PR open to PR merge. **Rejected
+  because** PR metadata is not in `git log`, and the engine commits to
+  working from `git log` alone (portability across hosting providers).
+  PR-aware enrichment is a future provider-specific module.
+- *Rejected alternative:* time from first-ever-commit-on-branch to
+  tag. **Rejected because** long-lived branches inflate lead time
+  artificially; the "not-already-shipped" filter is what makes the
+  metric reflect lead time *for this change*.
+
+**3. Change Failure Rate (CFR) — committed definition.**
+- *Engine measurement:* over the rolling window, CFR = `count(commit
+  subject prefixed with revert / hotfix / rollback) / count(total
+  commits)`. Per-commit, not per-deploy. The numerator counts
+  subject-line prefix matches (case-insensitive, word-boundary).
+- *Rejected alternative:* per-deploy CFR (incidents per deploy).
+  **Rejected because** per-deploy requires a deploy-to-incident
+  causality link that the git log does not carry. The per-commit
+  ratio is a coarser proxy but is **falsifiable from `git log`
+  alone**, which is the engine's portability contract. The headline
+  CLAIMS-MEASUREMENT.md DORA-claim section above uses the per-ship
+  definition for the *aspirational target*; the engine reports the
+  per-commit proxy and labels the difference explicitly in
+  `.apex/DORA.json` (field: `cfr_definition: "per_commit_proxy"`).
+- *Rejected alternative:* parse commit *body* (not just subject) for
+  failure keywords. **Rejected because** false-positive rate
+  ballooned in dogfooding (commit bodies legitimately discuss past
+  reverts). Subject-prefix match is the precision-favoring choice.
+
+**4. Mean Time To Restore (MTTR) / Time-to-Restore Service —
+committed heuristic + documented limitations.**
+- *Engine measurement (heuristic):* for each commit whose subject
+  starts with `revert ` / `hotfix ` / `rollback `, restore time =
+  `next_forward_tag_time - failing_commit_time`, where
+  `next_forward_tag_time` is the earliest deploy-pattern tag whose
+  commit is a descendant of the failing commit. Aggregated as the
+  **median** across CFR-counted incidents in the window.
+- *Heuristic limitations (must be documented to the consumer):*
+  1. **Tag-as-restore proxy.** "Restore" in DORA's original sense is
+     "service restored to users". The engine cannot observe user
+     impact; it proxies "restore" with "next forward deploy tag".
+     For projects that deploy continuously, this is close. For
+     projects that deploy weekly, this overestimates MTTR
+     by up to one deploy-cycle.
+  2. **Revert-without-redeploy gap.** A revert merged to `main` but
+     not yet tagged is invisible to the heuristic until the next
+     tag — MTTR appears longer than the engineering reality.
+  3. **No incident-detection signal.** The engine treats the first
+     `revert/hotfix/rollback` commit as the incident-start timestamp.
+     In practice, the incident started earlier (when the user-visible
+     failure began). Engine MTTR is therefore a **lower bound** on
+     true MTTR, not an estimate of it.
+  4. **Ambiguous ownership.** A revert may target an older deploy,
+     not the most recent one. The engine attributes restore time to
+     the failing commit it can identify (subject-line revert),
+     not to the upstream root-cause commit.
+- *Rejected alternative:* parse PR-close-time labelled `incident`.
+  **Rejected because** non-portable across hosting providers (same
+  reason as LT). PR-aware enrichment is a future module.
+- *Rejected alternative:* read incident-management API
+  (PagerDuty / Opsgenie). **Rejected because** out-of-scope for an
+  in-repo git-log engine; cross-system integration belongs in M16.1
+  telemetry's optional enrichment layer.
+
+### How this falsifies the claim
+
+The DORA claim ("The First Framework That Improves DORA") is
+**falsifiable** by this engine because:
+
+1. The four metrics are computed from `git log` alone — no
+   self-reported survey data, no opaque vendor API.
+2. The CFR proxy and MTTR heuristic are documented above with their
+   exact biases and direction of error (CFR is per-commit not
+   per-deploy; MTTR is a lower bound). A Q1 2027 cohort report can
+   either confirm improvement against the DORA 2024 -7.2% baseline
+   or trigger the 30-day rephrase clock per the Honesty Contract.
+3. The engine's output schema (`.apex/DORA.json`) is stable and
+   versioned (field `schema_version`), so longitudinal aggregation
+   across the N≥10-team cohort is well-defined.
+4. **Non-engineering precondition:** N≥10 teams enrolled in opt-in
+   telemetry. This is a project-management precondition, not an
+   engineering deliverable; M18.1 does not block on it.
+
+### `.apex/DORA.json` schema (v1)
+
+```json
+{
+  "schema_version": 1,
+  "generated_at": "<UTC ISO-8601>",
+  "window_days": 28,
+  "deploy_tag_patterns": ["release/*", "deploy/*"],
+  "deployment_frequency": {
+    "deploys_in_window": <int|null>,
+    "deploys_per_week": <float|null>
+  },
+  "lead_time": {
+    "median_seconds": <int|null>,
+    "sample_size": <int>
+  },
+  "change_failure_rate": {
+    "ratio": <float|null>,
+    "numerator": <int>,
+    "denominator": <int>,
+    "cfr_definition": "per_commit_proxy"
+  },
+  "mean_time_to_restore": {
+    "median_seconds": <int|null>,
+    "sample_size": <int>,
+    "heuristic": "next_forward_tag_after_revert"
+  }
+}
+```
+
+Any field reads `null` when the input data is insufficient
+(greenfield repo, no tags, etc.). The engine never invents a number.
+
+---
+
 ## Update protocol
 
 This file is updated when:

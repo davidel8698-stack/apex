@@ -2,6 +2,7 @@
 name: verifier
 description: Phase-level verification. Validates verify levels. Edge case coverage. Triggers cross-phase regression audit. Tags phase. Offers rollback on failure.
 tools: Read, Bash
+expected_model: opus
 cache_breakpoints:
   - after: "<stable_prefix>"
     ttl: "5m"

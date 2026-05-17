@@ -180,6 +180,44 @@ if [ -f "$AGENT_MD" ]; then
       ISSUES+=("agent-md-missing-section: '$section' header not found")
     fi
   done
+
+  # --- M04 (Phase 12.01): expected_model frontmatter advisory ---
+  # If the agent declares `expected_model:`, warn (do NOT fail) when it
+  # disagrees with the routing default. Missing field → no warning, no
+  # action (legacy modules are unaffected). The routing JSON is the
+  # source of truth; the frontmatter is the agent's own assertion.
+  DECLARED_MODEL=$(echo "$FM" | sed -nE 's/^expected_model:[[:space:]]*([^[:space:]]+).*$/\1/p' | head -1)
+  if [ -n "$DECLARED_MODEL" ]; then
+    AGENT_NAME=$(echo "$FM" | sed -nE 's/^name:[[:space:]]*([a-z][a-z0-9-]*).*$/\1/p' | head -1)
+    # Walk up to find apex-model-routing.json (mirrors the schema walk above).
+    ROUTING_PATH=""
+    PARENT_R="$AGENT_MD"
+    for _ in 1 2 3 4 5 6; do
+      PARENT_R="$(dirname "$PARENT_R")"
+      [ -z "$PARENT_R" ] && break
+      if [ -f "$PARENT_R/apex-model-routing.json" ]; then
+        ROUTING_PATH="$PARENT_R/apex-model-routing.json"
+        break
+      fi
+    done
+    if [ -z "$ROUTING_PATH" ]; then
+      for candidate in \
+          "$HOME/.claude/apex-model-routing.json" \
+          "$(dirname "$0")/../apex-model-routing.json" \
+          "framework/apex-model-routing.json"; do
+        if [ -f "$candidate" ]; then
+          ROUTING_PATH="$candidate"
+          break
+        fi
+      done
+    fi
+    if [ -n "$ROUTING_PATH" ] && [ -n "$AGENT_NAME" ] && jq -e . "$ROUTING_PATH" >/dev/null 2>&1; then
+      ROUTED=$(jq -r --arg a "$AGENT_NAME" '.routing[$a].default // ""' "$ROUTING_PATH" 2>/dev/null)
+      if [ -n "$ROUTED" ] && [ "$ROUTED" != "$DECLARED_MODEL" ]; then
+        echo "⚠️  agent-lint: expected_model='$DECLARED_MODEL' but routing default for '$AGENT_NAME' is '$ROUTED' (M04 advisory; not blocking)" >&2
+      fi
+    fi
+  fi
 fi
 
 # --- Check 5: registry collision (if registry exists) ---

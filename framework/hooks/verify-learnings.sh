@@ -6,12 +6,16 @@ set -u
 LEARNINGS=~/.claude/apex-learnings.md
 STALE=0
 DECAYED=0
+HASH_STALE=0           # M13 / Phase 12.04: count of entries whose Code hash no longer matches the current cited code block
 HOT_COUNT=0
 WARM_COUNT=0
 MISSING_EVIDENCE=0
+MISSING_PROVENANCE=0   # M13: count of entries missing Source agent OR Code hash (advisory)
 CURRENT_SECTION=""
 CURRENT_DECAY=""
 CURRENT_ENTRY=""
+CURRENT_CODE_HASH=""   # M13: parsed Code hash for the current entry (empty if absent)
+CURRENT_SOURCE_AGENT=""
 HAS_EVIDENCE_COUNT=0
 NOW_EPOCH=$(date +%s)
 
@@ -56,8 +60,19 @@ while IFS= read -r line; do
       echo "⚠️ MISSING EVIDENCE COUNT: $CURRENT_ENTRY"
       MISSING_EVIDENCE=$((MISSING_EVIDENCE + 1))
     fi
+    # M13 (Phase 12.04): advisory check on prior entry — missing provenance fields.
+    # Template/PATTERN-* entries excluded (they're documentation examples, not real entries).
+    if [ -n "$CURRENT_ENTRY" ] \
+       && [[ "$CURRENT_SECTION" == "HOT" || "$CURRENT_SECTION" == "WARM" ]] \
+       && [[ "$CURRENT_ENTRY" != *"PATTERN-"* ]] \
+       && { [ -z "$CURRENT_CODE_HASH" ] || [ -z "$CURRENT_SOURCE_AGENT" ]; }; then
+      # Advisory only — don't fail the run for legacy entries pre-M13.
+      MISSING_PROVENANCE=$((MISSING_PROVENANCE + 1))
+    fi
     CURRENT_ENTRY="$line"
     CURRENT_DECAY=""
+    CURRENT_CODE_HASH=""
+    CURRENT_SOURCE_AGENT=""
     HAS_EVIDENCE_COUNT=0
     case "$CURRENT_SECTION" in
       HOT) HOT_COUNT=$((HOT_COUNT + 1)) ;;
@@ -77,6 +92,14 @@ while IFS= read -r line; do
   # v7 [R6]: Read decay class from entry
   if [[ "$line" =~ \*\*Decay:\*\*[[:space:]]*([a-z]+) ]]; then
     CURRENT_DECAY="${BASH_REMATCH[1]}"
+  fi
+
+  # M13 (Phase 12.04): Parse provenance fields from the current entry.
+  if [[ "$line" =~ \*\*Code[[:space:]]hash:\*\*[[:space:]]*(sha256:[a-f0-9]{4,}([…]?)([a-f0-9]+)?) ]]; then
+    CURRENT_CODE_HASH="${BASH_REMATCH[1]}"
+  fi
+  if [[ "$line" =~ \*\*Source[[:space:]]agent:\*\*[[:space:]]*([a-zA-Z_-]+) ]]; then
+    CURRENT_SOURCE_AGENT="${BASH_REMATCH[1]}"
   fi
 
   # v7 [R6]: Check date-based staleness with decay-class-aware thresholds
@@ -139,6 +162,7 @@ if [ "$ISSUES" -gt 0 ]; then
   [ "$STALE" -gt 0 ] && echo "⚠️ $STALE stale citations. Review apex-learnings.md."
   [ "$DECAYED" -gt 0 ] && echo "⏰ $DECAYED entries past decay threshold. Move to COLD."
   [ "$MISSING_EVIDENCE" -gt 0 ] && echo "⚠️ $MISSING_EVIDENCE entries missing evidence_count field."
+  [ "$MISSING_PROVENANCE" -gt 0 ] && echo "ℹ️ $MISSING_PROVENANCE entries missing M13 provenance (Source agent / Code hash) — advisory only; legacy entries pre-M13 are exempt."
 else
   echo "✅ All citations valid | HOT: $HOT_COUNT/30 | WARM: $WARM_COUNT/100"
 fi
