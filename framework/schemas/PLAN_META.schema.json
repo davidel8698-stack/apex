@@ -54,7 +54,22 @@
           "negative_auth_required": { "type": "boolean", "description": "Security tasks requiring negative authorization (deny) tests. When true, PASS verdict checks for deny/unauthorized/forbidden test patterns — missing patterns downgrade to PARTIAL [F-028]" },
           "task_class": { "type": "string", "enum": ["A", "B", "C", "D"], "description": "M08 risk class (Phase 12.02): A=low (Trusted after 5 clean), B=medium (Trusted after 7-8 clean, cap=2), C=high (NO auto-escalation, permanent Supervised), D=irreversible (NO auto-escalation ever, hard cap=0). Authored by architect Step 1.8 using framework/docs/RISK-KEYWORDS.md. OPTIONAL during the v8 transition window; framework/scripts/migrate-plan-meta-v8.sh backfills 'B' for legacy PLAN_META files. Will become REQUIRED in a follow-up migration once all phase plans are migrated." },
           "task_type": { "type": "string", "enum": ["new_code", "bug_fix", "code_review", "refactor", "test_writing", "frontend"], "description": "M12 task-type classifier (Phase 12.03): drives per-task-type CONTEXT_BUDGET profile selection. Orthogonal to task_class — a task can be task_class=C AND task_type=bug_fix. OPTIONAL during transition; defaults to 'new_code' when absent." },
-          "is_irreversible_now": { "type": "boolean", "description": "M08.1 dynamic-Track-D flag (Phase 12.02). Static task_class=C tasks can execute as Track D when THIS invocation is irreversible (e.g., deploy now, force-push now). Bypasses Track D batching — fires the plain-language modal immediately." }
+          "is_irreversible_now": { "type": "boolean", "description": "M08.1 dynamic-Track-D flag (Phase 12.02). Static task_class=C tasks can execute as Track D when THIS invocation is irreversible (e.g., deploy now, force-push now). Bypasses Track D batching — fires the plain-language modal immediately." },
+          "presumed_entities": {
+            "type": "array",
+            "description": "R16-626 (F-626, IMP-026): Entities (file paths, function/symbol names) referenced by this task that the planner could not verify via ls/grep at plan time. Architect Step 2.5 'ENTITY VERIFICATION' populates this list — each entry is marked `presumed=true` if the existence check failed but the confidence threshold allowed planning to continue; if the threshold did not hold, the plan is BLOCKED instead. Critic STEP 1.5 / verifier should treat presumed entities as soft assertions. Additive; absent on plans authored before R16-626.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["entity", "kind", "presumed"],
+              "properties": {
+                "entity": { "type": "string", "description": "The file path, function name, or symbol referenced in PLAN.md." },
+                "kind": { "type": "string", "enum": ["file", "function", "symbol", "directory", "module"], "description": "What kind of entity this is — drives the verification strategy (ls for file/dir, grep for function/symbol)." },
+                "presumed": { "type": "boolean", "description": "true = architect could not verify existence at plan time; false = explicitly verified present." },
+                "verification_command": { "type": "string", "description": "Optional — the ls/grep command architect ran to attempt verification." }
+              }
+            }
+          }
         }
       }
     }

@@ -67,6 +67,61 @@ Assign sequential IDs to each requirement: REQ-001, REQ-002, etc.
 IDs are stable — renaming or reordering sections does not change IDs. Use sequential assignment only.
 Format in SPEC.md: prefix each Must-Have Feature and Error Flow with its ID (e.g., "REQ-001: User can log in with email").
 
+## PHASE 2.5: ENTITY VERIFICATION [R16-626, F-626, IMP-026]
+
+**Purpose.** Catch phantom-entity planning at requirement-capture time.
+When a requirement names an external entity — a file path, an existing
+function, a third-party module, a configuration key — planner must
+either confirm the entity exists OR mark it `presumed=true` and surface
+the uncertainty to the user.
+
+**Mirror.** This is the planner-side complement to architect.md STEP 2.5.
+Identical algorithm; different artifact. Planner records uncertainty in
+SPEC.md and SPEC-side notes; architect carries it forward into
+`PLAN_META.tasks[].presumed_entities[]` (R16-626 schema additive). Both
+exist because the user typically interacts with planner first and never
+re-runs architect on a finished plan.
+
+**When to fire.**
+
+- Every named function/file in PHASE 2 Happy-Path answers.
+- Every "external service" / "third-party module" named in Error Flows.
+- Every configuration file path named under Technical Context (L3+).
+
+**Verification.**
+
+1. **Files / directories** — `ls` the path. If absent and the
+   requirement implies creation (e.g. "Set up Postgres docker-compose"),
+   record `presumed=true, action=create` and proceed. If absent and the
+   requirement implies modification of an existing thing, ASK the user
+   before proceeding.
+2. **Functions / symbols** — language-aware `grep` per the regex set
+   documented in architect.md STEP 2.5 (Python `^def`, JS/TS `function`/
+   `const`, Go `^func`). Single unique hit → verified. Multiple/partial
+   → `presumed=true` with a follow-up question.
+3. **Third-party modules** — verify via project's package manifest
+   (`package.json`, `requirements.txt`, `go.mod`, `Cargo.toml`, etc.). A
+   module named in the requirement that is NOT in the manifest is
+   `presumed=true` and a recorded "must be installed" risk.
+
+**Block condition.** If the user's requirement names an entity, the
+entity is NOT verifiable, AND the requirement implies the entity is
+already present, PLANNER MUST surface a single yes/no question:
+"`<entity>` was not found in the project. (1) It exists but I missed
+it — point me to it. (2) Mark as presumed=true and proceed. (3) Re-scope
+the requirement." Default answer is (2) only when complexity_level ≤ 2
+(non-critical projects); otherwise default is (1).
+
+**Recording.** SPEC.md gets a `## Presumed entities` section listing
+each `(entity, kind, reason)` triple. Architect inherits this on
+handoff and feeds it into PLAN_META.
+
+**Why here vs architect-only.** Planner runs in the requirement-capture
+window where the user is present and answerable. Architect runs later,
+in batch, with the user typically away. Catching phantom entities at
+planner time keeps the question-answering interactive; catching them
+only at architect time forces a context-switch back to the user.
+
 ## PHASE 3: Pre-Build (Level 3+ only)
 If complexity_level < 3: skip this phase entirely.
 Read SPEC.md. Write .apex/pre-build/CHECKLIST.md with ⬜ items.

@@ -266,6 +266,77 @@ absolute, not just per-token). See `framework/docs/TASK-TYPE-PROFILES.md`
 for the full mapping table and `framework/docs/PROMPT-CACHING.md` for
 the cache-key contract.
 
+## STEP 2.5: ENTITY VERIFICATION [R16-626, F-626, IMP-026]
+
+**Purpose.** Catch phantom-entity planning. Every file path, function name,
+or symbol mentioned in PLAN.md must either be verified to exist OR be
+explicitly marked `presumed=true` in PLAN_META.tasks[].presumed_entities[].
+If neither — block the plan until the architect resolves the gap.
+
+**Order.** Run AFTER STEP 1 (per-task generation) and BEFORE STEP 2
+(WAVE_MAP). The verification cost must be paid before tasks are
+scheduled, not after.
+
+**Algorithm.**
+
+For each task in PLAN_META.tasks[]:
+1. Walk `files[]` (modify and create lists), `done_criteria[]`, and any
+   prose body that names a function/symbol.
+2. For each named entity, classify it as kind ∈
+   `file | function | symbol | directory | module`.
+3. Verify by kind:
+   - **file / directory** — `ls <path>` (must exit 0). If a "create"
+     action is declared, non-existence is expected and the entry is
+     verified=true with `presumed=false` AND `kind=file`+`action=created`
+     (already encoded in `files[].action`); skip entity-verification for
+     creation rows.
+   - **function / symbol** — language-aware grep over the relevant
+     directories. Reuse the regex set from auditor.md (R-608A) for
+     test functions; for production code use:
+     - Python: `^def <name>\b` and `^class <name>\b`
+     - JavaScript/TypeScript: `\bfunction\s+<name>\b`, `\bconst\s+<name>\s*=`, `\bexport\s+(default\s+)?(function\s+)?<name>\b`
+     - Go: `^func\s+(\([^)]+\)\s+)?<name>\b`
+     - Generic fallback: `\b<name>\b` over `*.{py,js,ts,go,rs,java}` (high false-positive — confidence drop).
+   - **module** — file existence + import-graph node.
+
+4. Confidence ladder per entity:
+   - Verified by direct path → confidence HIGH, `presumed=false`.
+   - Verified by grep with single unique hit → confidence MEDIUM,
+     `presumed=false`.
+   - Verified by grep with multiple hits or partial match → confidence
+     LOW, `presumed=true` (the name might be a non-target symbol).
+   - Not verified at all → confidence MISSING, `presumed=true` OR block.
+
+5. Block condition: if ≥1 entity has confidence MISSING AND the task is
+   tier task_class C or D (irreversible) OR the entity is in `files[].action="modified"`
+   (you cannot modify what doesn't exist), HALT the plan generation with a
+   structured error:
+   `entity verification failed: <task_id> references <entity> (<kind>) which does not exist`.
+   The user must either correct the spec, mark the entity intentionally
+   `presumed=true` (with a justification line in DECISIONS.md), or
+   re-scope the task.
+
+6. For every entity that passes the threshold but cannot be confirmed,
+   record an entry into `PLAN_META.tasks[].presumed_entities[]` with
+   `entity`, `kind`, `presumed=true`, and the `verification_command` that
+   was attempted. This list is the audit trail consumed by critic STEP 1.5.
+
+**Carve-outs.**
+
+- Generated files (`.apex/**`, build artifacts under `dist/`, `build/`,
+  `target/`) are NOT verified — they don't exist at plan time by design.
+- Spec-cited section anchors (`apex-spec.md:Failure 9` etc.) are NOT
+  verified by this step — that is the auditor's job under R-630A.
+- The `framework/scripts/` and `framework/hooks/` namespaces use a
+  glob-aware fast-path: a `framework/hooks/<name>.sh` reference verifies
+  via `ls` even if the file is created by a sibling task in the same
+  phase, provided that sibling lands earlier in the wave ordering.
+
+**Pairing.** This step is the architect-side companion to auditor's
+phantom-check (R-608A test-function count delta) and critic's data-value
+xref (R-623C). Together they form three independent layers against
+phantom-entity hallucination at plan / audit / critic time.
+
 ## STEP 2: Generate WAVE_MAP.json [שיפור 22]
 Analyze task dependencies within each phase:
 - Tasks with NO dependencies on other tasks in same phase → Wave 1
