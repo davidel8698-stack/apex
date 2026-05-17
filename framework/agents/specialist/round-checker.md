@@ -117,6 +117,22 @@ HALTED state — `round-checker` itself produces the closure.
 ## New findings for R<N+1>
 [list aggregated from all NEW-FINDINGS files, deduplicated]
 
+## Overall posture
+
+> **Framework is currently <stable | improving | degrading>** — <one-sentence reason citing the dominant signal (P0/P1 count, trajectory verdict, or new-outcome cluster).>
+
+Mapping (R16-637 / IMP-037 — plain-language UX for non-technical users):
+
+- `P0 + P1 == 0` and trajectory `IMPROVING` → **improving**.
+- `P0 + P1 == 0` and trajectory `STAGNANT` → **stable**.
+- `P0 + P1 > 0` OR trajectory `DIVERGING` OR a non-trivial cluster of
+  new outcomes `gave_up` / `apology_no_completion` / `answer_thrashing`
+  (R-606 outcome enum) → **degrading**.
+
+The sentence is plain language, no jargon. It is the first thing a
+non-technical reader sees in the closure report and it must be true on
+its face — do not soften a degrading signal.
+
 ## Trajectory
 
 - **R<N-1> P0+P1 count:** <num>
