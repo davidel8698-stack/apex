@@ -41,7 +41,7 @@ drift-prone literal.
 
 ---
 
-## Auto-PreToolUse (8)
+## Auto-PreToolUse (9)
 
 | File | Matcher | Purpose |
 |---|---|---|
@@ -52,6 +52,7 @@ drift-prone literal.
 | `pre-task-snapshot.sh` | `Bash` | Git stash snapshot before task execution — enables per-task rollback. **R8-008 self-filter:** skips when the user's bash command starts with `git status\|log\|show\|diff\|stash` (read-only / stash-management — would clutter stash list). Matcher stays `Bash`; only the hook's internal logic narrows. Standalone CLI invocation (no stdin envelope) continues to fire the snapshot. |
 | `quarantine-guard.sh` | `Read\|Bash` | Agent-aware file access control. When `APEX_ACTIVE_AGENT=auditor`, restrict reads to test files and `.apex/` state. Microsecond pass-through otherwise. |
 | `test-deletion-guard.sh` | `Bash\|Write\|Edit` | R16-608 — blocks silent deletion of test files. Bash branch flags `rm`/`git rm` over `*.test.*` / `*.spec.*` / `tests/**` / `__tests__/**` / `test/**` paths. Write branch blocks shrinking an existing test file below 10% of its prior size when the file was non-trivial. Test-architect carve-out via `APEX_ACTIVE_AGENT=test-architect`. Exit 2 on detected deletion. Pairs with auditor.md count-delta check (R-608A). |
+| `sequence-guard.sh` | `Bash` | R16-616 (F-616, IMP-016) — stateful PreToolUse credential-search detector. Reads `STATE.recent_denied_error_window` (FIFO max 5, populated by `_state-update.sh:_record_denied_error` on denied-class PostToolUse errors). When window non-empty, tightens deny set to block `find . -name "*token*"`, `grep -r api[_-]key`, `cat .env` / `~/.aws/credentials`, `env \| grep -i token`, `printenv` over the next 5 Bash calls. Carve-outs: `APEX_ACTIVE_AGENT=test-architect` and `.env.example/sample/template`. Exit 2 on match. |
 | `workflow-guard.sh` | `Read` | Workflow-recipe injection scanner (post-R-006 auto-wiring). Self-filters non-workflow paths. Also invoked explicitly by `/apex:workflow`. **Dual-runtime (R5-003):** `.cjs` preferred, `.sh` shim falls back to native Bash when node absent. |
 
 Source: `framework/settings.json` entries under `.hooks.PreToolUse[]` (each entry has `matcher` and a nested `hooks:[{"type":"command", ...}]` array per Claude Code's native schema).
@@ -185,12 +186,12 @@ available, and both fall back to the preserved Bash logic when not.
 
 | Category | Count |
 |---|---|
-| Auto-PreToolUse | 8 |
+| Auto-PreToolUse | 9 |
 | Auto-PostToolUse | 10 |
 | Command-Invoked / Event-Triggered | 22 |
 | Library — Sourced | 17 |
 | CommonJS — Node-runtime guards (R5-003) | 3 |
-| **Total** | **59** (R5-011: `tdad-index.sh` and `cross-phase-audit.sh` are dual-listed in Auto-PostToolUse / SubagentStop AND Command-Invoked; not double-counted in the total. R5-014: `_fix-plan-emit.sh` added to Library — Sourced. R5-013: `owner-guard.sh` added to Auto-PreToolUse. R5-016: `decision-gate.sh` added to Command-Invoked. R6-017: `_adapter-detect.sh` added to Library — Sourced. v7.1 added Auto-Continuity Layer: `memory-watchdog.sh` and `turn-checkpoint.sh` to Auto-PostToolUse, `session-auto-resume.sh` to Command-Invoked / SessionStart, `_require-platform-detect.sh` to Library — Sourced. R12-001 added `_tokens-update.sh` to Library — Sourced; R13-001 closed the doc/disk cardinality gap. R13-002 added `observation-mask.sh` to Command-Invoked / Event-Triggered, invoked by `pre-compact.sh` before the `/compact` fall-through. R13-005 added `_rotation-decide.sh` to Library — Sourced, sourced by `/apex:next` Step F as the rotation-decision control-flow gate consumer of `CONTEXT_BUDGET.rotation_triggers[]`. Phase 12.12 (M18.1) added `dora-collect.sh` to Command-Invoked / Event-Triggered, invoked by `/apex:milestone-summary` and `/apex:ship` to extract the DORA quartet from `git log` into `.apex/DORA.json`.) |
+| **Total** | **60** (R16-616 added `sequence-guard.sh` to Auto-PreToolUse — stateful credential-search-after-denied-error detector. R5-011: `tdad-index.sh` and `cross-phase-audit.sh` are dual-listed in Auto-PostToolUse / SubagentStop AND Command-Invoked; not double-counted in the total. R5-014: `_fix-plan-emit.sh` added to Library — Sourced. R5-013: `owner-guard.sh` added to Auto-PreToolUse. R5-016: `decision-gate.sh` added to Command-Invoked. R6-017: `_adapter-detect.sh` added to Library — Sourced. v7.1 added Auto-Continuity Layer: `memory-watchdog.sh` and `turn-checkpoint.sh` to Auto-PostToolUse, `session-auto-resume.sh` to Command-Invoked / SessionStart, `_require-platform-detect.sh` to Library — Sourced. R12-001 added `_tokens-update.sh` to Library — Sourced; R13-001 closed the doc/disk cardinality gap. R13-002 added `observation-mask.sh` to Command-Invoked / Event-Triggered, invoked by `pre-compact.sh` before the `/compact` fall-through. R13-005 added `_rotation-decide.sh` to Library — Sourced, sourced by `/apex:next` Step F as the rotation-decision control-flow gate consumer of `CONTEXT_BUDGET.rotation_triggers[]`. Phase 12.12 (M18.1) added `dora-collect.sh` to Command-Invoked / Event-Triggered, invoked by `/apex:milestone-summary` and `/apex:ship` to extract the DORA quartet from `git log` into `.apex/DORA.json`.) |
 
 Verify with: `ls framework/hooks/ | wc -l` (the file-system count is the
 authority; the **Total** cell above must equal what `wc -l` returns and is

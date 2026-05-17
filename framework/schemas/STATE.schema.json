@@ -505,6 +505,18 @@
           }
         },
         "last_time_gate": { "type": ["string", "null"], "format": "date-time" },
+        "batch_mode": {
+          "type": "string",
+          "enum": ["unset", "asked", "enabled", "disabled"],
+          "default": "unset",
+          "description": "M15 (Phase 12.10) — /apex:fast batch mode opt-in state for the current session. State machine: unset (initial — modal eligible) → asked (modal rendered, awaiting choice) → enabled (user picked כן; future micro tasks are batched) | disabled (user picked לא; future micro tasks run normally). Once enabled or disabled, do NOT re-ask in the same session. Resets to unset on session id change (handled by session-init). Default Enter on the modal is כן (opposite of track-d-modal.sh's לא) — documented in framework/commands/apex/fast.md M15 BATCH MODE section. Additive — absent on projects predating M15."
+        },
+        "batched_tasks_count": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0,
+          "description": "M15 (Phase 12.10) — mirror of .apex/batch_queue.json `tasks | length` for /apex:status display without re-reading the queue file. Updated by /apex:fast on every append; reset on surface-and-flush events. Additive — absent on projects predating M15."
+        },
         "drift_indicators": {
           "type": "object",
           "additionalProperties": false,
@@ -696,6 +708,24 @@
           "type": ["array", "null"],
           "items": { "type": "string" },
           "description": "Filenames produced by the most recently completed round, for /apex:status surfacing."
+        }
+      }
+    },
+    "recent_denied_error_window": {
+      "type": "array",
+      "description": "R16-616 (F-616, IMP-016): rolling window of the last 5 PostToolUse denied-error events. Populated by _state-update.sh `_record_denied_error` whenever PostToolUse output classifies as unauthorized/forbidden/403/401/denied/missing-token. Consumed by sequence-guard.sh (PreToolUse Bash) to tighten the deny pattern set for the next 5 PreToolUse calls — catches the credential-search-after-permission-denied attack. FIFO bounded at 5 entries; oldest pops on append. Additive; absent on projects predating R16-616.",
+      "maxItems": 5,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["ts", "category"],
+        "properties": {
+          "ts": { "type": "string", "format": "date-time" },
+          "category": {
+            "type": "string",
+            "enum": ["unauthorized", "forbidden", "403", "401", "denied", "missing_token"]
+          },
+          "tool": { "type": "string" }
         }
       }
     },

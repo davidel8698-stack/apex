@@ -131,6 +131,39 @@ _state_update() {
 #
 # Example:
 #   _emit_apex_event memory_sample .apex rss_mb 412 commit_mb 1834
+# R16-616 (F-616, IMP-016): _record_denied_error pushes a denied-class
+# PostToolUse error event into STATE.recent_denied_error_window (FIFO, max 5).
+# Pairs with sequence-guard.sh which reads the window in PreToolUse and tightens
+# the deny pattern set for the next 5 calls.
+#
+# Usage:
+#   _record_denied_error <category> [<tool>]
+#     category ∈ unauthorized | forbidden | 403 | 401 | denied | missing_token
+#     tool     optional tool name string
+#
+# Fire-and-forget; failures are silent (we never block the post-tool path).
+_record_denied_error() {
+  local category="${1:-}"
+  local tool="${2:-unknown}"
+  if [ -z "$category" ]; then
+    return 0
+  fi
+  # Normalize category to the schema enum
+  case "$category" in
+    unauthorized|forbidden|403|401|denied|missing_token) ;;
+    *) return 0 ;;
+  esac
+  local _ts_now
+  _ts_now="$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date +%Y-%m-%dT%H:%M:%SZ)"
+  # Append the new entry; trim to the last 5 so the array stays bounded.
+  _state_update \
+    --arg ts "$_ts_now" \
+    --arg cat "$category" \
+    --arg tool "$tool" \
+    '.recent_denied_error_window = ((.recent_denied_error_window // []) + [{ts:$ts, category:$cat, tool:$tool}] | .[-5:])' \
+    2>/dev/null || true
+}
+
 _emit_apex_event() {
   if ! command -v jq >/dev/null 2>&1; then
     return 0
