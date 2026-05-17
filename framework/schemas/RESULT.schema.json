@@ -26,6 +26,11 @@
   ],
   "properties": {
     "task_id": { "type": "string" },
+    "task_start_sha": {
+      "type": "string",
+      "pattern": "^([0-9a-f]{7,40}|)$",
+      "description": "R16-601 (F-601, IMP-001): git HEAD SHA captured by pre-task-snapshot.sh at task start, used by critic STEP 1.5 GIT TRACE VERIFICATION (R16-603) to bound the diff window when verifying that every entry in files_modified[] actually appears in git's view of changes. Pattern accepts a 7-40 hex SHA (typical short or full) OR the empty string when the project has no git history (executor MUST write '' explicitly, never omit, so the required-marker added in R16-601R holds). Additive in R16-601; promoted to required[] in R16-601R after R16-602 executor population lands."
+    },
     "status": { "type": "string", "enum": ["success", "failure", "partial"] },
     "files_modified": {
       "type": "array",
