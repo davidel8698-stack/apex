@@ -84,6 +84,29 @@ update_state_stash_null() {
 
 source "$(dirname "$0")/_require-git.sh"
 
+# --- R16-602S: task_start_sha persistence ------------------------------
+# Capture the HEAD SHA at task entry and persist to a per-task path so
+# executor (R-602) and critic (R-603) can read a single canonical source
+# for "what was the repo state at task start?" Path convention per
+# IMP-001 plan: .apex/phases/<phase>/<task_id>/task_start_sha. Per
+# IMP-001 insight 8: keep the SHA capture as a separate write, not
+# coupled to the stash-SHA path. Worktree-safe via `git -C "$REPO_ROOT"`.
+REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo "")
+if [ -n "$REPO_ROOT" ]; then
+  task_start_sha=$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || echo "")
+  CURRENT_PHASE=""
+  if [ -f .apex/STATE.json ] && command -v jq >/dev/null 2>&1; then
+    CURRENT_PHASE=$(jq -r '.current_phase // empty' .apex/STATE.json 2>/dev/null || echo "")
+  fi
+  [ -z "$CURRENT_PHASE" ] && CURRENT_PHASE="unknown"
+  TASK_STATE_DIR=".apex/phases/${CURRENT_PHASE}/${TASK_ID}"
+  mkdir -p "$TASK_STATE_DIR" 2>/dev/null || true
+  if [ -d "$TASK_STATE_DIR" ]; then
+    printf '%s' "$task_start_sha" > "$TASK_STATE_DIR/task_start_sha" 2>/dev/null || true
+  fi
+fi
+# --- end R16-602S ------------------------------------------------------
+
 # Create a stash object WITHOUT touching the working tree.
 # -u includes untracked files (matching previous --include-untracked semantic).
 STASH_ERR=$(git stash create -u "$STASH_MSG" 2>&1)
