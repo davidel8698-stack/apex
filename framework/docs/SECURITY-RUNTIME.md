@@ -118,6 +118,48 @@ framework/test-fixtures/
   security-patterns.json  <-- canonical pattern set, loaded by both runtimes
 ```
 
+## Quarterly adversarial pattern refresh (R16-633 / IMP-033)
+
+The detection patterns in `framework/test-fixtures/security-patterns.json`
+must not stagnate. Spec anchor (IMP-033): "`framework/hooks/
+apex-prompt-guard.cjs` חייב לעבור Quarterly adversarial attack-generation
+refresh." The refresh cycle below is the process; the script
+`framework/scripts/adversarial-pattern-refresh.sh` is the entry point.
+
+### Cycle (run once per calendar quarter)
+
+1. **Generate.** Run `framework/scripts/adversarial-pattern-refresh.sh`
+   in `generate` mode. The script enumerates the current pattern
+   families (prompt injection, role hijacking, hidden directives,
+   encoded-bypass, role markers, etc.) and produces a candidate set of
+   new attack signatures. Initially a stub; the script's body grows
+   round-over-round as new attack classes surface.
+2. **Add signatures.** Review candidate signatures, drop false-positive
+   risks, and append survivors to the appropriate array in
+   `framework/test-fixtures/security-patterns.json`.
+3. **Remove obsolete.** Mark signatures whose attack vector no longer
+   applies (platform-side fix landed, attack class subsumed by a
+   broader pattern). Delete after one quarter of quarantine to allow
+   rollback.
+4. **Release notes.** Add a CHANGELOG entry summarising the refresh —
+   number of signatures added, removed, retained.
+5. **Visibility.** The refresh date and signature count delta surface
+   in the next round's audit findings under the "Adversarial pattern
+   refresh" cadence check.
+
+### Cadence
+
+- **Quarterly.** Calendar quarters (Q1/Q2/Q3/Q4). A missed quarter is
+  itself an audit finding.
+- The script logs its execution to `.apex/pattern-refresh.log` (epoch
+  + signature count + delta).
+
+### Output visibility
+
+- CHANGELOG.md — one entry per refresh.
+- `framework/test-fixtures/security-patterns.json` — direct diff.
+- Audit round R{N+quarterly} — "pattern refresh cadence" check.
+
 ## See also
 
 - `framework/security-policy.md` — mechanism→implementation map (one row per
@@ -125,3 +167,4 @@ framework/test-fixtures/
 - `framework/HOOK-CLASSIFICATION.md` — "CommonJS — Node-runtime guards
   (R5-003)" section.
 - `apex-spec.md` Failure 9 — original spec roster.
+- `framework/scripts/adversarial-pattern-refresh.sh` — quarterly cycle entry point (R16-633).
