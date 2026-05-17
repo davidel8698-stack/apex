@@ -42,6 +42,12 @@ if [ ! -d "$TESTS_DIR" ]; then
   exit 2
 fi
 
+# Recursion guard for the first-deployment gate (R16-636): tests may
+# themselves invoke sync-to-claude.sh, whose gate would recursively
+# re-invoke run-all.sh. Exporting the marker here means any child
+# sync-to-claude.sh invocation short-circuits its gate.
+export APEX_FIRST_DEPLOYMENT_GATE_RUNNING=1
+
 PASSED=0
 FAILED=0
 SKIPPED=0
