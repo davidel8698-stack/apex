@@ -73,9 +73,34 @@ fi
 
 # --- Native Bash fallback (preservation contract: original R-006 logic) -----
 
-# Self-filter: only scan workflow recipe files. Instant exit for everything else.
-# Non-workflow Read operations must not incur file I/O cost.
-if [ -n "$FILE" ] && ! echo "$FILE" | grep -q "apex-workflows/" 2>/dev/null; then
+# Self-filter: scan workflow recipe files OR planning files
+# (CLAUDE.md / SPEC.md / STATE.json / PLAN.md / DECISIONS.md). Instant
+# exit for everything else. Non-workflow / non-planning Read operations
+# must not incur file I/O cost.
+#
+# R16-615: planning-file prefill-priming defense. Per IMP-015, the .cjs
+# prompt-guard plus this .sh workflow-guard must both block reads of
+# poisoned planning files containing role markers (Human:/Assistant:/
+# [INST]/<|im_start|>). Detection runs only against leading-line role
+# markers and excludes markdown code blocks so IMP-citation quotes that
+# legitimately contain `[INST]`-like text inside a fenced block do not
+# false-positive. Hook trigger (PreToolUse Read) and matcher unchanged
+# — only this internal self-filter branch is new (Three-places contract
+# unaffected; no settings.json wiring change, no HOOK-CLASSIFICATION row
+# change).
+_is_planning_file() {
+  case "$1" in
+    *CLAUDE.md|*SPEC.md|*STATE.json|*PLAN.md|*DECISIONS.md) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+PLANNING_FILE_PATH=""
+if [ -n "$FILE" ] && _is_planning_file "$FILE"; then
+  PLANNING_FILE_PATH="$FILE"
+fi
+
+if [ -n "$FILE" ] && [ -z "$PLANNING_FILE_PATH" ] && ! echo "$FILE" | grep -q "apex-workflows/" 2>/dev/null; then
   exit 0
 fi
 
@@ -91,6 +116,34 @@ fi
 
 CONTENT=$(cat "$FILE")
 NORMALIZED=$(_sec_normalize "$CONTENT")
+
+# --- R16-615: planning-file role-marker scan -------------------------
+# Strip markdown code blocks (fenced ```...```) before role-marker
+# detection so IMP citations and example snippets that legitimately
+# contain `[INST]` / `Human:` text inside fenced blocks do not block
+# legitimate planning-file reads. Detection is constrained to leading-
+# line position so prose containing the substrings mid-line (e.g.,
+# "the Human: column" or "[INST]ruction quality") does not over-fire.
+if [ -n "$PLANNING_FILE_PATH" ]; then
+  PLANNING_STRIPPED=$(awk '
+    /^[[:space:]]*```/ { in_block = !in_block; next }
+    !in_block { print }
+  ' "$FILE")
+  if echo "$PLANNING_STRIPPED" | grep -qE '^[[:space:]]*(Human|Assistant|System):[[:space:]]' 2>/dev/null; then
+    _sec_block "WORKFLOW GUARD" "planning-file role marker" "Human:/Assistant:/System: at start of line in $FILE (prefill-priming defense)"
+  fi
+  if echo "$PLANNING_STRIPPED" | grep -qE '<\|im_start\|>|<\|im_end\|>' 2>/dev/null; then
+    _sec_block "WORKFLOW GUARD" "planning-file role marker" "<|im_start|>/<|im_end|> token in $FILE (prefill-priming defense)"
+  fi
+  if echo "$PLANNING_STRIPPED" | grep -qE '^[[:space:]]*\[INST\]' 2>/dev/null; then
+    _sec_block "WORKFLOW GUARD" "planning-file role marker" "[INST] at start of line in $FILE (prefill-priming defense)"
+  fi
+  # Planning files only get the role-marker branch — they do not run
+  # through the workflow-recipe injection regex set below, which is
+  # tuned for apex-workflows/ content (different threat model).
+  exit 0
+fi
+# --- end R16-615 ----------------------------------------------------
 
 # === DENY PATTERNS ===
 
