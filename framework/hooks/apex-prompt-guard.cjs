@@ -36,20 +36,22 @@ const sec = require('./security.cjs');
 
 function extractInput() {
   // Priority 1: explicit argv (test path / shim fallback).
+  // Returns { freeText: <str>, tool_input: null } so the caller still has
+  // the single-string extractInput contract for legacy callers.
   const argv = process.argv.slice(2);
   if (argv.length > 0 && argv[0]) {
-    return argv[0];
+    return { freeText: argv[0], tool_input: null };
   }
 
   // Priority 2: stdin JSON (Claude Code hook protocol).
-  if (process.stdin.isTTY) return '';
+  if (process.stdin.isTTY) return { freeText: '', tool_input: null };
   const raw = sec.readStdinSync();
-  if (!raw) return '';
+  if (!raw) return { freeText: '', tool_input: null };
   const parsed = sec.parseHookStdin(raw);
   if (parsed && typeof parsed === 'object') {
     const ti = parsed.tool_input || {};
     // Try the most common payload fields in priority order.
-    return (
+    const freeText = (
       ti.content ||
       ti.new_string ||
       ti.prompt ||
@@ -57,17 +59,40 @@ function extractInput() {
       ti.description ||
       ''
     );
+    return { freeText, tool_input: ti };
   }
   // Non-JSON stdin → treat as the input string itself.
-  return raw;
+  return { freeText: raw, tool_input: null };
 }
 
 function main() {
-  const input = extractInput();
-  if (!input) {
+  const { freeText, tool_input } = extractInput();
+
+  // R16-611 (F-611, IMP-003): tool_input arg-name dispatch.
+  // BEFORE running the legacy prompt-injection pattern set over free text,
+  // route each tool_input key by arg name so that path-typed args reject
+  // shell metachars and name-typed args reject role markers. Length-threshold
+  // advisory emits to stderr without blocking.
+  if (tool_input && typeof tool_input === 'object') {
+    for (const [argName, argValue] of Object.entries(tool_input)) {
+      // Only check string-valued args (skip nested objects / arrays).
+      if (typeof argValue !== 'string') continue;
+      const hit = sec.matchArgContent(argName, argValue);
+      if (!hit) continue;
+      if (hit.advisory) {
+        // Advisory: write to stderr and continue. Do not block.
+        process.stderr.write(`APEX PROMPT GUARD (advisory): ${hit.advisory}\n`);
+        continue;
+      }
+      sec.emitBlock('PROMPT GUARD', hit.name, hit.matched);
+      process.exit(2);
+    }
+  }
+
+  if (!freeText) {
     process.exit(0);
   }
-  const hit = sec.matchPromptInjection(input);
+  const hit = sec.matchPromptInjection(freeText);
   if (hit) {
     sec.emitBlock('PROMPT GUARD', hit.name, hit.matched);
     process.exit(2);

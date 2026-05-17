@@ -93,6 +93,58 @@ function _patternToRegExp(p) {
   return new RegExp(p.pattern, flags);
 }
 
+// R16-611 (F-611, IMP-003): arg-content validation. Three tiers:
+//   1. path-arg dispatch — args named path/filename/file/file_path: reject
+//      shell metachars and CR/LF.
+//   2. name-arg dispatch — args named name/title/description: reject role
+//      markers (<|im_start|>, [INST], ### System, Assistant:).
+//   3. length-threshold advisory — name-typed args >1000 chars: warn-not-block
+//      via stderr. Returns { advisory: <msg> } so the caller emits the
+//      advisory without blocking.
+// Returns: null on clean; { name, matched } on block; { advisory } on warn.
+// Caller (apex-prompt-guard.cjs) interprets advisory as "emit and continue".
+function matchArgContent(argName, value) {
+  if (!argName || value === null || value === undefined) return null;
+  const cfg = loadPatterns();
+  const valStr = String(value);
+  const lowerName = argName.toLowerCase();
+
+  // Path-arg block patterns
+  if (Array.isArray(cfg.path_arg_patterns)) {
+    for (const p of cfg.path_arg_patterns) {
+      const names = (p.applies_to_arg_names || []).map(n => n.toLowerCase());
+      if (!names.includes(lowerName)) continue;
+      const re = _patternToRegExp(p);
+      if (re.test(valStr)) {
+        return { name: p.name, matched: p.matched_message };
+      }
+    }
+  }
+
+  // Name-arg block patterns
+  if (Array.isArray(cfg.name_arg_patterns)) {
+    for (const p of cfg.name_arg_patterns) {
+      const names = (p.applies_to_arg_names || []).map(n => n.toLowerCase());
+      if (!names.includes(lowerName)) continue;
+      const re = _patternToRegExp(p);
+      if (re.test(valStr)) {
+        return { name: p.name, matched: p.matched_message };
+      }
+    }
+  }
+
+  // Length-threshold advisory (warn, not block)
+  const lt = cfg.length_threshold_advisory;
+  if (lt && Array.isArray(lt.applies_to_arg_names)) {
+    const names = lt.applies_to_arg_names.map(n => n.toLowerCase());
+    if (names.includes(lowerName) && valStr.length > (lt.threshold_chars || 1000)) {
+      return { advisory: `${lt.name}: ${argName}=${valStr.length} chars > ${lt.threshold_chars}` };
+    }
+  }
+
+  return null;
+}
+
 // Run all prompt_injection_patterns over normalized text. Returns the first
 // match descriptor { name, matched_message } or null.
 function matchPromptInjection(text) {
@@ -180,6 +232,7 @@ module.exports = {
   loadPatterns,
   normalize,
   hasZeroWidthChars,
+  matchArgContent,
   matchPromptInjection,
   matchWorkflowInjection,
   emitBlock,
