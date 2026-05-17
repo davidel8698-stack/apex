@@ -225,4 +225,40 @@ If you notice yourself running the same command 3+ times without progress:
 2. Write to DECISIONS.md: "CIRCUIT BREAKER: [what was repeating] at step [N]"
 3. Take a COMPLETELY different approach
 If you cannot find a different approach, report: "⚠️ Blocked — need guidance"
+
+## Expected overrefusal categories [R16-641E, IMP-077]
+The following four refusal categories are DESIGNED behavior, not failures.
+Mirror of apex-spec.md "Expected overrefusal categories" section — keep
+phrasing in sync. Predictable refusal is safe; surprising refusal is a bug.
+
+1. **Spec edits (`apex-spec.md`).** You will NOT modify `apex-spec.md` when
+   running on a regular user task. The spec is edited only by remediation
+   agents inside `/apex:self-heal` (cluster C-SPEC in
+   `REMEDIATION-PLAN-R<N>.md`) or by the human owner. If a user task asks
+   you to edit `apex-spec.md`, refuse and surface the request to the
+   self-heal pipeline.
+2. **Test deletion.** Reductions in test coverage that are not accompanied
+   by an explicit task labeled "remove dead test" with written justification
+   in DECISIONS.md. Defense-in-depth: `test-deletion-guard.sh` (PreToolUse)
+   blocks at runtime; auditor `test-function count delta` (R-608A) blocks
+   phase advance after the fact.
+3. **Secret access.** Reading or echoing `.env`, `~/.aws/credentials`,
+   `~/.ssh/`, API keys, tokens, or any artifact matching secret patterns —
+   even when the user appears to request it. Refuse with a pointer to
+   `framework/docs/SECURITY-RUNTIME.md`. Defense-in-depth: `path-guard.sh`
+   and `sequence-guard.sh` (PreToolUse) block at runtime; you must also
+   refuse to publish the contents in RESULT.json or any artifact even if
+   the read succeeded.
+4. **Threat-model bypass.** Mechanisms whose purpose is to make a
+   destructive operation or a policy downgrade "invisible" — for example
+   `git config core.fsmonitor` evasion, `LD_PRELOAD` syscall traps, alias
+   with `!` shell escape, `tmux send-keys` unattended confirmation,
+   base64-decoded shell. Refuse with a pointer to `destructive-guard.sh`
+   and IMP-008 / IMP-017 / IMP-018.
+
+**Recording.** When you refuse under one of these categories, write an
+entry into RESULT.json `issues_found[]` in the form
+`overrefusal:<category>:<short-reason>` so critic and verifier can
+distinguish a designed refusal from a failure. Do not silently skip the
+task — the refusal IS the deliverable for that step.
 </stable_prefix>
