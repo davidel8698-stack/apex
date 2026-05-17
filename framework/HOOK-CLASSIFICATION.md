@@ -41,7 +41,7 @@ drift-prone literal.
 
 ---
 
-## Auto-PreToolUse (7)
+## Auto-PreToolUse (8)
 
 | File | Matcher | Purpose |
 |---|---|---|
@@ -58,7 +58,7 @@ Source: `framework/settings.json` entries under `.hooks.PreToolUse[]` (each entr
 
 ---
 
-## Auto-PostToolUse (9)
+## Auto-PostToolUse (10)
 
 | File | Matcher | Purpose |
 |---|---|---|
@@ -185,12 +185,12 @@ available, and both fall back to the preserved Bash logic when not.
 
 | Category | Count |
 |---|---|
-| Auto-PreToolUse | 7 |
-| Auto-PostToolUse | 9 |
+| Auto-PreToolUse | 8 |
+| Auto-PostToolUse | 10 |
 | Command-Invoked / Event-Triggered | 22 |
 | Library — Sourced | 17 |
 | CommonJS — Node-runtime guards (R5-003) | 3 |
-| **Total** | **57** (R5-011: `tdad-index.sh` and `cross-phase-audit.sh` are dual-listed in Auto-PostToolUse / SubagentStop AND Command-Invoked; not double-counted in the total. R5-014: `_fix-plan-emit.sh` added to Library — Sourced. R5-013: `owner-guard.sh` added to Auto-PreToolUse. R5-016: `decision-gate.sh` added to Command-Invoked. R6-017: `_adapter-detect.sh` added to Library — Sourced. v7.1 added Auto-Continuity Layer: `memory-watchdog.sh` and `turn-checkpoint.sh` to Auto-PostToolUse, `session-auto-resume.sh` to Command-Invoked / SessionStart, `_require-platform-detect.sh` to Library — Sourced. R12-001 added `_tokens-update.sh` to Library — Sourced; R13-001 closed the doc/disk cardinality gap. R13-002 added `observation-mask.sh` to Command-Invoked / Event-Triggered, invoked by `pre-compact.sh` before the `/compact` fall-through. R13-005 added `_rotation-decide.sh` to Library — Sourced, sourced by `/apex:next` Step F as the rotation-decision control-flow gate consumer of `CONTEXT_BUDGET.rotation_triggers[]`. Phase 12.12 (M18.1) added `dora-collect.sh` to Command-Invoked / Event-Triggered, invoked by `/apex:milestone-summary` and `/apex:ship` to extract the DORA quartet from `git log` into `.apex/DORA.json`.) |
+| **Total** | **59** (R5-011: `tdad-index.sh` and `cross-phase-audit.sh` are dual-listed in Auto-PostToolUse / SubagentStop AND Command-Invoked; not double-counted in the total. R5-014: `_fix-plan-emit.sh` added to Library — Sourced. R5-013: `owner-guard.sh` added to Auto-PreToolUse. R5-016: `decision-gate.sh` added to Command-Invoked. R6-017: `_adapter-detect.sh` added to Library — Sourced. v7.1 added Auto-Continuity Layer: `memory-watchdog.sh` and `turn-checkpoint.sh` to Auto-PostToolUse, `session-auto-resume.sh` to Command-Invoked / SessionStart, `_require-platform-detect.sh` to Library — Sourced. R12-001 added `_tokens-update.sh` to Library — Sourced; R13-001 closed the doc/disk cardinality gap. R13-002 added `observation-mask.sh` to Command-Invoked / Event-Triggered, invoked by `pre-compact.sh` before the `/compact` fall-through. R13-005 added `_rotation-decide.sh` to Library — Sourced, sourced by `/apex:next` Step F as the rotation-decision control-flow gate consumer of `CONTEXT_BUDGET.rotation_triggers[]`. Phase 12.12 (M18.1) added `dora-collect.sh` to Command-Invoked / Event-Triggered, invoked by `/apex:milestone-summary` and `/apex:ship` to extract the DORA quartet from `git log` into `.apex/DORA.json`.) |
 
 Verify with: `ls framework/hooks/ | wc -l` (the file-system count is the
 authority; the **Total** cell above must equal what `wc -l` returns and is
