@@ -1,0 +1,22 @@
+# Repo-wide line-ending policy.
+# Text files are stored with LF in the index regardless of the platform a contributor uses.
+# This prevents the LF→CRLF noise that appeared on Windows checkouts.
+
+* text=auto eol=lf
+
+# POSIX shell / executables — must stay LF or shebang breaks under bash.
+*.sh text eol=lf
+
+# Windows-only scripts — must stay CRLF or PowerShell/cmd reject them.
+*.ps1 text eol=crlf
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# Binary assets — git must not attempt any line-ending or text munging.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.pdf binary
+*.ico binary
+*.zip binary
