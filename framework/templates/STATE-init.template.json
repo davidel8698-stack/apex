@@ -165,5 +165,13 @@
     "in_flight_edits": [],
     "working_summary": null,
     "last_completed_tool": null
+  },
+  "quality": {
+    "rolling_window_tasks": [],
+    "baseline_window_tasks": [],
+    "current_drift_pct": 0,
+    "alert_threshold_pct": 5,
+    "baselined_at_phase": null,
+    "tasks_since_rebaseline": 0
   }
 }

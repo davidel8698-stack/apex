@@ -554,6 +554,67 @@
       "type": "object",
       "additionalProperties": { "type": "number" }
     },
+    "quality": {
+      "type": "object",
+      "description": "M16 (Phase 12.09) quality-drift tracking — R2-C214 'ultimate APEX metric' (task#50 ≈ task#1 quality) instrumentation. Additive; legacy STATE files without this object remain valid (quality-drift.sh falls back via jq `// {}`). rolling_window_tasks is a FIFO bounded at 10 entries — subagent-stop.sh appends per-task signals on verifier/critic return; oldest entries pop when length > 10. baseline_window_tasks captures the first 10 tasks of a project (or post-phase-change rebaseline) and is FROZEN thereafter until a phase-change rebaseline event. current_drift_pct is the computed delta (negative = degradation). alert_threshold_pct is the absolute-value threshold above which quality-drift.sh emits a `quality_drift` event to event-log.jsonl AND a rotation trigger (consumed by R12 F-205). Confidence mapping (qualitative→numeric): high=1.0, medium=0.5, low=0.0; documented in framework/docs/PRIVACY-POLICY.md.",
+      "additionalProperties": false,
+      "properties": {
+        "rolling_window_tasks": {
+          "type": "array",
+          "maxItems": 10,
+          "description": "FIFO window of the last 10 task quality signals. Appended by subagent-stop.sh on verifier/critic return. Each entry is a per-task signal extracted from RESULT.json.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["task_id", "confidence_score", "verifier_pass", "attempts"],
+            "properties": {
+              "task_id": { "type": "string" },
+              "confidence_score": { "type": "number", "minimum": 0, "maximum": 1, "description": "Numeric mapping of RESULT.json `confidence`: high=1.0, medium=0.5, low=0.0." },
+              "verifier_pass": { "type": "boolean" },
+              "attempts": { "type": "integer", "minimum": 0 },
+              "mutation_score": { "type": "number", "minimum": 0, "maximum": 1, "description": "Optional — populated only when STATE.mutation_scores has a corresponding entry." }
+            }
+          }
+        },
+        "baseline_window_tasks": {
+          "type": "array",
+          "maxItems": 10,
+          "description": "Frozen baseline (first 10 tasks) used as the comparison cohort for drift computation. Re-frozen on phase-change rebaseline (after 5+ tasks completed in the new phase). Same item shape as rolling_window_tasks.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["task_id", "confidence_score", "verifier_pass", "attempts"],
+            "properties": {
+              "task_id": { "type": "string" },
+              "confidence_score": { "type": "number", "minimum": 0, "maximum": 1 },
+              "verifier_pass": { "type": "boolean" },
+              "attempts": { "type": "integer", "minimum": 0 },
+              "mutation_score": { "type": "number", "minimum": 0, "maximum": 1 }
+            }
+          }
+        },
+        "current_drift_pct": {
+          "type": "number",
+          "description": "Computed as ((current_avg - baseline_avg) / baseline_avg) * 100. Sign convention: negative = degradation (current < baseline). Updated by quality-drift.sh."
+        },
+        "alert_threshold_pct": {
+          "type": "number",
+          "minimum": 0,
+          "default": 5,
+          "description": "Absolute-value threshold above which quality-drift.sh fires the quality_drift event. Default 5 (per PLAN task 12.09 §5 spec). Configurable per-project."
+        },
+        "baselined_at_phase": {
+          "type": ["string", "null"],
+          "description": "The phase identifier at which baseline_window_tasks was frozen. Used by quality-drift.sh to detect phase-change rebaseline (when STATE.context.current_session_phase differs AND 5+ tasks completed in new phase)."
+        },
+        "tasks_since_rebaseline": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0,
+          "description": "Count of tasks appended to rolling_window_tasks since the last rebaseline event. Used by the rebaseline guard (only re-freezes baseline after 5+ tasks in a new phase)."
+        }
+      }
+    },
     "sqlite_mirror": {
       "type": "object",
       "description": "Optional bookkeeping for the opt-in SQLite mirror (R5-002). Absent in projects that do not enable APEX_SQLITE_MIRROR. See framework/docs/STATE-PLANE.md.",

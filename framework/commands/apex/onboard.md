@@ -48,6 +48,36 @@ if [ -f "$ADAPTER_MANIFEST" ] && [ "$ALREADY_SHOWN" != "true" ]; then
 fi
 ```
 
+## TELEMETRY NOTIFICATION [M16.1 / Phase 12.09 / User Decision #3]
+## Spec anchors: "Honest scope over marketing scope." + "Honestly Scoped, Not Universally Promised." + User Decision #3 (opt-out from start).
+## One-time, per-project notification surfaced on first /apex:onboard run.
+## Mirror of the block in start.md — onboard is the entry point for existing-project adoption.
+## Idempotent — suppression via `.apex/telemetry-notification-shown.flag`.
+```bash
+TELEMETRY_FLAG=".apex/telemetry-notification-shown.flag"
+if [ ! -f "$TELEMETRY_FLAG" ]; then
+  echo ""
+  echo "🔒 APEX collects anonymous, numeric quality counters locally to"
+  echo "   validate context-preservation claims. No code, paths, names, or"
+  echo "   commit messages are ever collected. Data lives in"
+  echo "   .apex/telemetry.jsonl (project-local — no remote upload in v0.1.x)."
+  echo "   Opt out: export APEX_TELEMETRY=off   (per-session)"
+  echo "        OR: touch ~/.claude/telemetry-opt-out.flag   (persistent)"
+  echo "   Full policy: framework/docs/PRIVACY-POLICY.md"
+  echo ""
+  echo "🔒 APEX אוסף מוני איכות מספריים אנונימיים באופן מקומי כדי לאמת"
+  echo "   טענות לגבי שימור הקשר. אין איסוף של קוד, נתיבים, שמות או"
+  echo "   הודעות commit. הנתונים נשמרים ב-.apex/telemetry.jsonl בלבד"
+  echo "   (מקומי לפרויקט — ללא העלאה מרחוק בגרסה v0.1.x)."
+  echo "   ביטול הסכמה: export APEX_TELEMETRY=off   (לסשן נוכחי)"
+  echo "          או:   touch ~/.claude/telemetry-opt-out.flag   (קבוע)"
+  echo "   המדיניות המלאה: framework/docs/PRIVACY-POLICY.md"
+  echo ""
+  mkdir -p .apex 2>/dev/null
+  touch "$TELEMETRY_FLAG" 2>/dev/null || true
+fi
+```
+
 ## PURPOSE
 Guide through APEX setup for an existing project that does not have .apex/ initialized.
 

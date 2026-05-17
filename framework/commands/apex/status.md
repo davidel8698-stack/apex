@@ -174,7 +174,20 @@ Context Health: {gauge_glyph} {gauge.pct}% (target {gauge.target_pct}%, hard {ga
 - `last_rotation.at == null`: render "Last rotation:     never".
 - `last_mask.at == null`: render "Last mask:         never".
 - `quality_rolling.status == "n/a"`: render
-  "Quality (rolling): n/a (Phase 12 M16 pending)".
+  "Quality (rolling): n/a (insufficient baseline — first 10 tasks)".
+- `quality_rolling.status == "ok"` (M16 / Phase 12.09 wired): render
+  "Quality drift: {drift_sign}{drift_pct}% (task #{rolling_size}/{baseline_size}, baseline {baseline_avg}, current {current_avg})"
+  where drift_sign is `+` for positive and `-` for negative.
+  Example: "Quality drift: -2.3% (task #14/10, baseline 0.91, current 0.89)".
+  Read STATE.quality.current_drift_pct, STATE.quality.rolling_window_tasks
+  length, STATE.quality.baseline_window_tasks length. Compute
+  baseline_avg / current_avg via:
+  `jq -r '((.quality.baseline_window_tasks // []) | map(.confidence_score // 0) | if length == 0 then 0 else (add / length) end)' .apex/STATE.json`
+  (and similarly for rolling). Render in the detailed view ONLY UNLESS
+  the auto-surface trigger in step 3 (|drift| > 5%) fired — in which case
+  it bubbles up via the default→detailed promotion path already defined
+  above. M16 contract: this line is the falsification mechanism for
+  R2-C214 (task#50 ≈ task#1 quality).
 - `alerts == []`: render "ALERTS:            none".
 
 ### Existing-sections regression invariant
@@ -221,6 +234,16 @@ Extract and substitute into Section 6 template:
     EvoScore regression from STATE.evoscore.regression_rate
     Comprehension gates N/total
     Mutation kill rate from STATE.mutation_scores (show "N/A" if no scores exist)
+    Quality drift (M16 / Phase 12.09): read STATE.quality.current_drift_pct.
+      DETAILED VIEW ONLY (or auto-surfaced when |drift| > alert_threshold_pct).
+      When baseline_window_tasks length < 10: render
+        "Quality drift: N/A (baseline forming — N/10 tasks)".
+      When baseline_window_tasks length == 10: render
+        "Quality drift: {drift_sign}{drift_pct}% (task #{rolling_size}/{baseline_size}, baseline {baseline_avg}, current {current_avg})"
+        (drift_sign = "+" for positive, "-" for negative).
+      Read averages via the jq expression documented in the Stub-Rendering Rules
+      section above. Spec anchor: R2-C214 "ultimate APEX metric" — falsification
+      mechanism for "task #50 quality ≈ task #1 quality".
     Living Evidence Counter: parse ~/.claude/apex-learnings.md by tier section (## HOT, ## WARM, ## COLD).
       For each tier, count entries and sum their `**Evidence count: N**` values.
       Display: "Living Evidence: [total_confirmations] confirmations across [total_learnings] learnings ([H] hot, [W] warm, [C] cold)"

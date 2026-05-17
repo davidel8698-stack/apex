@@ -48,6 +48,35 @@ if [ -f "$ADAPTER_MANIFEST" ] && [ "$ALREADY_SHOWN" != "true" ]; then
 fi
 ```
 
+## TELEMETRY NOTIFICATION [M16.1 / Phase 12.09 / User Decision #3]
+## Spec anchors: "Honest scope over marketing scope." + "Honestly Scoped, Not Universally Promised." + User Decision #3 (opt-out from start).
+## One-time, per-project notification surfaced on first /apex:start run.
+## Idempotent — suppression via `.apex/telemetry-notification-shown.flag`.
+```bash
+TELEMETRY_FLAG=".apex/telemetry-notification-shown.flag"
+if [ ! -f "$TELEMETRY_FLAG" ]; then
+  echo ""
+  echo "🔒 APEX collects anonymous, numeric quality counters locally to"
+  echo "   validate context-preservation claims. No code, paths, names, or"
+  echo "   commit messages are ever collected. Data lives in"
+  echo "   .apex/telemetry.jsonl (project-local — no remote upload in v0.1.x)."
+  echo "   Opt out: export APEX_TELEMETRY=off   (per-session)"
+  echo "        OR: touch ~/.claude/telemetry-opt-out.flag   (persistent)"
+  echo "   Full policy: framework/docs/PRIVACY-POLICY.md"
+  echo ""
+  echo "🔒 APEX אוסף מוני איכות מספריים אנונימיים באופן מקומי כדי לאמת"
+  echo "   טענות לגבי שימור הקשר. אין איסוף של קוד, נתיבים, שמות או"
+  echo "   הודעות commit. הנתונים נשמרים ב-.apex/telemetry.jsonl בלבד"
+  echo "   (מקומי לפרויקט — ללא העלאה מרחוק בגרסה v0.1.x)."
+  echo "   ביטול הסכמה: export APEX_TELEMETRY=off   (לסשן נוכחי)"
+  echo "          או:   touch ~/.claude/telemetry-opt-out.flag   (קבוע)"
+  echo "   המדיניות המלאה: framework/docs/PRIVACY-POLICY.md"
+  echo ""
+  mkdir -p .apex 2>/dev/null
+  touch "$TELEMETRY_FLAG" 2>/dev/null || true
+fi
+```
+
 ## VISUAL IDENTITY
 All user-facing output in this command MUST render using ~/.claude/apex-branding.md.
 Read ~/.claude/apex-branding.md before producing any output.
@@ -273,6 +302,7 @@ If no:
      }
      circuit_breaker: {consecutive_no_change_actions: 0, max_allowed: 3, total_tool_calls_this_task: 0, max_tool_calls_per_task: 80, last_file_hash: null, triggered: false, trigger_reason: null}
      snapshots: {pre_task_stash: null, last_snapshot_task: null}
+     quality: {rolling_window_tasks: [], baseline_window_tasks: [], current_drift_pct: 0, alert_threshold_pct: 5, baselined_at_phase: null, tasks_since_rebaseline: 0}  # M16 (Phase 12.09) — quality drift instrumentation; three-place contract with STATE.schema.json + STATE-init.template.json
      autopilot: {
        enabled: false,
        mode: null,

@@ -75,7 +75,7 @@ Source: `framework/settings.json` entries under `.hooks.PostToolUse[]` (each ent
 
 ---
 
-## Command-Invoked / Event-Triggered (21)
+## Command-Invoked / Event-Triggered (22)
 
 Hooks that fire via explicit invocation from command `.md` files, from other
 hooks, or from Claude Code lifecycle events.
@@ -118,6 +118,7 @@ in addition to the new auto-wirings.)
 | `track-d-modal.sh` | `/apex:next` (STEP G when task_class=="D") | M08.1 (Phase 12.02) plain-language Hebrew/English modal for Track D events. Default Enter = `לא, עצור` (decline — safe). Rate-limited ≤1/30 min; excess batches to `.apex/pending_track_d.json`; digest mode after 3 modals/day. `is_irreversible_now=true` bypasses batching. Exit codes: 0=approved, 1=declined, 2=batched/digested, 3=invocation error (caller fails safe to Supervised). |
 | `observation-mask.sh` | `pre-compact.sh` (invoked first; fall-through to `/compact` is the safety net) | R13-002 (F-302) — extractive observation masking. Reads the executor transcript (`APEX_TRANSCRIPT_PATH` env, fallback `.apex/event-log.jsonl`), identifies tool-result blocks older than `working_memory.masking_window_turns` (default 3), and replaces each with a single-line stub `[masked: <tool> at turn <N>, re-read from disk if needed]`. Updates `STATE.context.last_mask_at`; emits `observation.mask.fired` / `observation.mask.fallback` / `observation.mask.bypassed` / `observation.mask.stub` to event-log. Fail-safe: transcript missing → exit 0 (never blocks the pipeline). Idempotent on already-masked blocks. CRLF-safe (R7-009 contract). Bypass: `STATE.context.observation_masking_active = false`. |
 | `dora-collect.sh` | `/apex:milestone-summary`, `/apex:ship` (Phase 12.12) | M18.1 DORA Measurement Engine. Extracts the DORA quartet (Deployment Frequency, Lead Time, Change Failure Rate, MTTR) from `git log` alone and writes `.apex/DORA.json` (schema v1, atomic via rename-temp). Configurable tag patterns via env (`APEX_DORA_DEPLOY_TAG_PATTERN` default `release/*`, `APEX_DORA_DEPLOY_TAG_PATTERN_ALT` default `deploy/*`); rolling window via `APEX_DORA_WINDOW_DAYS` (default 28). CFR uses the per-commit proxy (`per_commit_proxy`) — documented in `framework/docs/CLAIMS-MEASUREMENT.md` §"DORA measurement engine" with rejected alternatives. MTTR uses the `next_forward_tag_after_revert` heuristic; limitations documented. Exit codes: 0=DORA.json written, 1=no commits / git unavailable, 2=invocation error (no .apex/). |
+| `quality-drift.sh` | `subagent-stop.sh` (after rolling-window append); `/apex:status` (`--detailed`); `_rotation-decide.sh` (consumer of `quality_drift` trigger) | M16 (Phase 12.09) quality-drift computation. Reads `STATE.quality.rolling_window_tasks` (FIFO max 10, populated by `subagent-stop.sh`) and `STATE.quality.baseline_window_tasks` (first-10 frozen baseline; resets on phase change + 5 tasks in new phase). Computes `drift_pct = ((current_avg - baseline_avg) / baseline_avg) * 100` over `confidence_score` (high=1.0, medium=0.5, low=0.0). Writes `STATE.quality.current_drift_pct`. If `abs(drift_pct) > alert_threshold_pct` (default 5) AND `tasks_completed > 20` → emits `quality_drift` event to `.apex/event-log.jsonl` (new rotation trigger registered in `_rotation-decide.sh`). Exit codes: 0=ok, 1=insufficient data (baseline <10), 2=invocation error (no .apex/). |
 
 **Note:** Grep across `framework/commands/apex/` returns 51 invocation sites
 across 15 command files — `/apex:next` alone invokes 34 of these. See the
@@ -125,7 +126,7 @@ command `.md` files for exact invocation points.
 
 ---
 
-## Library — Sourced (16)
+## Library — Sourced (17)
 
 Files prefixed with `_` — utility libraries sourced by other hooks.
 **Never invoked directly.**
@@ -148,6 +149,7 @@ Files prefixed with `_` — utility libraries sourced by other hooks.
 | `_require-platform-detect.sh` | `detect_apex_platform` (sets `APEX_PLATFORM=windows\|macos\|linux\|unknown`) + `sample_bun_memory_mb` (echoes `<rss_mb> <commit_mb>` for the ancestor Bun/Claude Code process; always exits 0 with `0 0` + stderr warning on failure). v7.1 cross-platform memory sampling helpers. Fail-soft contract: never block, throttle is the caller's job. | `memory-watchdog.sh` |
 | `_rotation-decide.sh` | `apex_rotation_decide <state_file> <budget_file>` — returns one of `proactive_compact \| warn_and_compact \| hard_rotate \| noop` by reading `STATE.context.estimated_context_usage_pct` (post-R12-001) and iterating `CONTEXT_BUDGET.rotation_triggers[]` in priority order (array index = priority; first match wins). Supports trigger types `utilization_pct`, `phase_boundary`, `task_batch`, `time_minutes`, `recovery_density`; `pattern` is legacy-skipped; unknown types are skipped with an event-log line. **HALT-priority guard**: returns `noop` regardless of pressure when `STATE.session.drift_indicators.circuit_breaker_triggers > 0` or `STATE.circuit_breaker.triggered == true`. Fail-safe: missing inputs or jq absence → `noop`. R13-005 (F-305). | `/apex:next` Step F (CONTEXT OVERFLOW CHECK → rotation dispatch) |
 | `_emit_apex_event.sh` | `apex_emit_event SEVERITY HOOK_NAME WHAT WHERE WHY [DEDUP_KEY] [NEXT_ACTIONS_JSON]` — M10 central event emitter (Phase 12.06). Routes by severity: CRITICAL → stdout + event-log + CRITICAL-budget tracker (4th-in-12h triggers follow-up MAJOR); MAJOR → event-log + /apex:status flag (silent); MINOR → event-log only (digest hook reaps). 5-min dedup window on `(hook, severity, dedup_key)`. Replaces the ad-hoc `echo "🚫 ..." >&2 ; exit 2` patterns across the 50 hooks; hook rewrite is a documented follow-up. See `framework/docs/SEVERITY-REGISTRY.md` for the per-hook classification table. | New hooks; future per-hook rewrites under Phase 12.06 follow-up |
+| `_telemetry-emit.sh` | `apex_telemetry_emit <event> [counters_json]` — M16.1 (Phase 12.09) anonymized telemetry writer. Single writer to `.apex/telemetry.jsonl`. Dual opt-out (BOTH paths checked before any disk write): `APEX_TELEMETRY=off` env-var OR `.apex/telemetry-opt-out.flag` file → exit 0, no write. Anonymization: project identifier = `sha256(basename $PWD) \| head -c 8` with fallback chain sha256sum→shasum→openssl→sentinel `00000000` (defense-in-depth: never falls back to leaking basename); path-leak guard validates no `/` characters inside counters JSON. Local-only v0.1.x; explicitly ignores `APEX_TELEMETRY_REMOTE` (reserved for v1.0+ opt-in). Atomic append via `printf '%s\n' >> file` (POSIX-atomic for sub-PIPE_BUF writes). Bilingual privacy policy at `framework/docs/PRIVACY-POLICY.md`. Exit codes: 0=ok (write or opt-out), 2=invocation error (missing event arg, malformed counters_json). | `quality-drift.sh` (per-task quality metric); future hooks emitting opt-in counters under M16.1 |
 
 ---
 
@@ -183,10 +185,10 @@ available, and both fall back to the preserved Bash logic when not.
 |---|---|
 | Auto-PreToolUse | 7 |
 | Auto-PostToolUse | 9 |
-| Command-Invoked / Event-Triggered | 21 |
-| Library — Sourced | 16 |
+| Command-Invoked / Event-Triggered | 22 |
+| Library — Sourced | 17 |
 | CommonJS — Node-runtime guards (R5-003) | 3 |
-| **Total** | **55** (R5-011: `tdad-index.sh` and `cross-phase-audit.sh` are dual-listed in Auto-PostToolUse / SubagentStop AND Command-Invoked; not double-counted in the total. R5-014: `_fix-plan-emit.sh` added to Library — Sourced. R5-013: `owner-guard.sh` added to Auto-PreToolUse. R5-016: `decision-gate.sh` added to Command-Invoked. R6-017: `_adapter-detect.sh` added to Library — Sourced. v7.1 added Auto-Continuity Layer: `memory-watchdog.sh` and `turn-checkpoint.sh` to Auto-PostToolUse, `session-auto-resume.sh` to Command-Invoked / SessionStart, `_require-platform-detect.sh` to Library — Sourced. R12-001 added `_tokens-update.sh` to Library — Sourced; R13-001 closed the doc/disk cardinality gap. R13-002 added `observation-mask.sh` to Command-Invoked / Event-Triggered, invoked by `pre-compact.sh` before the `/compact` fall-through. R13-005 added `_rotation-decide.sh` to Library — Sourced, sourced by `/apex:next` Step F as the rotation-decision control-flow gate consumer of `CONTEXT_BUDGET.rotation_triggers[]`. Phase 12.12 (M18.1) added `dora-collect.sh` to Command-Invoked / Event-Triggered, invoked by `/apex:milestone-summary` and `/apex:ship` to extract the DORA quartet from `git log` into `.apex/DORA.json`.) |
+| **Total** | **57** (R5-011: `tdad-index.sh` and `cross-phase-audit.sh` are dual-listed in Auto-PostToolUse / SubagentStop AND Command-Invoked; not double-counted in the total. R5-014: `_fix-plan-emit.sh` added to Library — Sourced. R5-013: `owner-guard.sh` added to Auto-PreToolUse. R5-016: `decision-gate.sh` added to Command-Invoked. R6-017: `_adapter-detect.sh` added to Library — Sourced. v7.1 added Auto-Continuity Layer: `memory-watchdog.sh` and `turn-checkpoint.sh` to Auto-PostToolUse, `session-auto-resume.sh` to Command-Invoked / SessionStart, `_require-platform-detect.sh` to Library — Sourced. R12-001 added `_tokens-update.sh` to Library — Sourced; R13-001 closed the doc/disk cardinality gap. R13-002 added `observation-mask.sh` to Command-Invoked / Event-Triggered, invoked by `pre-compact.sh` before the `/compact` fall-through. R13-005 added `_rotation-decide.sh` to Library — Sourced, sourced by `/apex:next` Step F as the rotation-decision control-flow gate consumer of `CONTEXT_BUDGET.rotation_triggers[]`. Phase 12.12 (M18.1) added `dora-collect.sh` to Command-Invoked / Event-Triggered, invoked by `/apex:milestone-summary` and `/apex:ship` to extract the DORA quartet from `git log` into `.apex/DORA.json`.) |
 
 Verify with: `ls framework/hooks/ | wc -l` (the file-system count is the
 authority; the **Total** cell above must equal what `wc -l` returns and is
@@ -242,7 +244,16 @@ in next.md). Phase 12.08 (M14) added `pre-rotation-snapshot.sh` (54,
 command-invoked — atomic 4-artifact rotation capture: STATE +
 DECISIONS flush + git tag + ROTATION-NOTE; safe-or-noop on failure;
 tag retention=50). resume.md reads the most-recent ROTATION-NOTE
-preferentially over DECISIONS.md.
+preferentially over DECISIONS.md. Phase 12.12 (M18.1) added
+`dora-collect.sh` (55, command-invoked — DORA quartet extractor;
+writes `.apex/DORA.json` from `git log` alone; configurable tag
+patterns). Phase 12.09 (M16 + M16.1) added `quality-drift.sh`
+(56, command-invoked — rolling/baseline confidence-score drift
+detector; emits `quality_drift` event consumed by
+`_rotation-decide.sh`) and `_telemetry-emit.sh` (57, library —
+single anonymized telemetry writer with dual opt-out checked
+BEFORE any disk write; sha256(basename)[0:8] anonymization with
+defense-in-depth fallback; local-only v0.1.x).
 All files accounted for in the tables above.
 
 ---

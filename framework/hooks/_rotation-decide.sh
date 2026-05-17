@@ -41,6 +41,10 @@
 #   - recovery_density: fires when
 #                       `STATE.session.drift_indicators.recovery_density >= value`
 #                       (R2-C091: "same test 3+ times" TDAD signal).
+#   - quality_drift:   fires when `abs(STATE.quality.current_drift_pct) >= value`
+#                       (Phase 12.09 M16 — R2-C214 quality-drift falsification).
+#                       Compared as absolute value so any direction of drift
+#                       (degradation OR unexpected improvement) triggers.
 #   - pattern:         legacy; not consumed here (kept for back-compat,
 #                      iterated as unknown-skip).
 #
@@ -99,12 +103,18 @@ apex_rotation_decide() {
   fi
 
   # Extract state values once.
-  local pct tasks_since phase_boundary recovery_density session_started
+  local pct tasks_since phase_boundary recovery_density session_started quality_drift_pct
   pct=$(jq -r '(.context.estimated_context_usage_pct // 0)' "$state_file" 2>/dev/null | tr -d '\r')
   tasks_since=$(jq -r '(.session.tasks_since_last_rotation // 0)' "$state_file" 2>/dev/null | tr -d '\r')
   phase_boundary=$(jq -r '(.session.phase_boundary_crossed // false)' "$state_file" 2>/dev/null | tr -d '\r')
   recovery_density=$(jq -r '(.session.drift_indicators.recovery_density // 0)' "$state_file" 2>/dev/null | tr -d '\r')
   session_started=$(jq -r '(.session.started_at // "")' "$state_file" 2>/dev/null | tr -d '\r')
+  # M16 (Phase 12.09): quality drift trigger. Read as absolute value so
+  # any direction of drift (negative = degradation, positive = unexpected
+  # improvement / metric break) triggers identically.
+  quality_drift_pct=$(jq -r '
+    (.quality.current_drift_pct // 0) | if . < 0 then -. else . end
+  ' "$state_file" 2>/dev/null | tr -d '\r')
 
   # Sanitize numeric reads (jq may return floats; integer-truncate for `-ge`).
   pct=${pct%.*}
@@ -113,6 +123,8 @@ apex_rotation_decide() {
   [ -z "$tasks_since" ] && tasks_since=0
   recovery_density=${recovery_density%.*}
   [ -z "$recovery_density" ] && recovery_density=0
+  # quality_drift_pct stays as float; awk handles the compare.
+  [ -z "$quality_drift_pct" ] && quality_drift_pct=0
 
   # Compute minutes-since-session-start (used by time_minutes triggers).
   local mins_elapsed=0
@@ -186,6 +198,15 @@ apex_rotation_decide() {
         local v=${t_value%.*}
         [ -z "$v" ] && v=0
         if [ "${recovery_density:-0}" -ge "$v" ] 2>/dev/null; then
+          decision="$t_action"
+          matched=1
+        fi
+        ;;
+      quality_drift)
+        # Float compare via awk: fires when |drift_pct| >= value.
+        local exceeds
+        exceeds=$(awk -v a="${quality_drift_pct:-0}" -v t="${t_value:-0}" 'BEGIN{ print (a >= t) ? "1" : "0" }')
+        if [ "$exceeds" = "1" ]; then
           decision="$t_action"
           matched=1
         fi

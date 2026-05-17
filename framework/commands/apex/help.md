@@ -146,4 +146,66 @@ This event is consumed by `state-rebuild.sh` (R5-004 — events become disk-deri
 
 ## DYNAMIC DISCOVERY
 For completeness, also scan `ls ~/.claude/commands/apex/*.md` at runtime to catch any commands not in the static table above.
+
+## TOPIC: telemetry [M16.1 / Phase 12.09 / User Decision #3]
+When the user runs `/apex:help telemetry` (or asks about telemetry, privacy,
+data collection, opt-out, "what does APEX collect", "מה APEX אוסף",
+"איך לבטל את הטלמטריה"), render the following summary verbatim and link to
+`framework/docs/PRIVACY-POLICY.md` for the full policy. Hebrew + English
+together (the user's primary language is Hebrew per CLAUDE.md).
+
+```
+🔒 APEX Telemetry — Quick Summary
+─────────────────────────────────
+What's collected (numeric counters only):
+  • Timestamps (ts), event names, project_hash (sha256[0:8]).
+  • Phase identifier (optional).
+  • Counters: drift_pct, baseline_avg, current_avg, tasks_completed, etc.
+
+What's NOT collected (ever):
+  • File paths, source code, commit messages, branch names.
+  • Repository URLs, user identity (name/email).
+  • Free-text strings from RESULT.json prose fields.
+
+Where it lives:
+  • .apex/telemetry.jsonl — project-local file. No remote upload in v0.1.x.
+
+How to opt out (either path works — defense-in-depth):
+  • Per-session:  export APEX_TELEMETRY=off
+  • Persistent:   touch ~/.claude/telemetry-opt-out.flag
+
+How to delete:
+  • rm .apex/telemetry.jsonl   (single-file removal; no backups, no remote)
+  • TODO: apex telemetry purge command — v1.0+ backlog.
+
+Full policy: framework/docs/PRIVACY-POLICY.md
+─────────────────────────────────
+🔒 APEX טלמטריה — סיכום קצר
+מה נאסף (מוני מספרים בלבד):
+  • חותמות זמן, שמות אירועים, project_hash (sha256[0:8]).
+  • מזהה שלב (אופציונלי).
+  • מונים: drift_pct, baseline_avg, current_avg, tasks_completed וכו'.
+
+מה לא נאסף (אף פעם):
+  • נתיבי קבצים, קוד מקור, הודעות commit, שמות branch.
+  • כתובות URL, זהות משתמש (שם/אימייל).
+  • מחרוזות טקסט חופשי משדות prose ב-RESULT.json.
+
+היכן הנתונים:
+  • .apex/telemetry.jsonl — קובץ מקומי של הפרויקט. אין העלאה מרחוק ב-v0.1.x.
+
+איך לבטל הסכמה (שני הנתיבים עובדים — הגנה לעומק):
+  • לסשן בודד:    export APEX_TELEMETRY=off
+  • קבוע:         touch ~/.claude/telemetry-opt-out.flag
+
+איך למחוק:
+  • rm .apex/telemetry.jsonl   (מחיקת קובץ בודד; אין גיבויים, אין מרוחק)
+  • TODO: פקודה apex telemetry purge — ב-backlog לגרסה v1.0+.
+
+המדיניות המלאה: framework/docs/PRIVACY-POLICY.md
+```
+
+## INTENT-TO-COMMAND ROUTING — TELEMETRY ADDITION
+Add the following row to the routing table above (intent → telemetry topic):
+| "telemetry" / "privacy" / "what does APEX collect" / "opt out" | "טלמטריה" / "פרטיות" / "מה APEX אוסף" / "ביטול הסכמה" | `/apex:help telemetry` (this topic) | Renders the telemetry/privacy summary above + links to PRIVACY-POLICY.md |
 </context>
