@@ -252,6 +252,15 @@ run_first_deployment_gate() {
     log "first-deployment gate: SKIPPED (APEX_SKIP_FIRST_DEPLOYMENT_GATE=1)"
     return 0
   fi
+  # Recursion guard: when run-all.sh's child tests themselves invoke
+  # sync-to-claude.sh (e.g., test-sync-doc-coverage.sh), the gate must
+  # NOT trigger another run-all.sh — that creates an infinite recursion.
+  # APEX_FIRST_DEPLOYMENT_GATE_RUNNING is exported when this function
+  # first executes; nested invocations short-circuit.
+  if [[ "${APEX_FIRST_DEPLOYMENT_GATE_RUNNING:-0}" == "1" ]]; then
+    log "first-deployment gate: SKIPPED (nested call inside run-all.sh tests)"
+    return 0
+  fi
   if [[ $DRY_RUN -eq 1 || $CLEAN_MODE -eq 1 ]]; then
     return 0
   fi
@@ -261,8 +270,10 @@ run_first_deployment_gate() {
   fi
 
   log "first-deployment gate: running framework/tests/run-all.sh ..."
+  export APEX_FIRST_DEPLOYMENT_GATE_RUNNING=1
   local new_json
   new_json=$(bash "$runner" --json 2>/dev/null || true)
+  unset APEX_FIRST_DEPLOYMENT_GATE_RUNNING
   if [[ -z "$new_json" ]]; then
     log "first-deployment gate: runner produced no output — gate SKIPPED."
     return 0
