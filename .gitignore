@@ -4,14 +4,20 @@
 .apex/event-log.jsonl
 .apex/backups/
 .apex/phases/
+.apex/FIX_PLAN.md
+.apex/RECOVERY_MENU.md
+.apex/SESSION-LOG.md
+.apex/TEST_MAP.txt
+.apex/health-check-*.md
 
 # Claude Code local settings (contains personal machine paths)
 .claude/settings.local.json
+.claude/scheduled_tasks.lock
 
 # Internal audit artifacts (not for public)
 apex-audit-findings-*.md
 NEW-FINDINGS-*.md
-WAVE-*-RESULT.md
+WAVE-*-RESULT*.md
 WAVES-R*.md
 ROUND-R*-CLOSURE.md
 REMEDIATION-PLAN-*.md
