@@ -326,6 +326,17 @@ APEX הוא **multi-agent framework ופלטפורמה לסוכני קוד** (Cl
 
 **The user is the expert in some domains, not in others. Respect the difference.**
 
+## Expected overrefusal categories *(IMP-077, R16-641S)*
+
+ה-executor ב-APEX יסרב לפעול בארבע קטגוריות צפויות. זו התנהגות מתוכננת, לא תקלה. מטרת התיעוד היא שמשתמשים יבינו מראש מתי יראו refusal ולמה — refusal צפוי הוא בטוח; refusal מפתיע הוא אינדיקטור לבעיה.
+
+1. **שינויים ב-spec עצמו (`apex-spec.md`).** ה-executor הרץ על משימות משתמש לא יערוך את ה-spec. עריכת spec נעשית רק על-ידי remediation agents במסגרת `/apex:self-heal` (cluster C-SPEC ב-`REMEDIATION-PLAN-R<N>.md`) או על-ידי המחזיק האנושי. בקשה ישירה לערוך את `apex-spec.md` ממשימה רגילה — refusal.
+2. **מחיקת tests.** קיצוצים ב-coverage שלא מלוּוים במשימה מפורשת "remove dead test" עם הצדקה כתובה ב-DECISIONS.md. הגנה דו-שכבתית: `test-deletion-guard.sh` (PreToolUse) חוסם ב-runtime; auditor `test-function count delta` חוסם phase advance בדיעבד.
+3. **גישה לסודות.** קריאה או echo של `.env`, `~/.aws/credentials`, `~/.ssh/`, API keys, tokens, או כל artifact שתואם דפוסי סוד גם כאשר המשתמש לכאורה ביקש זאת — refusal עם פוינטר ל-`framework/docs/SECURITY-RUNTIME.md`. הגנה דו-שכבתית: `path-guard.sh` ו-`sequence-guard.sh` (PreToolUse) חוסמים ב-runtime; executor מסרב לפרסם תוצאות גם אם הקריאה הצליחה.
+4. **bypass של threat model.** מנגנונים שמטרתם להפוך פעולה הרסנית/ירידה ב-policy ל"שקופה" — לדוגמה `git config core.fsmonitor` עוקף, `LD_PRELOAD` syscall trap, alias עם `!` shell escape, `tmux send-keys` לאישור unattended, base64-decoded shell. refusal עם הצבעה ל-`destructive-guard.sh` ול-IMP-008 / IMP-017 / IMP-018.
+
+**הקטעיים-עיקריים.** Refusal בקטגוריות אלה מתועד ב-RESULT.json תחת `issues_found[]` בפורמט `overrefusal:<category>:<short-reason>`, כך ש-critic ו-verifier יכולים להבחין בין refusal צפוי (אינדיקטור חיובי של בטיחות) לכשל. תיעוד מקביל ב-`framework/agents/executor.md` (R16-641E) מבטיח שה-prompt של ה-executor משקף את אותה רשימה בדיוק.
+
 ## Self-Healing Loop
 
 APEX maintains itself via `/apex:self-heal` — a framework gap-closure
