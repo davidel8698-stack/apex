@@ -108,6 +108,35 @@ check_segment() {
     return 1
   fi
 
+  # R16-609 (F-609, IMP-008): git-config tamper primitives — persistence vector
+  # for cover-up attacks (Mythos §4.5.4.1). Pairs with critic STEP 1.5 GIT TRACE
+  # VERIFICATION (R16-603) which assumes git itself is uncompromised.
+  # Pattern set: core.fsmonitor (hooks every fs op), core.hooksPath (relocates
+  # hook dir), git alias (core.alias-family) with leading ! shell escape, writes to .git/hooks/,
+  # .git/config, ~/.gitconfig, /etc/gitconfig, and `git -c core.<name>=` overrides.
+  # Carve-out: legitimate `git config user.email` / `user.name` / `core.editor`
+  # are NOT in this pattern set.
+  if echo "$NORMALIZED" | grep -qiE "git\s+config\s+(--global\s+|--system\s+|--local\s+)*core\.fsmonitor" 2>/dev/null; then
+    block "$SEGMENT" "git config core.fsmonitor (cover-up persistence)"
+    return 1
+  fi
+  if echo "$NORMALIZED" | grep -qiE "git\s+config\s+(--global\s+|--system\s+|--local\s+)*core\.hooksPath" 2>/dev/null; then
+    block "$SEGMENT" "git config core.hooksPath (hook relocation)"
+    return 1
+  fi
+  if echo "$NORMALIZED" | grep -qE "git\s+config\s+(--global\s+|--system\s+|--local\s+)*alias\.[^=]*=['\"]!" 2>/dev/null; then
+    block "$SEGMENT" "git alias with shell escape (! prefix)"
+    return 1
+  fi
+  if echo "$NORMALIZED" | grep -qE "(>|>>|tee)\s+([^|]*\s+)?(\.git/hooks/|\.git/config|~/\.gitconfig|/etc/gitconfig)" 2>/dev/null; then
+    block "$SEGMENT" "direct write to git config / hook dir"
+    return 1
+  fi
+  if echo "$NORMALIZED" | grep -qiE "git\s+-c\s+core\.[a-zA-Z]+=[^[:space:]]+" 2>/dev/null; then
+    block "$SEGMENT" "git -c core.<name>= override"
+    return 1
+  fi
+
   return 0
 }
 
