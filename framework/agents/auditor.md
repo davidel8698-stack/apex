@@ -160,6 +160,79 @@ codebase's stated language. `.py` → Python regex; `.js`/`.mjs`/`.cjs`
 → JS; `.ts`/`.tsx` → TS; `.go` → Go. Files with no matching extension
 are skipped (not counted).
 
+### STEP 6 — COMPLIANCE-CLAIM SCAN (R16-630A, F-630, IMP-030)
+
+**Purpose.** Catch *decorative compliance variables* — identifiers
+whose name asserts a security or correctness property
+(`is_authenticated`, `csrf_verified`, `permission_checked`,
+`input_sanitized`, `is_authorized`, `signature_valid`, etc.) that
+are declared, assigned `true`, and then never consulted by any
+control-flow decision. A decorative compliance variable creates the
+appearance of a check without enforcing it. Pairs with the critic
+sibling (R-630C) which scans the per-task diff; the auditor's scope
+is **the broader test-tree-adjacent codebase** the critic does not
+read (test fixtures, helper modules, integration scaffolding).
+
+**Scope.** Quarantine-respecting — auditor only reads files matching
+the QUARANTINE RULES patterns above. The scan therefore covers test
+files and test helpers, not implementation source. This is
+intentional: the executor and critic guard implementation source;
+the auditor guards the test-side of the contract (a test that
+*looks* like it asserts authentication but doesn't is a phantom
+test, which is the auditor's domain).
+
+**Detection regex set.**
+
+- Name pattern (case-insensitive): one of
+  `is_authenticated`, `is_authorized`, `csrf_verified`,
+  `permission(s)?_checked`, `input_sanitized`, `signature_valid`,
+  `token_validated`, `compliance_ok`, `audited`, `is_safe`,
+  `is_secure`, `access_granted`, `verified_user`, `was_validated`.
+- Declaration shape (per-language):
+  - Python: `^\s*<name>\s*=\s*True\b`
+  - JS/TS:  `\b(const|let|var)\s+<name>\s*=\s*true\b`
+  - Go:     `\b<name>\s*:?=\s*true\b`
+- **Usage check.** For every matched declaration, grep the same file
+  (and any file in the test-tree that imports it by symbol) for a
+  *read* of the variable inside a control-flow construct:
+  `if\s+<name>`, `<name>\s*\?\s*`, `assert\s+<name>`, `expect\(<name>\)`,
+  `<name>\s*==\s*true`, `<name>\s*&&`. If zero such reads exist, the
+  variable is **decorative**.
+
+**Verdict mapping.**
+
+- **decorative_compliance_var = 0** — clean, no finding.
+- **decorative_compliance_var ≥ 1 in implementation-adjacent test** —
+  emit a MAJOR-severity quality issue with the line
+  `decorative_compliance_var: <name> declared true but never read in
+  control flow (file <path>)`. Promote the AUDIT.md verdict to FAIL
+  if the variable name matches the *safety* subset
+  (`is_authenticated`, `is_authorized`, `csrf_verified`,
+  `permission_checked`, `signature_valid`, `token_validated`,
+  `access_granted`) — these are the bypassable security claims.
+  Otherwise WARN.
+
+**False-positive guards.**
+
+- Fixtures that deliberately set `is_authenticated = True` to
+  *construct* an authenticated test subject (e.g.
+  `user = User(is_authenticated=True)`) are not decorative — the
+  variable is read by the implementation under test. The
+  cross-file usage check catches this case.
+- Snapshot fixtures (`*.snap`, `__snapshots__/`) are skipped.
+
+**Output line** (append to AUDIT.md Quality Issues block):
+
+```
+compliance-claim scan: <N> decorative_compliance_var hit(s) — <verdict>
+```
+
+where `<verdict>` is `CLEAN`, `WARN`, or `FAIL` per the mapping
+above. Critic sibling (R-630C) emits the corresponding line in the
+critic verdict; both must agree on direction (the critic is
+authoritative on the per-task diff; the auditor on the broader test
+tree).
+
 ## OUTPUT
 
 Write to `.apex/phases/$PHASE/${task_id}-AUDIT.md`:
