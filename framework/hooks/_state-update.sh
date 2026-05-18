@@ -142,6 +142,23 @@ _state_update() {
 #     tool     optional tool name string
 #
 # Fire-and-forget; failures are silent (we never block the post-tool path).
+# R16-610 (F-610, IMP-005): _record_tool_failure increments
+# STATE.tool_failure_count whenever a PostToolUse event reports
+# `is_error=true`. Read by exfil-guard.sh in PreToolUse — when the counter
+# reaches the IMP-005 threshold (>=5), the hook activates an elevated deny
+# set targeting DNS-based exfil, non-standard ports, base64-looking
+# filenames, and side-channel /tmp/<encoded> writes.
+#
+# Usage:
+#   _record_tool_failure
+#
+# Fire-and-forget; failures are silent (we never block the post-tool path).
+_record_tool_failure() {
+  _state_update \
+    '.tool_failure_count = ((.tool_failure_count // 0) + 1)' \
+    2>/dev/null || true
+}
+
 _record_denied_error() {
   local category="${1:-}"
   local tool="${2:-unknown}"

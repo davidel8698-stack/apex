@@ -711,6 +711,12 @@
         }
       }
     },
+    "tool_failure_count": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 0,
+      "description": "R16-610 (F-610, IMP-005): Monotonic counter of PostToolUse events where the executed tool returned `is_error=true`. Incremented by _state-update.sh `_record_tool_failure` from PostToolUse hooks. Read by exfil-guard.sh in PreToolUse — when count >= 5, the hook activates an elevated deny set (DNS exfil via encoded subdomains, non-standard port binds, base64-looking filenames, /tmp/<encoded> writes). Reset to 0 by /apex:next on task boundary success. Additive — absent on projects predating R16-610; consumers MUST tolerate undefined via `// 0`."
+    },
     "recent_denied_error_window": {
       "type": "array",
       "description": "R16-616 (F-616, IMP-016): rolling window of the last 5 PostToolUse denied-error events. Populated by _state-update.sh `_record_denied_error` whenever PostToolUse output classifies as unauthorized/forbidden/403/401/denied/missing-token. Consumed by sequence-guard.sh (PreToolUse Bash) to tighten the deny pattern set for the next 5 PreToolUse calls — catches the credential-search-after-permission-denied attack. FIFO bounded at 5 entries; oldest pops on append. Additive; absent on projects predating R16-616.",

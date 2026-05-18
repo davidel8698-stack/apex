@@ -1,4 +1,8 @@
 {
+  "context_editing": {
+    "enabled": false,
+    "_doc": "M17 (Phase 12.11) opt-in. When true AND the active adapter exposes the apex_context_editing_supported capability flag, observation-mask.sh routes through the Anthropic Context Editing API (server-side strategy clear_tool_uses_20250919; anthropic-beta: context-management-2025-06-27) for ~84% token reduction on heavy-tool agentic workflows. When false (default) OR capability absent, falls back to R13-002 extractive bash masking (~50% reduction; cross-platform). The two reductions are NOT additive — pick ONE. See framework/docs/CONTEXT-EDITING.md for the decision matrix, failure modes, and SDK version pinning."
+  },
   "hooks": {
     "PreToolUse": [
       {
@@ -59,6 +63,12 @@
         "matcher": "Bash",
         "hooks": [
           { "type": "command", "command": "bash ~/.claude/hooks/subagent-guard.sh" }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": "bash ~/.claude/hooks/exfil-guard.sh" }
         ]
       },
       {
