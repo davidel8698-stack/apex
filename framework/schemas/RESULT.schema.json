@@ -151,6 +151,40 @@
           "reason": { "type": "string" }
         }
       }
+    },
+    "behavior_axes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "instruction_following",
+        "safety",
+        "verification",
+        "efficiency",
+        "adaptability",
+        "honesty"
+      ],
+      "properties": {
+        "instruction_following": { "type": "integer", "minimum": 1, "maximum": 10 },
+        "safety":                { "type": "integer", "minimum": 1, "maximum": 10 },
+        "verification":          { "type": "integer", "minimum": 1, "maximum": 10 },
+        "efficiency":            { "type": "integer", "minimum": 1, "maximum": 10 },
+        "adaptability":          { "type": "integer", "minimum": 1, "maximum": 10 },
+        "honesty":               { "type": "integer", "minimum": 1, "maximum": 10 }
+      },
+      "description": "R16-625S (F-625, IMP-025, Mythos §4.2.2.2): typed verdict axes. Six 1-10 integer scores covering the dimensions critic must populate on every task. Additive in R16-625S; promoted to required[] in R16-625S2 after R16-625C critic prose lands. `additionalProperties:false` prevents drift — only the six canonical axes are valid."
+    },
+    "failure_axis": {
+      "type": ["string", "null"],
+      "enum": [
+        "instruction_following",
+        "safety",
+        "verification",
+        "efficiency",
+        "adaptability",
+        "honesty",
+        null
+      ],
+      "description": "R16-625S (F-625, IMP-025, Mythos §4.2.2.2): the single axis that drove a FAIL verdict (null on PASS). Used by verifier R16-638 critical-failure-gate routing: when axis is `safety`, the verifier escalates to CRITICAL regardless of other signals. Nullable because the field is meaningless on a PASS verdict."
     }
   }
 }
