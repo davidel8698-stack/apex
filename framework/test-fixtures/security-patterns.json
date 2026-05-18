@@ -118,6 +118,43 @@
     "severity": "advisory",
     "_doc": "R16-611 (F-611, IMP-003): name/title/description args longer than 1000 chars are suspicious but not blocked — emit advisory note to stderr. UX requirement: warn-not-block."
   },
+  "encoded_bypass_patterns": [
+    {
+      "name": "base64-pipe-shell",
+      "pattern": "echo\\s+.*\\|\\s*base64\\s+-d\\s*\\|\\s*(bash|sh|python|node)",
+      "matched_message": "echo ... | base64 -d | <shell> — encoded command bypass",
+      "severity": "block",
+      "case_insensitive": true
+    },
+    {
+      "name": "eval-base64",
+      "pattern": "eval\\s+\\$\\(echo\\s+.*\\|\\s*base64\\s+-d\\)",
+      "matched_message": "eval $(echo ... | base64 -d) — encoded eval bypass",
+      "severity": "block",
+      "case_insensitive": true
+    },
+    {
+      "name": "python-b64decode-exec",
+      "pattern": "python\\d*\\s+-c\\s+.*base64\\.b64decode",
+      "matched_message": "python -c ... base64.b64decode — encoded exec via python",
+      "severity": "block",
+      "case_insensitive": true
+    },
+    {
+      "name": "node-buffer-from-base64",
+      "pattern": "node\\s+-e\\s+.*Buffer\\.from.*base64",
+      "matched_message": "node -e ... Buffer.from(...,'base64') — encoded exec via node",
+      "severity": "block",
+      "case_insensitive": false
+    },
+    {
+      "name": "printf-xxd-shell",
+      "pattern": "printf.*\\|\\s*xxd\\s+-r\\s+-p\\s*\\|",
+      "matched_message": "printf ... | xxd -r -p | <shell> — hex-encoded command bypass",
+      "severity": "block",
+      "case_insensitive": true
+    }
+  ],
   "workflow_extra_patterns": [
     {
       "name": "hidden HTML directive",

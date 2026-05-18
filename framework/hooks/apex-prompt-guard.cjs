@@ -92,6 +92,19 @@ function main() {
   if (!freeText) {
     process.exit(0);
   }
+
+  // R16-617P (F-617, IMP-017): encoded-command bypass detection.
+  // Runs BEFORE the legacy prompt-injection pattern set so an
+  // echo|base64|sh chain blocks immediately. Pairs with destructive-guard.sh
+  // R16-617D for layered defense (.sh blocks at Bash PreToolUse; .cjs blocks
+  // at Write|Edit|Agent PreToolUse). Pattern source: security-patterns.json
+  // encoded_bypass_patterns (canonical, shared with .sh).
+  const encodedHit = sec.matchEncodedBypass(freeText);
+  if (encodedHit) {
+    sec.emitBlock('PROMPT GUARD', encodedHit.name, encodedHit.matched);
+    process.exit(2);
+  }
+
   const hit = sec.matchPromptInjection(freeText);
   if (hit) {
     sec.emitBlock('PROMPT GUARD', hit.name, hit.matched);

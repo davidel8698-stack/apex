@@ -159,6 +159,26 @@ function matchPromptInjection(text) {
   return null;
 }
 
+// R16-617P (F-617, IMP-017): encoded-command bypass detection. Pairs with
+// destructive-guard.sh R16-617D for layered defense. Patterns target
+// echo-base64-pipe-shell, eval-base64, python -c base64.b64decode,
+// node -e Buffer.from(..,'base64'), and printf | xxd -r -p | <shell>.
+// Pattern source: security-patterns.json `encoded_bypass_patterns` (single
+// source of truth shared with the .sh sibling). Returns { name, matched }
+// on first match or null.
+function matchEncodedBypass(text) {
+  const cfg = loadPatterns();
+  if (!Array.isArray(cfg.encoded_bypass_patterns)) return null;
+  const norm = normalize(text);
+  for (const p of cfg.encoded_bypass_patterns) {
+    const re = _patternToRegExp(p);
+    if (re.test(norm)) {
+      return { name: p.name, matched: p.matched_message };
+    }
+  }
+  return null;
+}
+
 // Workflow guard runs all prompt_injection_patterns plus workflow_extra_patterns.
 // Some workflow patterns apply to the raw file content (HTML comments, code blocks)
 // rather than the normalized stream — those patterns carry applies_to: "raw_file".
@@ -234,6 +254,7 @@ module.exports = {
   hasZeroWidthChars,
   matchArgContent,
   matchPromptInjection,
+  matchEncodedBypass,
   matchWorkflowInjection,
   emitBlock,
   readStdinSync,
