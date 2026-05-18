@@ -224,6 +224,44 @@ check_segment() {
     return 1
   fi
 
+  # R16-617D (F-617, IMP-017): encoded-command bypass — block payloads that
+  # decode a base64/hex string and pipe the result into a shell or interpreter.
+  # Pair with apex-prompt-guard.cjs encoded_bypass_patterns (R16-617P) for
+  # layered defense (prompt-side blocks the prompt itself; this hook blocks
+  # the executed command when the bypass still reaches Bash). The
+  # discriminator is the pipe target — base64-decoding to a *file* or
+  # variable is legitimate; piping to bash/sh/python/node is the attack
+  # primitive Mythos §4.5.4.4 (cover-up vector) calls out.
+  #
+  # Pattern families:
+  #   * `echo ... | base64 -d | (bash|sh|python|node|perl|ruby)` — classic.
+  #   * `eval "$(echo ... | base64 -d)"` — eval-wrapped variant.
+  #   * `python -c "...base64.b64decode..."` — in-language decode and exec.
+  #   * `node -e "...Buffer.from(..., 'base64').toString()..."` — JS variant.
+  #   * `printf ... | xxd -r -p | (bash|sh|...)` — hex-decode variant.
+  # Carve-out: `base64 -d > file.bin`, `b64decode` to a non-exec sink is
+  # *not* matched — these patterns require the shell/interpreter target.
+  if echo "$NORMALIZED" | grep -qiE "base64\s+(-d|--decode|-D)\b.*\|\s*(bash|sh|zsh|ksh|dash|python[0-9.]*|node|perl|ruby|php)\b" 2>/dev/null; then
+    block "$SEGMENT" "base64 -d | shell-interpreter — encoded-command bypass"
+    return 1
+  fi
+  if echo "$NORMALIZED" | grep -qiE "eval\s+(\\\$\(|\")?\s*echo\b.*\|\s*base64\s+(-d|--decode|-D)\b" 2>/dev/null; then
+    block "$SEGMENT" "eval \$(echo ... | base64 -d) — encoded-command bypass"
+    return 1
+  fi
+  if echo "$NORMALIZED" | grep -qE "python[0-9.]*\s+-c\s+.*base64\.b64decode" 2>/dev/null; then
+    block "$SEGMENT" "python -c base64.b64decode — in-language decode"
+    return 1
+  fi
+  if echo "$NORMALIZED" | grep -qE "node\s+-e\s+.*Buffer\.from.*['\"]base64['\"]" 2>/dev/null; then
+    block "$SEGMENT" "node -e Buffer.from(..., 'base64') — in-language decode"
+    return 1
+  fi
+  if echo "$NORMALIZED" | grep -qiE "(printf|echo)\b.*\|\s*xxd\s+-r\s+-p\b.*\|\s*(bash|sh|zsh|ksh|dash|python[0-9.]*|node|perl|ruby|php)\b" 2>/dev/null; then
+    block "$SEGMENT" "xxd -r -p | shell-interpreter — hex-decoded bypass"
+    return 1
+  fi
+
   # ADVISORY tier — emits to stderr, does not block. Sets ADVISORY=1 so the
   # outer dispatcher exits 1 instead of 0 (per IMP-002 two-tier contract).
   if echo "$NORMALIZED" | grep -qE "cat\s+/proc/[0-9]+/maps\b" 2>/dev/null; then
