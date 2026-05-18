@@ -50,6 +50,12 @@
         ]
       },
       {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": "bash ~/.claude/hooks/grader-search-guard.sh" }
+        ]
+      },
+      {
         "matcher": "Read",
         "hooks": [
           { "type": "command", "command": "if command -v node >/dev/null 2>&1 && [ -f ~/.claude/hooks/apex-workflow-guard.cjs ]; then node ~/.claude/hooks/apex-workflow-guard.cjs; else bash ~/.claude/hooks/workflow-guard.sh; fi" }
