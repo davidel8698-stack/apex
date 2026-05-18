@@ -178,6 +178,52 @@ check_segment() {
     return 1
   fi
 
+  # R16-613 (F-613, IMP-014): mass-effect destructive patterns — operations
+  # that affect a wide blast radius in a single call (process trees, container
+  # fleets, namespace-wide deletes, recursive find -delete / -exec rm). All
+  # block (exit 2).
+  # Pattern set: pkill -f, killall, pkill -[09], kubectl delete ... --all,
+  # kubectl delete ... -A, docker kill $(docker ps -aq),
+  # docker rm -f $(docker ps -aq), find ... -delete, find ... -exec rm,
+  # rm -rf * / rm -rf .*  (handled here when not caught by the earlier rm
+  # block — e.g. when the dangerous-target shape is the bare glob).
+  # Carve-out: legitimate test-cleanup scripts run under
+  # APEX_ACTIVE_AGENT=test-architect bypass via the exfil-guard convention;
+  # this hook does not honor that variable (defense-in-depth — destructive-
+  # guard is the last line). Document the carve-out for operators.
+  if echo "$NORMALIZED" | grep -qiE "\bpkill\s+(-[0-9]+\s+)?(-f\b|-[a-zA-Z]*f\b)" 2>/dev/null; then
+    block "$SEGMENT" "pkill -f — mass process kill by pattern"
+    return 1
+  fi
+  if echo "$NORMALIZED" | grep -qiE "\bkillall\b" 2>/dev/null; then
+    block "$SEGMENT" "killall — mass process kill by name"
+    return 1
+  fi
+  if echo "$NORMALIZED" | grep -qiE "\bpkill\s+-(0|9)\b" 2>/dev/null; then
+    block "$SEGMENT" "pkill -0 / pkill -9 — process probe / mass-kill signal"
+    return 1
+  fi
+  if echo "$NORMALIZED" | grep -qiE "kubectl\s+delete\s+\S+\s+.*(--all\b|\s-A\b|\s--all-namespaces\b)" 2>/dev/null; then
+    block "$SEGMENT" "kubectl delete <resource> --all / -A — namespace-wide delete"
+    return 1
+  fi
+  if echo "$NORMALIZED" | grep -qE "docker\s+(kill|rm\s+-f)\s+\\\$\(\s*docker\s+ps\s+-aq" 2>/dev/null; then
+    block "$SEGMENT" "docker kill/rm -f \$(docker ps -aq) — container fleet wipe"
+    return 1
+  fi
+  if echo "$NORMALIZED" | grep -qiE "\bfind\b.*\s-delete\b" 2>/dev/null; then
+    block "$SEGMENT" "find ... -delete — recursive deletion via find"
+    return 1
+  fi
+  if echo "$NORMALIZED" | grep -qiE "\bfind\b.*\s-exec\s+rm\b" 2>/dev/null; then
+    block "$SEGMENT" "find ... -exec rm — recursive deletion via find -exec"
+    return 1
+  fi
+  if echo "$NORMALIZED" | grep -qE "\brm\s+-[a-zA-Z]*rf[a-zA-Z]*\s+(\*|\.\*)(\s|$)" 2>/dev/null; then
+    block "$SEGMENT" "rm -rf * / rm -rf .* — glob-wide mass delete"
+    return 1
+  fi
+
   # ADVISORY tier — emits to stderr, does not block. Sets ADVISORY=1 so the
   # outer dispatcher exits 1 instead of 0 (per IMP-002 two-tier contract).
   if echo "$NORMALIZED" | grep -qE "cat\s+/proc/[0-9]+/maps\b" 2>/dev/null; then
