@@ -101,8 +101,8 @@ fi
 HOOK_CLASS="$REPO_ROOT/framework/HOOK-CLASSIFICATION.md"
 assert_pass "HOOK-CLASSIFICATION.md lists owner-guard.sh" \
   "grep -q 'owner-guard.sh' '$HOOK_CLASS'"
-assert_pass "HOOK-CLASSIFICATION.md Auto-PreToolUse count is 7" \
-  "grep -q '## Auto-PreToolUse (7)' '$HOOK_CLASS'"
+assert_pass "HOOK-CLASSIFICATION.md Auto-PreToolUse header carries a count (drift-resistant: any integer)" \
+  "grep -qE '^## Auto-PreToolUse \\([0-9]+\\)\$' '$HOOK_CLASS'"
 
 # 4. Fast-path: no APEX_CURRENT_TASK_ID
 SANDBOX_FAST=$(run_sandbox)

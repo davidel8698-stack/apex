@@ -31,7 +31,19 @@
       "pattern": "^([0-9a-f]{7,40}|)$",
       "description": "R16-601 (F-601, IMP-001): git HEAD SHA captured by pre-task-snapshot.sh at task start, used by critic STEP 1.5 GIT TRACE VERIFICATION (R16-603) to bound the diff window when verifying that every entry in files_modified[] actually appears in git's view of changes. Pattern accepts a 7-40 hex SHA (typical short or full) OR the empty string when the project has no git history (executor MUST write '' explicitly, never omit, so the required-marker added in R16-601R holds). Additive in R16-601; promoted to required[] in R16-601R after R16-602 executor population lands."
     },
-    "status": { "type": "string", "enum": ["success", "failure", "partial"] },
+    "status": {
+      "type": "string",
+      "enum": [
+        "success",
+        "failure",
+        "partial",
+        "gave_up",
+        "stuck_on_recurring_error",
+        "answer_thrashing",
+        "apology_no_completion"
+      ],
+      "description": "R16-606 (F-606, IMP-063/064/065/007): widened from the original 3 values (success/failure/partial) to add four mythos-grade outcomes consumers (round-checker R16-637, verifier R16-638, executor outcome classifier R16-607, circuit-breaker R16-605) must distinguish: `gave_up` — executor abandoned task without completing required work (semantically separate from `failure` which implies attempted-and-failed); `stuck_on_recurring_error` — circuit-breaker detected the same error hash repeating beyond threshold; `answer_thrashing` — executor flipped between answers on a deterministic question (R2-C091 signal); `apology_no_completion` — output contains apology language with no actual completion. Additive widening — original three members preserved verbatim per acceptance criterion."
+    },
     "files_modified": {
       "type": "array",
       "items": {
