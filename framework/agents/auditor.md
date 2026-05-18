@@ -87,6 +87,79 @@ Are the required test types present? Are minimum assertion counts met?
 Verify tests don't import implementation internals in ways that couple them
 to implementation details rather than testing observable behavior.
 
+### STEP 5 — TEST-FUNCTION COUNT DELTA (R16-608A, F-608, IMP-008-A)
+
+**Purpose.** Catch silent erosion of test coverage: a task that quietly
+removes test functions without an explicit "remove dead test" instruction
+in PLAN_META is committing a coverage regression and must block phase
+advance. Pairs with `framework/hooks/test-deletion-guard.sh` (R16-608) —
+the hook blocks at PreToolUse; this step is the cross-cutting auditor
+check that catches whatever the hook missed (different patterns,
+chained commits, etc.).
+
+**Counts persist at** `.apex/phases/$PHASE/${task_id}-test-count.json`
+(written by this step on first invocation per task, and re-read on the
+post-task pass). Shape:
+
+```json
+{
+  "task_id": "<id>",
+  "captured_at": "<RFC 3339>",
+  "by_language": { "python": <n>, "javascript": <n>, "typescript": <n>, "go": <n> },
+  "total": <sum>
+}
+```
+
+**Regex set per language family** (anchored to the start of a line; whole
+test-tree only — never source dirs):
+
+- **Python** — `^def test_` (covers `def test_foo(...)` at module level)
+  AND `^\s+def test_` (covers methods inside test classes).
+- **JavaScript / TypeScript** (Jest, Vitest, Mocha, Bun:test) — `^\s*it\(`
+  AND `^\s*test\(` AND `^\s*describe\(` (counted but not asserted —
+  describes are containers).
+- **Go** — `^func\s+Test[A-Z]`.
+
+**Pre-task capture.** Before any executor work begins, run the count over
+`tests/`, `test/`, `__tests__/`, and any directory listed in
+`SPEC.md`'s "test patterns" section (if present). Write the JSON above.
+
+**Post-task delta.** Re-run the same count. Compute:
+
+```
+delta = post.total - pre.total
+```
+
+- **`delta >= 0`** — coverage stable or grew. PASS branch.
+- **`delta < 0`** — coverage shrank. Check PLAN_META.task description
+  and `done_criteria` for an explicit "remove dead test" / "delete
+  obsolete test" / "drop legacy fixture" intent. If present → WARN
+  (advisory line in AUDIT.md, no phase block). If absent → FAIL:
+  block phase advance with the line `Verdict: FAIL — test_count_delta:
+  <delta> without explicit removal instruction`. Pairs with the hook's
+  exit-2 path; the auditor's FAIL is the second-line defense when the
+  hook was bypassed (e.g., manual edit, `git rm`).
+
+**Output.** Append a `## Test-Function Count Delta` section to the
+existing AUDIT.md output:
+
+```
+## Test-Function Count Delta
+Pre:  python=<n>  js=<n>  ts=<n>  go=<n>  total=<n>
+Post: python=<n>  js=<n>  ts=<n>  go=<n>  total=<n>
+Delta: <signed integer>
+Verdict: STABLE | GROWN | WARN-explicit-removal | FAIL-uncompensated-decrease
+```
+
+**Carve-outs.** When `PLAN_META.task_class` is `test_writing` and the
+task description matches `remove|delete|drop|cleanup.*test`, an
+uncompensated decrease is permitted with WARN, not FAIL.
+
+**Language dispatch.** Detect by file extension; never trust the
+codebase's stated language. `.py` → Python regex; `.js`/`.mjs`/`.cjs`
+→ JS; `.ts`/`.tsx` → TS; `.go` → Go. Files with no matching extension
+are skipped (not counted).
+
 ## OUTPUT
 
 Write to `.apex/phases/$PHASE/${task_id}-AUDIT.md`:
