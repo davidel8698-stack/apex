@@ -8,12 +8,23 @@
 # outputs from the executor transcript (working_memory zone Z3). Replaces
 # the previous banner-only behavior with a real fail-safe masking pass.
 #
+# M17 (Phase 12.11): Anthropic Context Editing API integration. When the
+# active adapter exposes the `apex_context_editing_supported` capability
+# AND `context_editing.enabled == true` in settings.json, route through
+# the server-side `clear_tool_uses_20250919` strategy (~84% reduction on
+# heavy-tool agentic tasks). Otherwise fall back to the R13-002 bash path
+# (~50% reduction, cross-platform). The two reductions are NOT additive —
+# the API path supersedes bash; bash never runs when API succeeds. See
+# framework/docs/CONTEXT-EDITING.md for the decision matrix.
+#
 # Spec anchors:
 #   - "Honest scope over marketing scope."
 #   - "Configuration declarative = theatre until code consumes it."
 #   - "Re-read from disk after compaction." (R2-C040)
 #   - Design-note: "Observation masking > LLM summarization (R2: JetBrains
 #     study, 50% cost, equal quality)"
+#   - PLAN.md task 12.11 (M17) — adapter-capability dispatch + fail-safe
+#     fallback to bash on API failure.
 #
 # Contract:
 #   - Fail-safe. If the transcript path cannot be resolved or is missing,
@@ -28,6 +39,10 @@
 #     a single-line stub. NEVER summarizes (R2-C034 vs R2-C035).
 #   - Bypass switch. `STATE.context.observation_masking_active == false`
 #     exits 0 with `observation.mask.bypassed`.
+#   - API-path fail-safe (M17). If the API ping fails, MUST fall back to
+#     bash. NEVER block. Emits a MAJOR severity event so the failure is
+#     observable in /apex:status without breaking the masking guarantee.
+#   - STATE.context.last_mask_at is updated REGARDLESS of which path ran.
 #
 # Window:
 #   `working_memory.masking_window_turns` in CONTEXT_BUDGET.default.json
@@ -83,6 +98,172 @@ if [ -f "$STATE_FILE" ]; then
     exit 0
   fi
 fi
+
+# ── M17 (Phase 12.11): Anthropic Context Editing API dispatch ──
+#
+# Decision matrix (the only two gates; no force-override by design):
+#
+#   context_editing.enabled    capability flag    →  path
+#   ─────────────────────────  ─────────────────  ──────
+#   false (default)            any                →  bash (R13-002)
+#   true                       absent / false     →  bash (R13-002)
+#   true                       true               →  API
+#                              (on API failure)   →  bash (fail-safe)
+#
+# Settings lookup:
+#   1. `framework/settings.json` (source of truth in-repo).
+#   2. `~/.claude/settings.json` (delivered copy).
+# Either is acceptable; missing => default false.
+#
+# Capability lookup:
+#   1. APEX_CONTEXT_EDITING_SUPPORTED env var (explicit override; takes
+#      precedence — used by tests). Accepted values: "true" / "false".
+#   2. framework/adapters/<active>/adapter.json `capabilities.apex_context_editing_supported`.
+#   3. ~/.claude/adapters/<active>/adapter.json (delivered copy).
+#   Missing => false (conservative; bash fallback).
+#
+# API contract (server-side):
+#   The Anthropic context-management API (`anthropic-beta:
+#   context-management-2025-06-27`, strategy `clear_tool_uses_20250919`)
+#   is applied server-side by the adapter when capability is present.
+#   observation-mask.sh does NOT call the API directly — Claude Code (or
+#   the future adapter equivalent) owns the messages.create() invocation.
+#   This hook's role under M17 is twofold:
+#     (a) Mark the mask_path=api in STATE.context so the rest of APEX
+#         (rotation-decide, /apex:status, telemetry) can see WHICH path
+#         was taken.
+#     (b) Run an optional connectivity ping (APEX_CONTEXT_EDITING_API_URL)
+#         to confirm the adapter is wired correctly. If the ping fails,
+#         emit MAJOR + fall back to bash.
+#   When APEX_CONTEXT_EDITING_API_URL is unset (production default), no
+#   network call happens — the capability flag is trusted as the
+#   adapter's self-report.
+_m17_settings_enabled() {
+  local f val=""
+  for f in "framework/settings.json" "$HOME/.claude/settings.json"; do
+    [ -f "$f" ] || continue
+    val=$(jq -r '.context_editing.enabled // false' "$f" 2>/dev/null | tr -d '\r')
+    if [ "$val" = "true" ] || [ "$val" = "false" ]; then
+      printf '%s\n' "$val"
+      return 0
+    fi
+  done
+  printf 'false\n'
+}
+
+_m17_capability_supported() {
+  # Test-friendly explicit override wins.
+  if [ -n "${APEX_CONTEXT_EDITING_SUPPORTED:-}" ]; then
+    case "$APEX_CONTEXT_EDITING_SUPPORTED" in
+      true)  printf 'true\n';  return 0 ;;
+      false) printf 'false\n'; return 0 ;;
+      *) ;; # fall through to adapter probe on unrecognized value
+    esac
+  fi
+  # Adapter probe.
+  local adapter="" probe="$SCRIPT_DIR/_adapter-detect.sh"
+  if [ -f "$probe" ]; then
+    adapter=$(bash "$probe" active 2>/dev/null | tr -d '\r' | head -1)
+  fi
+  [ -z "$adapter" ] && adapter="claude-code"
+  local f val=""
+  for f in \
+    "framework/adapters/$adapter/adapter.json" \
+    "$HOME/.claude/adapters/$adapter/adapter.json"; do
+    [ -f "$f" ] || continue
+    val=$(jq -r '.capabilities.apex_context_editing_supported // false' "$f" 2>/dev/null | tr -d '\r')
+    if [ "$val" = "true" ]; then
+      printf 'true\n'
+      return 0
+    fi
+  done
+  printf 'false\n'
+}
+
+_m17_emit_major() {
+  # Emit a MAJOR severity event via the central M10 emitter. Falls back to
+  # an inline event-log append if the helper is absent (defensive — the
+  # M10 library should be present, but this hook MUST NOT block).
+  local what="$1" why="$2" where="${3:-observation-mask.sh}"
+  local emitter="$SCRIPT_DIR/_emit_apex_event.sh"
+  if [ -f "$emitter" ]; then
+    # shellcheck disable=SC1090
+    source "$emitter" 2>/dev/null
+    if declare -F apex_emit_event >/dev/null 2>&1; then
+      apex_emit_event MAJOR observation-mask "$what" "$where" "$why" \
+        "m17-api-fallback" '["bash framework/tests/test-context-editing.sh"]' \
+        >/dev/null 2>&1 || true
+      return 0
+    fi
+  fi
+  local ts_now
+  ts_now="$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date +%Y-%m-%dT%H:%M:%SZ)"
+  printf '{"ts":"%s","severity":"MAJOR","type":"observation.mask.api_fallback","source":"observation-mask","what":"%s","why":"%s"}\n' \
+    "$ts_now" "$what" "$why" >> "$EVENT_LOG" 2>/dev/null || true
+}
+
+_m17_mark_state_path() {
+  # Set STATE.context.mask_path and last_mask_at atomically. Fail-soft.
+  local path_tag="$1"
+  [ -f "$STATE_FILE" ] || return 0
+  local NOW
+  NOW="$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date +%Y-%m-%dT%H:%M:%SZ)"
+  _state_update \
+    --arg now "$NOW" \
+    --arg p "$path_tag" \
+    '.context.last_mask_at = $now | .context.mask_path = $p' \
+    "$STATE_FILE" >/dev/null 2>&1 || true
+}
+
+_M17_ENABLED=$(_m17_settings_enabled)
+_M17_CAPABLE=$(_m17_capability_supported)
+
+if [ "$_M17_ENABLED" = "true" ] && [ "$_M17_CAPABLE" = "true" ]; then
+  # Take the API path. Optional connectivity ping; production default is
+  # "no ping" — the capability flag is the adapter's self-report.
+  _api_ok=1
+  if [ -n "${APEX_CONTEXT_EDITING_API_URL:-}" ]; then
+    if command -v curl >/dev/null 2>&1; then
+      # Hard timeout (5s connect, 10s overall) so a hung endpoint cannot
+      # block the pipeline. Capture exit code + HTTP status; treat
+      # anything non-2xx OR empty body as failure.
+      _resp=$(curl --silent --show-error \
+                   --connect-timeout 5 \
+                   --max-time 10 \
+                   --write-out '\n%{http_code}\n' \
+                   "$APEX_CONTEXT_EDITING_API_URL" 2>/dev/null) || _api_ok=0
+      _status=$(printf '%s' "$_resp" | tail -1 | tr -d '\r')
+      _body=$(printf '%s' "$_resp" | sed '$d')
+      case "$_status" in
+        2*) : ;;     # success
+        *)  _api_ok=0 ;;
+      esac
+      if [ -z "$_body" ]; then
+        _api_ok=0
+      fi
+    else
+      # No curl on the host — degrade to bash (test platforms without curl
+      # should fall back; this is the documented contract).
+      _api_ok=0
+    fi
+  fi
+
+  if [ "$_api_ok" = "1" ]; then
+    _m17_mark_state_path "api"
+    ts_now="$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date +%Y-%m-%dT%H:%M:%SZ)"
+    printf '{"ts":"%s","type":"observation.mask.fired","source":"observation-mask","mask_path":"api","strategy":"clear_tool_uses_20250919"}\n' \
+      "$ts_now" >> "$EVENT_LOG" 2>/dev/null || true
+    exit 0
+  fi
+
+  # API failure: emit MAJOR and fall through to bash. The fallback is
+  # the contract — under no circumstance does the pipeline block here.
+  _m17_emit_major \
+    "context-editing API ping failed — falling back to R13-002 bash masking" \
+    "Adapter reports apex_context_editing_supported=true but APEX_CONTEXT_EDITING_API_URL ping failed (curl rc/status not 2xx, or empty body)"
+fi
+# Fall through to R13-002 bash path below. The state update at the end
+# of the bash path will set mask_path="bash" via _m17_mark_state_path.
 
 # Resolve window. Default 3.
 WINDOW=3
@@ -197,10 +378,14 @@ if [ -f "$TMP" ]; then
 fi
 
 # Update STATE.context.last_mask_at via _state-update.sh (atomic, with
-# event-log emission). Fail-soft.
+# event-log emission). Fail-soft. M17 also tags mask_path="bash" so the
+# observable path is symmetric with the API branch.
 if [ -f "$STATE_FILE" ]; then
   NOW="$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date +%Y-%m-%dT%H:%M:%SZ)"
-  _state_update --arg now "$NOW" '.context.last_mask_at = $now' "$STATE_FILE" || true
+  _state_update \
+    --arg now "$NOW" \
+    '.context.last_mask_at = $now | .context.mask_path = "bash"' \
+    "$STATE_FILE" || true
 fi
 
 # Emit the fired event.
