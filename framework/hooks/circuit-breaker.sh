@@ -161,4 +161,93 @@ if [ "$TOOL_CALLS" -ge "$MAX_TOOL_CALLS" ]; then
   exit 2
 fi
 
+# === CHECK 3: Recurring-error hash (R16-605, F-605, IMP-007) ===
+# Reads the PostToolUse stdin envelope for `tool_response.is_error == true`
+# tool results, sha256-hashes the first 200 chars of the error payload, and
+# maintains a 20-call FIFO ring buffer in STATE.circuit_breaker.recent_error_hashes[].
+# When any single hash reaches >=5 occurrences in the window, the breaker
+# fires with trigger_reason='stuck_on_recurring_error' and RESULT.status
+# (set by executor on next write) is widened by R-606 to accept this outcome.
+#
+# Pairs with R16-610 exfil-guard (which reads STATE.tool_failure_count, a
+# coarser sibling counter) — they do not interfere; one counts *any* error,
+# the other detects *repeating* errors.
+#
+# Carve-out: PostToolUse envelope MAY be absent when this hook is invoked
+# from a non-Claude-Code context (CLI tests). In that case, stdin is empty
+# and CHECK 3 silently no-ops.
+if [ ! -t 0 ]; then
+  CB_STDIN_BUF=$(cat 2>/dev/null || true)
+  if [ -n "$CB_STDIN_BUF" ] && command -v jq >/dev/null 2>&1; then
+    CB_IS_ERROR=$(echo "$CB_STDIN_BUF" | jq -r '.tool_response.is_error // false' 2>/dev/null || echo "false")
+    if [ "$CB_IS_ERROR" = "true" ]; then
+      # Extract error text; fall back to stringified tool_response when no
+      # explicit error field exists.
+      CB_ERR_TEXT=$(echo "$CB_STDIN_BUF" | jq -r '
+        (.tool_response.content[0].text // empty)
+        // (.tool_response.error // empty)
+        // (.tool_response | tostring)
+      ' 2>/dev/null || true)
+      if [ -n "$CB_ERR_TEXT" ]; then
+        # Hash first 200 chars (per IMP-007 spec).
+        CB_ERR_HEAD=$(printf '%s' "$CB_ERR_TEXT" | head -c 200)
+        if command -v sha256sum >/dev/null 2>&1; then
+          CB_ERR_HASH=$(printf '%s' "$CB_ERR_HEAD" | sha256sum | cut -c1-16)
+        elif command -v shasum >/dev/null 2>&1; then
+          CB_ERR_HASH=$(printf '%s' "$CB_ERR_HEAD" | shasum -a 256 | cut -c1-16)
+        else
+          CB_ERR_HASH=""
+        fi
+        if [ -n "$CB_ERR_HASH" ]; then
+          CB_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo "1970-01-01T00:00:00Z")
+          # Append + FIFO-cap at 20, atomically.
+          _state_update --arg h "$CB_ERR_HASH" --arg t "$CB_TS" \
+             '.circuit_breaker.recent_error_hashes = (((.circuit_breaker.recent_error_hashes // []) + [{"hash":$h,"ts":$t}]) | .[(if length > 20 then length - 20 else 0 end):])' "$STATE_FILE"
+          # Count occurrences of this hash in the window.
+          CB_COUNT=$(jq --arg h "$CB_ERR_HASH" -r '
+            [ .circuit_breaker.recent_error_hashes[]? | select(.hash == $h) ] | length
+          ' "$STATE_FILE" 2>/dev/null || echo 0)
+          case "$CB_COUNT" in ''|*[!0-9]*) CB_COUNT=0 ;; esac
+          if [ "$CB_COUNT" -ge 5 ]; then
+            mkdir -p .apex 2>/dev/null
+            if command -v emit_fix_plan >/dev/null 2>&1; then
+              emit_fix_plan \
+                --also-write-recovery-menu \
+                "circuit-breaker" \
+                "Circuit breaker tripped: STUCK ON RECURRING ERROR. The same error hash appeared $CB_COUNT times in the last 20 tool calls (threshold: 5). The executor is retrying the same failing action." \
+                "Trigger: stuck_on_recurring_error (hash $CB_ERR_HASH count=$CB_COUNT)" \
+                "/apex:forensics -- diagnose the recurring error and its trigger" \
+                "/apex:rollback -- revert recent edits if they caused the loop" \
+                "/apex:recover -- reset and re-plan with a different approach" \
+                2>/dev/null || true
+            else
+              {
+                echo "# Recovery Menu"
+                echo ""
+                echo "## Reason"
+                echo "Circuit breaker tripped: STUCK ON RECURRING ERROR."
+                echo "Same error hash appeared $CB_COUNT times in the last 20 tool calls (threshold: 5)."
+                echo ""
+                echo "## Options"
+                echo "- \`/apex:forensics\` — diagnose the recurring error."
+                echo "- \`/apex:rollback\` — revert recent edits if they caused the loop."
+                echo "- \`/apex:recover\` — reset and re-plan with a different approach."
+              } > .apex/RECOVERY_MENU.md 2>/dev/null
+            fi
+            {
+              echo "🛑 SAFETY-STOP FIRED (circuit breaker): STUCK ON RECURRING ERROR"
+              echo "   Same error hash ($CB_ERR_HASH) appeared $CB_COUNT times in the last 20 tool calls."
+              echo "   Threshold: 5. The executor is retrying the same failing action."
+              echo ""
+              echo "   Fix plan written to: .apex/FIX_PLAN.md (also mirrored to .apex/RECOVERY_MENU.md)"
+            } >&2
+            _state_update '.circuit_breaker.triggered = true | .circuit_breaker.trigger_reason = "stuck_on_recurring_error"' "$STATE_FILE"
+            exit 2
+          fi
+        fi
+      fi
+    fi
+  fi
+fi
+
 exit 0

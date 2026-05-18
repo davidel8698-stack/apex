@@ -368,7 +368,21 @@
         "max_tool_calls_per_task": { "type": "integer", "minimum": 1 },
         "last_file_hash": { "type": ["string", "null"] },
         "triggered": { "type": "boolean" },
-        "trigger_reason": { "type": ["string", "null"] }
+        "trigger_reason": { "type": ["string", "null"] },
+        "recent_error_hashes": {
+          "type": "array",
+          "maxItems": 20,
+          "description": "R16-605 (F-605, IMP-007): ring buffer of the last 20 PostToolUse `is_error=true` tool-result hashes. Each entry is the sha256 of the first 200 chars of the error payload. circuit-breaker.sh CHECK 3 counts identical hashes within the window — when any one hash occurs >=5 times, the breaker fires with trigger_reason='stuck_on_recurring_error'. Additive; default [] when absent. FIFO bounded at 20 — oldest pops on append.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["hash", "ts"],
+            "properties": {
+              "hash": { "type": "string", "pattern": "^[0-9a-f]{8,64}$" },
+              "ts": { "type": "string", "format": "date-time" }
+            }
+          }
+        }
       }
     },
     "snapshots": {
