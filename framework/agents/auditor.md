@@ -233,6 +233,93 @@ critic verdict; both must agree on direction (the critic is
 authoritative on the per-task diff; the auditor on the broader test
 tree).
 
+### STEP 7 — ADVERSARIAL PERTURBATIONS (R16-632A, F-632, IMP-032)
+
+**Purpose.** When a C/D task has reached PASS at critic and survived
+the auditor checks above, run **one-byte adversarial perturbations**
+over each assertion's expected value and re-execute the test. A test
+that *still passes* after its expected value has been mutated is a
+phantom assertion — it is not actually checking what its expected
+value claims to check. Pairs with the critic sibling (R-632C) which
+covers the risk-proportional review depth in the critic verdict
+block; the auditor here is the *empirical* leg of the same lesson —
+proof-of-process via test execution rather than diff inspection.
+
+**Trigger conditions.**
+
+- `verify_level` ∈ {`C`, `D`} (A/B tasks never invoke this auditor).
+- Critic verdict is `PASS` (a FAIL/PARTIAL already blocks advance —
+  no point burning the time budget on failing tests).
+- Test count after PLAN_META filtering is ≤ 50 (perturbing each
+  expected value costs one re-run; bound the budget). When >50,
+  sample at most 50 random assertions and document the sampling in
+  the AUDIT.md output line.
+
+**Perturbation primitives.** Per matched assertion expected value:
+
+- **Numeric literal** (`42`, `3.14`, `-7`) — flip the lowest-order
+  digit by +1 modulo 10 (`42` → `43`, `3.14` → `3.15`, `-7` → `-8`).
+- **String literal with ASCII content** — flip the last character
+  by +1 modulo 128 within printable range (`"ok"` → `"ol"`,
+  `"hello"` → `"hellp"`). Empty strings are skipped.
+- **Boolean literal** — toggle (`true` → `false`, and vice-versa).
+- **`null` / `undefined` / `None`** — replace with the language's
+  conventional non-null sentinel (`{}`, `0`, `""` — language-aware
+  via file extension).
+
+**Detection regex set** (anchored to test-file assertion shapes):
+
+- Python (pytest, unittest): `\bassert\s+\S+\s*==\s*<value>`,
+  `\bself\.assertEqual\(\s*\S+,\s*<value>\s*\)`.
+- JS/TS (Jest, Vitest, Mocha): `\bexpect\(\s*\S+\s*\)\.toBe\(\s*<value>\s*\)`,
+  `\bexpect\(\s*\S+\s*\)\.toEqual\(\s*<value>\s*\)`,
+  `\bassert\.\w+\(\s*\S+,\s*<value>\s*\)`.
+- Go: `\bassert\.\w+\(\s*t,\s*<value>\s*,`.
+
+**Execution.** For each matched expected value:
+
+1. Snapshot the test file.
+2. Apply the perturbation primitive to a copy.
+3. Re-run the test target (`pytest <file>`, `npx jest <file>`,
+   `go test <file>` — language dispatch by file extension; same
+   logic as STEP 5).
+4. **If the test still passes** with the mutated expected value →
+   the assertion is a **survivor** (phantom). Flag with a
+   MAJOR-severity quality issue.
+5. Restore the snapshot.
+
+**Survivor classification.**
+
+- `survivors == 0` → CLEAN — assertions are sensitive to their
+  expected values. No finding.
+- `0 < survivors ≤ 10% of mutated` → WARN — pockets of phantom
+  assertions; surface in AUDIT.md but do not block.
+- `survivors > 10% of mutated` → FAIL — the test suite is largely
+  vacuous; promote the AUDIT.md verdict to FAIL with the line
+  `Verdict: FAIL — adversarial_perturbation: <N>/<M> assertions
+  survived one-byte mutation`.
+
+**Output line** (append to AUDIT.md Quality Issues block):
+
+```
+adversarial perturbations: <M> mutated, <N> survivors — <verdict>
+```
+
+where `<verdict>` is `CLEAN`, `WARN`, or `FAIL` per the mapping
+above.
+
+**Time-budget rollback.** If the perturbation cycle exceeds the
+configured audit budget (`auditor.adversarial_budget_seconds`, default
+120 s), abort the remaining mutations and emit a WARN line
+`adversarial perturbations: aborted at <K>/<M> — time budget`.
+Truncation must never escalate to FAIL — the auditor was unable to
+verify, not unable to find.
+
+**Cross-language sampling carve-out.** When the test tree mixes
+languages (e.g., a Python service with a TypeScript SDK), distribute
+the 50-assertion cap proportionally to file count per language to
+avoid sampling bias.
+
 ## OUTPUT
 
 Write to `.apex/phases/$PHASE/${task_id}-AUDIT.md`:
