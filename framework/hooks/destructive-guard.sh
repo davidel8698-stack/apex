@@ -137,6 +137,60 @@ check_segment() {
     return 1
   fi
 
+  # R16-612 (F-612, IMP-002): process-memory introspection — credential
+  # extraction attack surface. Two-tier coverage:
+  #   DENY (exit 2): /proc/<pid>/(mem|environ|fd|maps|stat), /dev/(mem|kmem|kcore),
+  #     gdb -p / --pid / attach, dd if=/proc/* / of=/dev/(mem|kmem),
+  #     ptrace, strace -p, LD_PRELOAD= environment override.
+  #   ADVISORY (exit 1): cat /proc/<pid>/maps and /sys/class/net/ reads —
+  #     legitimate-ish but suspicious; warn-not-block.
+  # Pairs with apex-prompt-guard.cjs encoded_bypass_patterns (R16-617P).
+  # Carve-outs: LD_PRELOAD is constrained to the `^LD_PRELOAD=` form so env-var
+  # discussions in prose / comments don't trigger.
+
+  # DENY tier
+  if echo "$NORMALIZED" | grep -qE "/proc/[0-9]+/(mem|environ|fd|maps|stat)\b" 2>/dev/null; then
+    block "$SEGMENT" "/proc/<pid>/(mem|environ|fd|maps|stat) — process-memory introspection"
+    return 1
+  fi
+  if echo "$NORMALIZED" | grep -qE "/dev/(mem|kmem|kcore)\b" 2>/dev/null; then
+    block "$SEGMENT" "/dev/(mem|kmem|kcore) — raw kernel memory access"
+    return 1
+  fi
+  if echo "$NORMALIZED" | grep -qiE "\bgdb\s+(-p|--pid|attach)\b" 2>/dev/null; then
+    block "$SEGMENT" "gdb -p / --pid / attach — debugger attach"
+    return 1
+  fi
+  if echo "$NORMALIZED" | grep -qiE "\bdd\s+(if=/proc/|of=/dev/(mem|kmem))" 2>/dev/null; then
+    block "$SEGMENT" "dd if=/proc/* or of=/dev/(mem|kmem) — memory copy"
+    return 1
+  fi
+  if echo "$NORMALIZED" | grep -qiE "\bptrace\b" 2>/dev/null; then
+    block "$SEGMENT" "ptrace — process tracing primitive"
+    return 1
+  fi
+  if echo "$NORMALIZED" | grep -qiE "\bstrace\s+-p\b" 2>/dev/null; then
+    block "$SEGMENT" "strace -p — attach to running process"
+    return 1
+  fi
+  if echo "$NORMALIZED" | grep -qE "(^|[[:space:];&|])LD_PRELOAD=" 2>/dev/null; then
+    block "$SEGMENT" "LD_PRELOAD= — dynamic linker override"
+    return 1
+  fi
+
+  # ADVISORY tier — emits to stderr, does not block. Sets ADVISORY=1 so the
+  # outer dispatcher exits 1 instead of 0 (per IMP-002 two-tier contract).
+  if echo "$NORMALIZED" | grep -qE "cat\s+/proc/[0-9]+/maps\b" 2>/dev/null; then
+    echo "⚠️  APEX DESTRUCTIVE GUARD (advisory): cat /proc/<pid>/maps — memory map read" >&2
+    echo "Segment: $SEGMENT" >&2
+    ADVISORY=1
+  fi
+  if echo "$NORMALIZED" | grep -qE "/sys/class/net/" 2>/dev/null; then
+    echo "⚠️  APEX DESTRUCTIVE GUARD (advisory): /sys/class/net/ read" >&2
+    echo "Segment: $SEGMENT" >&2
+    ADVISORY=1
+  fi
+
   return 0
 }
 
@@ -168,6 +222,9 @@ block() {
 # inside quoted strings (e.g., echo "a && b" would be split incorrectly).
 # Solution: pure-bash state machine that tracks single/double quote context.
 BLOCKED=0
+# R16-612 (F-612, IMP-002): advisory tier flag — set by check_segment when an
+# advisory-class pattern matches; surfaces as exit 1 below (no block).
+ADVISORY=0
 
 # Quote-aware command splitter: splits on unquoted && and ;
 _split_commands() {
@@ -225,6 +282,11 @@ done
 
 if [ "$BLOCKED" -eq 1 ]; then
   exit 2
+fi
+
+# R16-612: advisory-tier match surfaces as exit 1 (warn-not-block).
+if [ "$ADVISORY" -eq 1 ]; then
+  exit 1
 fi
 
 exit 0
