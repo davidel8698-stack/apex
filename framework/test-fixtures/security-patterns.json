@@ -155,6 +155,65 @@
       "case_insensitive": true
     }
   ],
+  "role_marker_patterns": {
+    "_doc": "R16-620P (F-620 sibling, IMP-020): canonical role-marker pattern set, single source of truth shared between critic.md PRE-PROCESSING (R16-620) and apex-prompt-guard.cjs detection (R16-611 name_arg_patterns). Critic prose references this list by name when scanning task XML / <task> content for embedded role markers; prompt-guard imports the regex literals at runtime. Drift between the two enforcement points was a documented R2 failure mode — this object pins the canonical list so both consumers cannot diverge. Patterns are normalized to JS regex literal form (escape backslash once for JSON; consumer .cjs unescapes per JS literal rules; .sh consumer reads via grep -E equivalent).",
+    "spec_anchor": "F-620 + IMP-020 + IMP-003 (cross-cutting between prompt-guard arg dispatch and critic PRE-PROCESSING).",
+    "patterns": [
+      {
+        "name": "openai-anthropic role markers",
+        "pattern": "<\\|im_start\\|>|<\\|im_end\\|>",
+        "matched_message": "<|im_start|> / <|im_end|> — OpenAI/Anthropic tokenizer role marker",
+        "severity": "block",
+        "case_insensitive": true
+      },
+      {
+        "name": "llama instruction markers",
+        "pattern": "\\[INST\\]|\\[/INST\\]",
+        "matched_message": "[INST] / [/INST] — Llama-family instruction marker",
+        "severity": "block",
+        "case_insensitive": false
+      },
+      {
+        "name": "markdown system heading",
+        "pattern": "^\\s*### System",
+        "matched_message": "### System — markdown role heading",
+        "severity": "block",
+        "case_insensitive": false,
+        "multiline": true
+      },
+      {
+        "name": "conversational assistant role",
+        "pattern": "^\\s*Assistant:",
+        "matched_message": "Assistant: — conversational role label at line start",
+        "severity": "block",
+        "case_insensitive": false,
+        "multiline": true
+      },
+      {
+        "name": "conversational system role",
+        "pattern": "^\\s*System:",
+        "matched_message": "System: — conversational role label at line start",
+        "severity": "block",
+        "case_insensitive": false,
+        "multiline": true
+      },
+      {
+        "name": "conversational user role",
+        "pattern": "^\\s*User:",
+        "matched_message": "User: — conversational role label at line start",
+        "severity": "block",
+        "case_insensitive": false,
+        "multiline": true
+      },
+      {
+        "name": "chatml token",
+        "pattern": "<\\|(system|user|assistant)\\|>",
+        "matched_message": "<|system|> / <|user|> / <|assistant|> — ChatML role token",
+        "severity": "block",
+        "case_insensitive": true
+      }
+    ]
+  },
   "workflow_extra_patterns": [
     {
       "name": "hidden HTML directive",
