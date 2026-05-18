@@ -250,4 +250,76 @@ if [ ! -t 0 ]; then
   fi
 fi
 
+# === CHECK 4: Result-fishing detection — same (command, args) repeating (R16-624, F-624, IMP-024) ===
+# Reads the PreToolUse stdin envelope. sha256-hashes the canonical
+# "<tool_name>|<sorted-args-json>" string and maintains a 20-call FIFO ring
+# buffer in STATE.circuit_breaker.recent_command_hashes[]. When any one hash
+# reaches >=5 occurrences in the window, the breaker ESCALATES (status
+# banner + alternative-approach suggestion) — it does NOT halt (exit 2).
+# This is the key difference from CHECK 3: result-fishing is a productivity
+# warning, not a safety stop. The user/orchestrator should rethink the
+# approach, but blocking would be over-firing on legitimate retry loops
+# like `npm test`. CHECK 1 / 2 / 3 catch the safety-critical cases.
+#
+# CHECK 4 reuses the CB_STDIN_BUF captured by CHECK 3 when the envelope is
+# present. Falls back to a fresh stdin read only if CHECK 3 did not run
+# (e.g., PostToolUse fields were absent and the buffer was empty). The
+# explicit `${CB_STDIN_BUF:-}` reference keeps `set -u` happy.
+if [ ! -t 0 ]; then
+  CB4_BUF="${CB_STDIN_BUF:-}"
+  if [ -n "$CB4_BUF" ] && command -v jq >/dev/null 2>&1; then
+    # PreToolUse envelope provides `tool_name` and `tool_input`. PostToolUse
+    # provides the same plus `tool_response`. Either shape works for CHECK 4
+    # — we only need the request side.
+    CB4_TOOL=$(echo "$CB4_BUF" | jq -r '.tool_name // empty' 2>/dev/null || true)
+    CB4_ARGS=$(echo "$CB4_BUF" | jq -cS '.tool_input // {}' 2>/dev/null || echo "{}")
+    if [ -n "$CB4_TOOL" ]; then
+      CB4_CANON="$CB4_TOOL|$CB4_ARGS"
+      if command -v sha256sum >/dev/null 2>&1; then
+        CB4_HASH=$(printf '%s' "$CB4_CANON" | sha256sum | cut -c1-16)
+      elif command -v shasum >/dev/null 2>&1; then
+        CB4_HASH=$(printf '%s' "$CB4_CANON" | shasum -a 256 | cut -c1-16)
+      else
+        CB4_HASH=""
+      fi
+      if [ -n "$CB4_HASH" ]; then
+        CB4_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo "1970-01-01T00:00:00Z")
+        _state_update --arg h "$CB4_HASH" --arg t "$CB4_TS" \
+           '.circuit_breaker.recent_command_hashes = (((.circuit_breaker.recent_command_hashes // []) + [{"hash":$h,"ts":$t}]) | .[(if length > 20 then length - 20 else 0 end):])' "$STATE_FILE"
+        CB4_COUNT=$(jq --arg h "$CB4_HASH" -r '
+          [ .circuit_breaker.recent_command_hashes[]? | select(.hash == $h) ] | length
+        ' "$STATE_FILE" 2>/dev/null || echo 0)
+        case "$CB4_COUNT" in ''|*[!0-9]*) CB4_COUNT=0 ;; esac
+        if [ "$CB4_COUNT" -ge 5 ]; then
+          # Escalate (warn, do not halt). Write a FIX_PLAN entry so the user
+          # has the suggested alternative approach, but exit 0 so the
+          # orchestrator continues — this is a productivity nudge, not a
+          # destructive event.
+          mkdir -p .apex 2>/dev/null
+          if command -v emit_fix_plan >/dev/null 2>&1; then
+            emit_fix_plan \
+              "circuit-breaker" \
+              "Result-fishing detected: the same (tool, arguments) call was issued $CB4_COUNT times in the last 20 tool calls (threshold: 5). Consider an alternative approach — re-running the same call rarely produces a different result." \
+              "Trigger: result_fishing (tool=$CB4_TOOL hash=$CB4_HASH count=$CB4_COUNT)" \
+              "/apex:forensics -- review what changed between the calls (if anything)" \
+              "/apex:recover -- step back and try a different angle on this task" \
+              "/apex:status -- check the status banner for the alternative approach suggestion" \
+              2>/dev/null || true
+          fi
+          {
+            echo "⚠️  APEX CIRCUIT BREAKER (advisory, CHECK 4): RESULT-FISHING DETECTED"
+            echo "   Same (tool, args) hash ($CB4_HASH) seen $CB4_COUNT times in the last 20 calls."
+            echo "   Threshold: 5. Consider an alternative approach — re-running rarely changes output."
+            echo "   Suggestion: try a different tool, different arguments, or step back to /apex:recover."
+          } >&2
+          # No STATE flag write — the ring buffer itself is the persistent
+          # signal (`/apex:status` can re-count). Adding a flag would also
+          # require a schema entry; CHECK 4 is warn-only, so the stderr +
+          # FIX_PLAN.md emission is the user-visible surface.
+        fi
+      fi
+    fi
+  fi
+fi
+
 exit 0

@@ -382,6 +382,20 @@
               "ts": { "type": "string", "format": "date-time" }
             }
           }
+        },
+        "recent_command_hashes": {
+          "type": "array",
+          "maxItems": 20,
+          "description": "R16-624 (F-624, IMP-024): ring buffer of the last 20 PreToolUse tool-call command+args hashes. Each entry is the sha256 of the canonical `<tool_name>|<args_json>` string. circuit-breaker.sh CHECK 4 detects result-fishing — the executor re-running the same (command, args) hoping for a different output. When any one hash occurs >=5 times within the 20-window, the breaker escalates with an alternative-approach suggestion (status banner, not halt — distinct from CHECK 3 which exits 2 on recurring error). Different from `recent_error_hashes`: that buffer hashes the *response* (error payload); this one hashes the *request* (tool call). Both buffers can fire independently; they observe orthogonal pathologies. Additive; default [] when absent. FIFO bounded at 20 — oldest pops on append.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["hash", "ts"],
+            "properties": {
+              "hash": { "type": "string", "pattern": "^[0-9a-f]{8,64}$" },
+              "ts": { "type": "string", "format": "date-time" }
+            }
+          }
         }
       }
     },
