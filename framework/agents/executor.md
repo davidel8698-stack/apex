@@ -255,6 +255,82 @@ If you notice yourself running the same command 3+ times without progress:
 3. Take a COMPLETELY different approach
 If you cannot find a different approach, report: "⚠️ Blocked — need guidance"
 
+## TERMINATION OUTCOME CLASSIFIER [R16-607, F-607, IMP-063/064/065]
+
+Run this classifier **immediately before** writing RESULT.json's
+`status` field when the task did NOT achieve `success`. The classifier
+picks one of four non-success outcomes — `failure`, `gave_up`,
+`answer_thrashing`, `apology_no_completion` — by evaluating the
+following branches in order. The first match wins; if no branch
+matches, fall back to `failure`.
+
+The four outcomes are NOT synonyms. `failure` means
+*attempted-and-failed objectively*; `gave_up` means
+*explicit-abandonment-decision*; `apology_no_completion` means
+*apology-language with no verified completion*; `answer_thrashing`
+means *flipping between distinct final answers on a deterministic
+question*. Verifier R16-638 maps these to phase-advance routing —
+they MUST be distinguishable downstream.
+
+**Branch 1 — `gave_up` (reflexion-exhaustion path).**
+If the task entered REFLEXION mode (a previous attempt failed and the
+context contains "PREVIOUS ATTEMPT FAILED") AND the current attempt
+also did not satisfy all <done> criteria AND `attempt_number` has
+reached MAX_RETRIES (the executor's normal retry ceiling), classify
+as **`gave_up`**. Retry-count logic is NOT modified by this step —
+the classifier only *reads* `attempt_number`; MAX_RETRIES remains
+whatever the executor's retry contract defines.
+
+**Branch 2 — `apology_no_completion` (apology-only narrative).**
+If your narrative output for this task matches one of the apology-
+language patterns below AND `verified_criteria[]` is empty (i.e. no
+<done> criterion was actually verified with command output), classify
+as **`apology_no_completion`**. The detection is regex over the
+narrative you produced; it does NOT consume chain-of-thought
+(preserve clean-room — CoT is never an input to RESULT). Patterns
+(case-insensitive, anchored to a clause boundary so phrases inside
+quoted error messages or code comments do not trigger):
+
+  - `\bI(?:'m|\s+am)\s+sorry,?\s+(?:but\s+)?I\s+cannot\b`
+  - `\bI\s+apologize,?\s+(?:but\s+)?I\s+(?:cannot|am\s+unable)\b`
+  - `\bUnfortunately,?\s+I(?:'m|\s+am)\s+unable\s+to\b`
+  - `\bI\s+regret\s+(?:that\s+)?I\s+cannot\b`
+
+A match here when `verified_criteria` is empty is the
+*apology-only signature* — pretend-helpful prose without actual work.
+
+**Branch 3 — `answer_thrashing` (≥3 distinct final-answer hashes).**
+For tasks that resolve to a single deterministic final-answer (e.g.
+a yes/no, a numeric value, a single file path, a single classifier
+label), track the sha256 of each final-answer you committed to during
+this task's attempts. If you have recorded ≥3 *distinct* final-answer
+hashes, classify as **`answer_thrashing`**. The hash buffer is
+per-task and lives in
+`.apex/phases/$CURRENT_PHASE/$TASK_ID/answer_hashes.log` (one hash
+per line, append-on-flip). When the buffer cardinality reaches 3,
+this branch fires regardless of whether the *latest* answer is
+correct — three flips means the executor's confidence signal is
+unreliable and the downstream verifier should treat the result as
+non-final.
+
+Note on scaffolding overlap: `recent_command_hashes` (circuit-breaker
+R16-624) hashes the *tool call*; this buffer hashes the *answer
+content*. They are siblings — independent, non-blocking on each
+other.
+
+**Branch 4 — fallback `failure`.**
+If none of the three branches above fired, classify as **`failure`**.
+This is the existing semantics — attempted-and-failed objectively
+(tests red, command exit non-zero, criterion verifiable but
+unverified).
+
+**Writing the field.** Populate `status` in RESULT.json with the
+chosen string (one of `failure`, `gave_up`, `answer_thrashing`,
+`apology_no_completion`). The four values are added to the schema
+enum in R16-606. The verifier R16-638 critical-failure-gate maps
+each to phase-advance behavior; the round-checker R16-637 reads
+them for trajectory classification.
+
 ## Expected overrefusal categories [R16-641E, IMP-077]
 The following four refusal categories are DESIGNED behavior, not failures.
 Mirror of apex-spec.md "Expected overrefusal categories" section — keep
