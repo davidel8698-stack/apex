@@ -228,6 +228,8 @@ APEX הוא **multi-agent framework ופלטפורמה לסוכני קוד** (Cl
 
 ## עקרונות העבודה
 
+**Monitored-mode by default — אין unmonitored mode.** *(R16-640, IMP-076)* כל פעולה של APEX אובזרבילית, כל artifact ניתן ל-replay. אין מצב שבו executor / critic / verifier / auditor פועלים מחוץ למסלול ה-observable (hooks, event-log, RESULT.json, STATE.json). זוהי הצהרה מפורשת של עיקרון שהיה implicit עד כה — כל הוספה עתידית של agent/hook חייבת לרשת את אותו contract. **Carve-out מפורש (IMP-071):** `/apex:health-check` חושף `guards-disabled` mode עבור adversarial framework testing — זהו testing affordance בלבד, sandbox-only, **לא user-facing**. הוא מהווה מעקף מבוקר של ה-guards כדי לבחון אותם, לא bypass של ה-monitored-mode עצמו (ה-event-log + RESULT.json נשארים פעילים גם בו).
+
 **Fail-loud, never fail-silent.**
 
 **Trust but verify at filesystem level — ועד רמת content, schema sync, ו-prompt injection.**
