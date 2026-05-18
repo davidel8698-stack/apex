@@ -262,6 +262,52 @@ check_segment() {
     return 1
   fi
 
+  # R16-618D (F-618, IMP-018): subagent-launching primitives — the pure-pattern
+  # deny tier. Pairs with R16-618N (`subagent-guard.sh`) which handles the
+  # *stateful* `--yes`/auto-approve correlation with destructive command shapes
+  # (a `--yes` flag is legitimate on `apt install -y` and similar, so the
+  # context-sensitive logic lives in 618N). The patterns below are
+  # unconditionally dangerous regardless of surrounding context: detached /
+  # backgrounded session-launchers, expect-driven auto-typers, and
+  # permission-bypass flags that have no legitimate use under APEX agent
+  # control (per Mythos §4.5.4.3 the subagent-launching vector is how an
+  # executor escapes the orchestrator's audit window).
+  #
+  # Pattern families (all block, exit 2):
+  #   * `tmux new-session` / `tmux new -d` — detached tmux launch.
+  #   * `tmux send-keys` followed by an Enter/Return/y/yes literal — typed
+  #     auto-confirmation into an existing tmux session.
+  #   * `screen -dm` / `screen -dmS` — detached screen launch.
+  #   * `expect` script invocations (`expect <file>` or `expect -c`).
+  #   * `--dangerously-skip-permissions` — the literal Claude-CLI footgun flag.
+  #
+  # Carve-out: `nohup` and `--yes` are NOT here — they live in R16-618N
+  # because their danger depends on the command they wrap.
+  if echo "$NORMALIZED" | grep -qiE "\btmux\s+new(-session)?\b.*-d\b" 2>/dev/null; then
+    block "$SEGMENT" "tmux new -d / new-session -d — detached subagent launch"
+    return 1
+  fi
+  if echo "$NORMALIZED" | grep -qiE "\btmux\s+new-session\b" 2>/dev/null; then
+    block "$SEGMENT" "tmux new-session — subagent launch"
+    return 1
+  fi
+  if echo "$NORMALIZED" | grep -qiE "\btmux\s+send-keys\b.*\b(Enter|Return|y|yes)\b" 2>/dev/null; then
+    block "$SEGMENT" "tmux send-keys with Enter/Return/y/yes — auto-typed confirmation"
+    return 1
+  fi
+  if echo "$NORMALIZED" | grep -qiE "\bscreen\s+-dm(S)?\b" 2>/dev/null; then
+    block "$SEGMENT" "screen -dm / -dmS — detached subagent launch"
+    return 1
+  fi
+  if echo "$NORMALIZED" | grep -qiE "\bexpect\s+(-c\s+|[^[:space:]]+\.exp\b|/)" 2>/dev/null; then
+    block "$SEGMENT" "expect script — auto-driven interactive bypass"
+    return 1
+  fi
+  if echo "$NORMALIZED" | grep -qiE "\-\-dangerously-skip-permissions\b" 2>/dev/null; then
+    block "$SEGMENT" "--dangerously-skip-permissions — permission-bypass flag"
+    return 1
+  fi
+
   # ADVISORY tier — emits to stderr, does not block. Sets ADVISORY=1 so the
   # outer dispatcher exits 1 instead of 0 (per IMP-002 two-tier contract).
   if echo "$NORMALIZED" | grep -qE "cat\s+/proc/[0-9]+/maps\b" 2>/dev/null; then
