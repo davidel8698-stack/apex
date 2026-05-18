@@ -69,6 +69,18 @@
                 "verification_command": { "type": "string", "description": "Optional — the ls/grep command architect ran to attempt verification." }
               }
             }
+          },
+          "security_envelope": {
+            "type": "object",
+            "description": "M19 / Phase 12.13: per-task security context populated by architect Step 1.11.5 (Threat-Model Auto-Fill) when the task is Track C/D AND matches the auth/payments/multi-tenancy/encryption RISK-KEYWORDS cluster. Cross-references the per-task threat-model file under framework/modules/apex-security/threat-models/<task_id>.md. Additive; absent on plans authored before Phase 12.13 — legacy PLAN_META files validate cleanly without this field.",
+            "additionalProperties": false,
+            "properties": {
+              "threat_model_path": { "type": "string", "description": "Repo-relative path to the per-task threat-model file (e.g., framework/modules/apex-security/threat-models/12.13.md)." },
+              "negative_auth_tests": { "type": "array", "items": { "type": "string" }, "description": "Glob patterns or explicit test names that satisfy the negative_auth_required contract for this task. The verifier negative-auth pattern (deny|denied|unauthorized|forbidden|reject|401|403|לא[ -]מורש|נדחה|אסור|חסום) is applied to RESULT.json tests_run[].name; this field is the architect's hint about which tests in the suite are the negative-auth ones." },
+              "required_capabilities": { "type": "array", "items": { "type": "string" }, "description": "Security capabilities the task contract requires (e.g., 'auth', 'tenant-isolation', 'encryption', 'rate-limiting', 'input-validation'). Drives the THREAT_MODEL.template.md §4 'Negative-auth test requirements' generation." },
+              "auto_filled_at": { "type": "string", "format": "date-time", "description": "ISO 8601 UTC timestamp when architect Step 1.11.5 wrote this envelope." },
+              "auto_filled_from_keywords": { "type": "array", "items": { "type": "string" }, "description": "The RISK-KEYWORDS that matched during auto-fill — the audit trail for the trigger gate decision. May be ['__AMBIGUOUS__'] when the heuristic could not localise a single cluster (failure-loud rule)." }
+            }
           }
         }
       }

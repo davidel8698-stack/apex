@@ -17,6 +17,97 @@ set -u
 
 source "$(dirname "$0")/_security-common.sh"
 
+# --- M19 / Phase 12.13: per-task debounce gate ---
+#
+# PostToolUse fires after every Write|Edit. Without a debounce the
+# scanner re-runs on every file in a multi-file task even though only
+# one of them is a workflow file (the path-filter exit below catches
+# non-workflow files, but the gate-and-jq cost is still paid per call).
+# This gate skips the re-scan when:
+#   - APEX_CURRENT_TASK_ID is set (we have a task context to debounce
+#     against — manual edits without a task context fall through to the
+#     normal flow), AND
+#   - the same task_id was already scanned recently (<60s window), AND
+#   - the file-set being scanned has not changed since the last scan
+#     (hashed list of currently-present workflow paths).
+#
+# Cap the debounce window at 60s to bound the multi-file vulnerability
+# window — the silent_failure_risks[1] in PLAN_META.json task 12.13
+# names "debounce too wide → multi-file vulnerability lands between
+# scans" as the failure mode this cap mitigates.
+#
+# Atomic writes: rename-temp to avoid a half-written state file.
+_apex_ci_scan_debounce() {
+  local task_id="${APEX_CURRENT_TASK_ID:-}"
+  [ -z "$task_id" ] && return 1
+  command -v jq >/dev/null 2>&1 || return 1
+  command -v sha256sum >/dev/null 2>&1 || command -v shasum >/dev/null 2>&1 || return 1
+
+  local repo_root=""
+  if command -v git >/dev/null 2>&1; then
+    repo_root=$(git rev-parse --show-toplevel 2>/dev/null || true)
+  fi
+  [ -z "$repo_root" ] && repo_root="$(pwd)"
+  [ -d "$repo_root/.apex" ] || return 1
+
+  local state_file="$repo_root/.apex/.ci-scan-state.json"
+  local now_iso
+  now_iso=$(date -u +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || echo "1970-01-01T00:00:00Z")
+  local now_epoch
+  now_epoch=$(date -u +"%s" 2>/dev/null || echo "0")
+
+  # Compute current file-list hash (sorted list of workflow basenames
+  # currently under the scan target). When the target directory does
+  # not exist yet, hash the empty string so the gate still works.
+  # Portable: avoid GNU-only `find -printf`.
+  local file_list_hash
+  local file_listing=""
+  if [ -d "$repo_root/.github/workflows" ]; then
+    file_listing=$(ls -1 "$repo_root/.github/workflows" 2>/dev/null | grep -E '\.(yml|yaml)$' | LC_ALL=C sort)
+  fi
+  if command -v sha256sum >/dev/null 2>&1; then
+    file_list_hash=$(printf '%s' "$file_listing" | sha256sum 2>/dev/null | awk '{print $1}')
+  else
+    file_list_hash=$(printf '%s' "$file_listing" | shasum -a 256 2>/dev/null | awk '{print $1}')
+  fi
+
+  # Compare against last-scan record. Skip rule = same task_id AND
+  # same file-list-hash AND <60s elapsed.
+  if [ -f "$state_file" ]; then
+    local last_task last_ts last_hash
+    last_task=$(jq -r '.last_scan_task_id // empty' "$state_file" 2>/dev/null)
+    last_ts=$(jq -r '.last_scan_epoch // 0' "$state_file" 2>/dev/null)
+    last_hash=$(jq -r '.last_scan_files_hash // empty' "$state_file" 2>/dev/null)
+    if [ "$last_task" = "$task_id" ] && [ "$last_hash" = "$file_list_hash" ]; then
+      local age=$((now_epoch - last_ts))
+      if [ "$age" -ge 0 ] && [ "$age" -lt 60 ]; then
+        # Hit — debounce skip.
+        return 0
+      fi
+    fi
+  fi
+
+  # Miss — record current scan and let the scanner run.
+  local tmp_file="${state_file}.tmp.$$"
+  jq -n \
+    --arg task "$task_id" \
+    --arg ts "$now_iso" \
+    --argjson epoch "$now_epoch" \
+    --arg hash "$file_list_hash" \
+    '{
+      last_scan_task_id: $task,
+      last_scan_ts:      $ts,
+      last_scan_epoch:   $epoch,
+      last_scan_files_hash: $hash
+    }' > "$tmp_file" 2>/dev/null && mv "$tmp_file" "$state_file" 2>/dev/null
+  rm -f "$tmp_file" 2>/dev/null
+  return 1
+}
+
+if _apex_ci_scan_debounce; then
+  exit 0
+fi
+
 # --- R5-010: Path-filter early-exit for auto-PostToolUse invocation ---
 # When invoked from settings.json the hook receives a JSON payload on
 # stdin describing the tool call. We support three invocation shapes:

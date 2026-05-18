@@ -266,6 +266,87 @@ absolute, not just per-token). See `framework/docs/TASK-TYPE-PROFILES.md`
 for the full mapping table and `framework/docs/PROMPT-CACHING.md` for
 the cache-key contract.
 
+## STEP 1.11.5: Threat-Model Auto-Fill [M19 / Phase 12.13]
+
+For each task in `PLAN_META.json` whose classification matches the
+security-trigger gate, generate a per-task threat-model file and
+populate the `security_envelope` field on the task object.
+
+**Spec anchor.** `apex-spec.md` Failure 9 (Defense-in-Depth Security
+Layer) names the 6 security mechanisms; this step authors a per-task
+companion document that maps the specific task surface to STRIDE-style
+threats. PLAN.md task 12.13 §"M19 Security-Specialist Closure"
+documents the architect-side responsibility.
+
+**Trigger gate.** Auto-fill fires when BOTH:
+
+1. `task.task_class` is `"C"` or `"D"` (the high-risk and irreversible
+   tracks from STEP 1.10), AND
+2. The auth-or-payments RISK-KEYWORDS cluster matches ANY of
+   `task.name`, `task.spec_ref` joined, or `task.files[]` joined
+   (case-insensitive substring). Matchable keyword set, sourced from
+   `framework/docs/RISK-KEYWORDS.md` Class C:
+   `auth`, `authentication`, `authorization`, `oauth`, `oidc`, `saml`,
+   `session`, `JWT`, `bearer`, `csrf`, `cors`, `password`, `credential`,
+   `token`, `api key`, `secret`, `vault`, `payment`, `stripe`, `paypal`,
+   `invoice`, `subscription`, `billing`, `charge`, `refund`,
+   `chargeback`, `PII`, `GDPR`, `multi-tenant`, `tenant`, `RBAC`,
+   `permission`, `policy`, `ACL`, `IAM`, `encryption`, `encrypt`,
+   `decrypt`, `cipher`, `KMS`, `HSM`, `tls`, `ssl`, `mtls`.
+
+If the trigger gate fires, the architect SHALL:
+
+a) Generate `framework/modules/apex-security/threat-models/<task_id>.md`
+   by copying `framework/modules/apex-security/THREAT_MODEL.template.md`
+   and substituting the `{{double-curly}}` placeholders:
+   - `{{TASK_ID}}` ← `task.id`
+   - `{{TASK_NAME}}` ← `task.name`
+   - `{{PHASE_ID}}` ← parent phase id
+   - `{{GENERATED_AT_ISO8601}}` ← current UTC ISO 8601 timestamp
+   - `{{TASK_CLASS}}` ← `task.task_class`
+   - `{{TASK_TYPE}}` ← `task.task_type`
+   - `{{MATCHED_RISK_KEYWORDS}}` ← JSON array of the keywords that
+     actually matched the trigger gate. If the heuristic could not
+     confidently extract a single cluster, substitute the literal
+     `["__AMBIGUOUS__"]` AND add `"threat-model auto-fill was
+     ambiguous — manual review required"` to the task's
+     `unresolved_risks` list when the executor RESULT.json is written.
+   - `{{NEGATIVE_AUTH_TESTS}}` ← bullet list derived from
+     `task.security_envelope.required_capabilities` (one bullet per
+     capability — e.g., `"encryption"` →
+     `"- test_encryption_at_rest_rejects_plaintext_input"`).
+
+b) Populate `task.security_envelope` in `PLAN_META.json`:
+   ```json
+   {
+     "threat_model_path": "framework/modules/apex-security/threat-models/<task_id>.md",
+     "negative_auth_tests": ["test-<short-name>-deny", "..."],
+     "required_capabilities": ["auth", "tenant-isolation", "encryption"],
+     "auto_filled_at": "<ISO 8601 UTC>",
+     "auto_filled_from_keywords": ["auth", "JWT", "tenant"]
+   }
+   ```
+
+**Failure-loud rule.** When the trigger gate fires but the keyword
+match cannot be confidently localised (more than one cluster matches
+weakly, or the matched keyword is inside a Markdown code fence — same
+masking as STEP 1.10), the architect MUST write the threat-model file
+with `{{MATCHED_RISK_KEYWORDS}}` ← `["__AMBIGUOUS__"]` and surface
+`"auto-fill ambiguous"` in `unresolved_risks` rather than silently
+substituting a generic template. This guards the failure mode named
+in `silent_failure_risks[0]` of PLAN_META.json task `12.13`.
+
+**Output.** For every Track C/D security-keyword task:
+- A per-task threat-model file at the path above.
+- A populated `security_envelope` object on the task in
+  `PLAN_META.json`.
+
+**Auditor / critic responsibility.** The auto-fill is heuristic — see
+`framework/modules/apex-security/REMAINING-GAPS.md` (G-4). The critic
+SHOULD review every Track C/D auto-fill for novel attack vectors that
+the keyword match missed and add `unresolved_risks` entries to the
+task's CRITIC.md when suspected.
+
 ## STEP 2.5: ENTITY VERIFICATION [R16-626, F-626, IMP-026]
 
 **Purpose.** Catch phantom-entity planning. Every file path, function name,
