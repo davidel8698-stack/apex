@@ -40,6 +40,76 @@ if [ "${APEX_ACTIVE_AGENT:-}" = "test-architect" ]; then
   exit 0
 fi
 
+# --- R16-614 (F-614, IMP-013): unconditional public-share deny ---------
+# Public-share / paste-class exfil channels are blocked at all times, NOT
+# gated by tool_failure_count (unlike the R16-610 elevated set below).
+# Rationale: posting to gist / pastebin / transfer.sh is never a legitimate
+# in-task action regardless of failure state; the failure-count gate exists
+# only to widen the *advisory*-class exfil set. Public-share is a hard deny
+# end-state. Inline domain list per planner decision (R-614 step §10:
+# inline, keeps the hook self-contained; no cross-file dependency on
+# security-patterns.json).
+#
+# Carve-outs honor the same emergency bypass + test-architect agent escape
+# already declared at the top of this hook.
+NORMALIZED_PUBLIC=$(echo "$COMMAND" | tr -s ' ' | sed 's/^ *//;s/ *$//')
+
+_public_block() {
+  echo "🛑 APEX EXFIL GUARD: BLOCKED (public-share deny — unconditional)" >&2
+  echo "Command: $1" >&2
+  echo "Matched: $2" >&2
+  echo "" >&2
+  echo "Public-share / paste / file-drop channels are denied at all times." >&2
+  echo "See framework/docs/SECURITY-RUNTIME.md (IMP-013)." >&2
+  if [ -f "$(dirname "$0")/_fix-plan-emit.sh" ]; then
+    # shellcheck source=/dev/null
+    source "$(dirname "$0")/_fix-plan-emit.sh"
+    if command -v emit_fix_plan >/dev/null 2>&1; then
+      emit_fix_plan \
+        "exfil-guard" \
+        "Public-share / exfil channel was blocked (unconditional): $2" \
+        "Blocked command: $1" \
+        "/apex:forensics -- inspect the chain that led to the exfil attempt" \
+        "/apex:rollback -- revert recent edits to the last green tag" \
+        "/apex:recover -- reset and re-plan without the exfil-class action" \
+        2>/dev/null || true
+    fi
+  fi
+}
+
+# Domain deny list (11) — public paste / file-drop / link-share endpoints
+# that have no in-task legitimate use.
+_PUBLIC_SHARE_DOMAINS='gist\.github\.com|pastebin\.com|hastebin\.com|paste\.ee|ix\.io|transfer\.sh|0x0\.st|file\.io|dropbox\.com/s/|we\.tl|wetransfer\.com'
+if echo "$NORMALIZED_PUBLIC" | grep -qiE "$_PUBLIC_SHARE_DOMAINS" 2>/dev/null; then
+  _public_block "$COMMAND" "public-share domain in command (gist/pastebin/transfer.sh/file.io/dropbox-share/wetransfer)"
+  exit 2
+fi
+
+# Command shapes (4) — gh gist create, gist <upload, curl POST <public domain>,
+# wget --post-data <public domain>. The curl/wget patterns intentionally
+# co-require a public-share domain match elsewhere in the command (caught by
+# the regex above when the URL is on the same line — which it always is for
+# single-shot exfil).
+if echo "$NORMALIZED_PUBLIC" | grep -qiE "\bgh\s+gist\s+create\b" 2>/dev/null; then
+  _public_block "$COMMAND" "gh gist create — GitHub gist publish"
+  exit 2
+fi
+if echo "$NORMALIZED_PUBLIC" | grep -qiE "\bgist\s+(<|--?file)" 2>/dev/null; then
+  _public_block "$COMMAND" "gist CLI upload — gist <file or gist --file"
+  exit 2
+fi
+if echo "$NORMALIZED_PUBLIC" | grep -qiE "\bcurl\b.*\s(-X\s+POST|--data|--data-binary|-F\b|--form\b)" 2>/dev/null \
+   && echo "$NORMALIZED_PUBLIC" | grep -qiE "$_PUBLIC_SHARE_DOMAINS" 2>/dev/null; then
+  _public_block "$COMMAND" "curl POST <public-share-domain> — exfil via POST upload"
+  exit 2
+fi
+if echo "$NORMALIZED_PUBLIC" | grep -qiE "\bwget\b.*\s--post-data" 2>/dev/null \
+   && echo "$NORMALIZED_PUBLIC" | grep -qiE "$_PUBLIC_SHARE_DOMAINS" 2>/dev/null; then
+  _public_block "$COMMAND" "wget --post-data <public-share-domain> — exfil via POST upload"
+  exit 2
+fi
+# --- end R16-614 -------------------------------------------------------
+
 # Locate STATE.json. Walk up from $PWD looking for .apex/STATE.json.
 STATE_FILE=""
 search_dir="$PWD"
