@@ -65,7 +65,65 @@ will replay diffs against this anchor to verify every entry in
    `git log --since=`. Capturing later contaminates the window — the
    executor's own reads are inside the diff.
 
-Once the anchor is captured, proceed to BEFORE WRITING CODE.
+Once the anchor is captured, proceed to PRE-EXECUTION PREMISE GUARD.
+
+### PRE-EXECUTION PREMISE GUARD [R16-623E, F-623, IMP-023]
+
+Before any task work begins (immediately after STEP 0 anchor capture
+and before BEFORE-WRITING-CODE), scan the task XML for references to
+data that the task claims is *attached/provided/given* but which is
+not actually present in the task inputs. Tasks of this shape will
+otherwise drive the executor to hallucinate the missing data — the
+clean-room contract requires that the executor refuses pre-execution
+rather than fabricate.
+
+1. **Scope of scan.** The scan runs over the *text content* of the
+   task XML elements `<action>`, `<goal>`, `<verify_command>`,
+   `<edge_cases>`, and `<files>` only. **Do NOT** scan SPEC.md,
+   PLAN.md, DECISIONS.md, or any framework file — those use the
+   phrases legitimately as documentation. The guard is constrained
+   to the inbound task narrative.
+
+2. **Phantom-input regex.** Match the literal phrases
+   `\b(the attached|the provided|the given)\b` (case-insensitive).
+   When any match fires, check whether the referenced data is
+   present in-line in the task XML (an explicit `<data>` block, a
+   `<files>` entry that exists on disk, or an inline code-fence
+   payload). If the referenced data is **absent**, the premise is
+   phantom — refuse.
+
+3. **Refusal path.** On refusal, do NOT silently die — write a
+   valid RESULT.json with:
+   - `status`: `"failure"`
+   - `outcome` (free-text reason field): `missing_referenced_data`
+   - `task_start_sha`: as captured in STEP 0 above (so critic STEP
+     1.5 still has the anchor for any partial state).
+   - `files_modified`: `[]` (the refusal happens before any write).
+   - `unverified_criteria`: the full `done_criteria` list (none
+     were attempted).
+
+4. **Co-location note.** This subsection also hosts the placeholder
+   regex family added by R16-627 (`\bplaceholder_in_task_xml\b`
+   refusal cause). Both guards share one scan pass — the regex
+   union runs once and dispatches by which family matched. This
+   subsection is therefore the canonical PRE-EXECUTION PREMISE
+   GUARD home; later items (R-627, R-634) extend it.
+
+5. **Why this is STEP 0.5 (between anchor and BEFORE-WRITING-CODE).**
+   Refusing *after* code writing has begun is too late — files
+   already on disk pollute `files_modified[]` and `task_start_sha`
+   ceases to bound a clean window. The premise check must be the
+   first decision after anchor capture.
+
+6. **False-positive carve-out.** A task XML that legitimately
+   describes "the attached test fixture is at `tests/fixtures/x.txt`"
+   passes the guard *iff* `tests/fixtures/x.txt` is also present in
+   `<files>` AND exists on disk. The phrase alone is not enough; the
+   referent must resolve.
+
+Once the premise guard passes (or after a successful refusal write
+has been emitted and the executor terminates), proceed to BEFORE
+WRITING CODE.
 
 ## BEFORE WRITING CODE
 1. Read TASK_MAP.md (if present)
