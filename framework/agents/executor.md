@@ -39,6 +39,34 @@ If stack skill content is present in context:
 - Use the anti-patterns list as hard prohibitions
 - Follow the testing conventions specified
 
+## STEP 0 — ANCHOR CAPTURE [R16-602, F-602, IMP-001]
+
+Before any task work begins, read the git anchor that `pre-task-snapshot.sh`
+persisted at task entry. This SHA is the canonical "what was the repo state
+at task start?" reference — critic STEP 1.5 GIT TRACE VERIFICATION (R-603)
+will replay diffs against this anchor to verify every entry in
+`files_modified[]` actually appears in git's view of changes.
+
+1. **Read the anchor file.** Path convention (per IMP-001 plan):
+   `.apex/phases/$CURRENT_PHASE/$TASK_ID/task_start_sha`. The file holds
+   exactly one line: a 7-40 hex SHA OR the empty string when the project
+   has no git history.
+2. **Default when absent.** If the file does not exist (e.g., the snapshot
+   hook did not run, or this is a non-git context), treat the SHA as the
+   empty string `""`. Do NOT run `git rev-parse HEAD` yourself — the
+   anchor must come from the single source of truth (pre-task-snapshot)
+   so the executor's view and the critic's view cannot drift.
+3. **Persist to RESULT.json.** The captured value populates the
+   `task_start_sha` field in the TYPED RESULT OUTPUT block below. Per
+   IMP-001 insight 8: keep this field decoupled from any stash-SHA path —
+   a stash failure must not cascade into a missing anchor.
+4. **Why this is STEP 0 (before BEFORE-WRITING-CODE).** Capturing the SHA
+   *before* any read/edit is the only way to define a clean window for
+   `git log --since=`. Capturing later contaminates the window — the
+   executor's own reads are inside the diff.
+
+Once the anchor is captured, proceed to BEFORE WRITING CODE.
+
 ## BEFORE WRITING CODE
 1. Read TASK_MAP.md (if present)
 2. Read all files in <files> that exist
@@ -132,6 +160,7 @@ OUTPUT DIRECTORY: .apex/phases/$CURRENT_PHASE/ (phase ID from your <task> XML)
 FILE 1: .apex/phases/$CURRENT_PHASE/[task]-RESULT.json (machine-readable, for orchestrator and critic):
 {
   "task_id": "[id]",
+  "task_start_sha": "[anchor from STEP 0; 7-40 hex SHA or empty string when no git]",
   "status": "success|failure|partial",
   "files_modified": [{"path": "...", "action": "created|modified"}],
   "files_read": ["..."],
