@@ -1322,6 +1322,90 @@ not a task-side defect.
 §4.2.2.2 ("actionable feedback every task" — six axes are the
 mechanism).
 
+### R16-632C — RISK-PROPORTIONAL REVIEW DEPTH (F-632, IMP-032)
+
+**Mandatory when the verdict is tentative-PASS or PARTIAL on a high-risk
+task.** For tasks whose `PLAN_META.json.verify_level` is `C` or `D`, the
+critic MUST NOT close the verdict on the strength of STEP 1 through
+STEP 4.6 alone. After those steps emit a tentative-PASS or PARTIAL, the
+critic MUST run at least **three additional review dimensions** before
+finalizing the verdict — risk-proportional depth, not uniform depth.
+"At least three dimensions" is the floor; the critic adds more when the
+risk signals warrant. FAIL verdicts on the same level are exempt
+because a FAIL already routes through REFLEXION and the verifier
+critical-failure-gate; the extra dimensions exist to catch shallow
+PASSes on tasks that the system itself classified as high-risk.
+
+**Why this exists.** Review depth must scale with the three risk
+dimensions of the change — blast radius (how many downstream consumers
+break if this lands wrong), reversibility (how cheaply a bad outcome
+can be undone), and novelty (how far the change is from the project's
+existing surface area). A C-level or D-level `verify_level` is the
+plan's own signal that all three risk dimensions are elevated for
+this task. Applying uniform, A-level scrutiny to a D-level change is
+the critic's most common silent-failure mode and the dominant source
+of false-PASS verdicts feeding the next round's audit.
+
+**The three minimum dimensions on C/D tentative-PASS.** Run at least
+all three; add more if the artifacts surface additional risk signals.
+
+1. **Edge-case rescan against the diff.** Re-walk `task_spec.<edge_cases>`
+   from PLAN_META.json against the actual file diff (not against
+   RESULT.json's self-reported `edge_cases_handled[]`). For each
+   listed edge case, identify the specific code path in the diff that
+   handles it. If the diff has no traceable handler for a listed edge
+   case, downgrade the verdict to PARTIAL (or FAIL if the edge case
+   was load-bearing per the task XML). This dimension targets the
+   blast-radius axis: an unhandled edge case on a C/D task is
+   high-blast because consumer code will exercise it.
+2. **Negative-path test injection.** For each acceptance criterion
+   verified by a positive test in `tests_run[]`, identify the
+   corresponding negative path (the test that would fail if the
+   implementation regressed). If `tests_run[]` contains only
+   positive-path tests, flag the missing negative path as MAJOR. This
+   dimension targets the reversibility axis: positive-only test
+   coverage means a regression cannot be cheaply caught later.
+3. **Cross-phase regression sweep.** Cross-reference
+   `files_modified[].path` against the rest of the project's
+   `.apex/phases/` history. For any file this task modified that an
+   earlier phase also modified, surface the prior phase's
+   acceptance criteria and confirm they remain satisfied under the
+   new diff. Earlier-phase criteria silently broken by a later phase
+   is the canonical novelty-axis failure mode — a new touch on
+   familiar code that quietly invalidates the original contract.
+
+**Floor, not ceiling.** Three dimensions is a *floor*. The minimum
+"three dimensions" is binding even when the artifacts look clean. When the
+verdict-axes block shows a low `adaptability` or `verification` score
+on a C/D task, add a fourth dimension (e.g., re-run the premise
+verification trail from STEP 0.5 if assumption_unverified=true, or
+walk the event-log for unattributed tool calls). The critic may add
+dimensions but must never run fewer than three.
+
+**Reading `verify_level`.** The field lives in
+`PLAN_META.json.tasks[].verify_level` (per the architect's task
+authoring). Read it once at the start of the verdict block and
+cache it; the value is one of `A` | `B` | `C` | `D`. Only `C` and `D`
+trigger this subsection — `A` and `B` continue to use the existing
+STEP 1 through STEP 4.6 depth as the full audit.
+
+**Emission.** Record the three (or more) dimensions actually
+exercised in the CRITIC.md body under a `risk_proportional_review:`
+block, one line per dimension with the finding (PASS / DOWNGRADE /
+MAJOR). The block is human-readable and is *not* schema-validated —
+it is the audit trail that proves the C/D depth was actually applied.
+
+**Time-budget note.** Critic budget on a C/D task is therefore
+larger than on an A/B task. This is intentional: the extra cost is
+load-bearing for the safety/honesty axes. If the additional
+dimensions push the critic past its token budget, the correct response
+is to flag the budget violation as a R17 carry-forward, **not** to
+skip dimensions.
+
+**Spec anchor:** F-632 (critic side), IMP-032 ("ל-tasks ברמת C/D …
+חייב להשקיע מאמץ נוסף פרופורציונלי לרמת הסיכון: לפחות 3 ממדי בדיקה
+על משימה שעברה PASS").
+
 ON FAIL → write .apex/phases/$PHASE/[task]-REFLEXION.md:
 - What Failed (specific, max 200 tokens)
 - For Next Attempt: 3 specific changes
