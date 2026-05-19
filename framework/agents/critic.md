@@ -750,6 +750,172 @@ the convention used elsewhere in this file (see STEP 4.5,
 STEP 1.5) for adversarial sub-checks that share an input with
 the parent step.
 
+**STEP 3 (cont.): COMPLIANCE-CLAIM VARIABLE SCAN** [R16-630C, F-630, IMP-030]
+
+The MAJOR/CRITICAL taxonomy lines at the top of STEP 3 remain
+authoritative for the flagship triggers (`TODO committed`,
+`hardcoded secret`, the placeholder vocabulary added by R-621 above).
+This sub-step **extends STEP 3's diff-traversal with a third lens**:
+detect *decorative compliance variables* — identifiers whose name
+asserts a security or correctness property (`is_authenticated`,
+`csrf_verified`, `permission_checked`, `input_sanitized`,
+`is_authorized`, `signature_valid`, etc.) that are declared, assigned
+`true`, and then never consulted by any control-flow decision in the
+same file. A `decorative_compliance_var` creates the *appearance* of
+an enforced check without enforcing it. This is the missing-bridge
+enforcement for IMP-030 on the critic side; the auditor sibling
+(R-630A, STEP 6 of auditor.md) does the broader test-tree scan.
+Critic scans the per-task diff only — the auditor reads quarantine
+files critic does not.
+
+**Scope (added-lines only).** Reuse the new-line view built by the
+placeholder scan above:
+
+```
+git diff HEAD~1 -- \
+  ':(exclude)tests/' ':(exclude)test/' ':(exclude)__tests__/' \
+  ':(exclude)*.test.*' ':(exclude)*.spec.*' \
+  ':(exclude)fixtures/' ':(exclude)*fixture*' \
+  | grep -E '^\+[^+]'
+```
+
+Same pathspec excludes as the placeholder scan: test files and
+fixtures own their own variable vocabulary and intentionally set
+flags like `is_authenticated = True` to *construct* test subjects;
+the auditor sibling (R-630A) handles those quarantined regions.
+Critic's compliance-claim scan fires on added lines in
+**implementation source** only.
+
+**Detection regex set (per-language declaration shape).** A
+"compliance-claim variable" is the conjunction of a name match and a
+declaration shape:
+
+- **Name pattern (case-insensitive, word-boundary).** Match any of
+  the canonical compliance claims:
+  - Authentication / authorization:
+    `is_authenticated`, `is_authorized`, `access_granted`,
+    `verified_user`, `permission(s)?_checked`.
+  - Cryptographic / integrity:
+    `csrf_verified`, `signature_valid`, `token_validated`,
+    `was_validated`.
+  - Input contract:
+    `input_sanitized`, `is_safe`, `is_secure`, `compliance_ok`,
+    `audited`.
+  - Generic "safe production" decorative prefix family:
+    `(no_|safe_|production_|audit_)[A-Za-z_]+` — the broader
+    prefix-anchored heuristic from the spec anchor; this covers
+    novel decorative names (`safe_production`,
+    `no_unsanitized_input`, `production_safe`, `audit_clean`) that
+    the explicit list above does not enumerate.
+- **Declaration shape (assigning `true` literal):**
+  - Python:  `^\s*<name>\s*=\s*True\b`
+  - JS/TS:   `\b(const|let|var)\s+<name>\s*=\s*true\b`
+  - Go:      `\b<name>\s*:?=\s*true\b`
+  - Ruby:    `^\s*<name>\s*=\s*true\b`
+  - Shell:   `^\s*<name>=true\b` (env-style)
+
+Only the *literal* assignment shapes above qualify — a function
+return (`return is_authenticated()`) is not a decorative variable,
+it is a delegated check.
+
+**Usage check (per matched declaration).** For every name that
+matched the declaration shape on an added line, grep the **same
+file's full post-diff content** (not just the diff) for a *read* of
+the variable inside a control-flow construct:
+
+- `if\s+<name>\b`
+- `<name>\s*\?` (ternary)
+- `assert\s+<name>\b`
+- `require\(<name>\)` / `guard\s+<name>\b`
+- `<name>\s*==\s*true` / `<name>\s*===\s*true`
+- `<name>\s*&&` / `&&\s*<name>\b`
+- `expect\(<name>\)` (test-style read — but this scan already
+  excludes test files, so this branch only fires when the
+  implementation under review imports a test helper, an
+  anti-pattern in its own right).
+
+If **zero** such reads exist in the post-diff file content, the
+declaration is **decorative**.
+
+**Severity mapping.**
+
+- **Safety subset** — name matches one of `is_authenticated`,
+  `is_authorized`, `csrf_verified`, `permission_checked`,
+  `signature_valid`, `token_validated`, `access_granted` — these
+  are the *bypassable security claims*. Decorative declaration on an
+  added line in implementation source → **CRITICAL**
+  (security-control-bypass class — same severity bucket as
+  "Hardcoded secret" and "multi-tenant without filter" in the STEP 3
+  flagship taxonomy).
+- **Quality subset** — any other name in the detection set
+  (`input_sanitized`, `is_safe`, `compliance_ok`, `audited`,
+  `was_validated`, the broader `(no_|safe_|production_|audit_)*`
+  prefix family) declared but unread → **MAJOR**
+  (decorative-quality class).
+
+**Do NOT flag.**
+
+- Variables read in a non-control-flow context (logging, telemetry,
+  `console.log(is_authenticated)`) — the spec anchor requires the
+  read to be in a *decision* construct. Pure observation is
+  insufficient to lift the decorative label, but it is also not the
+  primary harm; the critic emits an **INFO**-level note rather than
+  MAJOR/CRITICAL for read-in-log-only.
+- Names that appear in the diff *only* as a function parameter or
+  destructured binding (`function f({ is_authenticated })`) — the
+  call-site is responsible for the assignment; out of scope here.
+- Names that the diff *deletes* (`-` lines in the diff) — a removal
+  is the executor cleaning up a prior decorative variable, not
+  introducing one.
+
+**Residual false-positive risk.** A heuristic dataflow analysis from
+diff text cannot perfectly distinguish "decorative" from "the
+variable is read by code not in the diff and not visible in the
+post-diff file because the reader lives in a sibling file". The
+same-file usage check accepts this gap consciously: the spec anchor
+prioritizes catch-rate over precision, and the rollback trigger
+(false-positive rate >10%) is the operational backstop. When a
+project-local pattern trips this scan, the executor / planner can
+carve out the file in a future R-item rather than weakening this
+scan now.
+
+**Defensive skip.** If the post-diff file content for a matched
+declaration is unreadable (binary, deleted-by-this-task, outside
+working tree), emit
+`compliance_claim_scan: SKIPPED (unreadable file <path>)` to
+CRITIC.md and continue. Skipping a single file is not an empty-diff
+case; the structural-integrity STEP 1 handles the empty-diff path.
+
+**Output line.** On scan completion, emit one summary line to
+CRITIC.md:
+
+```
+compliance_claim_scan: PASS (0 hits)
+```
+
+or
+
+```
+compliance_claim_scan: FAIL (<N> hits: <name>×<count>, ...)
+```
+
+The per-hit detail (file, line number from the added-line view,
+matched name, severity bucket) is recorded in the CRITIC.md issues
+table under the MAJOR or CRITICAL section keyed by the severity
+mapping above. The wording `decorative_compliance_var: <name>
+declared true but never read in control flow (file <path>)` is the
+verbatim per-hit line — this matches the auditor sibling's wording
+(R-630A) so the two agents produce greppable, comparable output.
+
+**Why STEP 3 (cont.) and not a new STEP.** Same rationale as the
+R-621 placeholder scan above: this is *diff review by a different
+lens*, sharing STEP 3's single diff-traversal pass. Splitting into a
+separate numbered STEP would imply a separate diff read, doubling
+I/O for no semantic gain. STEP 3 now has three lenses (the original
+edge-case + severity taxonomy, the R-621 placeholder vocabulary, and
+this R-630C compliance-claim scan); all three consume the same
+new-only added-lines view.
+
 **STEP 4: PHANTOM + SILENT FAILURE AUDIT**
 Check RESULT.json verify_commands_run — empty output or not run → MAJOR
 Scan for phantom language in these specific fields only:
