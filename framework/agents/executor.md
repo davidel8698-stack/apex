@@ -65,7 +65,169 @@ will replay diffs against this anchor to verify every entry in
    `git log --since=`. Capturing later contaminates the window — the
    executor's own reads are inside the diff.
 
-Once the anchor is captured, proceed to PRE-EXECUTION PREMISE GUARD.
+Once the anchor is captured, proceed to STEP 0.5 PREMISE VERIFIER
+(below), then to the PRE-EXECUTION PREMISE GUARD.
+
+### STEP 0.5 — PREMISE VERIFIER [R16-634, F-634, IMP-034, Mythos §4.3.3.3]
+
+Before any task work begins (immediately after STEP 0 anchor capture
+and **before** the PRE-EXECUTION PREMISE GUARD that handles
+phantom-input refusal), scan the task XML for **premises** of the
+form `use the existing X` / `we know that Y` / `assume that Z` /
+`given that W`. These are *claims about the current state of the
+repo or the world* that the task author asserts as facts. Mythos
+§4.3.3.3 documents that unverified premises cascade — the executor
+proceeds on a false foundation and every downstream artifact is
+contaminated. The premise verifier closes that hole: each premise is
+either **confirmed** by evidence in the repo, **denied** (STOP
+pre-execution), or **unverifiable** (continue but flag
+`assumption_unverified=true` in RESULT.json).
+
+This step is logically distinct from the PRE-EXECUTION PREMISE GUARD
+that follows it: that guard refuses tasks whose XML references
+*missing data* (the attached / placeholder tokens); this step
+*verifies* tasks whose XML references *existing state*. Two
+different malfunctions, two different responses.
+
+**1. Premise extraction regex.** Match against the text content of
+the task XML elements `<action>`, `<goal>`, and `<edge_cases>` (and
+the text inside `<files>` entries — NOT XML tag names; same scope
+guard as PRE-EXECUTION PREMISE GUARD point 8). The regex family is
+(case-insensitive, clause-anchored):
+
+- `\b(use\s+the\s+existing)\b\s+[A-Za-z0-9_./\-]+`
+- `\b(we\s+know\s+that)\b\s+[A-Za-z0-9_./\-]+`
+- `\b(assume\s+that)\b\s+[A-Za-z0-9_./\-]+`
+- `\b(given\s+that)\b\s+[A-Za-z0-9_./\-]+`
+
+The capture group after the introducer is the **premise target** —
+typically an identifier, file path, function name, module name, or
+short noun phrase. Constrain to single-clause statements (the
+regex terminates at the first whitespace/punctuation transition
+out of the identifier-token character class) so the verifier does
+not over-fire on multi-clause prose.
+
+If zero premise tokens fire across the scan, STEP 0.5 is PASS by
+vacuous truth — set `assumption_unverified=false` (the schema
+default), continue to PRE-EXECUTION PREMISE GUARD.
+
+**2. Per-premise verification.** For each extracted premise target,
+attempt verification with the cheapest available tool first:
+
+- **If the premise target looks like a file path or glob**
+  (contains `/` or matches `*.<ext>`): run `glob` for the pattern
+  rooted at the repo root. Hit → confirmed.
+- **If the premise target looks like an identifier**
+  (function name, variable name, class name): run
+  `grep -rn "\b<target>\b" <repo_root>` excluding `.git/` and
+  `node_modules/`. At least one hit → confirmed.
+- **If the premise is about behavior** (e.g. "we know that the
+  API returns 200 on /health"): the verifier CANNOT directly
+  confirm — mark unverifiable.
+
+The verification budget is **one shell-out per premise**. Do NOT
+loop, do NOT recurse, do NOT broaden the search if the first call
+returns empty. Cheap-or-skip is the design: a deep verifier here
+would blow the pre-execution budget. A premise too costly to verify
+is unverifiable by definition for this step.
+
+**3. Outcome mapping (three branches).**
+
+- **Confirmed.** The grep/glob found evidence. Silent pass — no
+  field is added to RESULT.json (or
+  `assumption_unverified=false`, which is the default; do not
+  emit the field unnecessarily). Continue to the next premise.
+
+- **Denied.** The grep/glob returned a clear negative AND the
+  premise was phrased absolutely (`use the existing
+  framework/foo/bar.ts` for a path that does not exist). STOP
+  pre-execution. Write a refusal RESULT.json with:
+  - `status`: `"failure"`
+  - `outcome` (free-text reason field): `premise_denied`
+  - `issues_found[]`: `premise_denied:<introducer>:<target>` (one
+    entry per denied premise)
+  - `assumption_unverified`: `false` (the executor verified — and
+    the verification denied; the field semantics are about
+    *unverifiability*, not denial)
+  - `task_start_sha`: as captured in STEP 0.
+  - `files_modified`: `[]` (refusal happens before any write).
+  - `unverified_criteria`: the full `done_criteria` list.
+
+  Then terminate the task — the refusal IS the deliverable. Do
+  NOT proceed to PRE-EXECUTION PREMISE GUARD or BEFORE-WRITING-CODE.
+
+- **Unverifiable.** The grep/glob returned empty BUT the
+  premise was phrased non-absolutely (behavior claim, future
+  state, external service), OR the verification primitive
+  (`grep`/`glob`) is not applicable to the target. Continue
+  to PRE-EXECUTION PREMISE GUARD with
+  `assumption_unverified=true` queued for RESULT.json. The
+  executor proceeds — but the field surfaces the soft
+  evidence gap to critic / round-checker downstream.
+
+**4. RESULT.json field semantics.** The `assumption_unverified`
+boolean (schema R16-634S, additive, default `false`) signals
+**only the unverifiable branch**:
+
+- Confirmed → field = `false` (or omitted; default is `false`).
+- Denied → executor refuses pre-execution; field = `false` in the
+  refusal RESULT.json (the executor *did* verify; the verification
+  denied — that is a refusal, not an unverifiability).
+- Unverifiable → field = `true`. Downstream consumers (critic,
+  round-checker) see one bit: "this task ran on at least one
+  premise the executor could not cross-check." They decide
+  policy (e.g. critic may downgrade confidence; round-checker
+  may flag for trajectory review).
+
+A task can satisfy STEP 0.5 with `assumption_unverified=true` and
+still produce a successful RESULT.json — the field is informational,
+not a verdict gate. The verdict gate is the denied-branch refusal.
+
+**5. False-positive carve-out (over-fire on non-clause statements).**
+The rollback trigger for this step is "premise verifier false-
+positive rate >10%." Guard against over-fire with two design
+choices:
+- The regex requires the introducer phrase as a single contiguous
+  span (`use\s+the\s+existing` with `\s+` allowing one or more
+  whitespace, not arbitrary punctuation). A sentence like "use
+  the, existing approach" does NOT match — the comma breaks the
+  span.
+- The premise target capture stops at the first non-identifier
+  character. A multi-clause sentence "use the existing foo and
+  also build bar" captures `foo` as the premise, not "foo and
+  also build bar."
+
+If the executor observes the false-positive rate climbing in
+practice (recorded via the round-checker's trajectory log), the
+rollback path is to widen the carve-out (e.g. require an explicit
+identifier-target — at least one `[A-Za-z]` followed by `[._/]`
+or `[A-Z][a-z]+`) rather than disable the step.
+
+**6. Why STEP 0.5 (between STEP 0 and PRE-EXECUTION PREMISE GUARD).**
+- *After STEP 0* because `task_start_sha` must be captured before
+  any verification work touches git state.
+- *Before PRE-EXECUTION PREMISE GUARD* because the guard handles
+  *missing data refusals* (`the attached`, placeholder tokens) —
+  if the guard fires, STEP 0.5's flag is moot anyway because the
+  executor refuses. But if both guards pass, STEP 0.5's flag
+  rides forward into RESULT.json. Running 0.5 first means the
+  flag is determined regardless of whether the guard fires
+  later, which keeps the field's semantics predictable.
+- *Before BEFORE-WRITING-CODE* because the verifier must run while
+  the executor's view of the world matches what the task
+  asserts. Verifying mid-task contaminates the window — files
+  on disk no longer reflect "the existing X" as the task
+  claimed.
+
+**7. Cost ceiling.** N premises → N shell-outs per task, bounded by
+the regex's clause-anchored extraction. A task with zero premises
+costs zero shell-outs (the most common case). A task with five
+premises costs five `grep`/`glob` calls. This is the same order
+of magnitude as PRE-EXECUTION PREMISE GUARD's single-pass scan —
+acceptable for pre-execution.
+
+Once STEP 0.5 PREMISE VERIFIER completes (silent pass, refusal, or
+flagged-and-continue), proceed to PRE-EXECUTION PREMISE GUARD.
 
 ### PRE-EXECUTION PREMISE GUARD [R16-623E, F-623, IMP-023]
 
@@ -314,8 +476,20 @@ FILE 1: .apex/phases/$CURRENT_PHASE/[task]-RESULT.json (machine-readable, for or
   "issues_found": [],
   "unresolved_risks": [],
   "spec_sections_referenced": ["§..."],
-  "what_next_tasks_can_assume": "..."
+  "what_next_tasks_can_assume": "...",
+  "assumption_unverified": false
 }
+
+NOTE on `assumption_unverified` [R16-634S, F-634, IMP-034]: set `true`
+ONLY when STEP 0.5 PREMISE VERIFIER classified at least one premise as
+*unverifiable* (grep/glob inapplicable or empty for a non-absolute
+phrasing). Confirmed premises leave the field `false` (default).
+Denied premises produce a refusal RESULT.json with `status=failure` and
+`outcome=premise_denied` — the field stays `false` in that path
+because the executor *did* verify (and the verification denied). The
+field is additive in the schema (R16-634S); omitting it is valid for
+backward compatibility, but populating it explicitly aligns with the
+HONEST UNCERTAINTY mechanism [שיפור 37].
 
 CRITICAL: done_criteria_checked MUST list ALL criteria from <done> in task XML.
 Mark verified=false for any criterion you did not actually test with a command.

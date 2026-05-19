@@ -186,6 +186,11 @@
         null
       ],
       "description": "R16-625S (F-625, IMP-025, Mythos §4.2.2.2): the single axis that drove a FAIL verdict (null on PASS). Used by verifier R16-638 critical-failure-gate routing: when axis is `safety`, the verifier escalates to CRITICAL regardless of other signals. Nullable because the field is meaningless on a PASS verdict."
+    },
+    "assumption_unverified": {
+      "type": "boolean",
+      "default": false,
+      "description": "R16-634S (F-634, IMP-034, Mythos §4.3.3.3): set true by executor STEP 0.5 PREMISE VERIFIER when at least one premise of the form `use the existing X` / `we know that Y` / `assume that Z` / `given that W` was extracted from the task XML but could NOT be confirmed via grep/glob AND could NOT be denied (the executor lacks evidence either way — neither `grep` returned a hit nor a clear negative was established). On confirmed premises the field stays false (silent pass); on denied premises the executor STOPs pre-execution and writes a refusal RESULT.json (not this field). Additive in R16-634S; default false preserves backward compatibility for any pre-existing RESULT.json fixture that omits the field. Consumers: critic (may surface but not strictly required), round-checker (trajectory classification)."
     }
   }
 }
