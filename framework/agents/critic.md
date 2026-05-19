@@ -273,6 +273,117 @@ Read diff line-by-line against task spec:
 - Hardcoded secret/SQL injection/multi-tenant without filter → CRITICAL
 - TODO committed/API without error handling → MAJOR
 
+**STEP 3 (cont.): PLACEHOLDER & INCOMPLETE-CODE SCAN** [R16-621, F-621, IMP-021, Mythos §4.2.2.1]
+
+The MAJOR/CRITICAL taxonomy lines above remain authoritative for the
+two flagship triggers (`TODO committed`, `hardcoded secret`). This
+sub-step **expands the placeholder vocabulary** to the verbatim
+spec-anchor pattern set and **constrains the scan to new-only lines
+in non-test files** — the missing-bridge enforcement for IMP-021.
+The earlier MAJOR/MINOR taxonomy is preserved verbatim; this block
+adds breadth (more placeholder tokens) and a delta constraint (new
+lines only), it does not redefine severity.
+
+**Scan inputs (added-lines only).** Build the new-line view via:
+
+```
+git diff HEAD~1 -- \
+  ':(exclude)tests/' ':(exclude)test/' ':(exclude)__tests__/' \
+  ':(exclude)*.test.*' ':(exclude)*.spec.*' \
+  ':(exclude)fixtures/' ':(exclude)*fixture*' \
+  | grep -E '^\+[^+]'
+```
+
+The `^\+[^+]` filter retains diff body lines that start with a single
+`+` (an added line) and excludes the `+++ b/path` file header. The
+pathspec excludes neutralize fixture/test scope so test files that
+intentionally contain placeholder vocabulary (e.g.
+`security-patterns.json`, executor refusal fixtures) do not raise
+false positives. This is the **new-only** semantics: a placeholder
+that pre-existed the task is the previous task's debt, not this
+task's regression — the scan only fires on lines this task
+introduced.
+
+**Pattern set (verbatim from spec anchor — case-insensitive,
+word-boundary where applicable).** Run each regex over the added-line
+text:
+
+- `\bTODO\b`, `\bFIXME\b`, `\bXXX\b` — flag MAJOR only when **new in
+  this task's added lines** (the new-only delta semantics above
+  already enforces this; the existing STEP 3 "TODO committed → MAJOR"
+  rule is the severity binding).
+- `\bplaceholder\b` — case-insensitive bare-word match.
+- `\blorem ipsum\b` — copy-deck filler text in production strings.
+- `\byour_(api_key|password|secret|token)_here\b` — the canonical
+  placeholder credential pattern (covers the literal tokens
+  `your_api_key_here`, `your_password_here`, `your_secret_here`,
+  `your_token_here`).
+- `<INSERT_VALUE>` — angle-bracketed insertion marker (literal match,
+  no regex metas).
+- `\btest@test\.com\b` — placeholder email credential (literal
+  `test@test.com`).
+- `\bpassword123\b` — placeholder password credential.
+- `\bsk-test-\w*` — placeholder Stripe-style test secret-key prefix
+  (the literal `sk-test-` is the spec-anchored token; the `\w*` tail
+  catches the typical 24+ character body).
+
+**Severity mapping.**
+
+- Placeholder credentials in the credential pattern set
+  (`your_*_here`, `test@test.com`, `password123`, `sk-test-`) on
+  added lines in non-test files → **CRITICAL** (production-credential
+  leakage class — same severity bucket as "Hardcoded secret" above).
+- Copy-deck / structural placeholders (`placeholder`, `lorem ipsum`,
+  `<INSERT_VALUE>`) on added lines in non-test files → **MAJOR**
+  (deferred-debt class).
+- `TODO` / `FIXME` / `XXX` on added lines in non-test files →
+  **MAJOR** (already bound by the existing STEP 3 rule; this block
+  inherits, does not redefine).
+
+**Do NOT scan.** Test files (handled by the pathspec excludes
+above), fixture files (handled by the `fixtures/` and `*fixture*`
+excludes), the diff's removed lines (lines prefixed `-` in the
+diff), and `task_spec` (architect-authored). Documentation files
+(`*.md`, `docs/`) are **in scope** by default — if the executor
+committed `lorem ipsum` in a README, that is still a placeholder
+leak; project-specific carve-outs belong in a downstream
+configuration, not in this prose.
+
+**Residual false-positive risk.** Some legitimate fixtures live
+outside `tests/` (e.g. `data/`, application-level seed files).
+The pathspec list above intentionally does not enumerate every
+such directory — the spec anchor cites only `tests/` and
+`*.test.*` / `*.spec.*`. When a project-local fixture in
+`data/` trips this scan, the verdict is still **MAJOR** under
+the deferred-debt class; the executor / planner can carve out
+the path in a future R-item rather than weakening this scan now.
+
+**Defensive skip.** If `git diff HEAD~1` returns empty (no parent
+commit, or task produced no diff), emit
+`placeholder_scan: SKIPPED (no diff)` to CRITIC.md and continue
+to STEP 4. The structural-integrity STEP 1 already raises
+CRITICAL on an empty diff against a non-trivial task — this skip
+is the no-op completion for that pre-handled case.
+
+**Output line.** On scan completion, emit one summary line to
+CRITIC.md:
+`placeholder_scan: PASS (0 hits)` or
+`placeholder_scan: FAIL (<N> hits: <token1>×<count>, <token2>×<count>, ...)`
+The per-hit detail (file, line number from the added-line view,
+matched token) is recorded in the CRITIC.md issues table under
+the MAJOR or CRITICAL section keyed by the severity mapping above.
+
+**Why STEP 3 (cont.) and not a new STEP.** The placeholder scan is
+*diff review by a different lens*: STEP 3's existing prose already
+walks the diff line-by-line against the task spec. Adding the
+vocabulary and the new-only constraint as a continuation preserves
+the single diff-traversal pass — splitting into a separate
+numbered STEP would imply a separate diff read, doubling I/O for
+no semantic gain. The continuation marker (`STEP 3 (cont.)`) is
+the convention used elsewhere in this file (see STEP 4.5,
+STEP 1.5) for adversarial sub-checks that share an input with
+the parent step.
+
 **STEP 4: PHANTOM + SILENT FAILURE AUDIT**
 Check RESULT.json verify_commands_run — empty output or not run → MAJOR
 Scan for phantom language in these specific fields only:
