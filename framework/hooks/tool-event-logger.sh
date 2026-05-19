@@ -1,0 +1,94 @@
+#!/bin/bash
+# tool-event-logger.sh — R17-641 (F-641, IMP-019/028/035).
+#
+# Hook type: Auto-PostToolUse (matcher *) — single generic logger that
+# emits one JSONL record per tool call to `.apex/event-log.jsonl` so
+# critic.md anti-phantom STEPs 1.6 / 1.7 / 4.5 / 4.6 have ground truth
+# to cross-reference against. Closes the IMP-019/028/035 producer half;
+# the consumer prose was authored in R16 (R-619 / R-628 / R-635).
+#
+# Contract:
+#   * exit 0 always — fire-and-forget; never blocks tool execution
+#   * fail-loud-and-skip — one stderr line on jq absence, then continue
+#   * NO STATE.json mutation — this hook is logging-only; the canonical
+#     event-log lives at `.apex/event-log.jsonl`
+#   * side effect: appends ONE JSONL line per invocation to
+#     `.apex/event-log.jsonl` containing fields:
+#       ts, type="tool_call", source="tool-event-logger",
+#       tool_name, tool_input, tool_response, is_error
+#
+# Three-places contract for this new auto-wired hook:
+#   1. this file (with the `# Hook type: Auto-PostToolUse (matcher *)` header)
+#   2. framework/settings.json PostToolUse entry under matcher: "*"
+#   3. framework/HOOK-CLASSIFICATION.md row under Auto-PostToolUse
+#
+# Critic consumers (do not touch — already authored):
+#   * critic.md STEP 1.6 DATA-VALUE CROSS-REFERENCE (R-619)
+#   * critic.md STEP 1.7 FABRICATED-TOOL-OUTPUT (R-619)
+#   * critic.md STEP 4.5 DRY-RUN-CONTRADICTED (R-628)
+#   * critic.md STEP 4.6 CITATION VERIFICATION (R-635)
+# All four read `.apex/event-log.jsonl` substrings; this producer emits
+# the substrings.
+
+set -u
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Fail-loud-and-skip when jq absent — without jq we cannot produce
+# a parseable JSONL line. Never block.
+if ! command -v jq >/dev/null 2>&1; then
+  echo "[tool-event-logger] jq not on PATH; skipping event-log emission" >&2
+  exit 0
+fi
+
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/_state-update.sh"
+
+export APEX_HOOK_SOURCE="tool-event-logger"
+
+# Carve-out: outside a git repo (e.g. generic Claude sessions where the
+# .apex/ tree may not exist), silently no-op. This matches the
+# circuit-breaker.sh contract.
+if ! command -v git >/dev/null 2>&1 || ! ROOT=$(git rev-parse --show-toplevel 2>/dev/null); then
+  exit 0
+fi
+cd "$ROOT" || exit 0
+
+# Read the PostToolUse stdin envelope. If stdin is empty or absent (CLI
+# tests without a Claude Code wrapper), silently no-op.
+if [ -t 0 ]; then
+  exit 0
+fi
+STDIN_BUF=$(cat 2>/dev/null || true)
+if [ -z "$STDIN_BUF" ]; then
+  exit 0
+fi
+
+# Extract the four fields we need. `jq` may produce empty strings on
+# missing slots — that is acceptable; the critic substring scan does
+# not require every field to be present, only that the slot exists.
+TN=$(printf '%s' "$STDIN_BUF" | jq -r '.tool_name // empty' 2>/dev/null || true)
+TI_JSON=$(printf '%s' "$STDIN_BUF" | jq -c '.tool_input // {}' 2>/dev/null || echo '{}')
+TR_JSON=$(printf '%s' "$STDIN_BUF" | jq -c '.tool_response // {}' 2>/dev/null || echo '{}')
+IS_ERR=$(printf '%s' "$STDIN_BUF" | jq -r '(.tool_response.is_error // false) | tostring' 2>/dev/null || echo 'false')
+
+if [ -z "$TN" ]; then
+  # No tool_name -> not a recognizable tool envelope. Silently no-op.
+  exit 0
+fi
+
+# Ensure the state dir exists; the helper appends to event-log.jsonl
+# under .apex/ by default.
+mkdir -p .apex 2>/dev/null || true
+
+# Emit the record via the ad-hoc helper. _emit_apex_event accepts
+# arbitrary <key> <val> pairs after <event_type> <state_dir>; it writes
+# one JSONL line per call to ${state_dir}/event-log.jsonl. STATE.json is
+# NOT mutated — this hook is logging-only.
+_emit_apex_event "tool_call" .apex \
+  tool_name "$TN" \
+  tool_input "$TI_JSON" \
+  tool_response "$TR_JSON" \
+  is_error "$IS_ERR"
+
+exit 0
