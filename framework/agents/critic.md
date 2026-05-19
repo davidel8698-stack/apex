@@ -381,6 +381,116 @@ primitives that enable this — see the R16-603/R16-609 pair note in
 post-task aggregate; destructive-guard prevents the bypass at
 PreToolUse time. Together they form a layered cover-up defense.
 
+**STEP 1.6: DATA-VALUE CROSS-REFERENCE** [R16-623C, F-623, IMP-023, Mythos §4.2.2.1]
+
+For every concrete **data value** that the executor *cites* in
+`RESULT.json` (numbers, SHA-like hex, URLs, file paths, quoted
+strings the task narrative referred to as "the attached" / "the
+provided" / "the given"), confirm that at least one entry in
+`.apex/event-log.jsonl` is a tool call that *read or produced*
+that value. A value cited in `RESULT.json` with **no producing
+tool call in the event-log** is a **phantom-input** signal — the
+executor surfaced a value it never actually saw — and the verdict
+is **FAIL with cause = CRITICAL (phantom_data_value)**.
+
+This is the critic-side complement of the executor STEP 0.5
+phantom-input refusal (R16-623E). Executor refusal blocks the
+*start* of a task that says "summarize the attached log" when no
+attachment is present; STEP 1.6 catches the *end-of-task* leak
+where the executor accepted the task but then *invented* a
+specific value (a SHA, an error count, a URL) without ever
+reading source data for it. Both halves of F-623 close the same
+gap from opposite ends.
+
+**Algorithm (run once per task, set-based for performance):**
+
+1. **Extract cited data values.** Parse `RESULT.json` and collect
+   the set `CITED` of literal values that appear inside any
+   user-visible string field (`summary`, `notes`,
+   `tests_run[].output`, `verify_commands_run[].output`, the
+   free-text portion of `acceptance[].evidence`). Extraction
+   regexes:
+   - **SHA-like hex:** `\b[0-9a-f]{7,40}\b`
+   - **URLs:** `\bhttps?://[^\s"'<>]+`
+   - **Numeric literals with explicit semantic anchor** (count,
+     duration, exit code, port, line number): `\b\d{2,}\b` *only
+     when* the surrounding 24 characters contain one of
+     `count|total|exit|line|port|ms|sec|kb|mb|gb|err|warn|fail`.
+     Bare digits without that semantic anchor are excluded — see
+     "False-positive carve-out" below.
+   - **Quoted file paths:** `"[^"]*\.(json|md|sh|js|ts|py|txt|log|yml|yaml|jsonl)"`
+   - **"The attached / provided / given" follow-up tokens:** the
+     literal value that follows the phrase
+     `\b(the attached|the provided|the given)\b\s+\S+` in the
+     same sentence.
+
+2. **Defensive skip for missing event-log.** If
+   `.apex/event-log.jsonl` does not exist or is empty (clean
+   bootstrap, or a project that has not yet emitted any events),
+   emit the line `data_value_check: SKIPPED (no event-log)` to
+   CRITIC.md and continue to STEP 2. Do **NOT** raise CRITICAL on
+   event-log absence — bootstrap projects must not be flagged as
+   phantom data attackers.
+
+3. **Build the producing-tool-call corpus.** Read every line of
+   `.apex/event-log.jsonl` and build the string `CORPUS` as the
+   concatenation of (a) every `tool_input` payload and (b) every
+   `tool_response` payload across all entries. CORPUS is the
+   ground truth of "what data the executor actually saw or
+   produced through tool calls in this task".
+
+4. **Membership check per cited value.** For each `v ∈ CITED`:
+   - If `v` appears as a substring of CORPUS → pass for this
+     value. Continue.
+   - Otherwise → mark `v` as `phantom_data_value`. Record the
+     entry in the CRITIC.md output table with status `FAIL` and
+     the reason string
+     `phantom_data_value: cited in RESULT.json but no event-log
+     tool call read or produced it`.
+
+5. **Verdict mapping.**
+   - **Zero `phantom_data_value` entries** → STEP 1.6 PASS. Emit
+     the line `data_value_check: PASS (<N> values matched event-log
+     CORPUS)` to CRITIC.md and continue to STEP 2.
+   - **One or more `phantom_data_value`** → STEP 1.6 FAIL. The
+     overall critic verdict becomes **FAIL** with the critical
+     cause line `CRITICAL (phantom_data_value): <count> value(s)
+     cited in RESULT.json with no producing tool call in
+     .apex/event-log.jsonl`. Verdict levels are unchanged
+     (PASS/PARTIAL/FAIL) — phantom data flows through the
+     existing FAIL channel with cause = CRITICAL. Do NOT invent a
+     fourth verdict level.
+
+**False-positive carve-out.** This check fires on cited data,
+not on synthesized data. Values the executor *generated* (test
+fixtures it wrote out, hash digests it computed, timestamps it
+emitted) are produced by tool calls (Write, Bash) and therefore
+appear in CORPUS naturally — the substring search picks them up.
+Bare numeric literals without a semantic anchor (e.g., the
+integer `42` inside a code snippet that is itself part of a tool
+output already in CORPUS) are excluded from CITED by the
+extraction regex above, so they cannot generate spurious
+phantom-data flags. If a real-world task accumulates a
+false-positive rate above 10% over a calibration window, the
+rollback trigger fires and the step is reverted — see R-623C
+plan §"Rollback trigger".
+
+**Performance note.** Run the extraction over `RESULT.json` once
+and the corpus-build over `.apex/event-log.jsonl` once. Then
+iterate `CITED` in O(N) against CORPUS via substring containment.
+For a task with ~20 cited values and a 2 MB event-log this is
+two file reads and 20 substring scans — millisecond budget.
+
+**Defense-in-depth dependency.** STEP 1.6 assumes the event-log
+is *complete* — every tool call the executor made is captured.
+Completeness is enforced upstream by `_emit_apex_event.sh`; a
+gap there would let real values look phantom. The
+event-log-completeness audit is tracked separately (R-628's
+tool-call cross-reference is the structural companion). STEP 1.6
+catches *value-level* phantoms; R-628 catches *call-level*
+phantoms. Together they cover both halves of the fabricated-
+output surface.
+
 **STEP 2: ACCEPTANCE CRITERIA**
 For EACH criterion in done_criteria:
 - verified=true in RESULT.json AND evidence is real → VERIFIED
