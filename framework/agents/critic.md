@@ -160,6 +160,128 @@ sanitization would apply. Today's wiring: critic sees RESULT.json
 and event-log; SUMMARY.md is handled by `phantom-check.sh` before
 critic runs.
 
+## PRE-STEP: SCOPE-CREEP FLAG [R16-622C, F-622, IMP-022, Mythos §4.2.2.1]
+
+After PRE-PROCESSING sanitizes the artifacts but **before** STEP 1
+opens REVIEW STEPS, run a single arithmetic gate that catches the
+asymmetric-fix pathology described in IMP-022: a task XML so small
+that no reasonable executor could derive a large diff from it, paired
+with a diff so large that the executor must have invented requirements
+the architect never wrote. The pathology is *scope-creep*: the
+executor expanded the contract under the cover of "while I was in the
+file anyway." Detecting it once, up-front, is cheaper than chasing it
+through every downstream step.
+
+**Why this is a Pre-STEP, not a STEP.** Scope-creep is not a structural
+defect (STEP 1's surface), not an acceptance-criterion miss (STEP 2),
+not a phantom file (STEP 4). It is a *contract-size mismatch* and is
+unique among critic gates in needing only two scalar inputs. Running
+it before STEP 1 means a flagged task surfaces its scope-creep
+signature in CRITIC.md regardless of whether downstream STEPs find any
+other defect — the flag is informative on its own, and the architect
+who reads CRITIC.md gains the scope-review signal even on a PASS.
+
+**Why a Pre-STEP and not a verdict-flipper.** A scope-creep flag does
+**not** auto-FAIL the task. The mutation-gate sibling (R-622M) is the
+PreToolUse enforcement layer that can refuse the write; by the time
+critic runs, the mutation has already landed in the workspace. The
+critic-side role is *visibility* — emit the flag so round-checker and
+the human reviewer see the asymmetry, then continue the normal review.
+This mirrors PRE-PROCESSING's posture: surface the signal, do not
+short-circuit the pipeline.
+
+**Inputs (both already in WHAT YOU RECEIVE):**
+
+1. `task_xml` — the full task XML string from PLAN_META.json. Computed
+   length is `task_xml_chars = len(task_xml)`. Use the raw character
+   count of the XML as delivered, not a token estimate; the threshold
+   is calibrated to characters because the spec anchor is calibrated
+   to characters.
+2. `diff` — `git diff HEAD~1` (already provided to critic per WHAT YOU
+   RECEIVE). Computed line count is `diff_lines = number of lines in
+   the diff body, excluding the file-header lines` (`diff --git`,
+   `index`, `+++`, `---`, `@@` hunk headers). Count only added (`+`)
+   and removed (`-`) content lines — these are the lines an editor
+   actually touched.
+
+**Generated-file carve-out (false-positive guard).** Auto-generated
+files inflate `diff_lines` even when no human-equivalent editing
+occurred — package lockfiles (`package-lock.json`, `yarn.lock`,
+`Cargo.lock`, `poetry.lock`, `go.sum`), generated TypeScript/JS
+artifacts (`*.generated.ts`, `*.generated.js`, `dist/`, `build/`),
+build outputs, vendored dependencies (`vendor/`, `node_modules/` —
+which should not be committed but sometimes are), and any file the
+repo marks `linguist-generated=true` via `.gitattributes`. Before
+computing `diff_lines`, exclude lines belonging to files that match
+this list. If a task explicitly required regenerating one of these
+files (e.g., "update package-lock.json after dependency bump"), that
+intent is visible in `task_xml` — note it as the carve-out
+justification in CRITIC.md and skip the flag for that diff slice.
+
+**Threshold (from spec):**
+
+- `task_xml_chars < 2000` **AND** `diff_lines > 200` → emit
+  `scope_creep_flag` in CRITIC.md.
+
+Both conditions are required. A 1,900-character task XML with a
+180-line diff is normal small work. A 2,100-character task XML with a
+220-line diff is normal medium work. The flag fires only when a small
+contract maps to a large mutation — the asymmetric profile that the
+IMP-022 incident family taught us to watch for.
+
+**Emission format (CRITIC.md):**
+
+```
+scope_creep_flag: <true|false>
+scope_creep_metrics:
+  task_xml_chars: <integer>
+  diff_lines_raw: <integer, before carve-out>
+  diff_lines_after_generated_carveout: <integer>
+  excluded_generated_paths: [<list of file paths excluded>]
+scope_creep_reasoning: <one-sentence prose explaining the asymmetry
+  or, when flag=false, why the diff is proportionate>
+```
+
+When `scope_creep_flag: true`, also append a `scope_creep_review`
+recommendation to the verdict reasoning — not a verdict change, an
+*ask* directed at the human reviewer or the architect to confirm the
+expanded surface was intended. When `scope_creep_flag: false`, the
+metrics still appear in CRITIC.md so the architect sees the
+proportionality numbers on every task.
+
+**Worked examples (calibration):**
+
+1. **Task XML = 1,200 chars, diff = 850 lines, 600 in
+   `package-lock.json` (auto-generated, no task mention).** Carve-out
+   excludes 600 lines → `diff_lines_after_generated_carveout = 250`.
+   Both thresholds cross (1,200 < 2,000 AND 250 > 200) →
+   `scope_creep_flag: true`.
+2. **Task XML = 1,200 chars, diff = 850 lines, task explicitly says
+   "regenerate package-lock.json after the dependency bump."** Same
+   carve-out, but the carve-out is *task-justified* — still subtract
+   the 600 lines, leaving 250 manual lines. If those 250 manual lines
+   are themselves disproportionate to the 1,200-char task, the flag
+   still fires; the carve-out only protects the generated portion.
+3. **Task XML = 2,400 chars, diff = 250 lines.** `task_xml_chars >=
+   2000` → flag does not fire even though diff exceeds 200.
+4. **Task XML = 1,800 chars, diff = 180 lines.** `diff_lines <= 200` →
+   flag does not fire.
+
+**Tunability.** The 2,000-character and 200-line thresholds are
+spec-anchored, not local. Do not adjust them from inside this Pre-STEP
+— if calibration drifts, raise the change as a spec amendment and let
+a future R-item carry it. The Pre-STEP's job is to enforce the spec,
+not to negotiate it.
+
+**Preservation contract.** This Pre-STEP block does **not** alter
+PRE-PROCESSING above (untrusted-input protocol stays the
+load-bearing first gate), the FILESYSTEM-LEVEL VERIFICATION supersede
+rule on line ~35, or any REVIEW STEP below. It adds one arithmetic
+check between PRE-PROCESSING and STEP 1. STEP 1 (STRUCTURAL
+INTEGRITY), STEP 1.5 (GIT TRACE VERIFICATION), and every subsequent
+STEP remain byte-identical to their R-603/R-619/R-620/R-621 state
+before this insertion.
+
 ## REVIEW STEPS
 
 **STEP 1: STRUCTURAL INTEGRITY**
