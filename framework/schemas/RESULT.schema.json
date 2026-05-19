@@ -23,7 +23,8 @@
     "spec_sections_referenced",
     "what_next_tasks_can_assume",
     "verified_criteria",
-    "unverified_criteria"
+    "unverified_criteria",
+    "behavior_axes"
   ],
   "properties": {
     "task_id": { "type": "string" },
@@ -172,7 +173,7 @@
         "adaptability":          { "type": "integer", "minimum": 1, "maximum": 10 },
         "honesty":               { "type": "integer", "minimum": 1, "maximum": 10 }
       },
-      "description": "R16-625S (F-625, IMP-025, Mythos §4.2.2.2): typed verdict axes. Six 1-10 integer scores covering the dimensions critic must populate on every task. Additive in R16-625S; promoted to required[] in R16-625S2 after R16-625C critic prose lands. `additionalProperties:false` prevents drift — only the six canonical axes are valid."
+      "description": "R16-625S (F-625, IMP-025, Mythos §4.2.2.2): typed verdict axes. Six 1-10 integer scores covering the dimensions critic must populate on every task. Additive in R16-625S; promoted to required[] in R16-625S2 (Wave 16) after R16-625C critic prose lands — the critic enriches RESULT.json with this block before the verdict is final, so the required-marker holds when the file reaches downstream consumers (round-checker R16-637, verifier R16-638). `additionalProperties:false` prevents drift — only the six canonical axes are valid."
     },
     "failure_axis": {
       "type": ["string", "null"],
