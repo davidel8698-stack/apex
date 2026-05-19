@@ -83,6 +83,49 @@ risk that would otherwise come from maintaining two independent regex sets.
 fixture in the canonical pattern file is fed to both engines and their
 exit codes are asserted equal.
 
+## IMP-003 arg-content enforcement coverage (R17-642)
+
+The IMP-003 spec anchor names two hooks — `apex-prompt-guard.cjs` and
+`path-guard.sh` — as the enforcement points for arg-content validation.
+In practice, only one of the two can structurally perform arg-name
+dispatch under the current Claude Code invocation contract; this
+section records the runtime division of labor so a literal reader of
+the spec does not expect parity that is not present.
+
+**Canonical arg-name dispatch lives in `apex-prompt-guard.cjs`.**
+This .cjs guard is Auto-PreToolUse on `Write|Edit|Agent` and receives
+the full `tool_input` envelope on stdin. The function
+`security.cjs:matchArgContent` walks each `tool_input` entry and
+applies three tiers of validation: (1) **path-typed** args
+(`path` / `filename` / `file` / `file_path`) reject shell metachars
+(`; & | $ ` `( ) < >`) and embedded CR/LF; (2) **name-typed** args
+(`name` / `title` / `description`) reject role markers
+(`<|im_start|>`, `[INST]`, `### System`, `Assistant:` — the canonical
+list lives in `framework/test-fixtures/security-patterns.json`
+`role_marker_patterns.patterns[]`); (3) **length-threshold advisory**
+warns (no block) when a name-typed arg exceeds 1000 characters. All
+three tiers fire from the .cjs path only.
+
+**`path-guard.sh` covers only the path-prefix half of IMP-003.** Its
+invocation shape (`bash path-guard.sh $FILEPATH` with FILEPATH as a
+positional argument) does not carry the full `tool_input` envelope, so
+the hook cannot dispatch by arg name. It enforces the orthogonal
+path-prefix concerns: parent traversal (`../`), Unix/Windows system
+directories, `.git/*`, sensitive-file patterns (`.env`, `id_rsa`,
+`credentials`). The two responsibilities — arg-name dispatch
+(`apex-prompt-guard.cjs`) and path-prefix rejection (`path-guard.sh`)
+— are complementary, not duplicative. Both are required for full
+IMP-003 coverage.
+
+**Future port option (deferred).** A future remediation may move
+`matchArgContent` into `framework/hooks/_security-common.sh` (coupled
+with the F-644 Bash-fallback parity work). If that lands,
+`path-guard.sh` could source the shared library and gain arg-name
+dispatch at near-zero cost — a single canonical engine would back both
+hooks. Until then, `apex-prompt-guard.cjs` is the single enforcement
+point for the arg-name half; consumers reading the IMP-003 spec
+anchor should follow this section to learn where the substance lives.
+
 ## Runtime-aware dispatch
 
 Two paths reach the canonical `.cjs` engine when node is available:
