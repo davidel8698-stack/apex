@@ -245,6 +245,30 @@ if [ ! -t 0 ]; then
             exit 2
           fi
         fi
+        # === R17-640 (F-640, IMP-016): denied-class classifier ===
+        # Inspect the lowercased error text against the six denied-class
+        # tokens and, on a match, call _record_denied_error to populate
+        # STATE.recent_denied_error_window for sequence-guard.sh's
+        # consumer (IMP-016 writer-side). Placed OUTSIDE the
+        # `[ -n "$CB_ERR_HASH" ]` block so hashing-utility absence (no
+        # sha256sum / shasum on PATH) does NOT short-circuit the
+        # classifier — recurring-error-hash and denied-class signals are
+        # orthogonal. Categories map per _record_denied_error enum:
+        # unauthorized / forbidden / 403 / 401 / denied / missing_token.
+        CB_TOOL_NAME=$(echo "$CB_STDIN_BUF" | jq -r '.tool_name // empty' 2>/dev/null || true)
+        CB_ERR_LC=$(printf '%s' "$CB_ERR_TEXT" | tr '[:upper:]' '[:lower:]')
+        CB_DENIED_CAT=""
+        case "$CB_ERR_LC" in
+          *unauthorized*) CB_DENIED_CAT=unauthorized ;;
+          *forbidden*)    CB_DENIED_CAT=forbidden ;;
+          *403*)          CB_DENIED_CAT=403 ;;
+          *401*)          CB_DENIED_CAT=401 ;;
+          *"missing token"*|*"missing-token"*) CB_DENIED_CAT=missing_token ;;
+          *denied*)       CB_DENIED_CAT=denied ;;
+        esac
+        if [ -n "$CB_DENIED_CAT" ]; then
+          _record_denied_error "$CB_DENIED_CAT" "${CB_TOOL_NAME:-unknown}"
+        fi
       fi
     fi
   fi
