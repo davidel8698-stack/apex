@@ -121,6 +121,86 @@ rather than fabricate.
    `<files>` AND exists on disk. The phrase alone is not enough; the
    referent must resolve.
 
+#### PLACEHOLDER SCAN [R16-627, F-627, IMP-027]
+
+The same PRE-EXECUTION PREMISE GUARD subsection (one scan pass over
+the inbound task XML) ALSO runs the placeholder regex family below.
+Tasks whose XML still contains literal placeholder tokens —
+`<FEATURE_NAME>`, `[INSERT_VALUE]`, `TODO`, `XXX`, etc. — would
+otherwise drive the executor to run the task verbatim on the
+placeholder string, producing fabricated work.
+
+7. **Placeholder regex family (scoped to task XML text content
+   only).** The scan runs over the SAME text content as the
+   phantom-input scan above (`<action>`, `<goal>`,
+   `<verify_command>`, `<edge_cases>`, and the text *inside*
+   `<files>` entries — **not** XML tag names themselves; see
+   the scope guard below). Match any of:
+
+   - `<[A-Z_]+>` — angle-bracket all-caps placeholder
+     (`<FEATURE_NAME>`, `<API_KEY>`).
+   - `\{\{[A-Z_]+\}\}` — mustache-style placeholder
+     (`{{FEATURE_NAME}}`).
+   - `\$\{[A-Z_]+\}` — shell-style placeholder (`${FEATURE_NAME}`)
+     in *prose context*, not inside `<verify_command>` shell
+     literals (see scope guard).
+   - `\[INSERT` — square-bracket INSERT_* placeholder
+     (`[INSERT_VALUE]`, `[INSERT NAME HERE]`).
+   - `\[PLACEHOLDER` — explicit PLACEHOLDER markers
+     (`[PLACEHOLDER]`, `[PLACEHOLDER: description]`).
+   - `\[TODO` — TODO markers as inputs (`[TODO]`, `[TODO: fill in]`).
+   - `\bXXX\b` — word-boundary XXX placeholder.
+   - `\bFIXME\b` — word-boundary FIXME placeholder.
+
+   The eight families above are the canonical placeholder set per
+   IMP-027. They are union-scanned with the phantom-input regex
+   (point 2) in a single pass; matches are dispatched by family.
+
+8. **Scope guard against XML-tag false-positives.** The
+   `<[A-Z_]+>` regex would also match legitimate task XML element
+   names (`<ACTION>`, `<GOAL>`). Constrain the scan to *text
+   nodes* — characters between element open- and close-tags — not
+   tag names themselves. Implementation note: skim the task XML
+   into lines, strip lines that match a pure tag header
+   (`^\s*<[A-Z_]+>\s*$` or `^\s*</[A-Z_]+>\s*$`), then scan the
+   remainder. Similarly for `${...}` in `<verify_command>` shell
+   literals — these are valid shell variable expansions, not
+   placeholders. The scope guard is: a `${X}` token inside a
+   `<verify_command>` block is exempt iff the variable name is
+   also defined elsewhere in the task XML or is a well-known
+   shell variable (`${HOME}`, `${PWD}`, `${CURRENT_PHASE}`,
+   `${TASK_ID}`).
+
+9. **Refusal path — `placeholder_in_task_xml`.** On any
+   placeholder match that survives the scope guard, write a valid
+   RESULT.json with:
+   - `status`: `"failure"`
+   - `outcome` (free-text reason field):
+     `placeholder_in_task_xml`
+   - `issues_found[]` MUST include an entry of the form
+     `placeholder_in_task_xml:<family>:<token>` (one entry per
+     distinct match family), so critic / verifier can distinguish
+     this designed refusal from a generic failure.
+   - `task_start_sha`: as captured in STEP 0 above.
+   - `files_modified`: `[]` (refusal happens before any write).
+   - `unverified_criteria`: the full `done_criteria` list (none
+     attempted).
+
+   Then terminate the task with the refusal as the deliverable —
+   do NOT attempt to substitute, interpret, or "guess" what the
+   placeholder meant. The refusal IS the response.
+
+10. **Why both guards share one scan pass.** Phantom-input (point
+    2) and placeholder (point 7) are both "the task XML is not
+    runnable" classes — refusing pre-execution rather than
+    fabricating downstream. Running them as one scan pass keeps
+    the executor's pre-execution cost O(1) per task. If both
+    fire simultaneously, the refusal RESULT.json records both
+    reasons under `issues_found[]`; the primary `outcome` field
+    picks whichever fired first (phantom-input takes precedence
+    when both match, because a missing referent is more
+    fundamental than a placeholder token).
+
 Once the premise guard passes (or after a successful refusal write
 has been emitted and the executor terminates), proceed to BEFORE
 WRITING CODE.
