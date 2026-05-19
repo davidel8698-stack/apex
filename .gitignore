@@ -21,6 +21,8 @@ WAVE-*-RESULT*.md
 WAVES-R*.md
 ROUND-R*-CLOSURE.md
 REMEDIATION-PLAN-*.md
+# Runtime learnings dump (root-only — framework/apex-learnings.md is the tracked source)
+/apex-learnings.md
 
 # OS
 .DS_Store
