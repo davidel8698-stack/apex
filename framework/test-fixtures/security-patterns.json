@@ -71,46 +71,6 @@
       "_doc": "R16-611 (F-611, IMP-003): path-typed args should never contain CR/LF."
     }
   ],
-  "name_arg_patterns": [
-    {
-      "name": "role marker im_start in name arg",
-      "pattern": "<\\|im_start\\|>|<\\|im_end\\|>",
-      "matched_message": "<|im_start|> / <|im_end|> in a name-typed arg",
-      "severity": "block",
-      "case_insensitive": true,
-      "applies_to_arg_names": ["name", "title", "description"],
-      "_doc": "R16-611 (F-611, IMP-003): role markers should not appear inside name-typed args (Anthropic / OpenAI tokenizer markers)."
-    },
-    {
-      "name": "role marker INST in name arg",
-      "pattern": "\\[INST\\]|\\[/INST\\]",
-      "matched_message": "[INST] / [/INST] in a name-typed arg",
-      "severity": "block",
-      "case_insensitive": false,
-      "applies_to_arg_names": ["name", "title", "description"],
-      "_doc": "R16-611 (F-611, IMP-003): Llama-family instruction markers should not appear inside name-typed args."
-    },
-    {
-      "name": "role marker ### System in name arg",
-      "pattern": "^\\s*### System",
-      "matched_message": "### System heading in a name-typed arg",
-      "severity": "block",
-      "case_insensitive": false,
-      "multiline": true,
-      "applies_to_arg_names": ["name", "title", "description"],
-      "_doc": "R16-611 (F-611, IMP-003): the legitimate '### System' markdown heading should stay in file CONTENT, not in a name-typed arg position."
-    },
-    {
-      "name": "role marker Assistant: in name arg",
-      "pattern": "^\\s*Assistant:",
-      "matched_message": "Assistant: at start of a name-typed arg",
-      "severity": "block",
-      "case_insensitive": false,
-      "multiline": true,
-      "applies_to_arg_names": ["name", "title", "description"],
-      "_doc": "R16-611 (F-611, IMP-003): conversational role labels should not appear at the start of a name-typed arg."
-    }
-  ],
   "length_threshold_advisory": {
     "name": "name-arg length threshold",
     "threshold_chars": 1000,
@@ -156,7 +116,7 @@
     }
   ],
   "role_marker_patterns": {
-    "_doc": "R16-620P (F-620 sibling, IMP-020): canonical role-marker pattern set, single source of truth shared between critic.md PRE-PROCESSING (R16-620) and apex-prompt-guard.cjs detection (R16-611 name_arg_patterns). Critic prose references this list by name when scanning task XML / <task> content for embedded role markers; prompt-guard imports the regex literals at runtime. Drift between the two enforcement points was a documented R2 failure mode — this object pins the canonical list so both consumers cannot diverge. Patterns are normalized to JS regex literal form (escape backslash once for JSON; consumer .cjs unescapes per JS literal rules; .sh consumer reads via grep -E equivalent).",
+    "_doc": "R16-620P + R17-645 (F-645, IMP-003 + IMP-020): canonical role-marker pattern set, single source of truth shared between (a) critic PRE-PROCESSING (R16-620C) which scans untrusted task XML for embedded role markers and (b) `security.cjs:matchArgContent` (R17-645) which consumes this list with default `applies_to_arg_names: [\"name\",\"title\",\"description\"]` to enforce IMP-003 name-arg dispatch. Adding a pattern here propagates to BOTH consumers. The old `name_arg_patterns[]` array (deleted in R17-645) was the redundant byte-copy of the first four entries; deletion was lossless. Patterns are normalized to JS regex literal form (escape backslash once for JSON; consumer .cjs unescapes per JS literal rules).",
     "spec_anchor": "F-620 + IMP-020 + IMP-003 (cross-cutting between prompt-guard arg dispatch and critic PRE-PROCESSING).",
     "patterns": [
       {

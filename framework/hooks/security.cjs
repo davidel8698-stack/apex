@@ -121,10 +121,21 @@ function matchArgContent(argName, value) {
     }
   }
 
-  // Name-arg block patterns
-  if (Array.isArray(cfg.name_arg_patterns)) {
-    for (const p of cfg.name_arg_patterns) {
-      const names = (p.applies_to_arg_names || []).map(n => n.toLowerCase());
+  // Name-arg block patterns — R17-645 (F-645, IMP-003 + IMP-020):
+  // canonical source is role_marker_patterns.patterns[] (the same list
+  // critic PRE-PROCESSING reads). matchArgContent derives its candidate
+  // set from that list with default applies_to_arg_names of
+  // ['name','title','description'] when a pattern does not specify its
+  // own scope. Adding a pattern to role_marker_patterns now propagates
+  // to BOTH critic PRE-PROCESSING (R16-620C) AND this arg-name
+  // dispatch — single source of truth, no drift surface.
+  const rolePatterns = cfg.role_marker_patterns && Array.isArray(cfg.role_marker_patterns.patterns)
+    ? cfg.role_marker_patterns.patterns
+    : null;
+  if (rolePatterns) {
+    for (const p of rolePatterns) {
+      const names = (p.applies_to_arg_names || ['name', 'title', 'description'])
+        .map(n => n.toLowerCase());
       if (!names.includes(lowerName)) continue;
       const re = _patternToRegExp(p);
       if (re.test(valStr)) {

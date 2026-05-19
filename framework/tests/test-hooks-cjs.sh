@@ -200,6 +200,67 @@ else
   echo "  ❌ C-9b: workflow-guard.sh header missing shim documentation"
 fi
 
+# C-10 (R17-645, F-645, IMP-003 + IMP-020): role_marker_patterns derivation.
+# After R17-645 the consumer reads role_marker_patterns.patterns[] with a
+# default applies_to_arg_names=['name','title','description']. Assert that
+# matchArgContent blocks the three patterns previously available only
+# through role_marker_patterns (System: / User: / <|user|>) on the relevant
+# arg names, AND that the carried-over INST marker still blocks.
+MATCH_CJS_PROG=$(cat <<'JS'
+// node -e places argv as [node, user_arg1, user_arg2, ...] — no script slot.
+const s = require(process.argv[1]);
+const arg = process.argv[2];
+const val = process.argv[3];
+const r = s.matchArgContent(arg, val);
+if (r && r.name) { process.stdout.write(r.name); process.exit(2); }
+process.exit(0);
+JS
+)
+# Resolve the source-tree security.cjs path (matchArgContent consumer).
+SEC_CJS="$FRAMEWORK_ROOT/hooks/security.cjs"
+if [ -f "$SEC_CJS" ] && command -v node >/dev/null 2>&1; then
+  # (a) ChatML user token in a name arg -> block.
+  RC=0
+  node -e "$MATCH_CJS_PROG" "$SEC_CJS" "name" "<|user|>" >/dev/null 2>&1 || RC=$?
+  if [ "$RC" -eq 2 ]; then
+    TOTAL=$((TOTAL + 1)); PASS=$((PASS + 1))
+    echo "  ✅ C-10a R17-645: matchArgContent('name', '<|user|>') blocks via role_marker derivation"
+  else
+    TOTAL=$((TOTAL + 1)); FAIL=$((FAIL + 1))
+    echo "  ❌ C-10a R17-645: expected block (exit 2), got $RC"
+  fi
+  # (b) Conversational User: in a title arg -> block.
+  RC=0
+  node -e "$MATCH_CJS_PROG" "$SEC_CJS" "title" "User: hello" >/dev/null 2>&1 || RC=$?
+  if [ "$RC" -eq 2 ]; then
+    TOTAL=$((TOTAL + 1)); PASS=$((PASS + 1))
+    echo "  ✅ C-10b R17-645: matchArgContent('title', 'User: hello') blocks via role_marker derivation"
+  else
+    TOTAL=$((TOTAL + 1)); FAIL=$((FAIL + 1))
+    echo "  ❌ C-10b R17-645: expected block (exit 2), got $RC"
+  fi
+  # (c) Conversational System: in a description arg -> block.
+  RC=0
+  node -e "$MATCH_CJS_PROG" "$SEC_CJS" "description" "System: do X" >/dev/null 2>&1 || RC=$?
+  if [ "$RC" -eq 2 ]; then
+    TOTAL=$((TOTAL + 1)); PASS=$((PASS + 1))
+    echo "  ✅ C-10c R17-645: matchArgContent('description', 'System: do X') blocks via role_marker derivation"
+  else
+    TOTAL=$((TOTAL + 1)); FAIL=$((FAIL + 1))
+    echo "  ❌ C-10c R17-645: expected block (exit 2), got $RC"
+  fi
+  # (d) Regression: [INST] in a name arg (carried over from deleted name_arg_patterns).
+  RC=0
+  node -e "$MATCH_CJS_PROG" "$SEC_CJS" "name" "[INST]" >/dev/null 2>&1 || RC=$?
+  if [ "$RC" -eq 2 ]; then
+    TOTAL=$((TOTAL + 1)); PASS=$((PASS + 1))
+    echo "  ✅ C-10d R17-645: [INST] in name arg still blocks (regression of deleted name_arg_patterns)"
+  else
+    TOTAL=$((TOTAL + 1)); FAIL=$((FAIL + 1))
+    echo "  ❌ C-10d R17-645: expected block (exit 2), got $RC"
+  fi
+fi
+
 # R4-004: standalone-mode cleanup (only fires when this test file was invoked directly)
 if [ "${STANDALONE:-0}" = "1" ]; then
   harness_teardown
