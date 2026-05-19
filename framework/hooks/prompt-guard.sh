@@ -38,6 +38,15 @@ fi
 
 # --- Native Bash fallback (preservation contract: original R-006 logic) -----
 
+# R17-644 (F-644, IMP-003): emit a one-line stderr advisory when the Bash
+# fallback runs (i.e. node was unavailable or the .cjs payload was missing).
+# Placed AFTER the `if command -v node ... exec node ...` delegation so it
+# fires only on the degraded path. The five free-text prompt-injection
+# patterns below DO still fire; the missing capability is IMP-003 arg-name
+# dispatch (path-typed shell-metachar / name-typed role-marker /
+# >1000-char advisory) — which is only available via the .cjs path.
+printf '[APEX SECURITY] IMP-003 arg-content validation (path-arg shell-metachar / name-arg role-marker / >1000-char advisory) requires Node.js. Current host has no node on PATH; falling back to the 5 free-text prompt-injection patterns. Install Node.js to enable full IMP-003 coverage. See framework/docs/SECURITY-RUNTIME.md §Node.js prerequisite for IMP-003.\n' >&2
+
 block() {
   echo "APEX PROMPT GUARD: BLOCKED" >&2
   echo "Pattern: $1" >&2

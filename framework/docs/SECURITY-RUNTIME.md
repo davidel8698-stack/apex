@@ -126,6 +126,45 @@ hooks. Until then, `apex-prompt-guard.cjs` is the single enforcement
 point for the arg-name half; consumers reading the IMP-003 spec
 anchor should follow this section to learn where the substance lives.
 
+## Node.js prerequisite for IMP-003 (R17-644)
+
+Full IMP-003 arg-content validation requires Node.js on the host. The
+canonical engine lives in `apex-prompt-guard.cjs` (delegated to by
+`prompt-guard.sh` when `node` is on PATH, and invoked directly by the
+runtime-aware dispatcher in `framework/settings.json`). When Node is
+absent, the Bash fallback in `prompt-guard.sh` runs instead.
+
+**What still works on Bash-only hosts.** The five free-text
+prompt-injection patterns continue to enforce: instruction override,
+role hijacking, prompt framing (system-label at start of line), markdown
+code-block injection (the system-tagged triple-backtick form), and
+priority injection (`IMPORTANT:` / `CRITICAL:` at start of line). All
+five exit 2 on match per the original R-006 logic; preservation
+contract intact.
+
+**What requires Node.js.** The IMP-003 arg-name dispatch tiers — (1)
+path-typed shell-metachar rejection, (2) name-typed role-marker
+rejection, (3) >1000-char advisory — depend on
+`security.cjs:matchArgContent` walking the full `tool_input` envelope.
+The Bash fallback receives only the positional input string, not the
+arg-typed envelope, so it cannot dispatch.
+
+**Runtime advisory.** When the Bash fallback runs, `prompt-guard.sh`
+emits a single-line stderr advisory naming the missing capability
+and pointing to this section. The advisory is informational, not
+blocking — the five free-text patterns still fire. Operators on
+Bash-only hosts (minimal containers, forensic shells) should install
+Node.js to gain IMP-003 arg-content coverage.
+
+**Cross-reference to F-642.** A future remediation may port
+`matchArgContent` into `framework/hooks/_security-common.sh` so the
+Bash fallback achieves parity (and `path-guard.sh` gains arg-name
+dispatch as a free side-effect — see §IMP-003 arg-content enforcement
+coverage above). Until then, Node.js is the prerequisite for full
+IMP-003 coverage. The canonical pattern set lives in
+`framework/test-fixtures/security-patterns.json` — single source of
+truth shared between the .cjs and .sh runtimes when both are present.
+
 ## Runtime-aware dispatch
 
 Two paths reach the canonical `.cjs` engine when node is available:
