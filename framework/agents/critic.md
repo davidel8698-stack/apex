@@ -1028,6 +1028,168 @@ function name, CLI flag literal) — i.e. has no surrounding
 clause whitespace. In that case STEP 4.5 PASSes with reason
 `dry_run_check: PASS (identifier-only matches, no claim)`.
 
+**STEP 4.6: CITATION VERIFICATION** [R16-635, F-635, IMP-035, Mythos §4.2.2.1]
+
+Detect *fabricated* or *unverifiable* citations in the executor's
+narrative. Each URL, package@version reference, absolute file path,
+or `pip install` / `npm install` style install reference claimed in
+RESULT.json must correspond to a real read/fetch/install event in
+the per-project event-log `.apex/event-log.jsonl`. A citation that
+does not appear in the event-log as an actual tool call is a
+**phantom citation** → **verdict = FAIL** with reason
+`citation_unverified`.
+
+This is the missing-bridge check for IMP-035: phantom-import,
+phantom-dep, and phantom-URL hallucinations where the executor
+asserts having consulted a source it never opened. The clean-room
+protocol means critic has the narrative *and* the event-log as
+independent inputs — STEP 4.6 cross-references them, the same way
+STEP 4.5 cross-references dry-run claims against side-effect verbs.
+
+**Scope of the citation scan (claim side).** The scan runs over the
+text content of:
+- `RESULT.json.summary` — executor's final narrative blurb.
+- `RESULT.json.verify_commands_run[].output` — pasted stdout that
+  may include source references.
+- `RESULT.json.tests_run[].output` — same.
+- The diff's *added comments only* (lines starting with `//`, `#`,
+  `/*` and prefixed `+` in the diff) — the comments executor
+  authored this task, which sometimes name a library or URL as
+  authority.
+- The SUMMARY.md narrative is **not** an input to critic (clean-room
+  preservation contract); upstream phantom checks handle SUMMARY.md
+  before critic runs.
+
+**Do NOT scan:** task_spec (architect-written), fixture file
+contents, imported library code, third-party docs vendored into the
+repo. Citation extraction operates strictly on executor-authored
+narrative + executor-authored comments in the diff.
+
+**Citation extraction patterns (case-insensitive,
+clause-anchored).** Extract any of:
+
+- **URLs:** `\bhttps?://[A-Za-z0-9./_\-]+\b` — strictly constrained
+  to alnum, dot, slash, underscore, dash. No query strings, no
+  anchors — the canonical form is what the executor would have
+  fetched, so we match the host+path only. Over-matching is the
+  primary risk; this regex deliberately under-captures.
+- **Package@version references:** `\b[a-zA-Z0-9_\-./]+@[0-9]+\.[0-9]+(?:\.[0-9]+)?(?:[a-zA-Z0-9._\-]+)?\b`
+  — covers `lodash@4.17.21`, `@scope/pkg@1.2.0`, `requests==2.31.0`
+  (the `==` variant is normalized to `@` before extraction).
+- **Install references:** `\b(?:pip|pip3|npm|pnpm|yarn|cargo|gem|go\s+get)\s+install\s+[A-Za-z0-9_\-./@=]+\b`
+  — the package token immediately after the install verb is the
+  citation.
+- **Absolute file paths claimed as sources:** `\b/(?:[A-Za-z0-9_\-./]+/)*[A-Za-z0-9_\-.]+\.(?:md|txt|rst|json|yaml|yml|toml|py|js|ts|go|rs|java|cpp|h|sh)\b`
+  — only paths claimed as documentation/source references. Build
+  artifacts and binary paths are not citations.
+
+If zero citation tokens fire across the scan, STEP 4.6 is PASS by
+vacuous truth — emit `citation_check: PASS (no citation)` and
+continue.
+
+**Allowlist for synthetic/test references (false-positive
+control).** The following host patterns are *not* treated as
+citations even if matched by the URL regex — they are conventional
+synthetic endpoints used in tests, examples, and placeholders:
+
+- `example.com`, `example.org`, `example.net` and any subdomain
+  thereof.
+- `localhost`, `127.0.0.1`, `0.0.0.0`, `::1`.
+- Any host ending in `.test`, `.invalid`, `.localhost`, `.example`
+  (RFC 2606 reserved TLDs).
+- Any host with a single label and no dot (`internal`, `host`,
+  etc.).
+
+A citation that matches the allowlist is dropped from the claim
+set before event-log cross-reference. This prevents the regression
+trap noted in the wave's abort conditions: the regex MUST NOT FAIL
+the verdict on a test fixture that legitimately references
+`http://example.com/api`.
+
+**Event-log scan (evidence side).** Read
+`.apex/event-log.jsonl` (per-project, written by
+`_emit_apex_event.sh`). For each line, parse as JSON and extract
+the event's command/tool-call signature. Build the evidence set:
+
+- **URL reads/fetches:** events whose tool is `WebFetch`, `Read`
+  (of a URL-shaped argument), `curl`, `wget`, `httpie`, or any
+  `Bash` invocation whose command tokens include an `https?://`
+  literal. Record the host+path normal form for matching.
+- **Package installs:** events whose tool is `Bash` with command
+  matching `\b(?:pip|pip3|npm|pnpm|yarn|cargo|gem|go\s+get)\s+install\s+\S+\b`.
+  Record `<verb> <package>` as the evidence key, normalizing
+  `==` to `@` for pip-style version pins.
+- **File reads:** events whose tool is `Read` with an absolute
+  path argument. Record the canonical absolute path.
+
+A citation is **verified** if the event-log evidence set contains
+the same normal form (URL host+path, package@version token, or
+absolute path) at a timestamp `>=` `task_start_sha`'s capture
+time. Otherwise the citation is **unverified**.
+
+**Window bound.** Same rule as STEP 4.5: timestamp `>=
+task_start_sha`'s capture time, or fall back to the most recent
+N=200 entries if the timestamp field is absent. Document the
+degradation in `citation_check: DEGRADED (no timestamp window)`.
+
+**Phantom-citation rule.** If `unverified_citation_count >= 1`
+after the allowlist drop and the event-log cross-reference →
+**FAIL** with reason string
+`citation_unverified: claimed <citation> but no matching read/fetch/install in event-log`.
+The verdict is the existing FAIL channel — do NOT invent a new
+verdict level. The reason string is recorded under
+CRITIC.md's "Verdict" justification block, one line per
+unverified citation up to a cap of 5; additional unverified
+citations are summarized as `(+<N> more)`.
+
+**Defensive skip.** If `.apex/event-log.jsonl` does not exist
+(brand-new project, hook misconfigured, non-APEX repo), emit
+`citation_check: SKIPPED (no event-log)` and continue. Do not
+raise FAIL on absence — emission completeness is an upstream
+concern tracked separately under the IMP blind-spot for
+event-log coverage. This mirrors STEP 4.5's defensive skip; the
+two checks share the same event-log assumption.
+
+**Why STEP 4.6 not earlier.** The check requires
+`RESULT.json.summary` and the narrative output arrays to be
+populated and structurally validated (STEP 4 already does this).
+Running 4.6 before STEP 4 would have to re-derive that input,
+duplicating work. STEP 4.6 also benefits from STEP 4.5's
+event-log open — the two checks read the same file in the same
+pass when implemented sequentially.
+
+**False-positive carve-outs.** Citations that look like a URL
+but resolve to a non-fetchable form are dropped before
+verification:
+
+- The synthetic-test allowlist above (`example.com`, `.test`,
+  `.invalid`, `localhost`, ...).
+- URLs inside the executor's task_spec quote-back (the
+  architect-authored text quoted verbatim into RESULT.json) — if
+  a citation appears character-identical inside the task_spec
+  string, treat it as architect input, not executor claim.
+- Package references that name a dependency already declared in
+  the repo's manifest before the task started (`package.json`,
+  `requirements.txt`, `Cargo.toml`, `go.mod`) — these were
+  installed by an earlier event, possibly outside the window.
+  Verification falls back to a manifest-presence check for these.
+
+A citation that survives all carve-outs and remains unverified is
+the phantom-citation case the rule targets.
+
+**Pass/Fail emission summary.** STEP 4.6 emits exactly one of:
+
+```
+citation_check: PASS (no citation)
+citation_check: PASS (<N> verified, 0 unverified)
+citation_check: SKIPPED (no event-log)
+citation_check: DEGRADED (no timestamp window)
+citation_check: FAIL (<N> unverified: <citation>; ...)
+```
+
+The FAIL form lists up to 5 specific citations. The verdict line
+above is recorded in CRITIC.md alongside STEP 4.5's emission.
+
 ## OUTPUT: .apex/phases/$PHASE/[task]-CRITIC.md
 
 # Clean-Room Review: Task [id]
