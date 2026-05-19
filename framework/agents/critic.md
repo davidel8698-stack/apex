@@ -491,6 +491,140 @@ catches *value-level* phantoms; R-628 catches *call-level*
 phantoms. Together they cover both halves of the fabricated-
 output surface.
 
+**STEP 1.7: TOOL-CALL CROSS-REFERENCE** [R16-628, F-628, IMP-028, Mythos §4.3.3.5]
+
+For every entry the executor lists in
+`RESULT.json.tests_run[]` and `RESULT.json.verify_commands_run[]`,
+confirm that at least one entry in `.apex/event-log.jsonl`
+corresponds to a tool call that actually executed that test or
+command. An entry claimed in `RESULT.json` with **no matching
+event-log record** is a **fabricated tool output** signal — the
+executor narrated a test/verify run that never happened — and the
+verdict is **FAIL with cause = CRITICAL (fabricated_tool_output)**.
+
+This is the call-level companion to STEP 1.6's value-level
+cross-reference. STEP 1.6 catches the case where the executor
+*invented a specific value* (a SHA, a count, a URL) it never read;
+STEP 1.7 catches the case where the executor *invented the whole
+tool call* — claimed `pytest tests/test_auth.py` passed when no
+Bash invocation of that command was ever emitted. Both halves
+close the fabricated-output surface from opposite directions:
+STEP 1.6 is "did the data come from a real read?", STEP 1.7 is
+"did the call happen at all?". Run STEP 1.7 after STEP 1.6 — the
+ordering is structural (call must exist before value can be
+read), and if a call-level phantom fires the value-level scan
+above it has already done useful work in the same pass.
+
+**Algorithm (run once per task, per-entry pass):**
+
+1. **Extract claimed tool calls.** Parse `RESULT.json` and build
+   the set `CLAIMED` of tool-call descriptors:
+   - For each `t ∈ RESULT.json.tests_run[]`: descriptor =
+     (kind="test", key=`t.name`, result=`t.result`).
+   - For each `v ∈ RESULT.json.verify_commands_run[]`: descriptor
+     = (kind="verify", key=`v.command`, exit_code=`v.exit_code`).
+
+   The `key` field is the canonical string the critic will look
+   for in the event-log; it is the test name as the executor
+   declared it for `tests_run`, and the literal command string
+   for `verify_commands_run`.
+
+2. **Defensive skip for missing event-log.** If
+   `.apex/event-log.jsonl` does not exist or is empty (clean
+   bootstrap, or a project that has not yet emitted any events),
+   emit the line `tool_call_check: SKIPPED (no event-log)` to
+   CRITIC.md and continue to STEP 2. Do **NOT** raise CRITICAL on
+   event-log absence — bootstrap projects must not be flagged as
+   tool-call attackers. This matches the STEP 1.6 defensive
+   posture; the two steps share an upstream-completeness
+   assumption and degrade together.
+
+3. **Build the tool-call corpus.** Read every line of
+   `.apex/event-log.jsonl` and build the string `CALL_CORPUS` as
+   the concatenation of (a) every `tool_input` payload and
+   (b) every `tool_response` payload across all entries, plus
+   (c) the `what` / `where` / `command` fields where present.
+   `CALL_CORPUS` is the ground truth of "what tool calls actually
+   fired on behalf of the executor in this task". When `jq` is
+   unavailable, fall back to raw line text — the substring search
+   does not require parsed structure.
+
+4. **Membership check per claimed entry.** For each
+   `c ∈ CLAIMED`:
+   - If `c.key` appears as a substring of `CALL_CORPUS` → pass
+     for this entry. Continue.
+   - **Substring (not exact-equality) match is mandatory.** The
+     executor may quote a command with different shell escaping
+     than the event-log captured (extra spaces, quote style,
+     absolute vs relative path). Substring containment tolerates
+     this variance while still anchoring on the executable
+     fragment. Tokenize on whitespace and search for the longest
+     contiguous non-whitespace token from `c.key`; if that token
+     appears in `CALL_CORPUS`, treat the entry as matched.
+   - Otherwise → mark `c` as `fabricated_tool_output`. Record the
+     entry in the CRITIC.md output table with status `FAIL` and
+     the reason string
+     `fabricated_tool_output: claimed in RESULT.json
+     <tests_run|verify_commands_run> but no matching tool call
+     in .apex/event-log.jsonl`.
+
+5. **Verdict mapping.**
+   - **Zero `fabricated_tool_output` entries** → STEP 1.7 PASS.
+     Emit the line `tool_call_check: PASS (<N> calls matched
+     event-log CALL_CORPUS)` to CRITIC.md and continue to STEP 2.
+   - **One or more `fabricated_tool_output`** → STEP 1.7 FAIL.
+     The overall critic verdict becomes **FAIL** with the
+     critical cause line `CRITICAL (fabricated_tool_output):
+     <count> tool call(s) claimed in RESULT.json with no
+     matching record in .apex/event-log.jsonl`. Verdict levels
+     are unchanged (PASS/PARTIAL/FAIL) — fabricated tool output
+     flows through the existing FAIL channel with cause =
+     CRITICAL. Do NOT invent a fourth verdict level.
+
+**False-positive carve-out.** This check fires on *missing*
+event-log records for a claimed call, not on log-format variance.
+A test that ran inside a Bash invocation whose command line
+embeds the test name (e.g. `pytest -k test_auth_login`) matches
+both directly (the literal name appears in `tool_input.command`)
+and transitively (the test runner's stdout, captured in
+`tool_response`, echoes the test name). Both paths populate
+`CALL_CORPUS`, so the substring scan finds them. A test whose
+runner suppresses test names from stdout (rare; pytest `-q
+--tb=no`) still matches via the `tool_input` side. The carve-out
+that fails STEP 1.7 is the genuinely fabricated case: an entry
+appears in `RESULT.json.tests_run[]` but no Bash, no tool
+invocation of any kind, mentions that name anywhere — the
+executor wrote the test result without running anything. If a
+calibration window shows >10% false-positive rate on legitimate
+runs, the rollback trigger fires and STEP 1.7 is reverted — see
+R-628 plan §"Rollback trigger". A common upstream cause of
+false-positives is incomplete `_emit_apex_event.sh` coverage
+across hook branches; that is a separate audit (logged as R17
+carry-forward), not a STEP 1.7 defect.
+
+**Performance note.** Run the extraction over `RESULT.json` once
+and the corpus-build over `.apex/event-log.jsonl` once. Then
+iterate `CLAIMED` in O(N) against `CALL_CORPUS` via substring
+containment. For a task with ~10 claimed calls and a 2 MB
+event-log this is two file reads and 10 substring scans —
+millisecond budget. STEP 1.6 and STEP 1.7 may share the
+corpus-build pass: build CORPUS once, then run both value-level
+(STEP 1.6) and call-level (STEP 1.7) membership checks against
+the same string. The implementation is free to merge the two
+passes; the prose presents them in order for clarity.
+
+**Defense-in-depth dependency.** STEP 1.7 assumes
+`_emit_apex_event.sh` reliably emits every tool call across all
+hook branches. If a hook branch silently fails to emit, a
+legitimate tool call will look fabricated and STEP 1.7 will
+produce a false FAIL. Completeness of the emitter is enforced
+upstream and audited separately; on a benign false-positive
+spike the rollback trigger reverts STEP 1.7 rather than weakening
+the membership rule. The companion executor-side guard is the
+existing tool-input dispatch (R-611) and premise verifier
+(R-634); STEP 1.7 catches what those do not — a tool call the
+executor *claims to have made* but never actually invoked.
+
 **STEP 2: ACCEPTANCE CRITERIA**
 For EACH criterion in done_criteria:
 - verified=true in RESULT.json AND evidence is real → VERIFIED
