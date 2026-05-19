@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "apex/schemas/RESULT.schema.json",
   "title": "APEX RESULT.json (v7)",
-  "description": "Typed, machine-readable result written by executor for orchestrator and critic. Critic reads ONLY this file — never SUMMARY.md. [שיפור 33]",
+  "description": "Typed, machine-readable result written by executor for orchestrator and critic. Critic reads ONLY this file — never SUMMARY.md. [שיפור 33] NOTE on schema phasing (R17-643, F-643, IMP-025): `behavior_axes` and `failure_axis` are populated by the critic agent during VERDICT enrichment (R16-625C), not by the executor. A RESULT.json file is fully schema-conformant only after the critic step has run. Validators MUST validate against this schema only at or after the critic step, never between executor write and critic enrichment.",
   "type": "object",
   "additionalProperties": false,
   "required": [

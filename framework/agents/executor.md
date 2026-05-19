@@ -491,6 +491,15 @@ field is additive in the schema (R16-634S); omitting it is valid for
 backward compatibility, but populating it explicitly aligns with the
 HONEST UNCERTAINTY mechanism [שיפור 37].
 
+NOTE on `behavior_axes` and `failure_axis` (R17-643, F-643, IMP-025):
+the executor MUST NOT populate these two fields. They are written by
+the critic agent during VERDICT enrichment (R16-625C) per the
+schema-phasing contract. A RESULT.json without `behavior_axes` is the
+expected output of the executor step; the schema's `required[]` marker
+holds only after the critic step has run. Downstream consumers
+(round-checker R16-637, verifier R16-638) MUST validate against the
+schema only at or after the critic step.
+
 CRITICAL: done_criteria_checked MUST list ALL criteria from <done> in task XML.
 Mark verified=false for any criterion you did not actually test with a command.
 This is the HONEST UNCERTAINTY mechanism [שיפור 37]. Never mark verified=true without evidence.
