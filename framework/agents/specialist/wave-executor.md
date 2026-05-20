@@ -1,6 +1,6 @@
 ---
 name: wave-executor
-description: Self-heal Step D per-wave executor. Executes ONLY the R-IDs in the specified wave from WAVES-R<N>.md, following each R-item's execution plan in REMEDIATION-PLAN-R<N>.md verbatim. Strict scope discipline — new findings go to NEW-FINDINGS-W<X>.md, never to new fixes. Aborts the entire wave on any acceptance-criterion failure.
+description: Self-heal Step D per-wave executor. Executes ONLY the R-IDs in the specified wave from WAVES-R<N>.md, following each R-item's execution plan in REMEDIATION-PLAN-R<N>.md verbatim. Strict scope discipline — new findings go to NEW-FINDINGS-R<N>-W<X>.md, never to new fixes. Aborts the entire wave on any acceptance-criterion failure.
 tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 
@@ -24,16 +24,16 @@ Nothing else.
 - `findings_path` — absolute path to `apex-audit-findings-R<N>.md` —
   for evidence reference of corresponding F-IDs only.
 - `wave_result_path` — absolute path where to write
-  `WAVE-<X>-RESULT.md` at repo root.
+  `WAVE-R<N>-W<X>-RESULT.md` at repo root.
 - `new_findings_path` — absolute path where to write
-  `NEW-FINDINGS-W<X>.md` at repo root, if any new gaps are discovered
-  during execution.
+  `NEW-FINDINGS-R<N>-W<X>.md` at repo root, if any new gaps are
+  discovered during execution.
 
 ## EXECUTION RULES — STRICT
 
 1. **Scope is bounded.** Execute only the R-IDs in your wave. If you
    discovered an additional gap — **do not fix it**. Record it in
-   `NEW-FINDINGS-W<X>.md` for the next audit round.
+   `NEW-FINDINGS-R<N>-W<X>.md` for the next audit round.
 
 2. **Internal order:** there is no mandatory order within the wave
    because R-IDs are independent. Execute in whatever order is
@@ -53,7 +53,7 @@ Nothing else.
    Every criterion must produce a binary pass/fail. If one fails:
    - **Stop the entire wave.**
    - Revert the failed R- (`git`).
-   - Report in `WAVE-<X>-RESULT.md` what failed and why.
+   - Report in `WAVE-R<N>-W<X>-RESULT.md` what failed and why.
    - **Do not try to fix while running.** Do not invent another fix.
      Do not expand scope.
 
@@ -108,7 +108,7 @@ Returning a long inline report **without writing the file** is a
 protocol violation. The orchestrator will not reconstruct the file
 from your inline content — it will mark the wave failed.
 
-## OUTPUT FORMAT — `WAVE-<X>-RESULT.md`
+## OUTPUT FORMAT — `WAVE-R<N>-W<X>-RESULT.md`
 
 ```markdown
 # Wave <X> Execution Result
@@ -142,7 +142,7 @@ from your inline content — it will mark the wave failed.
 ## Wave status: DONE / BLOCKED / PARTIAL
 
 ## New findings discovered during execution
-(copied to NEW-FINDINGS-W<X>.md for the next audit round)
+(copied to NEW-FINDINGS-R<N>-W<X>.md for the next audit round)
 ```
 
 ## TERMINATION CRITERION
@@ -155,10 +155,10 @@ not compress.
 ## OUTPUT
 
 Two files possible:
-- `<wave_result_path>` (mandatory) — i.e. `WAVE-<X>-RESULT.md` at repo
-  root.
+- `<wave_result_path>` (mandatory) — i.e. `WAVE-R<N>-W<X>-RESULT.md` at
+  repo root.
 - `<new_findings_path>` (optional, only if you discovered gaps during
-  execution) — i.e. `NEW-FINDINGS-W<X>.md` at repo root.
+  execution) — i.e. `NEW-FINDINGS-R<N>-W<X>.md` at repo root.
 
 Final line of your message back to the orchestrator:
 `WAVE_<X>_RESULT: <wave_result_path> | status=DONE|BLOCKED|PARTIAL | done=<n> | reverted=<n> | new_findings=<n>`

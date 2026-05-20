@@ -117,8 +117,8 @@ If `--resume` was NOT passed, run this initialization before Step A.
         `current_wave = null`.
       - If `M > K` (audit exists but no closure — round in flight):
         `current_round = M`. Derive `current_step` from existing files:
-        - `WAVES-R<M>.md` exists AND any `WAVE-<X>-RESULT.md` for round
-          M exists → `current_step = "execute"`,
+        - `WAVES-R<M>.md` exists AND any `WAVE-R<M>-W<X>-RESULT.md` for
+          round M exists → `current_step = "execute"`,
           `current_wave = max(X) + 1` (next wave to run).
         - `WAVES-R<M>.md` exists, no WAVE-RESULT files → "execute",
           `current_wave = 1`.
@@ -245,7 +245,7 @@ While `STATE.self_heal.status == "running"`:
 
   For W from `STATE.self_heal.current_wave` to `total_waves`:
 
-    Skip if `$REPO_ROOT/WAVE-<W>-RESULT.md` already exists with
+    Skip if `$REPO_ROOT/WAVE-R<N>-W<W>-RESULT.md` already exists with
     `Wave status: DONE` (resume case).
 
     **Run RESET_BREAKER** before each wave invocation. Each wave gets
@@ -259,15 +259,15 @@ While `STATE.self_heal.status == "running"`:
       plan_path: "$REPO_ROOT/REMEDIATION-PLAN-R<N>.md",
       spec_path: "$REPO_ROOT/apex-spec.md",
       findings_path: "$REPO_ROOT/apex-audit-findings-R<N>.md",
-      wave_result_path: "$REPO_ROOT/WAVE-<W>-RESULT.md",
-      new_findings_path: "$REPO_ROOT/NEW-FINDINGS-W<W>.md"
+      wave_result_path: "$REPO_ROOT/WAVE-R<N>-W<W>-RESULT.md",
+      new_findings_path: "$REPO_ROOT/NEW-FINDINGS-R<N>-W<W>.md"
     }
     Task("wave-executor", WAVE_CONTEXT,
          model=resolve_model("wave-executor"))
     ```
 
     **POST-TASK VERIFICATION**: confirm
-    `$REPO_ROOT/WAVE-<W>-RESULT.md` exists on disk. If missing —
+    `$REPO_ROOT/WAVE-R<N>-W<W>-RESULT.md` exists on disk. If missing —
     regardless of what the agent's final-line summary said — treat
     the wave as BLOCKED. Do NOT reconstruct the file from the agent's
     inline content. Mark `WAVE_<W>_RESULT: WRITE_FAILED` in the event
@@ -293,16 +293,16 @@ While `STATE.self_heal.status == "running"`:
   **Run RESET_BREAKER**.
 
   Collect all wave-result paths and new-findings paths from this round:
-  `$REPO_ROOT/WAVE-<X>-RESULT.md` for X from 1 to last completed,
-  `$REPO_ROOT/NEW-FINDINGS-W<X>.md` where they exist.
+  `$REPO_ROOT/WAVE-R<N>-W<X>-RESULT.md` for X from 1 to last completed,
+  `$REPO_ROOT/NEW-FINDINGS-R<N>-W<X>.md` where they exist.
 
   ```
   CLOSER_CONTEXT = {
     findings_path: "$REPO_ROOT/apex-audit-findings-R<N>.md",
     plan_path: "$REPO_ROOT/REMEDIATION-PLAN-R<N>.md",
     waves_path: "$REPO_ROOT/WAVES-R<N>.md",
-    wave_results: [list of WAVE-<X>-RESULT.md paths],
-    new_findings: [list of NEW-FINDINGS-W<X>.md paths],
+    wave_results: [list of WAVE-R<N>-W<X>-RESULT.md paths],
+    new_findings: [list of NEW-FINDINGS-R<N>-W<X>.md paths],
     prev_closure_path: "$REPO_ROOT/ROUND-R<N-1>-CLOSURE.md" if N > 1 else null,
     spec_path: "$REPO_ROOT/apex-spec.md",
     output_path: "$REPO_ROOT/ROUND-R<N>-CLOSURE.md",

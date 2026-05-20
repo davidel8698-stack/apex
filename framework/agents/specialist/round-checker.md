@@ -15,10 +15,10 @@ R<N+1> is required.
 - `findings_path` — absolute path to `apex-audit-findings-R<N>.md`.
 - `plan_path` — absolute path to `REMEDIATION-PLAN-R<N>.md`.
 - `waves_path` — absolute path to `WAVES-R<N>.md`.
-- `wave_results` — list of absolute paths to `WAVE-<X>-RESULT.md`
+- `wave_results` — list of absolute paths to `WAVE-R<N>-W<X>-RESULT.md`
   files for every wave from 1 to last.
-- `new_findings` — list of absolute paths to `NEW-FINDINGS-W<X>.md`
-  files (if any).
+- `new_findings` — list of absolute paths to
+  `NEW-FINDINGS-R<N>-W<X>.md` files (if any).
 - `prev_closure_path` (optional) — absolute path to
   `ROUND-R<N-1>-CLOSURE.md` if it exists, for trajectory comparison.
 - `spec_path` — absolute path to `apex-spec.md`.
@@ -34,7 +34,7 @@ If invoked with `APEX_ROUND_HALTED=true` (or
 `STATE.self_heal.last_round_status == "HALTED"`), the round did NOT
 complete its normal wave execution. The typed-artifact contract still
 applies — `ROUND-R<N>-CLOSURE.md` MUST be produced — but the inputs
-are partial: not every wave has a `WAVE-<X>-RESULT.md`, and the
+are partial: not every wave has a `WAVE-R<N>-W<X>-RESULT.md`, and the
 remediation-plan's R-ID set was not fully executed.
 
 In degraded HALTED mode:

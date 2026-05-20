@@ -99,7 +99,7 @@ Any remediation that adds a new hook, agent, or top-level `framework/` file must
 
 ## Rule: Wave-exit invariants metadata (R9-012)
 
-If a wave's verification gate cannot enforce one or more baseline invariants at exit (because the wave is mid-chain, or the responsible R-item is scheduled in a later wave), the wave-executor MUST emit a machine-readable artifact named `WAVE-<N>-EXIT-INVARIANTS.json` at wave close. The schema is `framework/schemas/WAVE-EXIT-INVARIANTS.schema.json` (delivered to `~/.claude/schemas/` by the existing `copy_tree schemas` line).
+If a wave's verification gate cannot enforce one or more baseline invariants at exit (because the wave is mid-chain, or the responsible R-item is scheduled in a later wave), the wave-executor MUST emit a machine-readable artifact named `WAVE-R<N>-W<W>-EXIT-INVARIANTS.json` at wave close. The schema is `framework/schemas/WAVE-EXIT-INVARIANTS.schema.json` (delivered to `~/.claude/schemas/` by the existing `copy_tree schemas` line).
 
 The artifact lists, per relaxed invariant:
 
@@ -113,7 +113,7 @@ The artifact lists, per relaxed invariant:
 
 **Empty case:** A wave that exits with all baseline invariants intact MUST still emit the artifact, with `relaxed_invariants: []`. The artifact's presence is itself a Proof-of-process signal — its absence means the wave-executor skipped the gate, which is a separate audit finding.
 
-**Where the artifact lives:** Repo root or `.apex/phases/<phase>/`, alongside `WAVE-<X>-RESULT.md`. Path is convention; the schema is the contract. The repo-root `.gitignore` carries a `WAVE-*-EXIT-INVARIANTS.json` pattern (non-normative cross-reference, R-020-002) so the artifact is kept untracked alongside its sibling self-heal round artifacts.
+**Where the artifact lives:** Repo root or `.apex/phases/<phase>/`, alongside `WAVE-R<N>-W<W>-RESULT.md`. Path is convention; the schema is the contract. The repo-root `.gitignore` carries a `WAVE-*-EXIT-INVARIANTS.json` pattern (non-normative cross-reference, R-020-002) so the artifact is kept untracked alongside its sibling self-heal round artifacts.
 
 ---
 
