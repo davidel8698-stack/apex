@@ -148,12 +148,43 @@ else
   ns_header_present=0
 fi
 
+# R10-008-c (R-020-005, F-020-005): the meta-test polices itself.
+#
+# The R10-008-a scan loop deliberately self-skips
+# `test-harness-namespace.sh` ("Don't scan ourselves.") so the contract
+# enforcer was the one file the contract could not police. This
+# dedicated assertion closes that one-file blind spot: it greps this
+# file itself for a file-scope literal assignment to the four
+# harness-owned globals. The meta-test increments harness globals only
+# via the contractual `PASS=$((PASS + 1))` idiom (which starts with `$`
+# after the `=` and so does NOT match `[^$]`), and the pattern string
+# below is a quoted grep argument, not a file-scope assignment — so the
+# assertion passes on the clean tracked file. A dedicated grep (option
+# (b) of the audit hint) is unambiguous; folding this file into the
+# scan loop would risk the loop matching its own pattern literal.
+TOTAL=$((TOTAL + 1))
+ns_self_match="$(grep -nE '^(PASS|FAIL|TOTAL|SKIP)=[^$]' "$NS_SCRIPT_DIR/test-harness-namespace.sh")"
+if [ -z "$ns_self_match" ]; then
+  echo "  ✅ R10-008-c: test-harness-namespace.sh itself is namespace-clean"
+  PASS=$((PASS + 1))
+  ns_self_clean=1
+else
+  echo "  ❌ R10-008-c: test-harness-namespace.sh shadows a harness namespace global:"
+  echo "$ns_self_match" | while IFS= read -r ns_self_line; do
+    echo "       $ns_self_line"
+  done
+  echo "       The contract enforcer must itself obey the contract."
+  echo "       See # RESERVED NAMESPACE block at the top of _harness.sh."
+  FAIL=$((FAIL + 1))
+  ns_self_clean=0
+fi
+
 # Standalone exit semantics: if running outside the runner, exit
 # non-zero on any new violation so a developer running this directly
 # gets a clean signal. When run via the runner, the runner reads our
 # PASS/FAIL contributions from the sidecar.
 if [ -z "${HARNESS_COUNTERS_FILE:-}" ]; then
-  if [ "$ns_violation_count" -gt 0 ] || [ "$ns_header_present" -ne 1 ]; then
+  if [ "$ns_violation_count" -gt 0 ] || [ "$ns_header_present" -ne 1 ] || [ "$ns_self_clean" -ne 1 ]; then
     exit 1
   fi
   exit 0
