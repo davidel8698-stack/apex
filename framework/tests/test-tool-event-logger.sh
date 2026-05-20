@@ -28,10 +28,10 @@ if ! command -v jq >/dev/null 2>&1; then
   exit 0
 fi
 
-PASS=0
-FAIL=0
-ok()   { echo "  PASS: $1"; PASS=$((PASS+1)); }
-nope() { echo "  FAIL: $1"; FAIL=$((FAIL+1)); }
+LOCAL_PASS=0
+LOCAL_FAIL=0
+ok()   { echo "  PASS: $1"; LOCAL_PASS=$((LOCAL_PASS+1)); }
+nope() { echo "  FAIL: $1"; LOCAL_FAIL=$((LOCAL_FAIL+1)); }
 
 run_sandbox() {
   local sandbox; sandbox="$(mktemp -d)"
@@ -123,7 +123,7 @@ else
 fi
 rm -rf "$SANDBOX_D"
 
-TOTAL=$((PASS+FAIL))
+LOCAL_TOTAL=$((LOCAL_PASS+LOCAL_FAIL))
 echo ""
-echo "Results: $PASS passed, $FAIL failed (of $TOTAL)"
-exit "$FAIL"
+echo "Results: $LOCAL_PASS passed, $LOCAL_FAIL failed (of $LOCAL_TOTAL)"
+exit "$LOCAL_FAIL"
