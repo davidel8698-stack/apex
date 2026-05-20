@@ -113,7 +113,7 @@ The artifact lists, per relaxed invariant:
 
 **Empty case:** A wave that exits with all baseline invariants intact MUST still emit the artifact, with `relaxed_invariants: []`. The artifact's presence is itself a Proof-of-process signal — its absence means the wave-executor skipped the gate, which is a separate audit finding.
 
-**Where the artifact lives:** Repo root or `.apex/phases/<phase>/`, alongside `WAVE-<X>-RESULT.md`. Path is convention; the schema is the contract.
+**Where the artifact lives:** Repo root or `.apex/phases/<phase>/`, alongside `WAVE-<X>-RESULT.md`. Path is convention; the schema is the contract. The repo-root `.gitignore` carries a `WAVE-*-EXIT-INVARIANTS.json` pattern (non-normative cross-reference, R-020-002) so the artifact is kept untracked alongside its sibling self-heal round artifacts.
 
 ---
 

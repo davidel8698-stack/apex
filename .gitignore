@@ -18,6 +18,7 @@
 apex-audit-findings-*.md
 NEW-FINDINGS-*.md
 WAVE-*-RESULT*.md
+WAVE-*-EXIT-INVARIANTS.json
 WAVES-R*.md
 ROUND-R*-CLOSURE.md
 REMEDIATION-PLAN-*.md
