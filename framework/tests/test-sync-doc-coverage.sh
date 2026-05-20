@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# tag: slow
+# (R-021-005: measured 64–65s pole under aggregate load; `run-all.sh --quick` skips it.)
 # R7-003: sync-to-claude.sh delivers every file under framework/docs/ to
 # ~/.claude/docs/ via a tree walk (no per-doc copy_file anchor required).
 #
