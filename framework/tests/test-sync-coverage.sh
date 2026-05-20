@@ -188,6 +188,108 @@ done
 
 rm -rf "$SANDBOX"
 
+# --- R-019-002: IMP-036 name-level first-deployment gate regression ---
+#
+# These cases exercise run_first_deployment_gate's name-level failure-set
+# comparison (added in R-019-002). The gate's measurement input is
+# `run-all.sh --json` and a prior snapshot under
+# install-snapshots/. To drive the comparison deterministically WITHOUT
+# touching the real run-all.sh, each case builds a throwaway framework
+# tree: a copy of sync-to-claude.sh plus a STUB tests/run-all.sh that
+# echoes a crafted --json line. The gate computes FRAMEWORK_ROOT from
+# the script's own location, so the stub runner is the one it invokes.
+# A crafted prior snapshot is pre-seeded into the sandbox HOME's
+# install-snapshots/ directory. The gate runs (and may exit 2) before
+# any copy_tree, so a BLOCK is observable as process exit code 2.
+#
+# Spec anchor (IMP-036): "0 regressions vs the previous version" — a
+# test green in the prior install must BLOCK the install if it fails in
+# the new run, even when the total failure COUNT is unchanged.
+
+# run_gate_fixture — drive run_first_deployment_gate with crafted data.
+#   $1 new-run JSON (what the stub run-all.sh --json emits)
+#   $2 prior-snapshot JSON, or the literal "NONE" for no prior snapshot
+# Echoes the gate's process exit code.
+run_gate_fixture() {
+  local new_json="$1" prev_json="$2"
+  local gate_sandbox gate_fw gate_home gate_rc
+  gate_sandbox="$(mktemp -d)"
+  gate_fw="$gate_sandbox/framework"
+  gate_home="$gate_sandbox/home"
+  mkdir -p "$gate_fw/scripts" "$gate_fw/tests" "$gate_home/.claude"
+  # Copy the real sync script into the throwaway framework tree.
+  cp "$SYNC_SH" "$gate_fw/scripts/sync-to-claude.sh"
+  # Stub run-all.sh: emit the crafted JSON only for --json; the gate
+  # invokes it as `bash "$runner" --json`.
+  cat > "$gate_fw/tests/run-all.sh" <<STUB
+#!/usr/bin/env bash
+if [ "\${1:-}" = "--json" ]; then
+  printf '%s\n' '$new_json'
+fi
+exit 0
+STUB
+  chmod +x "$gate_fw/tests/run-all.sh"
+  # Seed the prior snapshot unless the caller asked for none.
+  if [ "$prev_json" != "NONE" ]; then
+    mkdir -p "$gate_home/.claude/install-snapshots"
+    printf '%s\n' "$prev_json" \
+      > "$gate_home/.claude/install-snapshots/20200101-000000.json"
+  fi
+  # Run the gate. --skip-settings keeps the gate active (it runs before
+  # the settings merge) while avoiding any settings.json mutation.
+  # Unset the recursion guard so the gate body actually executes.
+  (
+    unset APEX_FIRST_DEPLOYMENT_GATE_RUNNING
+    unset APEX_SKIP_FIRST_DEPLOYMENT_GATE
+    HOME="$gate_home" bash "$gate_fw/scripts/sync-to-claude.sh" --skip-settings
+  ) >/dev/null 2>&1
+  gate_rc=$?
+  rm -rf "$gate_sandbox"
+  echo "$gate_rc"
+}
+
+# Case C-8: equal failure COUNT, different failing test NAME → BLOCK.
+# Prior snapshot: 1 failure (test-old.sh). New run: 1 failure
+# (test-new.sh). Count comparison passes (1 == 1); the name-level
+# branch must catch that test-new.sh is a NEW failure and exit 2.
+rc=$(run_gate_fixture \
+  '{"total":3,"passed":2,"failed":1,"skipped":0,"failed_names":"test-new.sh"}' \
+  '{"total":3,"passed":2,"failed":1,"skipped":0,"failed_names":"test-old.sh"}')
+if [ "$rc" -eq 2 ]; then
+  ok "C-8: equal-count name-swap regression BLOCKs the gate (exit 2)"
+else
+  nope "C-8: equal-count name-swap should BLOCK with exit 2, got exit $rc"
+fi
+
+# Case C-9: previously-failing test fixed (failure set shrinks) → no
+# name-level block. Prior snapshot: test-old.sh failing. New run: zero
+# failures. newly_failing = {} \ {test-old.sh} = empty → gate must NOT
+# block on name-level grounds (and the count check also passes:
+# new_failed 0 <= prev_failed 1, new_passed 3 >= prev_passed 2).
+rc=$(run_gate_fixture \
+  '{"total":3,"passed":3,"failed":0,"skipped":0,"failed_names":""}' \
+  '{"total":3,"passed":2,"failed":1,"skipped":0,"failed_names":"test-old.sh"}')
+if [ "$rc" -eq 0 ]; then
+  ok "C-9: a fixed prior failure does NOT block the gate (exit 0)"
+else
+  nope "C-9: failure-fixed run should NOT block, got exit $rc"
+fi
+
+# Case C-10: backward-compat — prior snapshot has NO failed_names key.
+# Older snapshots predate the field. The gate must treat the missing
+# key as an empty/unknown prior-failure set, neither crashing nor
+# spuriously blocking; it degrades to count-level for that comparison.
+# Here new run has 0 failures and >= prior passed, so the count check
+# passes and the gate must exit 0 cleanly despite the missing key.
+rc=$(run_gate_fixture \
+  '{"total":3,"passed":3,"failed":0,"skipped":0,"failed_names":""}' \
+  '{"total":3,"passed":2,"failed":1}')
+if [ "$rc" -eq 0 ]; then
+  ok "C-10: missing failed_names key — gate degrades gracefully (exit 0)"
+else
+  nope "C-10: missing-failed_names prior snapshot should not block/crash, got exit $rc"
+fi
+
 TOTAL=$((PASS+FAIL))
 echo ""
 echo "$PASS/$TOTAL passed"

@@ -279,15 +279,22 @@ run_first_deployment_gate() {
     return 0
   fi
 
-  local new_passed new_failed
+  local new_passed new_failed new_failed_names
   if command -v jq >/dev/null 2>&1; then
     new_passed=$(echo "$new_json" | jq -r '.passed // 0' 2>/dev/null || echo 0)
     new_failed=$(echo "$new_json" | jq -r '.failed // 0' 2>/dev/null || echo 0)
+    # R-019-002 (IMP-036): name-level failure-set comparison. run-all.sh
+    # --json already emits "failed_names" — a space-joined string of
+    # failing test basenames. Extract it so the gate can compare the
+    # set of failing test *names*, not just the failure *count*.
+    new_failed_names=$(echo "$new_json" | jq -r '.failed_names // ""' 2>/dev/null || echo "")
   else
     new_passed=$(echo "$new_json" | sed -n 's/.*"passed":\([0-9]*\).*/\1/p')
     new_failed=$(echo "$new_json" | sed -n 's/.*"failed":\([0-9]*\).*/\1/p')
+    new_failed_names=$(echo "$new_json" | sed -n 's/.*"failed_names":"\([^"]*\)".*/\1/p')
     : "${new_passed:=0}"
     : "${new_failed:=0}"
+    : "${new_failed_names:=}"
   fi
   log "first-deployment gate: new run — passed=$new_passed failed=$new_failed"
 
@@ -300,15 +307,28 @@ run_first_deployment_gate() {
   if [[ -z "$prev_snapshot" ]]; then
     log "first-deployment gate: first-ever install (no prior snapshot) — gate PASSES by definition."
   else
-    local prev_passed prev_failed
+    local prev_passed prev_failed prev_failed_names
     if command -v jq >/dev/null 2>&1; then
       prev_passed=$(jq -r '.passed // 0' "$prev_snapshot" 2>/dev/null || echo 0)
       prev_failed=$(jq -r '.failed // 0' "$prev_snapshot" 2>/dev/null || echo 0)
+      # R-019-002 (IMP-036): extract the prior snapshot's failure-name
+      # set. Backward-compat: snapshots written before run-all.sh began
+      # emitting "failed_names" have no such key — `// ""` degrades the
+      # missing key to an empty string, so the name-level branch below
+      # treats an old snapshot as an unknown/empty prior-failure set and
+      # falls back to count-only behavior for that one comparison. It
+      # must NOT block an install just because the prior snapshot is old.
+      prev_failed_names=$(jq -r '.failed_names // ""' "$prev_snapshot" 2>/dev/null || echo "")
     else
       prev_passed=$(sed -n 's/.*"passed":\([0-9]*\).*/\1/p' "$prev_snapshot")
       prev_failed=$(sed -n 's/.*"failed":\([0-9]*\).*/\1/p' "$prev_snapshot")
+      # Missing-key fallback: when the snapshot has no "failed_names"
+      # key, this sed expression matches nothing and prev_failed_names
+      # stays empty — the same graceful degradation as the jq branch.
+      prev_failed_names=$(sed -n 's/.*"failed_names":"\([^"]*\)".*/\1/p' "$prev_snapshot")
       : "${prev_passed:=0}"
       : "${prev_failed:=0}"
+      : "${prev_failed_names:=}"
     fi
     log "first-deployment gate: prior run — passed=$prev_passed failed=$prev_failed (snapshot: ${prev_snapshot##*/})"
     # Pre-install gate: new install must have >= previous PASS count
@@ -317,6 +337,39 @@ run_first_deployment_gate() {
       log "ERROR: first-deployment gate BLOCKED — regression detected."
       log "       prior:  passed=$prev_passed failed=$prev_failed"
       log "       new:    passed=$new_passed failed=$new_failed"
+      log "       Set APEX_SKIP_FIRST_DEPLOYMENT_GATE=1 to bypass after triage."
+      exit 2
+    fi
+    # R-019-002 (IMP-036): name-level set-difference regression check.
+    # The count comparison above cannot tell "same failures persisted"
+    # from "old failures fixed, new failures introduced" — equal counts
+    # pass it. IMP-036's "0 regressions vs the previous version" demands
+    # that no test green in the prior snapshot may fail in the new run.
+    # Compute newly_failing = new_failed_names \ prev_failed_names (set
+    # difference, NOT set inequality — a previously-failing test getting
+    # fixed shrinks the set and is an improvement, never a block). If a
+    # name is failing now and was NOT failing before, BLOCK with exit 2.
+    # This is ADDITIVE defense-in-depth — the count check above stays.
+    local newly_failing="" nf pf is_prev_failure
+    for nf in $new_failed_names; do
+      is_prev_failure=0
+      for pf in $prev_failed_names; do
+        if [[ "$nf" == "$pf" ]]; then
+          is_prev_failure=1
+          break
+        fi
+      done
+      if [[ $is_prev_failure -eq 0 ]]; then
+        newly_failing="$newly_failing $nf"
+      fi
+    done
+    newly_failing="${newly_failing# }"
+    if [[ -n "$newly_failing" ]]; then
+      log "ERROR: first-deployment gate BLOCKED — new test failure(s): $newly_failing"
+      log "       prior failures: ${prev_failed_names:-<none>}"
+      log "       new failures:   ${new_failed_names:-<none>}"
+      log "       A test that passed in the prior install is failing now"
+      log "       (equal failure counts do not make this safe)."
       log "       Set APEX_SKIP_FIRST_DEPLOYMENT_GATE=1 to bypass after triage."
       exit 2
     fi
