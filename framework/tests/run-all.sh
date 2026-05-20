@@ -12,6 +12,13 @@
 #   bash framework/tests/run-all.sh --skip <name>    # skip a test by basename (repeatable)
 #   bash framework/tests/run-all.sh --quick          # only fast tests (skip those tagged "slow")
 #
+# Output
+#   Human summary: each test line carries an "(Ns)" wall-time suffix and
+#   the summary block prints a "total time:" figure (R-020-003).
+#   --json: additive "total_seconds" integer and a "durations" object
+#   mapping test basename to whole seconds, after the "flaky_tests"
+#   field. Timing is whole-second resolution (win32-portable).
+#
 # Flake handling (R-020-001 / F-020-001)
 #   A test that exits non-zero is retried EXACTLY ONCE before being
 #   recorded as a FAIL. If the retry succeeds, the test is counted as a
@@ -24,6 +31,18 @@
 #   when any test failed at least once. Retry-once pays its runtime
 #   cost only on failing tests — the IMP-036 first-deployment gate can
 #   then tell a flaky red (recovered on retry) from a hard red.
+#
+# Timing instrumentation (R-020-003 / F-020-003)
+#   Each test is wall-clock timed with whole-second `date +%s`
+#   resolution (sub-second tests show as "(0s)"; whole seconds avoid a
+#   portability dependency on `date +%s%N`, unreliable on some win32
+#   bash builds). The measurement spans the whole retry-inclusive step,
+#   so a flaky test's retry cost is included. The human summary appends
+#   an "(Ns)" suffix to each test line and prints a "total time:"
+#   figure; the --json output carries an additive "total_seconds"
+#   field and a "durations" object mapping basename to seconds. The
+#   IMP-036 first-deployment gate ignores the additive keys. This makes
+#   a slow run diagnosable rather than a black-box CI timeout.
 #
 # Exit codes
 #   0 — every test exited 0 (a flaky test recovered on retry counts here)
@@ -67,6 +86,13 @@ SKIPPED=0
 FAILED_NAMES=""
 FLAKY_NAMES=""
 
+# R-020-003 (F-020-003): per-test timing accumulators. TOTAL_SECONDS is
+# the sum of every test's retry-inclusive wall time; DURATIONS_JSON
+# accumulates `"basename":seconds` pairs for the --json `durations`
+# object. Whole-second `date +%s` resolution (see header comment).
+TOTAL_SECONDS=0
+DURATIONS_JSON=""
+
 # Per-test diagnostics directory (R-020-001 / F-020-001). The first
 # (failing) attempt of any test that fails at least once has its
 # stdout+stderr captured here so the failing assertion is diagnosable
@@ -97,11 +123,16 @@ for test_file in "$TESTS_DIR"/test-*.sh; do
   # per-test diagnostics file (not discarded). On a non-zero exit, retry
   # EXACTLY ONCE. Record PASS if either attempt succeeds; record a hard
   # FAIL only if both attempts fail.
+  #
+  # R-020-003: capture a whole-second start timestamp here and compute
+  # the elapsed delta after the retry-aware step, so the measurement
+  # spans the full retry-inclusive duration of a flaky test.
+  test_start=$(date +%s 2>/dev/null || echo 0)
   diag_file="$DIAG_DIR/$base.first.log"
   if bash "$test_file" >"$diag_file" 2>&1; then
     # First attempt passed.
     PASSED=$((PASSED + 1))
-    [ "$JSON_OUT" -eq 0 ] && printf ' PASS\n'
+    test_result="PASS"
   else
     # First attempt failed — preserve its output and retry exactly once.
     if bash "$test_file" >/dev/null 2>&1; then
@@ -109,23 +140,37 @@ for test_file in "$TESTS_DIR"/test-*.sh; do
       # toward PASSED; recorded in FLAKY_NAMES for the IMP-036 gate.
       PASSED=$((PASSED + 1))
       FLAKY_NAMES="$FLAKY_NAMES $base"
-      [ "$JSON_OUT" -eq 0 ] && printf ' PASS (flaky — recovered on retry)\n'
+      test_result="PASS (flaky — recovered on retry)"
     else
       # Both attempts failed: a genuine hard FAIL.
       FAILED=$((FAILED + 1))
       FAILED_NAMES="$FAILED_NAMES $base"
-      [ "$JSON_OUT" -eq 0 ] && printf ' FAIL\n'
+      test_result="FAIL"
     fi
   fi
+  # R-020-003: whole-second elapsed wall time for this (retry-inclusive)
+  # test. A negative or unparseable delta clamps to 0.
+  test_end=$(date +%s 2>/dev/null || echo 0)
+  test_elapsed=$((test_end - test_start))
+  [ "$test_elapsed" -lt 0 ] 2>/dev/null && test_elapsed=0
+  TOTAL_SECONDS=$((TOTAL_SECONDS + test_elapsed))
+  DURATIONS_JSON="$DURATIONS_JSON,\"$base\":$test_elapsed"
+  [ "$JSON_OUT" -eq 0 ] && printf ' %s (%ss)\n' "$test_result" "$test_elapsed"
 done
 
 TOTAL=$((PASSED + FAILED))
 
 if [ "$JSON_OUT" -eq 1 ]; then
-  printf '{"total":%d,"passed":%d,"failed":%d,"skipped":%d,"failed_names":"%s","flaky_tests":"%s"}\n' \
+  # R-020-003: "total_seconds" and "durations" are additive fields,
+  # emitted after "flaky_tests". The IMP-036 gate's keyed extraction
+  # ignores them. DURATIONS_JSON is built with a leading comma per
+  # entry; stripping that leading comma yields a valid object body.
+  printf '{"total":%d,"passed":%d,"failed":%d,"skipped":%d,"failed_names":"%s","flaky_tests":"%s","total_seconds":%d,"durations":{%s}}\n' \
     "$TOTAL" "$PASSED" "$FAILED" "$SKIPPED" \
     "$(echo "$FAILED_NAMES" | sed 's/^ //;s/"/\\"/g')" \
-    "$(echo "$FLAKY_NAMES" | sed 's/^ //;s/"/\\"/g')"
+    "$(echo "$FLAKY_NAMES" | sed 's/^ //;s/"/\\"/g')" \
+    "$TOTAL_SECONDS" \
+    "${DURATIONS_JSON#,}"
 else
   echo
   echo "═══════════════════════════════════════════════"
@@ -134,6 +179,10 @@ else
   echo "  passed:  $PASSED"
   echo "  failed:  $FAILED"
   echo "  skipped: $SKIPPED"
+  # R-020-003: total wall time across every test (retry-inclusive),
+  # shown as `Nm Ns` so a slow run is diagnosable rather than a
+  # black-box CI timeout.
+  echo "  total time: $((TOTAL_SECONDS / 60))m $((TOTAL_SECONDS % 60))s (${TOTAL_SECONDS}s)"
   if [ -n "$FLAKY_NAMES" ]; then
     echo "  flaky:$FLAKY_NAMES"
   fi

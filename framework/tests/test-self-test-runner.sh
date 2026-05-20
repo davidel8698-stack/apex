@@ -251,6 +251,31 @@ EOF
     fi
   fi
 
+  # --- Case D (R-020-003 / F-020-003): timing instrumentation. The
+  #     --json output carries an additive "total_seconds" field and a
+  #     "durations" object; the human summary carries a per-test "(Ns)"
+  #     suffix and a "total time:" line. The new keys are additive — the
+  #     IMP-036 gate's keyed extraction ignores them. ---
+  if echo "$RA_JSON_KEY" | grep -q '"total_seconds":'; then
+    ok "run-all.sh --json emits an additive total_seconds field (R-020-003)"
+  else
+    nope "run-all.sh --json missing total_seconds key — got: $RA_JSON_KEY"
+  fi
+  if command -v jq >/dev/null 2>&1; then
+    if echo "$RA_JSON_KEY" | jq -e 'has("total_seconds") and has("durations")' >/dev/null 2>&1; then
+      ok "run-all.sh --json is valid JSON with total_seconds + durations (R-020-003)"
+    else
+      nope "run-all.sh --json failed jq total_seconds/durations check"
+    fi
+  fi
+  RA_HUMAN="$(bash "$RA_FIXTURE/run-all.sh" --skip test-stub-flaky.sh --skip test-stub-hardfail.sh 2>/dev/null)"
+  if echo "$RA_HUMAN" | grep -qE '\([0-9]+s\)' \
+     && echo "$RA_HUMAN" | grep -q 'total time:'; then
+    ok "run-all.sh human output shows per-test (Ns) suffix + total time line (R-020-003)"
+  else
+    nope "run-all.sh human output missing timing suffix or total time line"
+  fi
+
   rm -rf "$RA_FIXTURE"
 else
   nope "run-all.sh missing at $RUN_ALL — cannot exercise retry/flaky cases"

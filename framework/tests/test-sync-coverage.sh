@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 # R10-001: generalised sync-coverage regression guard.
+# tag: slow
+# (R-020-003: empirically-confirmed long pole — case C-4 standalone
+#  multi-minute runtime, R19 N-W2-01; `run-all.sh --quick` skips it.)
 #
 # Asserts the framework->install delivery contract for EVERY
 # `copy_tree` and explicit `copy_file "$FRAMEWORK_ROOT/..."` declared

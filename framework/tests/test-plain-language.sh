@@ -1,4 +1,6 @@
 # R5-015: Plain-Language Mapping enforcement
+# tag: slow
+# (R-020-003: empirically-confirmed long pole; `run-all.sh --quick` skips it.)
 # Greps user-facing sections of command files for known bare-jargon
 # (jargon NOT followed by an opening parenthesis on the same line) and
 # reports violations.
