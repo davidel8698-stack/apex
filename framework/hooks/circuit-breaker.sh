@@ -174,10 +174,32 @@ fi
 # the other detects *repeating* errors.
 #
 # Carve-out: PostToolUse envelope MAY be absent when this hook is invoked
-# from a non-Claude-Code context (CLI tests). In that case, stdin is empty
-# and CHECK 3 silently no-ops.
+# from a non-Claude-Code context (CLI tests, or /apex:self-heal's post-wave
+# breaker probe). `[ ! -t 0 ]` only distinguishes a TTY from a non-TTY — a
+# non-TTY stdin can be a *closed* pipe (cat hits EOF, no-ops) OR an *open*
+# pipe with no live writer (an unguarded `cat` would block indefinitely).
+# A bounded `read` (timeout CB_STDIN_TIMEOUT seconds) prevents that hang: it
+# drains whatever payload is present, and on a timeout treats stdin as
+# no-payload AND emits a loud one-line diagnostic to stderr (fail-loud,
+# never fail-silent). CB_STDIN_BUF is pre-initialized to "" so it is set on
+# every path — `set -u` is satisfied and CHECK 4 can always reuse it.
+CB_STDIN_BUF=""
+CB_STDIN_TIMEOUT=3
 if [ ! -t 0 ]; then
-  CB_STDIN_BUF=$(cat 2>/dev/null || true)
+  if IFS= read -r -t "$CB_STDIN_TIMEOUT" -d '' CB_STDIN_BUF; then
+    : # full payload drained on EOF (delimiter never seen) — CB_STDIN_BUF set
+  else
+    CB_STDIN_READ_RC=$?
+    # read returns >128 on timeout, 1 on EOF-before-delimiter. On EOF the
+    # partial input is still placed in CB_STDIN_BUF (bash semantics); only a
+    # genuine timeout is the failure mode we must announce loudly.
+    if [ "$CB_STDIN_READ_RC" -gt 128 ]; then
+      CB_STDIN_BUF=""
+      echo "circuit-breaker: stdin read timed out after ${CB_STDIN_TIMEOUT}s; treating as no-payload" >&2
+    fi
+  fi
+fi
+if [ ! -t 0 ]; then
   if [ -n "$CB_STDIN_BUF" ] && command -v jq >/dev/null 2>&1; then
     CB_IS_ERROR=$(echo "$CB_STDIN_BUF" | jq -r '.tool_response.is_error // false' 2>/dev/null || echo "false")
     if [ "$CB_IS_ERROR" = "true" ]; then

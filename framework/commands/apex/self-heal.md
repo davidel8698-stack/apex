@@ -369,7 +369,7 @@ to keep `SESSION-LOG.md` in sync.
 
 ## CIRCUIT BREAKER
 
-After every wave completion, call `bash ~/.claude/hooks/circuit-breaker.sh`.
+After every wave completion, call `bash ~/.claude/hooks/circuit-breaker.sh </dev/null`.
 If it triggers (consecutive no-change actions, or total tool-calls
 cap), halt the round and exit with `STATE.self_heal.status = "halted"`.
 
