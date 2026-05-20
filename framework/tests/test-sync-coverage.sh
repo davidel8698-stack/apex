@@ -290,6 +290,55 @@ else
   nope "C-10: missing-failed_names prior snapshot should not block/crash, got exit $rc"
 fi
 
+# --- R-020-001: IMP-036 first-deployment gate flake tolerance ---
+#
+# Spec anchor (IMP-036 / F-020-001): a test that failed once and PASSED
+# on run-all.sh's retry-once is recorded as a PASS and listed in the new
+# run's "flaky_tests" field — it is NOT a regression and MUST NOT block
+# the install. R-019-002 made the gate strictly more sensitive to flaky
+# reds; R-020-001's flake tolerance is the matching gate-side change.
+
+# Case C-11: a retry-recovered (flaky) test does NOT block the gate.
+# New run: 0 failures, but test-flaky.sh failed-then-recovered, so it is
+# in flaky_tests and absent from failed_names. Prior snapshot: that test
+# was green. The gate must exit 0 — a flaky red is not a regression.
+rc=$(run_gate_fixture \
+  '{"total":3,"passed":3,"failed":0,"skipped":0,"failed_names":"","flaky_tests":"test-flaky.sh"}' \
+  '{"total":3,"passed":3,"failed":0,"skipped":0,"failed_names":""}')
+if [ "$rc" -eq 0 ]; then
+  ok "C-11: a retry-recovered (flaky) test does NOT block the gate (exit 0)"
+else
+  nope "C-11: flaky retry-recovered test should NOT block, got exit $rc"
+fi
+
+# Case C-12: defense-in-depth — even if a foreign/old runner listed a
+# name in BOTH failed_names and flaky_tests, the gate excludes the
+# flaky-recovered name from the newly_failing set and must NOT block.
+# Prior snapshot: that name was green. Count check: new_failed 1 <=
+# prev_failed 1 (prior also had one failure on a different name), so
+# only the name-level branch is exercised.
+rc=$(run_gate_fixture \
+  '{"total":3,"passed":2,"failed":1,"skipped":0,"failed_names":"test-flaky.sh","flaky_tests":"test-flaky.sh"}' \
+  '{"total":3,"passed":2,"failed":1,"skipped":0,"failed_names":"test-old.sh"}')
+if [ "$rc" -eq 0 ]; then
+  ok "C-12: a name in both failed_names and flaky_tests is excluded — gate does NOT block (exit 0)"
+else
+  nope "C-12: flaky-listed name should be excluded from newly_failing, got exit $rc"
+fi
+
+# Case C-13: a GENUINE new hard failure still BLOCKs — the flake
+# tolerance must not mask a real regression. New run: test-new.sh fails
+# hard (in failed_names, NOT in flaky_tests). Prior snapshot: that test
+# was green. The gate must still exit 2.
+rc=$(run_gate_fixture \
+  '{"total":3,"passed":2,"failed":1,"skipped":0,"failed_names":"test-new.sh","flaky_tests":""}' \
+  '{"total":3,"passed":3,"failed":0,"skipped":0,"failed_names":""}')
+if [ "$rc" -eq 2 ]; then
+  ok "C-13: a genuine new hard failure still BLOCKs the gate (exit 2)"
+else
+  nope "C-13: genuine new hard failure should BLOCK with exit 2, got exit $rc"
+fi
+
 TOTAL=$((PASS+FAIL))
 echo ""
 echo "$PASS/$TOTAL passed"

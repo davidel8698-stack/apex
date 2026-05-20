@@ -12,9 +12,22 @@
 #   bash framework/tests/run-all.sh --skip <name>    # skip a test by basename (repeatable)
 #   bash framework/tests/run-all.sh --quick          # only fast tests (skip those tagged "slow")
 #
+# Flake handling (R-020-001 / F-020-001)
+#   A test that exits non-zero is retried EXACTLY ONCE before being
+#   recorded as a FAIL. If the retry succeeds, the test is counted as a
+#   PASS and its basename is recorded in the "flaky_tests" field of the
+#   --json output (and a "flaky:" line of the human summary). A hard
+#   FAIL is recorded only when BOTH attempts fail. The first (failing)
+#   attempt's stdout+stderr is captured to a per-test file under a
+#   run-scoped `mktemp -d` diagnostics directory so the failing
+#   assertion is diagnosable; the diagnostics directory path is printed
+#   when any test failed at least once. Retry-once pays its runtime
+#   cost only on failing tests — the IMP-036 first-deployment gate can
+#   then tell a flaky red (recovered on retry) from a hard red.
+#
 # Exit codes
-#   0 — every test exited 0
-#   1 — at least one test failed
+#   0 — every test exited 0 (a flaky test recovered on retry counts here)
+#   1 — at least one test failed BOTH its attempts
 #   2 — invocation error (tests dir missing, etc.)
 
 set -u
@@ -52,6 +65,16 @@ PASSED=0
 FAILED=0
 SKIPPED=0
 FAILED_NAMES=""
+FLAKY_NAMES=""
+
+# Per-test diagnostics directory (R-020-001 / F-020-001). The first
+# (failing) attempt of any test that fails at least once has its
+# stdout+stderr captured here so the failing assertion is diagnosable
+# instead of being discarded with `>/dev/null 2>&1`. Run-scoped: a
+# single `mktemp -d` per aggregate run, cleaned only on a fully green
+# run (kept when something failed, so a maintainer can inspect it).
+DIAG_DIR="$(mktemp -d 2>/dev/null || echo "${TMPDIR:-/tmp}/run-all-diag-$$")"
+mkdir -p "$DIAG_DIR" 2>/dev/null || true
 
 # Iterate over test-*.sh in stable lexical order.
 for test_file in "$TESTS_DIR"/test-*.sh; do
@@ -70,22 +93,39 @@ for test_file in "$TESTS_DIR"/test-*.sh; do
   if [ "$JSON_OUT" -eq 0 ]; then
     printf '── %s ...' "$base"
   fi
-  # Run the test silently; capture exit code only.
-  if bash "$test_file" >/dev/null 2>&1; then
+  # Run the test once, capturing the first attempt's stdout+stderr to a
+  # per-test diagnostics file (not discarded). On a non-zero exit, retry
+  # EXACTLY ONCE. Record PASS if either attempt succeeds; record a hard
+  # FAIL only if both attempts fail.
+  diag_file="$DIAG_DIR/$base.first.log"
+  if bash "$test_file" >"$diag_file" 2>&1; then
+    # First attempt passed.
     PASSED=$((PASSED + 1))
     [ "$JSON_OUT" -eq 0 ] && printf ' PASS\n'
   else
-    FAILED=$((FAILED + 1))
-    FAILED_NAMES="$FAILED_NAMES $base"
-    [ "$JSON_OUT" -eq 0 ] && printf ' FAIL\n'
+    # First attempt failed — preserve its output and retry exactly once.
+    if bash "$test_file" >/dev/null 2>&1; then
+      # Retry recovered: this test is flaky, not a hard failure. Counts
+      # toward PASSED; recorded in FLAKY_NAMES for the IMP-036 gate.
+      PASSED=$((PASSED + 1))
+      FLAKY_NAMES="$FLAKY_NAMES $base"
+      [ "$JSON_OUT" -eq 0 ] && printf ' PASS (flaky — recovered on retry)\n'
+    else
+      # Both attempts failed: a genuine hard FAIL.
+      FAILED=$((FAILED + 1))
+      FAILED_NAMES="$FAILED_NAMES $base"
+      [ "$JSON_OUT" -eq 0 ] && printf ' FAIL\n'
+    fi
   fi
 done
 
 TOTAL=$((PASSED + FAILED))
 
 if [ "$JSON_OUT" -eq 1 ]; then
-  printf '{"total":%d,"passed":%d,"failed":%d,"skipped":%d,"failed_names":"%s"}\n' \
-    "$TOTAL" "$PASSED" "$FAILED" "$SKIPPED" "$(echo "$FAILED_NAMES" | sed 's/^ //;s/"/\\"/g')"
+  printf '{"total":%d,"passed":%d,"failed":%d,"skipped":%d,"failed_names":"%s","flaky_tests":"%s"}\n' \
+    "$TOTAL" "$PASSED" "$FAILED" "$SKIPPED" \
+    "$(echo "$FAILED_NAMES" | sed 's/^ //;s/"/\\"/g')" \
+    "$(echo "$FLAKY_NAMES" | sed 's/^ //;s/"/\\"/g')"
 else
   echo
   echo "═══════════════════════════════════════════════"
@@ -94,10 +134,24 @@ else
   echo "  passed:  $PASSED"
   echo "  failed:  $FAILED"
   echo "  skipped: $SKIPPED"
+  if [ -n "$FLAKY_NAMES" ]; then
+    echo "  flaky:$FLAKY_NAMES"
+  fi
   if [ "$FAILED" -gt 0 ]; then
     echo "  FAILED tests:$FAILED_NAMES"
   fi
   echo "═══════════════════════════════════════════════"
+fi
+
+# Diagnostics retention: keep the per-test capture directory when any
+# test failed at least once (hard FAIL or flaky retry-recovery), so the
+# failing assertion can be inspected. Remove it on a fully clean run.
+if [ "$FAILED" -gt 0 ] || [ -n "$FLAKY_NAMES" ]; then
+  if [ "$JSON_OUT" -eq 0 ]; then
+    echo "  per-test diagnostics (first-attempt output): $DIAG_DIR"
+  fi
+else
+  rm -rf "$DIAG_DIR" 2>/dev/null || true
 fi
 
 if [ "$FAILED" -gt 0 ]; then

@@ -279,7 +279,7 @@ run_first_deployment_gate() {
     return 0
   fi
 
-  local new_passed new_failed new_failed_names
+  local new_passed new_failed new_failed_names new_flaky_tests
   if command -v jq >/dev/null 2>&1; then
     new_passed=$(echo "$new_json" | jq -r '.passed // 0' 2>/dev/null || echo 0)
     new_failed=$(echo "$new_json" | jq -r '.failed // 0' 2>/dev/null || echo 0)
@@ -288,13 +288,23 @@ run_first_deployment_gate() {
     # failing test basenames. Extract it so the gate can compare the
     # set of failing test *names*, not just the failure *count*.
     new_failed_names=$(echo "$new_json" | jq -r '.failed_names // ""' 2>/dev/null || echo "")
+    # R-020-001 (IMP-036 / F-020-001): run-all.sh --json now also emits
+    # "flaky_tests" — a space-joined string of test basenames that
+    # failed once and PASSED on the retry-once. A flaky test is NOT a
+    # regression. `// ""` degrades the missing key to empty for an old
+    # runner that predates the field, exactly mirroring failed_names.
+    new_flaky_tests=$(echo "$new_json" | jq -r '.flaky_tests // ""' 2>/dev/null || echo "")
   else
     new_passed=$(echo "$new_json" | sed -n 's/.*"passed":\([0-9]*\).*/\1/p')
     new_failed=$(echo "$new_json" | sed -n 's/.*"failed":\([0-9]*\).*/\1/p')
     new_failed_names=$(echo "$new_json" | sed -n 's/.*"failed_names":"\([^"]*\)".*/\1/p')
+    # Missing-key fallback: an old runner's JSON has no "flaky_tests"
+    # key, so this sed matches nothing and new_flaky_tests stays empty.
+    new_flaky_tests=$(echo "$new_json" | sed -n 's/.*"flaky_tests":"\([^"]*\)".*/\1/p')
     : "${new_passed:=0}"
     : "${new_failed:=0}"
     : "${new_failed_names:=}"
+    : "${new_flaky_tests:=}"
   fi
   log "first-deployment gate: new run — passed=$new_passed failed=$new_failed"
 
@@ -350,8 +360,27 @@ run_first_deployment_gate() {
     # fixed shrinks the set and is an improvement, never a block). If a
     # name is failing now and was NOT failing before, BLOCK with exit 2.
     # This is ADDITIVE defense-in-depth — the count check above stays.
-    local newly_failing="" nf pf is_prev_failure
+    #
+    # R-020-001 (IMP-036 / F-020-001): a test in new_flaky_tests failed
+    # once but PASSED on the retry-once — it is recorded as a PASS by
+    # run-all.sh and is NOT in new_failed_names, so it would not reach
+    # this loop anyway. The explicit exclusion below is defense-in-depth
+    # against an old/foreign runner that (incorrectly) listed a name in
+    # BOTH failed_names and flaky_tests: a name that the runner already
+    # certified as retry-recovered must never be scored as a regression.
+    local newly_failing="" nf pf ft is_prev_failure is_flaky
     for nf in $new_failed_names; do
+      is_flaky=0
+      for ft in $new_flaky_tests; do
+        if [[ "$nf" == "$ft" ]]; then
+          is_flaky=1
+          break
+        fi
+      done
+      # A retry-recovered (flaky) test is not a regression — skip it.
+      if [[ $is_flaky -eq 1 ]]; then
+        continue
+      fi
       is_prev_failure=0
       for pf in $prev_failed_names; do
         if [[ "$nf" == "$pf" ]]; then
