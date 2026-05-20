@@ -30,7 +30,7 @@ harness_setup() {
   TEMP_REPO=$(mktemp -d)
   ORIG_DIR="$(pwd)"
   cd "$TEMP_REPO"
-  git init -q && git config user.email "test@apex" && git config user.name "APEX"
+  git init -q && git config core.autocrlf false && git config user.email "test@apex" && git config user.name "APEX"
   echo "init" > init.txt && git add . && git commit -qm "init"
   mkdir -p .apex/phases/01
   # NOTE: Tests run against installed hooks/commands ($HOME/.claude/), not framework source.
