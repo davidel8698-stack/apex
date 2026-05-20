@@ -15,6 +15,17 @@
 #   4. A fixture that calls `exit 0` mid-file does not prevent later
 #      fixtures from being sourced.
 #   5. Pattern-mode invocation continues to work for the single-file case.
+#
+# Dual scope: this file ALSO meta-tests framework/tests/run-all.sh, the
+# aggregate test runner. R-020-001 and R-020-003 extended it with
+# run-all.sh cases (the `# --- R-020-001 ... ---` block below). It asserts
+# run-all.sh is honest about aggregate-run outcomes:
+#   6. Retry-once-on-failure: a flaky fixture that fails then passes on
+#      the retry counts as PASS and run-all.sh exits 0 (R-020-001).
+#   7. The --json output populates the "flaky_tests" field with any
+#      retry-recovered test and always emits the key (R-020-001).
+#   8. Timing instrumentation: --json carries the additive "total_seconds"
+#      field and a per-test "durations" map (R-020-003).
 
 set -u
 
