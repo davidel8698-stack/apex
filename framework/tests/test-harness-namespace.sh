@@ -163,7 +163,7 @@ fi
 # (b) of the audit hint) is unambiguous; folding this file into the
 # scan loop would risk the loop matching its own pattern literal.
 TOTAL=$((TOTAL + 1))
-ns_self_match="$(grep -nE '^(PASS|FAIL|TOTAL|SKIP)=[^$]' "$NS_SCRIPT_DIR/test-harness-namespace.sh")"
+ns_self_match="$(grep -nE '^(PASS|FAIL|TOTAL|SKIP)=[^$]' "${BASH_SOURCE[0]}")"
 if [ -z "$ns_self_match" ]; then
   echo "  ✅ R10-008-c: test-harness-namespace.sh itself is namespace-clean"
   PASS=$((PASS + 1))
