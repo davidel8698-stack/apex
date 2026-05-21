@@ -17,6 +17,7 @@
 | PS-R1    | 20     | 69    | 29% | 2026-05-21 | Build-time module (86 unit tests); APEX integration verified. |
 | PS-R2    | 26     | 69    | 38% | 2026-05-21 | Runtime foundation — PinScope root, PinBadges, InfoPanel, hover (100 tests). |
 | PS-R3    | 33     | 69    | 48% | 2026-05-21 | Operation Protocol — parser, builder, history/clipboard, autocomplete (176 tests). |
+| PS-R4    | 38     | 69    | 55% | 2026-05-21 | Deployment surface (Next/Webpack), dist build, size-limit, perf (188 tests). |
 
 ## Status legend
 
@@ -92,10 +93,10 @@ Source of definitions: `pinscope/SPEC.md` Appendix A.
 | AC-063  | P4    | P3  | OPEN   | —            |
 | AC-064  | P4    | P2  | OPEN   | —            |
 | AC-065  | P4    | P2  | OPEN   | —            |
-| AC-070  | P1    | P1  | OPEN   | —            |
-| AC-071  | P1    | P0  | OPEN   | —            |
+| AC-070  | P1    | P1  | CLOSED | PS-R4        |
+| AC-071  | P1    | P0  | CLOSED | PS-R4        |
 | AC-072  | P3    | P1  | CLOSED | PS-R3        |
-| AC-073  | P1    | P0  | OPEN   | —            |
+| AC-073  | P1    | P0  | CLOSED | PS-R4        |
 | AC-074  | P1    | P0  | OPEN   | —            |
 | AC-075  | P4    | P2  | OPEN   | —            |
 | AC-076  | P4    | P2  | OPEN   | —            |
@@ -104,9 +105,9 @@ Source of definitions: `pinscope/SPEC.md` Appendix A.
 | AC-082  | P2    | P1  | OPEN   | —            |
 | AC-083  | P4    | P3  | OPEN   | —            |
 | AC-084  | P1    | P2  | CLOSED | PS-R1        |
-| AC-090  | P3    | P1  | OPEN   | —            |
+| AC-090  | P3    | P1  | CLOSED | PS-R4        |
 | AC-091  | P1    | P1  | CLOSED | PS-R2        |
-| AC-092  | P4    | P2  | OPEN   | —            |
+| AC-092  | P4    | P2  | CLOSED | PS-R4        |
 | AC-100  | P5    | P1  | CLOSED | PS-R1        |
 | AC-101  | P5    | P1  | CLOSED | PS-R1        |
 | AC-102  | P5    | P1  | CLOSED | PS-R1        |
@@ -116,7 +117,7 @@ Source of definitions: `pinscope/SPEC.md` Appendix A.
 | AC-106  | P5    | P2  | OPEN   | —            |
 | AC-107  | P5    | P3  | OPEN   | —            |
 
-**Total: 69 ACs · 33 CLOSED · 36 OPEN · 0 BLOCKED · 0 BACKLOG · 48% converged**
+**Total: 69 ACs · 38 CLOSED · 31 OPEN · 0 BLOCKED · 0 BACKLOG · 55% converged**
 
 > **Environment ceiling:** ~19 ACs have a Playwright `verify:` and cannot be
 > verified here (`cdn.playwright.dev` not allowlisted). They will move to
@@ -132,9 +133,12 @@ Source of definitions: `pinscope/SPEC.md` Appendix A.
   `ROUND-R2-CLOSURE.md`.
 - **PS-R3** — Operation Protocol (Cluster D): parser, builder, history/
   clipboard bridge, autocomplete. 7 ACs closed. See `ROUND-R3-CLOSURE.md`.
+- **PS-R4** — deployment surface (Next/Webpack wrappers), `dist/` build,
+  `size-limit`, runtime perf. 5 ACs closed. See `ROUND-R4-CLOSURE.md`.
 
-## Next round — PS-R4 (proposed)
+## Next round — PS-R5 (proposed)
 
-`examples/vite-react` + build/bundle/perf track: AC-010, AC-070, AC-071,
-AC-073, AC-074, AC-076, AC-090, AC-092. Author the Playwright e2e suite as a
-CI deliverable (AC-082 → `BLOCKED`).
+`examples/vite-react` — a real Vite + React app instrumented with PinScope,
+built in production mode to prove zero PinScope bytes reach `dist/` (AC-010,
+AC-074). Author the Playwright e2e suite as a CI deliverable (AC-082 →
+`BLOCKED`).
