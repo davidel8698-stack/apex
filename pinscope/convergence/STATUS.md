@@ -14,7 +14,8 @@
 | Round    | Closed | Total | %   | Date       | Notes |
 |----------|--------|-------|-----|------------|-------|
 | baseline | 0      | 69    | 0%  | 2026-05-21 | North-Star frozen; Stage 1 scaffolding committed. |
-| PS-R1    | 20     | 69    | 29% | 2026-05-21 | Build-time module implemented (86 unit tests pass); APEX integration verified. |
+| PS-R1    | 20     | 69    | 29% | 2026-05-21 | Build-time module (86 unit tests); APEX integration verified. |
+| PS-R2    | 26     | 69    | 38% | 2026-05-21 | Runtime foundation — PinScope root, PinBadges, InfoPanel, hover (100 tests). |
 
 ## Status legend
 
@@ -54,15 +55,15 @@ Source of definitions: `pinscope/SPEC.md` Appendix A.
 | AC-011  | P1    | P2  | CLOSED | PS-R1        |
 | AC-012  | P1    | P2  | CLOSED | PS-R1        |
 | AC-013  | P1    | P1  | CLOSED | PS-R1        |
-| AC-020  | P1    | P0  | OPEN   | —            |
-| AC-021  | P1    | P1  | OPEN   | —            |
-| AC-022  | P1    | P1  | OPEN   | —            |
-| AC-023  | P1    | P0  | OPEN   | —            |
+| AC-020  | P1    | P0  | CLOSED | PS-R2        |
+| AC-021  | P1    | P1  | CLOSED | PS-R2        |
+| AC-022  | P1    | P1  | CLOSED | PS-R2        |
+| AC-023  | P1    | P0  | OPEN   | — (built; Playwright verify) |
 | AC-024  | P4    | P2  | OPEN   | —            |
 | AC-025  | P4    | P2  | OPEN   | —            |
-| AC-026  | P1    | P1  | OPEN   | —            |
-| AC-027  | P1    | P1  | OPEN   | —            |
-| AC-030  | P1    | P1  | OPEN   | —            |
+| AC-026  | P1    | P1  | CLOSED | PS-R2        |
+| AC-027  | P1    | P1  | CLOSED | PS-R2        |
+| AC-030  | P1    | P1  | OPEN   | — (built; Playwright verify) |
 | AC-031  | P2    | P2  | OPEN   | —            |
 | AC-032  | P2    | P2  | OPEN   | —            |
 | AC-033  | P2    | P3  | OPEN   | —            |
@@ -100,7 +101,7 @@ Source of definitions: `pinscope/SPEC.md` Appendix A.
 | AC-083  | P4    | P3  | OPEN   | —            |
 | AC-084  | P1    | P2  | CLOSED | PS-R1        |
 | AC-090  | P3    | P1  | OPEN   | —            |
-| AC-091  | P1    | P1  | OPEN   | —            |
+| AC-091  | P1    | P1  | CLOSED | PS-R2        |
 | AC-092  | P4    | P2  | OPEN   | —            |
 | AC-100  | P5    | P1  | CLOSED | PS-R1        |
 | AC-101  | P5    | P1  | CLOSED | PS-R1        |
@@ -111,14 +112,19 @@ Source of definitions: `pinscope/SPEC.md` Appendix A.
 | AC-106  | P5    | P2  | OPEN   | —            |
 | AC-107  | P5    | P3  | OPEN   | —            |
 
-**Total: 69 ACs · 20 CLOSED · 49 OPEN · 0 BACKLOG · 29% converged**
+**Total: 69 ACs · 26 CLOSED · 43 OPEN · 0 BACKLOG · 38% converged**
 
 ## Round history
 
-- **PS-R1** — build-time module (Cluster A) + APEX-integration verification
-  (Cluster H). 20 ACs closed. See `ROUND-R1-CLOSURE.md`.
+- **PS-R1** — build-time module (Cluster A) + APEX-integration verification.
+  20 ACs closed. See `ROUND-R1-CLOSURE.md`.
+- **PS-R2** — runtime foundation (Cluster B): PinScope root, PinBadges,
+  InfoPanel, hover detection, public API. 6 ACs closed. AC-023 / AC-030 built
+  but OPEN pending Playwright verification. See `ROUND-R2-CLOSURE.md`.
 
-## Next round — PS-R2 (proposed)
+## Next round — PS-R3 (proposed)
 
-Re-audit, then scope to runtime core (Cluster B, AC-020–027), InfoPanel base
-sections (AC-030), and package public-API/export wiring (AC-090, AC-091).
+Two tracks: (1) Cluster C visual tools — Rulers, Crosshair, GridOverlay, TopBar
+(+ `useViewportSize`); (2) provision Playwright + `examples/vite-react` and
+batch-close the browser-dependent ACs (AC-010, AC-023, AC-030, AC-034–037,
+AC-070–071).
