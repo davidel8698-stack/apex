@@ -3,7 +3,7 @@
 
 > Live dashboard for the PinScope self-healing loop (`PS-R{N}`).
 > **North-Star:** `pinscope/SPEC.md` — version 2.0.0, **FROZEN**.
-> **Loop status:** **CONVERGED** · round 9.
+> **Loop status:** **CONVERGED** · round 10.
 > Generated from `loop.json`. See `LOOP.md` and `CONVERGENCE-REPORT.md`.
 
 ## Convergence metric
@@ -22,6 +22,7 @@
 | PS-R7 | 51 | 69 | 74% | Visual overlays (213 tests). |
 | PS-R8 | 57 | 69 | 83% | Control surface (241 tests). |
 | PS-R9 | 62 | 69 | 90% | Terminal — InfoPanel, screenshot, round-trip (248 tests). |
+| PS-R10 | 62 | 69 | 90% | Integrity round — AC-061 iframe overlay + AC-083 visual-regression suite authored (257 tests). |
 
 ## Status legend
 
@@ -142,6 +143,7 @@ environment. No PinScope code change unblocks them — a capable CI does.
 - **PS-R7** — Visual overlays (213 tests). 51/69 (74%).
 - **PS-R8** — Control surface (241 tests). 57/69 (83%).
 - **PS-R9** — Terminal — InfoPanel, screenshot, round-trip (248 tests). 62/69 (90%).
+- **PS-R10** — Integrity round — AC-061 iframe overlay + AC-083 visual-regression suite authored (257 tests). 62/69 (90%).
 
 ## Loop complete
 
