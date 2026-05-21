@@ -1,85 +1,132 @@
 ---
-description: PinScope self-healing loop — audit pinscope/ against its frozen North-Star, remediate gaps in dependency-ordered waves, verify, and repeat until converged. Usage: /ps-heal (heal to convergence) or /ps-heal once (single round).
+description: PinScope self-healing convergence loop. One invocation drives the full repair mechanism — audit, remediate, execute, verify, close — round after round until PinScope converges on its frozen North-Star or a circuit breaker halts it. Usage: /ps-heal [once | --verify | --audit | --max-rounds N | --resume].
 ---
 
 <context>
 ## PURPOSE
-Run the PinScope `PS-R{N}` self-healing convergence loop. One invocation of
-this command drives the **entire repair mechanism** — audit → remediate →
-wave → execute → verify → close — round after round, until PinScope converges
-on its North-Star specification or a circuit breaker halts it.
+`/ps-heal` is the **orchestrator** of the PinScope `PS-R{N}` self-healing
+convergence loop. One invocation runs the entire repair mechanism: it audits
+the `pinscope/` tree against its frozen North-Star, remediates every gap in
+dependency-ordered waves, verifies, closes the round, and repeats — until
+PinScope converges or a circuit breaker trips.
 
-Task / mode from $ARGUMENTS. If $ARGUMENTS contains `once`, run a single round
-then stop; otherwise loop until the terminal condition.
+The orchestrator runs deterministic SCRIPTS for mechanics and spawns FRESH,
+context-isolated SUB-AGENTS for judgement. The agent that audits is never the
+agent that fixed — the loop self-*checks*, it does not self-*assert*.
+
+Mode from $ARGUMENTS:
+- *(none)* — heal round after round to the terminal condition.
+- `once` — run exactly one round, then stop.
+- `--verify` — run the verification matrix + render `STATUS.md` only; no
+  sub-agents, no commit.
+- `--audit` — STEP 0–3 only (audit + findings written); no remediation, no commit.
+- `--max-rounds N` — stop after N rounds this invocation.
+- `--resume` — resume an interrupted round (auto-detected even without the flag).
 
 ## GUARD
 - Run from the apex repo root. If `pinscope/SPEC.md` is missing:
-  "❌ pinscope/SPEC.md not found." STOP.
-- `pinscope/SPEC.md` must be `status: FROZEN`. If it is not:
-  "❌ North-Star not frozen — freeze pinscope/SPEC.md before healing." STOP.
-- The North-Star is **READ-ONLY**. NEVER edit `pinscope/SPEC.md`. The loop
-  changes the `pinscope/` reality tree to match the spec, never the reverse.
+  print "❌ pinscope/SPEC.md not found" and STOP.
+- `pinscope/SPEC.md` must be `status: FROZEN`. If not: STOP.
+- `pinscope/SPEC.md` is **READ-ONLY**. The loop changes `pinscope/` reality to
+  match the spec — NEVER the spec to match reality.
+- All loop machinery lives in `pinscope/convergence/`.
 
 ## INPUTS
-- North-Star: `pinscope/SPEC.md` — frozen; Appendix A is the 69 machine-checkable
-  acceptance criteria; Appendix B is the loop contract.
-- Dashboard: `pinscope/convergence/STATUS.md` — per-AC status + round metric.
-- Remediation style: `framework/docs/REMEDIATION-STYLE.md`.
+- North-Star: `pinscope/SPEC.md` — Appendix A (69 acceptance criteria),
+  Appendix B (loop contract).
+- `pinscope/convergence/ac-matrix.json` — the verification matrix.
+- `pinscope/convergence/loop.json` — live loop state (source of truth).
+- `framework/docs/REMEDIATION-STYLE.md` — remediation authoring standard.
+- `pinscope/convergence/LOOP.md` — conventions + JSON shapes.
+- Artifact paths: source `pinscope/convergence/lib/round-paths.sh`, then call
+  `round_path <kind> <N>`.
 
 ## PROCEDURE — one round, repeated until terminal
 
-Determine round number N = (highest `PS-R{N}` in `STATUS.md`) + 1, then:
+### STEP 0 — Preflight + state load  *(deterministic)*
+- `bash pinscope/convergence/lib/preflight.sh` → writes `env-capabilities.json`.
+- `node pinscope/convergence/lib/loop-state.mjs read` → read `round`,
+  `loop_status`, `current_round.phase`.
+- If `loop_status == BREAKER_TRIPPED`: report the stuck finding and STOP.
+- If `current_round.phase != idle` → **resume** at that phase. Otherwise
+  `N = round + 1` and begin a new round.
 
-1. **Audit.** Diff every Appendix-A AC against the real `pinscope/` tree. Write
-   `pinscope/convergence/audit-findings-R{N}.md`. Each finding carries: an id,
-   the AC reference, severity, current state, and a **re-read verification
-   step** — re-confirm the gap exists in current code before acting (APEX
-   learning AP-006, "The Unchecked Audit"). Also re-run the carry-forward
-   check (`cd pinscope && npm run typecheck && npm test`): any previously
-   `CLOSED` AC that now fails is a new finding (regression).
+### STEP 1 — Audit  *(fresh `spec-auditor` sub-agent)*
+- Run `node pinscope/convergence/lib/ac-verify.mjs --round N` → writes
+  `ac-results-R{N}.json` (per-AC `PASS` / `FAIL` / `UNAVAILABLE`).
+- Spawn the `spec-auditor` agent with a clean context, given: the SPEC
+  Appendix A + B paths, `ac-matrix.json`, `ac-results-R{N}.json`,
+  `env-capabilities.json`, round `N`, and the `audit-md` / `audit-json` paths.
+  It re-confirms every `FAIL` by re-reading current code (AP-006) and writes
+  `audit-findings-R{N}.{json,md}`. It never sees prior remediation reasoning.
 
-2. **Terminal check.** If there are zero `OPEN` findings (every AC `CLOSED` or
-   `BLOCKED`) and no regression: report "✅ CONVERGED — nothing to heal" with
-   the current metric, and STOP. This is the correct no-op when PinScope is
-   already healthy.
+### STEP 2 — Record + terminal check  *(deterministic)*
+- `node …/loop-state.mjs record-round <ac-results-R{N}.json> N`.
+  - Exit 3 = monotonicity violation (a regression dropped `closed`): STOP and
+    report the regression — do NOT commit this as convergence.
+- Read `loop-state.mjs read metric`. If `open == 0` **and** the auditor
+  confirmed zero real findings: run `render-status.mjs`, print
+  **"✅ CONVERGED — nothing to heal"** with the metric, `set-phase idle`,
+  STOP. *(This is the safe no-op on an already-healthy tree.)*
 
-3. **Remediate.** Write `pinscope/convergence/REMEDIATION-PLAN-R{N}.md` per
-   `framework/docs/REMEDIATION-STYLE.md` — content anchors (not line numbers),
-   five mandatory sections per R-item.
+### STEP 3 — Circuit-breaker gate  *(deterministic)*
+- `node …/loop-state.mjs breaker-check`. Exit 2 = a finding survived 3
+  rounds, or a wave failed verification 3×: report where it is stuck, STOP,
+  do NOT claim convergence.
+- If mode is `--audit`: STOP here — findings are written, nothing else.
 
-4. **Wave.** Write `pinscope/convergence/WAVES-R{N}.md` — dependency-ordered,
-   write-serial-safe (one file = one owner per wave; build module before
-   runtime).
+### STEP 4 — Remediate  *(fresh `architect` sub-agent)*
+- `loop-state.mjs set-phase remediate`.
+- Spawn a fresh sub-agent in the `architect` role, given `audit-findings-R{N}.json`
+  and `framework/docs/REMEDIATION-STYLE.md`. It writes:
+  - `REMEDIATION-PLAN-R{N}.md` — 5 mandatory sections per R-item; content
+    anchors, never line numbers.
+  - `WAVES-R{N}.md` — dependency-ordered, write-serial-safe (one file = one
+    owner per wave).
 
-5. **Execute.** Implement each wave.
+### STEP 5 — Execute  *(fresh sub-agent per wave)*
+- `loop-state.mjs set-phase wave`.
+- Before each wave: `git stash create` and record the ref in
+  `loop.json.current_round.wave_snapshot_ref`.
+- For each wave in order, spawn a fresh sub-agent (the `executor` role; the
+  `frontend-specialist` role for React/runtime waves) given ONLY that wave's
+  R-items. After the wave, re-run `ac-verify.mjs` for the wave's ACs. If a
+  wave fails verification, restore the snapshot and retry — the 3rd failure
+  trips the circuit breaker.
+- Append `WAVE-R{N}-RESULT.md`.
 
-6. **Verify.** Run `cd pinscope && npm run typecheck && npm test`. For build /
-   example / size criteria also run their specific checks (production build of
-   `examples/vite-react` + `grep` of `dist/` for AC-010; `npx size-limit` for
-   AC-073). Re-run the `verify:` check of every AC the round claims to close.
-   **A claim without a passing check stays `OPEN`.** An AC whose `verify:`
-   genuinely requires a browser engine or a `~/.claude/` APEX install that is
-   unavailable in the environment is marked `BLOCKED` — never `CLOSED` from a
-   weak proxy.
+### STEP 6 — Verify  *(fresh `verifier` sub-agent, clean-room)*
+- `loop-state.mjs set-phase verify`.
+- Re-run `node …/ac-verify.mjs --round N`.
+- Spawn a fresh sub-agent in the `verifier` role, given `ac-results-R{N}.json`
+  and the list of every previously-`CLOSED` AC. It confirms each claimed
+  closure has a matrix `PASS` and runs the regression check across ALL prior
+  closures. It is clean-room — it sees verification results, NOT the
+  executor's reasoning. A claim without a passing matrix check stays `OPEN`.
+  An AC whose env is unavailable is `BLOCKED`, never `CLOSED` from a proxy.
 
-7. **Close.** Write `pinscope/convergence/WAVE-R{N}-RESULT.md` and
-   `ROUND-R{N}-CLOSURE.md`; update `STATUS.md`. The convergence metric
-   (`closed_AC / total_AC`) MUST be monotonically non-decreasing.
+### STEP 7 — Close  *(deterministic)*
+- `node …/loop-state.mjs record-round <ac-results-R{N}.json> N` — final merge
+  + monotonic guard.
+- `node pinscope/convergence/lib/render-status.mjs` — regenerate `STATUS.md`.
+- Write `ROUND-R{N}-CLOSURE.md` — closed this round, still-open, BLOCKED,
+  the metric, circuit-breaker status.
+- `loop-state.mjs set-phase idle`.
 
-8. **Commit + push** the round to the current working branch.
-
-9. If $ARGUMENTS contains `once`: STOP. Otherwise loop back to step 1 for
-   round N+1.
-
-## CIRCUIT BREAKER
-Halt and escalate to the user if: a finding survives 3 consecutive rounds with
-no status change, OR a wave fails verification 3 times. Do not mark the loop
-converged when the breaker trips — report where it is stuck.
+### STEP 8 — Commit + loop
+- Commit all `-R{N}` artifacts + `loop.json` + `STATUS.md` + the `pinscope/`
+  source changes; push to the working branch.
+- If mode is `once`, or `--max-rounds N` is reached: STOP.
+- Otherwise loop back to STEP 1 for round `N+1`.
 
 ## TERMINAL CONDITION
-The loop terminates when zero `OPEN` findings remain (every Phase-DoD AC is
-`CLOSED` or `BLOCKED`). On termination, refresh
-`pinscope/convergence/CONVERGENCE-REPORT.md`.
+Zero `OPEN` criteria — every Phase-DoD AC is `CLOSED` or `BLOCKED`. On
+termination, refresh `pinscope/convergence/CONVERGENCE-REPORT.md`.
+
+## CIRCUIT BREAKER
+`loop-state.mjs breaker-check` trips when a finding is unchanged for 3
+consecutive rounds, or a wave fails verification 3×. The loop NEVER reports
+`CONVERGED` while the breaker is tripped — it reports where it is stuck.
 
 ## OUTPUT
 A concise report: starting % and ending %, rounds run this invocation, ACs

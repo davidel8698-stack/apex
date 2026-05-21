@@ -1,0 +1,449 @@
+{
+  "schema": 1,
+  "north_star": "pinscope/SPEC.md",
+  "north_star_version": "2.0.0",
+  "round": 9,
+  "loop_status": "CONVERGED",
+  "metric": {
+    "closed": 62,
+    "blocked": 7,
+    "open": 0,
+    "total": 69,
+    "pct": 90
+  },
+  "metric_history": [
+    {
+      "round": 0,
+      "closed": 0,
+      "pct": 0,
+      "note": "North-Star frozen; Stage 1 scaffolding."
+    },
+    {
+      "round": 1,
+      "closed": 20,
+      "pct": 29,
+      "note": "Build-time module (86 tests)."
+    },
+    {
+      "round": 2,
+      "closed": 26,
+      "pct": 38,
+      "note": "Runtime foundation (100 tests)."
+    },
+    {
+      "round": 3,
+      "closed": 33,
+      "pct": 48,
+      "note": "Operation Protocol (176 tests)."
+    },
+    {
+      "round": 4,
+      "closed": 38,
+      "pct": 55,
+      "note": "Deployment surface + perf (188 tests)."
+    },
+    {
+      "round": 5,
+      "closed": 42,
+      "pct": 61,
+      "note": "Example app + Snapshot system (192 tests)."
+    },
+    {
+      "round": 6,
+      "closed": 46,
+      "pct": 67,
+      "note": "Edge cases (202 tests)."
+    },
+    {
+      "round": 7,
+      "closed": 51,
+      "pct": 74,
+      "note": "Visual overlays (213 tests)."
+    },
+    {
+      "round": 8,
+      "closed": 57,
+      "pct": 83,
+      "note": "Control surface (241 tests)."
+    },
+    {
+      "round": 9,
+      "closed": 62,
+      "pct": 90,
+      "note": "Terminal — InfoPanel, screenshot, round-trip (248 tests)."
+    }
+  ],
+  "env_capabilities": {
+    "browser": false,
+    "npm_registry": true,
+    "apex_install": false,
+    "probed_at": null
+  },
+  "criteria": {
+    "AC-001": {
+      "status": "CLOSED",
+      "round": 1,
+      "last_verified_round": 9
+    },
+    "AC-002": {
+      "status": "CLOSED",
+      "round": 1,
+      "last_verified_round": 9
+    },
+    "AC-003": {
+      "status": "CLOSED",
+      "round": 1,
+      "last_verified_round": 9
+    },
+    "AC-004": {
+      "status": "CLOSED",
+      "round": 1,
+      "last_verified_round": 9
+    },
+    "AC-005": {
+      "status": "CLOSED",
+      "round": 1,
+      "last_verified_round": 9
+    },
+    "AC-006": {
+      "status": "CLOSED",
+      "round": 1,
+      "last_verified_round": 9
+    },
+    "AC-007": {
+      "status": "CLOSED",
+      "round": 1,
+      "last_verified_round": 9
+    },
+    "AC-008": {
+      "status": "CLOSED",
+      "round": 1,
+      "last_verified_round": 9
+    },
+    "AC-009": {
+      "status": "CLOSED",
+      "round": 1,
+      "last_verified_round": 9
+    },
+    "AC-010": {
+      "status": "CLOSED",
+      "round": 5,
+      "last_verified_round": 9
+    },
+    "AC-011": {
+      "status": "CLOSED",
+      "round": 1,
+      "last_verified_round": 9
+    },
+    "AC-012": {
+      "status": "CLOSED",
+      "round": 1,
+      "last_verified_round": 9
+    },
+    "AC-013": {
+      "status": "CLOSED",
+      "round": 1,
+      "last_verified_round": 9
+    },
+    "AC-020": {
+      "status": "CLOSED",
+      "round": 2,
+      "last_verified_round": 9
+    },
+    "AC-021": {
+      "status": "CLOSED",
+      "round": 2,
+      "last_verified_round": 9
+    },
+    "AC-022": {
+      "status": "CLOSED",
+      "round": 2,
+      "last_verified_round": 9
+    },
+    "AC-023": {
+      "status": "BLOCKED",
+      "round": 5,
+      "last_verified_round": 9,
+      "blocked_reason": "browser",
+      "unblocks_on": "browser-capable CI"
+    },
+    "AC-024": {
+      "status": "CLOSED",
+      "round": 7,
+      "last_verified_round": 9
+    },
+    "AC-025": {
+      "status": "CLOSED",
+      "round": 6,
+      "last_verified_round": 9
+    },
+    "AC-026": {
+      "status": "CLOSED",
+      "round": 2,
+      "last_verified_round": 9
+    },
+    "AC-027": {
+      "status": "CLOSED",
+      "round": 2,
+      "last_verified_round": 9
+    },
+    "AC-030": {
+      "status": "BLOCKED",
+      "round": 5,
+      "last_verified_round": 9,
+      "blocked_reason": "browser",
+      "unblocks_on": "browser-capable CI"
+    },
+    "AC-031": {
+      "status": "CLOSED",
+      "round": 9,
+      "last_verified_round": 9
+    },
+    "AC-032": {
+      "status": "CLOSED",
+      "round": 9,
+      "last_verified_round": 9
+    },
+    "AC-033": {
+      "status": "CLOSED",
+      "round": 9,
+      "last_verified_round": 9
+    },
+    "AC-034": {
+      "status": "CLOSED",
+      "round": 7,
+      "last_verified_round": 9
+    },
+    "AC-035": {
+      "status": "CLOSED",
+      "round": 7,
+      "last_verified_round": 9
+    },
+    "AC-036": {
+      "status": "CLOSED",
+      "round": 7,
+      "last_verified_round": 9
+    },
+    "AC-037": {
+      "status": "CLOSED",
+      "round": 8,
+      "last_verified_round": 9
+    },
+    "AC-038": {
+      "status": "CLOSED",
+      "round": 8,
+      "last_verified_round": 9
+    },
+    "AC-039": {
+      "status": "CLOSED",
+      "round": 7,
+      "last_verified_round": 9
+    },
+    "AC-040": {
+      "status": "CLOSED",
+      "round": 8,
+      "last_verified_round": 9
+    },
+    "AC-041": {
+      "status": "CLOSED",
+      "round": 8,
+      "last_verified_round": 9
+    },
+    "AC-042": {
+      "status": "CLOSED",
+      "round": 5,
+      "last_verified_round": 9
+    },
+    "AC-043": {
+      "status": "CLOSED",
+      "round": 8,
+      "last_verified_round": 9
+    },
+    "AC-050": {
+      "status": "CLOSED",
+      "round": 3,
+      "last_verified_round": 9
+    },
+    "AC-051": {
+      "status": "CLOSED",
+      "round": 3,
+      "last_verified_round": 9
+    },
+    "AC-052": {
+      "status": "CLOSED",
+      "round": 3,
+      "last_verified_round": 9
+    },
+    "AC-053": {
+      "status": "CLOSED",
+      "round": 3,
+      "last_verified_round": 9
+    },
+    "AC-054": {
+      "status": "CLOSED",
+      "round": 3,
+      "last_verified_round": 9
+    },
+    "AC-060": {
+      "status": "CLOSED",
+      "round": 6,
+      "last_verified_round": 9
+    },
+    "AC-061": {
+      "status": "BLOCKED",
+      "round": 9,
+      "last_verified_round": 9,
+      "blocked_reason": "browser",
+      "unblocks_on": "browser-capable CI"
+    },
+    "AC-062": {
+      "status": "CLOSED",
+      "round": 6,
+      "last_verified_round": 9
+    },
+    "AC-063": {
+      "status": "BLOCKED",
+      "round": 9,
+      "last_verified_round": 9,
+      "blocked_reason": "browser",
+      "unblocks_on": "browser-capable CI"
+    },
+    "AC-064": {
+      "status": "CLOSED",
+      "round": 8,
+      "last_verified_round": 9
+    },
+    "AC-065": {
+      "status": "CLOSED",
+      "round": 6,
+      "last_verified_round": 9
+    },
+    "AC-070": {
+      "status": "CLOSED",
+      "round": 4,
+      "last_verified_round": 9
+    },
+    "AC-071": {
+      "status": "CLOSED",
+      "round": 4,
+      "last_verified_round": 9
+    },
+    "AC-072": {
+      "status": "CLOSED",
+      "round": 3,
+      "last_verified_round": 9
+    },
+    "AC-073": {
+      "status": "CLOSED",
+      "round": 4,
+      "last_verified_round": 9
+    },
+    "AC-074": {
+      "status": "CLOSED",
+      "round": 5,
+      "last_verified_round": 9
+    },
+    "AC-075": {
+      "status": "CLOSED",
+      "round": 5,
+      "last_verified_round": 9
+    },
+    "AC-076": {
+      "status": "CLOSED",
+      "round": 9,
+      "last_verified_round": 9
+    },
+    "AC-080": {
+      "status": "CLOSED",
+      "round": 1,
+      "last_verified_round": 9
+    },
+    "AC-081": {
+      "status": "CLOSED",
+      "round": 3,
+      "last_verified_round": 9
+    },
+    "AC-082": {
+      "status": "BLOCKED",
+      "round": 5,
+      "last_verified_round": 9,
+      "blocked_reason": "browser",
+      "unblocks_on": "browser-capable CI"
+    },
+    "AC-083": {
+      "status": "BLOCKED",
+      "round": 9,
+      "last_verified_round": 9,
+      "blocked_reason": "browser",
+      "unblocks_on": "browser-capable CI"
+    },
+    "AC-084": {
+      "status": "CLOSED",
+      "round": 1,
+      "last_verified_round": 9
+    },
+    "AC-090": {
+      "status": "CLOSED",
+      "round": 4,
+      "last_verified_round": 9
+    },
+    "AC-091": {
+      "status": "CLOSED",
+      "round": 2,
+      "last_verified_round": 9
+    },
+    "AC-092": {
+      "status": "CLOSED",
+      "round": 4,
+      "last_verified_round": 9
+    },
+    "AC-100": {
+      "status": "CLOSED",
+      "round": 1,
+      "last_verified_round": 9
+    },
+    "AC-101": {
+      "status": "CLOSED",
+      "round": 1,
+      "last_verified_round": 9
+    },
+    "AC-102": {
+      "status": "CLOSED",
+      "round": 1,
+      "last_verified_round": 9
+    },
+    "AC-103": {
+      "status": "CLOSED",
+      "round": 1,
+      "last_verified_round": 9
+    },
+    "AC-104": {
+      "status": "CLOSED",
+      "round": 1,
+      "last_verified_round": 9
+    },
+    "AC-105": {
+      "status": "CLOSED",
+      "round": 1,
+      "last_verified_round": 9
+    },
+    "AC-106": {
+      "status": "BLOCKED",
+      "round": 9,
+      "last_verified_round": 9,
+      "blocked_reason": "apex-install",
+      "unblocks_on": "APEX-installed CI"
+    },
+    "AC-107": {
+      "status": "CLOSED",
+      "round": 9,
+      "last_verified_round": 9
+    }
+  },
+  "findings": [],
+  "current_round": {
+    "phase": "idle",
+    "started_at": null,
+    "wave_snapshot_ref": null
+  }
+}

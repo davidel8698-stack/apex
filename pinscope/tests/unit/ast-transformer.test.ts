@@ -46,6 +46,11 @@ describe('AST transformer — behavior', () => {
     expect(run('<div data-pin-ignore />').code).not.toMatch(PIN_RE);
   });
 
+  it('skips elements whose tag is in excludeTags — Fragment, Suspense (AC-003)', () => {
+    expect(run('<Fragment />').code).not.toMatch(PIN_RE);
+    expect(run('<Suspense />').code).not.toMatch(PIN_RE);
+  });
+
   it('emits a source map (AC-011)', () => {
     expect(run('<div />').map).not.toBeNull();
   });

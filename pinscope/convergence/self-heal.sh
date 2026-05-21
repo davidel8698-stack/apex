@@ -1,24 +1,21 @@
 #!/usr/bin/env bash
-# PinScope self-healing convergence loop.
-#
-# One command runs the full repair mechanism — audit -> remediate -> wave ->
-# execute -> verify -> close — round after round, until PinScope converges on
-# its frozen North-Star (pinscope/SPEC.md) or a circuit breaker halts it.
+# PinScope self-healing convergence loop — terminal entry point.
 #
 #   bash pinscope/convergence/self-heal.sh            # heal until converged
-#   bash pinscope/convergence/self-heal.sh --once     # run a single round
-#   bash pinscope/convergence/self-heal.sh --verify   # mechanical re-verify only
+#   bash pinscope/convergence/self-heal.sh once       # one round, then stop
+#   bash pinscope/convergence/self-heal.sh --verify   # verification matrix only
+#   bash pinscope/convergence/self-heal.sh --audit    # audit only, no remediation
 #
-# The audit and remediation steps need judgement, so the loop is driven by
-# Claude (the `claude` CLI, or the /ps-heal slash command inside Claude Code).
-# This script runs the mechanical verification itself and then hands the
-# round-by-round loop to Claude.
+# Audit and remediation need judgement, so the round loop is driven by Claude
+# (the `/ps-heal` slash command — see .claude/commands/ps-heal.md). This script
+# runs the deterministic preflight + verification itself, then hands the loop
+# to `claude -p`. The mechanics live in pinscope/convergence/lib/.
 
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT"
-
+LIB="pinscope/convergence/lib"
 MODE="${1:-loop}"
 
 echo "▲ PinScope self-heal"
@@ -29,39 +26,32 @@ if [ ! -f pinscope/SPEC.md ]; then
   exit 1
 fi
 
-# 1. Mechanical verification — build + typecheck + the full test suite.
-#    This is the falsifiable health check; it catches regressions.
-echo "▸ Verifying current state (build + typecheck + tests)…"
-( cd pinscope && npm run typecheck && npm test ) > /tmp/ps-self-heal.log 2>&1
-VERIFY_EXIT=$?
-tail -6 /tmp/ps-self-heal.log
-if [ "$VERIFY_EXIT" -eq 0 ]; then
-  echo "✅ verification passed"
-else
-  echo "⚠ verification reported failures — the loop will remediate them"
-  echo "  full log: /tmp/ps-self-heal.log"
-fi
+# 1. Preflight — probe environment capabilities (deterministic, read-only).
+bash "${LIB}/preflight.sh"
 
-# 2. Current convergence metric.
-echo ""
-grep -E '^\*\*Total:|loop status' pinscope/convergence/STATUS.md | head -2 || true
-echo ""
-
+# 2. --verify: run the per-AC verification matrix + render STATUS.md, stop.
 if [ "$MODE" = "--verify" ]; then
-  exit "$VERIFY_EXIT"
+  ROUND="$(node "${LIB}/loop-state.mjs" read round)"
+  node "${LIB}/ac-verify.mjs" --round "$ROUND"
+  rc=$?
+  node "${LIB}/render-status.mjs"
+  grep -E '^\*\*Total:' pinscope/convergence/STATUS.md || true
+  [ "$rc" -eq 0 ] && echo "✅ verification passed" || echo "❌ verification found gaps"
+  exit "$rc"
 fi
 
 # 3. Drive the convergence loop through Claude.
-SCOPE="round after round until the terminal condition (zero OPEN acceptance criteria) or a circuit breaker"
-if [ "$MODE" = "--once" ]; then
-  SCOPE="for exactly one round, then stop"
-fi
+SCOPE="round after round until the terminal condition (zero OPEN criteria) or a circuit breaker"
+case "$MODE" in
+  once)    SCOPE="for exactly one round, then stop" ;;
+  --audit) SCOPE="in --audit mode — audit and write findings only, no remediation, no commit" ;;
+esac
 
 if command -v claude >/dev/null 2>&1; then
   echo "▸ Driving the convergence loop via Claude…"
   claude -p "Run the PinScope self-healing convergence loop exactly as specified in .claude/commands/ps-heal.md. Run ${SCOPE}. Commit and push each round."
 else
   echo "ℹ The 'claude' CLI is not on PATH."
-  echo "  Open this repo in Claude Code and run the slash command:  /ps-heal"
+  echo "  Open this repo in Claude Code and run the slash command:  /ps-heal ${MODE}"
   exit 1
 fi
