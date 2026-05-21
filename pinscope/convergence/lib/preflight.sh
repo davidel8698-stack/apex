@@ -38,6 +38,13 @@ if [ -d "${HOME}/.claude/agents" ]; then
   apex_install=true
 fi
 
+# --- spec_hash: content hash of the frozen North-Star (SPEC-drift detection) ---
+spec_hash="none"
+SPEC_FILE="${CONV_DIR}/../SPEC.md"
+if [ -f "$SPEC_FILE" ] && command -v sha256sum >/dev/null 2>&1; then
+  spec_hash="sha256:$(sha256sum "$SPEC_FILE" | awk '{print $1}')"
+fi
+
 probed_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
 if ! cat > "$OUT" <<EOF
@@ -45,6 +52,7 @@ if ! cat > "$OUT" <<EOF
   "browser": ${browser},
   "npm_registry": ${npm_registry},
   "apex_install": ${apex_install},
+  "spec_hash": "${spec_hash}",
   "probed_at": "${probed_at}"
 }
 EOF

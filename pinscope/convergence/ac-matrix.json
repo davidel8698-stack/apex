@@ -1,6 +1,7 @@
 {
   "spec_version": "2.0.0",
   "generated_from": "pinscope/SPEC.md Appendix A",
+  "generated_from_hash": "sha256:1779526021db1f5bc7ffe36647e6deb08ba3f8234e82cee31dc0bca5357c7a45",
   "note": "Static verification matrix. verify.kind: vitest-tag | grep | build-grep | command | manual. env: node | browser | apex-install. vitest commands run in pinscope/; grep paths are repo-root-relative.",
   "criteria": [
     { "id": "AC-001", "phase": "P1", "severity": "P0", "env": "node", "verify": { "kind": "vitest-tag", "tag": "AC-001", "min_tests": 1 } },

@@ -29,12 +29,14 @@
 - **BLOCKED** — implementation built + test authored, but the `verify:`
   needs an environment unavailable here (browser engine, or a `~/.claude/`
   APEX install). Closeable verbatim on a capable CI.
+- **MANUAL_PENDING** — a `manual`-kind AC whose environment is now
+  available; awaits an explicit `loop-state.mjs manual-attest`.
 - **OPEN** — unresolved gap.
 - **BACKLOG** — P3, explicitly deferred by user decision.
 
 ## Convergence condition
 
-**MET** — zero OPEN criteria; every AC is CLOSED (62) or BLOCKED (7).
+**MET** — zero OPEN criteria; 62 CLOSED, 7 BLOCKED.
 
 ## Circuit breaker log
 
@@ -42,77 +44,77 @@ _(empty — no stalls)_
 
 ## Acceptance Criteria ledger
 
-| AC      | Phase | Sev | Status  | Round |
-|---------|-------|-----|---------|-------|
-| AC-001 | P1    | P0  | CLOSED  | 1     |
-| AC-002 | P1    | P0  | CLOSED  | 1     |
-| AC-003 | P1    | P2  | CLOSED  | 1     |
-| AC-004 | P1    | P1  | CLOSED  | 1     |
-| AC-005 | P1    | P0  | CLOSED  | 1     |
-| AC-006 | P1    | P1  | CLOSED  | 1     |
-| AC-007 | P1    | P1  | CLOSED  | 1     |
-| AC-008 | P1    | P2  | CLOSED  | 1     |
-| AC-009 | P1    | P0  | CLOSED  | 1     |
-| AC-010 | P1    | P0  | CLOSED  | 5     |
-| AC-011 | P1    | P2  | CLOSED  | 1     |
-| AC-012 | P1    | P2  | CLOSED  | 1     |
-| AC-013 | P1    | P1  | CLOSED  | 1     |
-| AC-020 | P1    | P0  | CLOSED  | 2     |
-| AC-021 | P1    | P1  | CLOSED  | 2     |
-| AC-022 | P1    | P1  | CLOSED  | 2     |
-| AC-023 | P1    | P0  | BLOCKED | 5     |
-| AC-024 | P4    | P2  | CLOSED  | 7     |
-| AC-025 | P4    | P2  | CLOSED  | 6     |
-| AC-026 | P1    | P1  | CLOSED  | 2     |
-| AC-027 | P1    | P1  | CLOSED  | 2     |
-| AC-030 | P1    | P1  | BLOCKED | 5     |
-| AC-031 | P2    | P2  | CLOSED  | 9     |
-| AC-032 | P2    | P2  | CLOSED  | 9     |
-| AC-033 | P2    | P3  | CLOSED  | 9     |
-| AC-034 | P2    | P1  | CLOSED  | 7     |
-| AC-035 | P2    | P2  | CLOSED  | 7     |
-| AC-036 | P2    | P1  | CLOSED  | 7     |
-| AC-037 | P2    | P2  | CLOSED  | 8     |
-| AC-038 | P3    | P1  | CLOSED  | 8     |
-| AC-039 | P4    | P2  | CLOSED  | 7     |
-| AC-040 | P2    | P2  | CLOSED  | 8     |
-| AC-041 | P2    | P1  | CLOSED  | 8     |
-| AC-042 | P4    | P2  | CLOSED  | 5     |
-| AC-043 | P2    | P2  | CLOSED  | 8     |
-| AC-050 | P3    | P0  | CLOSED  | 3     |
-| AC-051 | P3    | P1  | CLOSED  | 3     |
-| AC-052 | P3    | P0  | CLOSED  | 3     |
-| AC-053 | P3    | P1  | CLOSED  | 3     |
-| AC-054 | P3    | P2  | CLOSED  | 3     |
-| AC-060 | P4    | P2  | CLOSED  | 6     |
-| AC-061 | P4    | P3  | BLOCKED | 9     |
-| AC-062 | P4    | P3  | CLOSED  | 6     |
-| AC-063 | P4    | P3  | BLOCKED | 9     |
-| AC-064 | P4    | P2  | CLOSED  | 8     |
-| AC-065 | P4    | P2  | CLOSED  | 6     |
-| AC-070 | P1    | P1  | CLOSED  | 4     |
-| AC-071 | P1    | P0  | CLOSED  | 4     |
-| AC-072 | P3    | P1  | CLOSED  | 3     |
-| AC-073 | P1    | P0  | CLOSED  | 4     |
-| AC-074 | P1    | P0  | CLOSED  | 5     |
-| AC-075 | P4    | P2  | CLOSED  | 5     |
-| AC-076 | P4    | P2  | CLOSED  | 9     |
-| AC-080 | P1    | P1  | CLOSED  | 1     |
-| AC-081 | P3    | P1  | CLOSED  | 3     |
-| AC-082 | P2    | P1  | BLOCKED | 5     |
-| AC-083 | P4    | P3  | BLOCKED | 9     |
-| AC-084 | P1    | P2  | CLOSED  | 1     |
-| AC-090 | P3    | P1  | CLOSED  | 4     |
-| AC-091 | P1    | P1  | CLOSED  | 2     |
-| AC-092 | P4    | P2  | CLOSED  | 4     |
-| AC-100 | P5    | P1  | CLOSED  | 1     |
-| AC-101 | P5    | P1  | CLOSED  | 1     |
-| AC-102 | P5    | P1  | CLOSED  | 1     |
-| AC-103 | P5    | P2  | CLOSED  | 1     |
-| AC-104 | P5    | P2  | CLOSED  | 1     |
-| AC-105 | P5    | P1  | CLOSED  | 1     |
-| AC-106 | P5    | P2  | BLOCKED | 9     |
-| AC-107 | P5    | P3  | CLOSED  | 9     |
+| AC      | Phase | Sev | Status        | Round |
+|---------|-------|-----|---------------|-------|
+| AC-001 | P1    | P0  | CLOSED        | 1     |
+| AC-002 | P1    | P0  | CLOSED        | 1     |
+| AC-003 | P1    | P2  | CLOSED        | 1     |
+| AC-004 | P1    | P1  | CLOSED        | 1     |
+| AC-005 | P1    | P0  | CLOSED        | 1     |
+| AC-006 | P1    | P1  | CLOSED        | 1     |
+| AC-007 | P1    | P1  | CLOSED        | 1     |
+| AC-008 | P1    | P2  | CLOSED        | 1     |
+| AC-009 | P1    | P0  | CLOSED        | 1     |
+| AC-010 | P1    | P0  | CLOSED        | 5     |
+| AC-011 | P1    | P2  | CLOSED        | 1     |
+| AC-012 | P1    | P2  | CLOSED        | 1     |
+| AC-013 | P1    | P1  | CLOSED        | 1     |
+| AC-020 | P1    | P0  | CLOSED        | 2     |
+| AC-021 | P1    | P1  | CLOSED        | 2     |
+| AC-022 | P1    | P1  | CLOSED        | 2     |
+| AC-023 | P1    | P0  | BLOCKED       | 5     |
+| AC-024 | P4    | P2  | CLOSED        | 7     |
+| AC-025 | P4    | P2  | CLOSED        | 6     |
+| AC-026 | P1    | P1  | CLOSED        | 2     |
+| AC-027 | P1    | P1  | CLOSED        | 2     |
+| AC-030 | P1    | P1  | BLOCKED       | 5     |
+| AC-031 | P2    | P2  | CLOSED        | 9     |
+| AC-032 | P2    | P2  | CLOSED        | 9     |
+| AC-033 | P2    | P3  | CLOSED        | 9     |
+| AC-034 | P2    | P1  | CLOSED        | 7     |
+| AC-035 | P2    | P2  | CLOSED        | 7     |
+| AC-036 | P2    | P1  | CLOSED        | 7     |
+| AC-037 | P2    | P2  | CLOSED        | 8     |
+| AC-038 | P3    | P1  | CLOSED        | 8     |
+| AC-039 | P4    | P2  | CLOSED        | 7     |
+| AC-040 | P2    | P2  | CLOSED        | 8     |
+| AC-041 | P2    | P1  | CLOSED        | 8     |
+| AC-042 | P4    | P2  | CLOSED        | 5     |
+| AC-043 | P2    | P2  | CLOSED        | 8     |
+| AC-050 | P3    | P0  | CLOSED        | 3     |
+| AC-051 | P3    | P1  | CLOSED        | 3     |
+| AC-052 | P3    | P0  | CLOSED        | 3     |
+| AC-053 | P3    | P1  | CLOSED        | 3     |
+| AC-054 | P3    | P2  | CLOSED        | 3     |
+| AC-060 | P4    | P2  | CLOSED        | 6     |
+| AC-061 | P4    | P3  | BLOCKED       | 9     |
+| AC-062 | P4    | P3  | CLOSED        | 6     |
+| AC-063 | P4    | P3  | BLOCKED       | 9     |
+| AC-064 | P4    | P2  | CLOSED        | 8     |
+| AC-065 | P4    | P2  | CLOSED        | 6     |
+| AC-070 | P1    | P1  | CLOSED        | 4     |
+| AC-071 | P1    | P0  | CLOSED        | 4     |
+| AC-072 | P3    | P1  | CLOSED        | 3     |
+| AC-073 | P1    | P0  | CLOSED        | 4     |
+| AC-074 | P1    | P0  | CLOSED        | 5     |
+| AC-075 | P4    | P2  | CLOSED        | 5     |
+| AC-076 | P4    | P2  | CLOSED        | 9     |
+| AC-080 | P1    | P1  | CLOSED        | 1     |
+| AC-081 | P3    | P1  | CLOSED        | 3     |
+| AC-082 | P2    | P1  | BLOCKED       | 5     |
+| AC-083 | P4    | P3  | BLOCKED       | 9     |
+| AC-084 | P1    | P2  | CLOSED        | 1     |
+| AC-090 | P3    | P1  | CLOSED        | 4     |
+| AC-091 | P1    | P1  | CLOSED        | 2     |
+| AC-092 | P4    | P2  | CLOSED        | 4     |
+| AC-100 | P5    | P1  | CLOSED        | 1     |
+| AC-101 | P5    | P1  | CLOSED        | 1     |
+| AC-102 | P5    | P1  | CLOSED        | 1     |
+| AC-103 | P5    | P2  | CLOSED        | 1     |
+| AC-104 | P5    | P2  | CLOSED        | 1     |
+| AC-105 | P5    | P1  | CLOSED        | 1     |
+| AC-106 | P5    | P2  | BLOCKED       | 9     |
+| AC-107 | P5    | P3  | CLOSED        | 9     |
 
 **Total: 69 ACs · 62 CLOSED · 0 OPEN · 7 BLOCKED · 90% converged**
 

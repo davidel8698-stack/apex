@@ -53,7 +53,14 @@ Mode from $ARGUMENTS:
 
 ### STEP 1 — Audit  *(fresh `spec-auditor` sub-agent)*
 - Run `node pinscope/convergence/lib/ac-verify.mjs --round N` → writes
-  `ac-results-R{N}.json` (per-AC `PASS` / `FAIL` / `UNAVAILABLE`).
+  `ac-results-R{N}.json` (per-AC `PASS`/`FAIL`/`UNAVAILABLE`/`MANUAL`).
+  - **Exit 2 (HARNESS_ERROR)** — the test harness itself failed; this is NOT
+    an implementation gap. STOP, report the harness failure, do not spawn the
+    auditor, do not record the round.
+  - **Exit 4 (SPEC drift)** — `pinscope/SPEC.md` changed and `ac-matrix.json`
+    is stale. STOP. Regenerating the matrix from SPEC Appendix A is a
+    deliberate, user-approved step — the loop never auto-edits the matrix.
+  - **Exit 5 (schema-invalid)** — a loop JSON file is malformed. STOP, fix it.
 - Spawn the `spec-auditor` agent with a clean context, given: the SPEC
   Appendix A + B paths, `ac-matrix.json`, `ac-results-R{N}.json`,
   `env-capabilities.json`, round `N`, and the `audit-md` / `audit-json` paths.
@@ -62,6 +69,8 @@ Mode from $ARGUMENTS:
 
 ### STEP 2 — Record + terminal check  *(deterministic)*
 - `node …/loop-state.mjs record-round <ac-results-R{N}.json> N`.
+  - Exit 2 = the round carries a `HARNESS_ERROR` — record-round refuses it.
+    STOP; fix the harness, never commit a harness-error round.
   - Exit 3 = monotonicity violation (a regression dropped `closed`): STOP and
     report the regression — do NOT commit this as convergence.
 - Read `loop-state.mjs read metric`. If `open == 0` **and** the auditor
@@ -104,6 +113,11 @@ Mode from $ARGUMENTS:
   closures. It is clean-room — it sees verification results, NOT the
   executor's reasoning. A claim without a passing matrix check stays `OPEN`.
   An AC whose env is unavailable is `BLOCKED`, never `CLOSED` from a proxy.
+- A `manual`-kind AC whose environment is now available is `MANUAL_PENDING`,
+  not `CLOSED`. It closes ONLY via an explicit
+  `loop-state.mjs manual-attest <AC> pass "<evidence>"` — never an automated
+  proxy. Surface every `MANUAL_PENDING` AC in the closure as "awaiting manual
+  attestation", distinct from an OPEN gap.
 
 ### STEP 7 — Close  *(deterministic)*
 - `node …/loop-state.mjs record-round <ac-results-R{N}.json> N` — final merge
@@ -127,6 +141,9 @@ termination, refresh `pinscope/convergence/CONVERGENCE-REPORT.md`.
 `loop-state.mjs breaker-check` trips when a finding is unchanged for 3
 consecutive rounds, or a wave fails verification 3×. The loop NEVER reports
 `CONVERGED` while the breaker is tripped — it reports where it is stuck.
+The breaker is not a sticky latch: once the stalling finding resolves,
+`breaker-check` / `record-round` auto-reset `loop_status` to `IN_PROGRESS`
+and append the event to `loop.json.breaker_log`.
 
 ## OUTPUT
 A concise report: starting % and ending %, rounds run this invocation, ACs

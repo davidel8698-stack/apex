@@ -48,14 +48,27 @@ clean-room) → close → commit`.
 `audit-findings-R{N}.{md,json}` · `REMEDIATION-PLAN-R{N}.md` · `WAVES-R{N}.md`
 · `WAVE-R{N}-RESULT.md` · `ROUND-R{N}-CLOSURE.md`
 
-### `lib/` — deterministic mechanics
+### `lib/` — deterministic mechanics (thin CLI drivers)
 - `round-paths.sh` — canonical artifact paths (sourced helper).
 - `preflight.sh` — probes environment capabilities (browser / npm registry /
-  APEX install) → `env-capabilities.json`.
+  APEX install / SPEC hash) → `env-capabilities.json`.
 - `ac-verify.mjs` — runs the per-AC verification matrix → `ac-results-R{N}.json`.
 - `loop-state.mjs` — reads/updates `loop.json`; computes the metric; enforces
-  monotonic convergence; the circuit-breaker ledger.
+  monotonic convergence; the circuit-breaker ledger; `manual-attest`.
 - `render-status.mjs` — renders `STATUS.md` from `loop.json`.
+
+### `lib/core/` — pure logic (no I/O, unit-tested)
+`verdict.mjs` (verdict/status vocabulary + exit codes) · `ac-eval.mjs` (report
+parsing + matrix evaluation) · `loop-logic.mjs` (metric, findings,
+monotonicity, breaker) · `render.mjs` (STATUS.md builder) · `schema.mjs` (JSON
+validators) · `spec-hash.mjs` (SPEC-drift hashing). The CLI drivers above are
+thin shells around these.
+
+### `lib/test/` — the engine's own test suite
+`bash pinscope/convergence/lib/test/run.sh` (or `npm run test:engine` in
+`pinscope/`) runs the `node --test` suite for every `core/` module — the
+convergence engine is itself verified. The suite is `.mjs` under
+`convergence/`, so vitest and ac-verify's AC-tag scan never see it.
 
 ## JSON shapes
 
@@ -69,10 +82,42 @@ last_verified_round } }, findings: [ { id, ac, status, rounds_unchanged,
 history } ], current_round: { phase, wave_snapshot_ref } }`.
 
 Statuses: `CLOSED` (verified) · `OPEN` (gap) · `BLOCKED` (built + tested, but
-the AC's verify needs an unavailable environment) · `BACKLOG` (P3 deferred).
+the AC's verify needs an unavailable environment) · `MANUAL_PENDING` (a
+`manual`-kind AC whose environment is now available — awaiting `manual-attest`)
+· `BACKLOG` (P3 deferred).
+
+## loop-state.mjs commands
+
+`read [field]` · `set-phase <phase>` · `record-round <ac-results> <round>` ·
+`add-finding '<json>'` · `breaker-check` ·
+`manual-attest <AC-id> <pass|fail> "<evidence>" [--by <name>]`.
+
+`manual-attest` is the **only** path that closes a `manual`-kind AC (AC-061,
+063, 082, 083, 106) — it records an explicit human/agent verification, never
+an automated proxy.
+
+## Exit codes (engine-wide)
+
+`0` ok · `1` bad input / a real FAIL · `2` HARNESS_ERROR (the verifier engine
+itself failed — *not* an implementation gap) or circuit-breaker tripped · `3`
+monotonicity violation (a round would decrease `closed`) · `4` SPEC drift
+(`SPEC.md` changed, `ac-matrix.json` stale) · `5` schema-invalid JSON.
+
+A `HARNESS_ERROR` round is **refused** by `record-round` — a broken test
+harness can never masquerade as 69 implementation regressions.
+
+## SPEC-drift detection
+
+`ac-matrix.json` records `generated_from_hash` (a SHA-256 of `SPEC.md`).
+`ac-verify` recomputes the hash each run; a mismatch exits `4` and halts the
+loop. The matrix is regenerated only by a deliberate, user-approved step —
+the loop never auto-edits it.
 
 ## Circuit breaker
 
 A finding unchanged for 3 consecutive rounds, or a wave failing verification
 3 times, trips the breaker (`loop_status = BREAKER_TRIPPED`). The loop halts
-and never reports `CONVERGED` while tripped.
+and never reports `CONVERGED` while tripped. The breaker is **not a sticky
+latch** — once the stalling finding resolves, `breaker-check` / `record-round`
+auto-reset `loop_status` to `IN_PROGRESS` and append the event to
+`loop.json.breaker_log`.

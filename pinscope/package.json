@@ -20,6 +20,7 @@
     "pretest": "tsc -p tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:engine": "node --test convergence/lib/test/*.test.mjs",
     "typecheck": "tsc --noEmit",
     "size": "size-limit"
   },
