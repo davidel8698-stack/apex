@@ -40,7 +40,8 @@
     "@babel/generator": "^7.24.0",
     "@babel/parser": "^7.24.0",
     "@babel/traverse": "^7.24.0",
-    "@babel/types": "^7.24.0"
+    "@babel/types": "^7.24.0",
+    "html2canvas": "^1.4.1"
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",
