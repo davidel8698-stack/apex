@@ -1,0 +1,43 @@
+/** Mouse crosshair lines — see SPEC §8.3. */
+
+import { useEffect, useState } from 'react';
+import type { CSSProperties, ReactElement } from 'react';
+import { HUD_ROOT_ATTR, Z_HOVER } from '../constants.js';
+
+export function Crosshair(): ReactElement | null {
+  const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
+
+  useEffect(() => {
+    const onMove = (e: MouseEvent): void => {
+      const target = e.target;
+      if (target instanceof Element && target.closest(`[${HUD_ROOT_ATTR}]`)) {
+        setPos(null);
+        return;
+      }
+      setPos({ x: e.clientX, y: e.clientY });
+    };
+    document.addEventListener('mousemove', onMove, { passive: true });
+    return () => document.removeEventListener('mousemove', onMove);
+  }, []);
+
+  if (!pos) return null;
+
+  const line: CSSProperties = {
+    position: 'fixed',
+    background: 'rgba(239, 68, 68, 0.6)',
+    zIndex: Z_HOVER,
+    pointerEvents: 'none',
+  };
+  return (
+    <div data-pinscope-crosshair="">
+      <div
+        data-crosshair="v"
+        style={{ ...line, left: pos.x, top: 0, width: 1, height: '100%' }}
+      />
+      <div
+        data-crosshair="h"
+        style={{ ...line, top: pos.y, left: 0, height: 1, width: '100%' }}
+      />
+    </div>
+  );
+}

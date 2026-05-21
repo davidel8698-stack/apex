@@ -17,6 +17,7 @@
 | PS-R4    | 38     | 69    | 55% | 2026-05-21 | Deployment surface + perf (188 tests). |
 | PS-R5    | 42     | 69    | 61% | 2026-05-21 | Example app + Snapshot system (192 tests). |
 | PS-R6    | 46     | 69    | 67% | 2026-05-21 | Edge cases — runtime ids, Shadow DOM, SVG, throttle (202 tests). |
+| PS-R7    | 51     | 69    | 74% | 2026-05-21 | Visual overlays — Rulers, Crosshair, GridOverlay, Measurement, VoidBadges (213 tests). |
 
 ## Status legend
 
@@ -58,7 +59,7 @@ _(empty — no stalls)_
 | AC-021  | P1    | P1  | CLOSED  | PS-R2        |
 | AC-022  | P1    | P1  | CLOSED  | PS-R2        |
 | AC-023  | P1    | P0  | BLOCKED | PS-R5        |
-| AC-024  | P4    | P2  | OPEN    | —            |
+| AC-024  | P4    | P2  | CLOSED  | PS-R7        |
 | AC-025  | P4    | P2  | CLOSED  | PS-R6        |
 | AC-026  | P1    | P1  | CLOSED  | PS-R2        |
 | AC-027  | P1    | P1  | CLOSED  | PS-R2        |
@@ -66,12 +67,12 @@ _(empty — no stalls)_
 | AC-031  | P2    | P2  | OPEN    | —            |
 | AC-032  | P2    | P2  | OPEN    | —            |
 | AC-033  | P2    | P3  | OPEN    | —            |
-| AC-034  | P2    | P1  | OPEN    | —            |
-| AC-035  | P2    | P2  | OPEN    | —            |
-| AC-036  | P2    | P1  | OPEN    | —            |
+| AC-034  | P2    | P1  | CLOSED  | PS-R7        |
+| AC-035  | P2    | P2  | CLOSED  | PS-R7        |
+| AC-036  | P2    | P1  | CLOSED  | PS-R7        |
 | AC-037  | P2    | P2  | OPEN    | —            |
 | AC-038  | P3    | P1  | OPEN    | —            |
-| AC-039  | P4    | P2  | OPEN    | —            |
+| AC-039  | P4    | P2  | CLOSED  | PS-R7        |
 | AC-040  | P2    | P2  | OPEN    | —            |
 | AC-041  | P2    | P1  | OPEN    | —            |
 | AC-042  | P4    | P2  | CLOSED  | PS-R5        |
@@ -111,13 +112,13 @@ _(empty — no stalls)_
 | AC-106  | P5    | P2  | OPEN    | —            |
 | AC-107  | P5    | P3  | OPEN    | —            |
 
-**Total: 69 ACs · 46 CLOSED · 20 OPEN · 3 BLOCKED · 0 BACKLOG · 67% converged**
+**Total: 69 ACs · 51 CLOSED · 15 OPEN · 3 BLOCKED · 0 BACKLOG · 74% converged**
 
-> **Environment ceiling.** ~16 of the 20 OPEN ACs have a Playwright `verify:`
-> and will move to `BLOCKED` as their implementations land
-> (`cdn.playwright.dev` not allowlisted; no system browser). Headless-CLOSED
-> convergence ceiling is ~50/69; the rest become `BLOCKED` — closeable
-> verbatim by running the authored Playwright suite on a browser-capable CI.
+> **Environment ceiling.** ~6 ACs need a real browser engine (CSS `::before`,
+> layout geometry, `@media print`, cross-origin, screenshots) and will move to
+> `BLOCKED` once built + spec-authored (`cdn.playwright.dev` not allowlisted).
+> The remaining OPEN ACs are headless-closeable. Closed convergence ceiling is
+> ~63/69; the rest stay `BLOCKED` — closeable verbatim on a browser-capable CI.
 
 ## Round history
 
@@ -132,10 +133,13 @@ _(empty — no stalls)_
   3 BLOCKED.
 - **PS-R6** — edge cases (runtime ids, Shadow DOM, SVG rect, throttle).
   4 closed.
+- **PS-R7** — visual overlays (Rulers, Crosshair, GridOverlay, Measurement,
+  VoidBadges). 5 closed.
 
-## Next round — PS-R7 (proposed)
+## Next round — PS-R8 (proposed)
 
-Build the remaining visual components (Rulers, Crosshair, GridOverlay, TopBar,
-CommandBar, MeasurementTool, StatePanel, SelectionManager) + void-element
-overlay. Their `verify:` is Playwright → the ACs move to `BLOCKED`. Then PS-R8
-— APEX finalisation (AC-106, AC-107) + terminal convergence report.
+Build the control components — TopBar, CommandBar, StatePanel,
+SelectionManager — plus the remaining InfoPanel sections and keyboard
+shortcuts (AC-031, 032, 033, 037, 038, 040, 041, 043, 064). Then PS-R9 —
+APEX finalisation (AC-106, AC-107), AC-076, and the terminal convergence
+report.
