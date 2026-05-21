@@ -10,16 +10,32 @@ send a structured operation. UI-change communication rounds drop from 5–10 to
 
 ## Status
 
-This package is under construction. It is built and converged by the **PinScope
-self-healing loop** (`PS-R{N}`):
+Built and converged by the **PinScope self-healing loop** (`PS-R{N}`) — 9
+rounds, **62/69 acceptance criteria CLOSED (90%)**, 0 OPEN, 7 environment-
+`BLOCKED`. 248 tests pass. See `convergence/CONVERGENCE-REPORT.md`.
 
 - **`SPEC.md`** — the frozen north-star specification (the ideal state).
 - **`convergence/`** — the loop's audit / remediation / wave / closure
-  artifacts, and `STATUS.md`, the live convergence dashboard.
+  artifacts, `STATUS.md` (live dashboard), and `CONVERGENCE-REPORT.md`.
 
-The loop audits the `pinscope/` reality tree against `SPEC.md` round by round,
-closing the gaps in dependency-ordered waves until every acceptance criterion
-in `SPEC.md` Appendix A passes.
+## Self-healing — re-running the loop
+
+The convergence loop is a runnable command. It audits the `pinscope/` reality
+tree against the frozen `SPEC.md`, remediates any gap (or regression) in
+dependency-ordered waves, verifies, and repeats until converged.
+
+```sh
+# from the apex repo root — heal until converged
+bash pinscope/convergence/self-heal.sh
+
+bash pinscope/convergence/self-heal.sh --once     # run a single round
+bash pinscope/convergence/self-heal.sh --verify   # mechanical re-verify only
+```
+
+Inside a Claude Code session the same loop is the `/ps-heal` slash command.
+On an already-converged tree the loop is a safe no-op — it audits, confirms
+zero gaps, and stops; it produces real work only when `SPEC.md` changes or a
+regression appears.
 
 ## Relationship to APEX
 
