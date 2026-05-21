@@ -3,7 +3,7 @@
   "north_star": "pinscope/SPEC.md",
   "north_star_version": "2.0.0",
   "north_star_hash": "sha256:1779526021db1f5bc7ffe36647e6deb08ba3f8234e82cee31dc0bca5357c7a45",
-  "round": 10,
+  "round": 11,
   "loop_status": "CONVERGED",
   "breaker_log": [],
   "metric": {
@@ -80,6 +80,12 @@
       "closed": 62,
       "pct": 90,
       "note": "Integrity round — AC-061 iframe overlay + AC-083 visual-regression suite authored (257 tests)."
+    },
+    {
+      "round": 11,
+      "closed": 62,
+      "pct": 90,
+      "note": "Confirmation re-audit — NO_FINDINGS; tree converged (257 tests)."
     }
   ],
   "env_capabilities": {
@@ -92,361 +98,361 @@
     "AC-001": {
       "status": "CLOSED",
       "round": 1,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-002": {
       "status": "CLOSED",
       "round": 1,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-003": {
       "status": "CLOSED",
       "round": 1,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-004": {
       "status": "CLOSED",
       "round": 1,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-005": {
       "status": "CLOSED",
       "round": 1,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-006": {
       "status": "CLOSED",
       "round": 1,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-007": {
       "status": "CLOSED",
       "round": 1,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-008": {
       "status": "CLOSED",
       "round": 1,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-009": {
       "status": "CLOSED",
       "round": 1,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-010": {
       "status": "CLOSED",
       "round": 5,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-011": {
       "status": "CLOSED",
       "round": 1,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-012": {
       "status": "CLOSED",
       "round": 1,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-013": {
       "status": "CLOSED",
       "round": 1,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-020": {
       "status": "CLOSED",
       "round": 2,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-021": {
       "status": "CLOSED",
       "round": 2,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-022": {
       "status": "CLOSED",
       "round": 2,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-023": {
       "status": "BLOCKED",
       "round": 5,
-      "last_verified_round": 10,
+      "last_verified_round": 11,
       "blocked_reason": "browser",
       "unblocks_on": "browser-capable CI"
     },
     "AC-024": {
       "status": "CLOSED",
       "round": 7,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-025": {
       "status": "CLOSED",
       "round": 6,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-026": {
       "status": "CLOSED",
       "round": 2,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-027": {
       "status": "CLOSED",
       "round": 2,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-030": {
       "status": "BLOCKED",
       "round": 5,
-      "last_verified_round": 10,
+      "last_verified_round": 11,
       "blocked_reason": "browser",
       "unblocks_on": "browser-capable CI"
     },
     "AC-031": {
       "status": "CLOSED",
       "round": 9,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-032": {
       "status": "CLOSED",
       "round": 9,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-033": {
       "status": "CLOSED",
       "round": 9,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-034": {
       "status": "CLOSED",
       "round": 7,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-035": {
       "status": "CLOSED",
       "round": 7,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-036": {
       "status": "CLOSED",
       "round": 7,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-037": {
       "status": "CLOSED",
       "round": 8,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-038": {
       "status": "CLOSED",
       "round": 8,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-039": {
       "status": "CLOSED",
       "round": 7,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-040": {
       "status": "CLOSED",
       "round": 8,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-041": {
       "status": "CLOSED",
       "round": 8,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-042": {
       "status": "CLOSED",
       "round": 5,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-043": {
       "status": "CLOSED",
       "round": 8,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-050": {
       "status": "CLOSED",
       "round": 3,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-051": {
       "status": "CLOSED",
       "round": 3,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-052": {
       "status": "CLOSED",
       "round": 3,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-053": {
       "status": "CLOSED",
       "round": 3,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-054": {
       "status": "CLOSED",
       "round": 3,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-060": {
       "status": "CLOSED",
       "round": 6,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-061": {
       "status": "BLOCKED",
       "round": 9,
-      "last_verified_round": 10,
+      "last_verified_round": 11,
       "blocked_reason": "browser",
       "unblocks_on": "browser-capable CI"
     },
     "AC-062": {
       "status": "CLOSED",
       "round": 6,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-063": {
       "status": "BLOCKED",
       "round": 9,
-      "last_verified_round": 10,
+      "last_verified_round": 11,
       "blocked_reason": "browser",
       "unblocks_on": "browser-capable CI"
     },
     "AC-064": {
       "status": "CLOSED",
       "round": 8,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-065": {
       "status": "CLOSED",
       "round": 6,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-070": {
       "status": "CLOSED",
       "round": 4,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-071": {
       "status": "CLOSED",
       "round": 4,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-072": {
       "status": "CLOSED",
       "round": 3,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-073": {
       "status": "CLOSED",
       "round": 4,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-074": {
       "status": "CLOSED",
       "round": 5,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-075": {
       "status": "CLOSED",
       "round": 5,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-076": {
       "status": "CLOSED",
       "round": 9,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-080": {
       "status": "CLOSED",
       "round": 1,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-081": {
       "status": "CLOSED",
       "round": 3,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-082": {
       "status": "BLOCKED",
       "round": 5,
-      "last_verified_round": 10,
+      "last_verified_round": 11,
       "blocked_reason": "browser",
       "unblocks_on": "browser-capable CI"
     },
     "AC-083": {
       "status": "BLOCKED",
       "round": 9,
-      "last_verified_round": 10,
+      "last_verified_round": 11,
       "blocked_reason": "browser",
       "unblocks_on": "browser-capable CI"
     },
     "AC-084": {
       "status": "CLOSED",
       "round": 1,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-090": {
       "status": "CLOSED",
       "round": 4,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-091": {
       "status": "CLOSED",
       "round": 2,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-092": {
       "status": "CLOSED",
       "round": 4,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-100": {
       "status": "CLOSED",
       "round": 1,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-101": {
       "status": "CLOSED",
       "round": 1,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-102": {
       "status": "CLOSED",
       "round": 1,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-103": {
       "status": "CLOSED",
       "round": 1,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-104": {
       "status": "CLOSED",
       "round": 1,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-105": {
       "status": "CLOSED",
       "round": 1,
-      "last_verified_round": 10
+      "last_verified_round": 11
     },
     "AC-106": {
       "status": "BLOCKED",
       "round": 9,
-      "last_verified_round": 10,
+      "last_verified_round": 11,
       "blocked_reason": "apex-install",
       "unblocks_on": "APEX-installed CI"
     },
     "AC-107": {
       "status": "CLOSED",
       "round": 9,
-      "last_verified_round": 10
+      "last_verified_round": 11
     }
   },
   "findings": [],

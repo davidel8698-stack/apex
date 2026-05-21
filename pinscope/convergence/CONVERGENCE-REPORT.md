@@ -1,8 +1,9 @@
 # PinScope — Convergence Report
 
-> Terminal report for the PinScope self-healing loop (`PS-R1` … `PS-R9`).
+> Terminal report for the PinScope self-healing loop (`PS-R1` … `PS-R11`).
 > **North-Star:** `pinscope/SPEC.md` v2.0.0 (FROZEN 2026-05-21).
-> **Status:** **CONVERGED** — loop terminal condition reached.
+> **Status:** **CONVERGED** — loop terminal condition reached and
+> independently re-confirmed.
 
 ## 1. Result
 
@@ -12,8 +13,8 @@
 | **CLOSED** (verified) | **62 (90%)** |
 | **BLOCKED** (environment-limited) | **7** |
 | **OPEN** (unresolved gap) | **0** |
-| Rounds run | 9 (`PS-R1` … `PS-R9`) |
-| Automated tests | **248 passing**, 0 failing |
+| Rounds run | 11 (`PS-R1` … `PS-R11`) |
+| Automated tests | **257 passing**, 0 failing |
 | Strict typecheck | `tsc --noEmit` clean |
 | Dev bundle | 1.21 kB (budget 80 kB) |
 | Production bundle | 0 PinScope bytes (verified by `examples/vite-react` build) |
@@ -37,33 +38,34 @@ PinScope is a complete, dev-only visual debug layer:
   shortcut-property resolution, autocomplete, clipboard + history bridge.
 - **Managers** — SelectionManager (URL-hash mirroring), SnapshotManager,
   RuntimePinObserver, HistoryManager.
-- **Edge cases** — Shadow DOM, SVG-aware rects, heavy-page throttling,
-  runtime-id assignment.
+- **Edge cases** — Shadow DOM, cross-origin iframe outline overlay, SVG-aware
+  rects, heavy-page throttling, runtime-id assignment.
 - **Deployment** — `pinscope/vite`, `pinscope/runtime`, `pinscope/next`,
-  `pinscope/webpack` export map; `examples/vite-react`; Playwright e2e suite.
+  `pinscope/webpack` export map; `examples/vite-react`; Playwright e2e suite +
+  visual-regression suite.
 - **APEX integration** — the `pinscope` skill, `/apex:ui-phase` scaffolding,
   `/apex:ui-review` ingestion, `architect`/`frontend-specialist` stack-skill
   wiring, registration in `apex-spec.md`.
 
 ## 3. The 7 BLOCKED criteria
 
-These are **not gaps** — they are implemented and have authored tests; their
-SPEC `verify:` methods cannot run in this environment.
+These are **not gaps** — every one is implemented and has an authored test;
+their SPEC `verify:` methods cannot run in this environment.
 
 | AC | Why blocked |
 |----|-------------|
 | AC-023 | Badge `::before` content — needs a browser to render pseudo-elements. |
 | AC-030 | InfoPanel hover values — needs real layout geometry. |
-| AC-061 | Cross-origin iframe behaviour — needs two real origins. |
+| AC-061 | Cross-origin iframe outline overlay — `src/runtime/utils/iframe-overlay.ts` + 8 jsdom tests; full visual verification needs two real origins. |
 | AC-063 | `@media print` hiding — needs a browser print engine. |
 | AC-082 | Playwright integration suite — browser binary unavailable. |
-| AC-083 | Visual-regression screenshots — needs a browser. |
+| AC-083 | Visual-regression suite — `tests/integration/visual-regression.spec.ts` authored; `toHaveScreenshot` needs a browser. |
 | AC-106 | `/apex:health-check` — needs APEX synced to `~/.claude/`. |
 
 **Root cause:** the environment network policy blocks the Playwright browser
 download (`cdn.playwright.dev` not allowlisted) and there is no system
 browser; AC-106 additionally needs a `~/.claude/` APEX install. **Unblock:**
-run the already-authored Playwright suite (`tests/integration/`,
+run the already-authored Playwright suites (`tests/integration/`,
 `playwright.config.ts`) on a browser-capable CI, and run `/apex:health-check`
 on a CI with a clean APEX install. No PinScope code change is required.
 
@@ -77,22 +79,36 @@ on a CI with a clean APEX install. No PinScope code change is required.
   browser engine, the AC stayed `BLOCKED`.
 - Anti-pattern AP-006 ("The Unchecked Audit"): every audit finding carried a
   re-read check; prior closures were re-confirmed each round.
+- **PS-R10 — the integrity round.** A fresh re-audit of the PS-R9 `CONVERGED`
+  tree did not rubber-stamp it: the auditor found AC-061 and AC-083 marked
+  `BLOCKED` while their deliverable was *genuinely absent* — cross-origin
+  iframe rendering had no implementation, and no visual-regression suite was
+  authored. `BLOCKED` was masking two real gaps. The loop remediated both, and
+  PS-R11's independent auditor re-confirmed the fix (`NO_FINDINGS`). The
+  `BLOCKED` set is now fully honest — exactly the failure mode AP-006 exists to
+  catch, caught.
 - Self-corrections were caught by `verify`, not shipped: the missing
   `@types/node` (PS-R2), the `getByTestId`/`data-measure` mismatch (PS-R7),
-  the demo-copy token collision (PS-R5).
+  the demo-copy token collision (PS-R5), the falsely-`BLOCKED` AC-061/083
+  (PS-R10).
 
 ## 5. Convergence trajectory
 
 ```
-PS-R1 ███████░░░░░░░░░░░░░░░░░ 29%   build module
-PS-R2 █████████░░░░░░░░░░░░░░░ 38%   runtime foundation
-PS-R3 ████████████░░░░░░░░░░░░ 48%   operation protocol
-PS-R4 █████████████░░░░░░░░░░░ 55%   deployment + perf
-PS-R5 ███████████████░░░░░░░░░ 61%   example app + snapshots
-PS-R6 ████████████████░░░░░░░░ 67%   edge cases
-PS-R7 ██████████████████░░░░░░ 74%   visual overlays
-PS-R8 ████████████████████░░░░ 83%   control surface
-PS-R9 ██████████████████████░░ 90%   terminal — 0 OPEN
+PS-R1  ███████░░░░░░░░░░░░░░░░░ 29%   build module
+PS-R2  █████████░░░░░░░░░░░░░░░ 38%   runtime foundation
+PS-R3  ████████████░░░░░░░░░░░░ 48%   operation protocol
+PS-R4  █████████████░░░░░░░░░░░ 55%   deployment + perf
+PS-R5  ███████████████░░░░░░░░░ 61%   example app + snapshots
+PS-R6  ████████████████░░░░░░░░ 67%   edge cases
+PS-R7  ██████████████████░░░░░░ 74%   visual overlays
+PS-R8  ████████████████████░░░░ 83%   control surface
+PS-R9  ██████████████████████░░ 90%   terminal — 0 OPEN
+PS-R10 ██████████████████████░░ 90%   integrity round — AC-061/083 remediated
+PS-R11 ██████████████████████░░ 90%   confirmation re-audit — NO_FINDINGS
 ```
 
-The PinScope north-star spec is realised. The loop is complete.
+The PinScope north-star spec is realised. The loop is complete — and its final
+two rounds prove the self-check works: round 10 found that round 9's
+"converged" was not fully honest, fixed it, and round 11 independently
+confirmed the result.
