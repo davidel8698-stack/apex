@@ -41,3 +41,7 @@ venv/
 .env
 .env.local
 .env.*.local
+
+# PinScope convergence artifacts ARE tracked (proof-of-process build log)
+!pinscope/convergence/
+!pinscope/convergence/**

@@ -1,7 +1,8 @@
 # PinScope — North-Star Specification
 
-> **north_star_version:** 2.0.0-draft
-> **status:** DRAFT — awaiting user freeze (do NOT start PS-R{N} rounds until frozen)
+> **north_star_version:** 2.0.0
+> **status:** FROZEN — source of truth for the PS-R{N} convergence loop
+> **frozen:** 2026-05-21 (user-approved)
 > **base:** PinScope Technical Specification v1.0 (user-supplied)
 > **role:** Single source of truth. The PinScope `PS-R{N}` self-healing
 > convergence loop audits the `pinscope/` reality tree against this document.

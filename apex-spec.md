@@ -69,7 +69,7 @@ APEX הוא **multi-agent framework ופלטפורמה לסוכני קוד** (Cl
 
 **Module Ecosystem כ-Extension Model** (חידוש מ-BMAD). במקום plugin registry יחיד, APEX מפורק ל-repositories נפרדים עם lifecycles עצמאיים:
 - **`apex-core`** — ליבה (free forever)
-- **`apex-frontend`** — UI design contracts, 6-pillar audit, shadcn gate
+- **`apex-frontend`** — UI design contracts, 6-pillar audit, shadcn gate, PinScope visual-feedback layer (ראה `pinscope/SPEC.md`)
 - **`apex-data`** — data pipeline contracts, schema evolution
 - **`apex-security`** — threat modeling, defense-in-depth
 - **`apex-test-architect`** — TEA equivalent עם veto power

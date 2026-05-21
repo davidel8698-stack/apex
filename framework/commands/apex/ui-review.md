@@ -53,6 +53,15 @@ For each completed task in the current phase, scan the changed files for pillar 
 - Red flag: large bundle imports without code splitting, synchronous loading of heavy assets
 - Verdict: PASS if performance patterns found | WARN if heavy assets without optimization | N/A if no performance-sensitive code
 
+## PINSCOPE EVIDENCE (optional)
+If the project is PinScope-instrumented and `.pinscope/snapshots/` or pending
+PinScope Operations exist, ingest them as review evidence:
+- A PinScope Snapshot gives exact numeric state per element (rect, computed
+  styles) — use it to verify Pillar 1 (responsive) and Pillar 6 (performance)
+  against measured values, not just pattern grep.
+- Pending Operations indicate user-requested UI changes not yet applied — list
+  them so the next /apex:ui-phase run addresses them.
+
 ## REPORT FORMAT
 
 ```
