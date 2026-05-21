@@ -3,7 +3,7 @@
 
 > Live dashboard for the PinScope self-healing loop (`PS-R{N}`).
 > **North-Star:** `pinscope/SPEC.md` — version 2.0.0, **FROZEN**.
-> **Loop status:** **CONVERGED** · round 12.
+> **Loop status:** **CONVERGED** · round 13.
 > Generated from `loop.json`. See `LOOP.md` and `CONVERGENCE-REPORT.md`.
 
 ## Convergence metric
@@ -25,6 +25,7 @@
 | PS-R10 | 62 | 69 | 90% | Integrity round — AC-061 iframe overlay + AC-083 visual-regression suite authored (257 tests). |
 | PS-R11 | 62 | 69 | 90% | Confirmation re-audit — NO_FINDINGS; tree converged (257 tests). |
 | PS-R12 | 62 | 69 | 90% | Re-confirmation re-audit — NO_FINDINGS; tree remains converged (257 tests). |
+| PS-R13 | 62 | 69 | 90% |  |
 
 ## Status legend
 
@@ -148,6 +149,7 @@ environment. No PinScope code change unblocks them — a capable CI does.
 - **PS-R10** — Integrity round — AC-061 iframe overlay + AC-083 visual-regression suite authored (257 tests). 62/69 (90%).
 - **PS-R11** — Confirmation re-audit — NO_FINDINGS; tree converged (257 tests). 62/69 (90%).
 - **PS-R12** — Re-confirmation re-audit — NO_FINDINGS; tree remains converged (257 tests). 62/69 (90%).
+- **PS-R13** —  62/69 (90%).
 
 ## Loop complete
 

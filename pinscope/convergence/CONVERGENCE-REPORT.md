@@ -1,6 +1,6 @@
 # PinScope — Convergence Report
 
-> Terminal report for the PinScope self-healing loop (`PS-R1` … `PS-R12`).
+> Terminal report for the PinScope self-healing loop (`PS-R1` … `PS-R13`).
 > **North-Star:** `pinscope/SPEC.md` v2.0.0 (FROZEN 2026-05-21).
 > **Status:** **CONVERGED** — loop terminal condition reached and
 > independently re-confirmed.
@@ -13,7 +13,7 @@
 | **CLOSED** (verified) | **62 (90%)** |
 | **BLOCKED** (environment-limited) | **7** |
 | **OPEN** (unresolved gap) | **0** |
-| Rounds run | 12 (`PS-R1` … `PS-R12`) |
+| Rounds run | 13 (`PS-R1` … `PS-R13`) |
 | Automated tests | **257 passing**, 0 failing |
 | Strict typecheck | `tsc --noEmit` clean |
 | Dev bundle | 1.21 kB (budget 80 kB) |
@@ -107,9 +107,10 @@ PS-R9  ██████████████████████░░ 
 PS-R10 ██████████████████████░░ 90%   integrity round — AC-061/083 remediated
 PS-R11 ██████████████████████░░ 90%   confirmation re-audit — NO_FINDINGS
 PS-R12 ██████████████████████░░ 90%   re-confirmation re-audit — NO_FINDINGS
+PS-R13 ██████████████████████░░ 90%   re-confirmation re-audit — NO_FINDINGS
 ```
 
 The PinScope north-star spec is realised. The loop is complete — and rounds 10
-through 12 prove the self-check works: round 10 found that round 9's
-"converged" was not fully honest, fixed it, and rounds 11 and 12 each
+through 13 prove the self-check works: round 10 found that round 9's
+"converged" was not fully honest, fixed it, and rounds 11 through 13 each
 independently re-confirmed the result with a fresh, context-isolated auditor.
