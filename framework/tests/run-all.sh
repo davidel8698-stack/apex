@@ -12,6 +12,22 @@
 #   bash framework/tests/run-all.sh --skip <name>    # skip a test by basename (repeatable)
 #   bash framework/tests/run-all.sh --quick          # only fast tests (skip those tagged "slow")
 #
+# Slow-test tagging policy (R-022-001 — single source of truth)
+#   `--quick` is meant to be an HONEST fast subset of the full suite: a
+#   test that takes longer than tests it skips makes `--quick`
+#   incoherent. A test earns the `# tag: slow` header line when it
+#   measures at or above the established tagged-set lower bound — the
+#   shortest already-tagged test (`test-sync-coverage.sh`, ~37s) — under
+#   aggregate `run-all.sh` load, as evidenced by the `--json`
+#   `durations` map. The `# tag: slow` header line is the single opt-in
+#   mechanism `--quick` honors; there is no central registry. Future
+#   tagging decisions are made by checking the live `durations` map
+#   against this rule, not by re-judging each test from prose. The
+#   threshold is the RULE (relative to the tagged-set lower bound on
+#   live evidence), deliberately not a frozen numeric constant — whole-
+#   second `date +%s` figures vary across hosts, so a hard constant
+#   would age badly and violate the "state-derived counts" style rule.
+#
 # Output
 #   Human summary: each test line carries an "(Ns)" wall-time suffix and
 #   the summary block prints a "total time:" figure (R-020-003).

@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # R5-004: state-rebuild.sh reconstructs .apex/STATE.json from event-log.jsonl
+# tag: slow
+# (R-022-001: measured ~48s pole under aggregate load; `run-all.sh --quick` skips it.)
 # Test asserts:
 #   1. Hook exits 0 when STATE.json already exists (no-op).
 #   2. Hook produces STATE.json from a fixture event log when STATE.json

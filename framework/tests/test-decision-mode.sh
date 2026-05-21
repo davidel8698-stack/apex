@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 # R5-018: Decision-mode classifier accuracy test (heuristic-as-proxy).
+# tag: slow
+# (R-022-001: measured ~62s pole — second-largest in the 72-test suite
+#  under aggregate load; `run-all.sh --quick` skips it.)
 # The architect.md STEP 1.6 prompt classifies each task as collaborator vs
 # replacement using a content-based heuristic. This test extracts the same
 # heuristic into a deterministic Bash classifier, runs it across the
