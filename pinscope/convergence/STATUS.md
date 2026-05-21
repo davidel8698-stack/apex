@@ -18,6 +18,7 @@
 | PS-R5    | 42     | 69    | 61% | 2026-05-21 | Example app + Snapshot system (192 tests). |
 | PS-R6    | 46     | 69    | 67% | 2026-05-21 | Edge cases — runtime ids, Shadow DOM, SVG, throttle (202 tests). |
 | PS-R7    | 51     | 69    | 74% | 2026-05-21 | Visual overlays — Rulers, Crosshair, GridOverlay, Measurement, VoidBadges (213 tests). |
+| PS-R8    | 57     | 69    | 83% | 2026-05-21 | Control surface — SelectionManager, TopBar, CommandBar, StatePanel, shortcuts (241 tests). |
 
 ## Status legend
 
@@ -70,13 +71,13 @@ _(empty — no stalls)_
 | AC-034  | P2    | P1  | CLOSED  | PS-R7        |
 | AC-035  | P2    | P2  | CLOSED  | PS-R7        |
 | AC-036  | P2    | P1  | CLOSED  | PS-R7        |
-| AC-037  | P2    | P2  | OPEN    | —            |
-| AC-038  | P3    | P1  | OPEN    | —            |
+| AC-037  | P2    | P2  | CLOSED  | PS-R8        |
+| AC-038  | P3    | P1  | CLOSED  | PS-R8        |
 | AC-039  | P4    | P2  | CLOSED  | PS-R7        |
-| AC-040  | P2    | P2  | OPEN    | —            |
-| AC-041  | P2    | P1  | OPEN    | —            |
+| AC-040  | P2    | P2  | CLOSED  | PS-R8        |
+| AC-041  | P2    | P1  | CLOSED  | PS-R8        |
 | AC-042  | P4    | P2  | CLOSED  | PS-R5        |
-| AC-043  | P2    | P2  | OPEN    | —            |
+| AC-043  | P2    | P2  | CLOSED  | PS-R8        |
 | AC-050  | P3    | P0  | CLOSED  | PS-R3        |
 | AC-051  | P3    | P1  | CLOSED  | PS-R3        |
 | AC-052  | P3    | P0  | CLOSED  | PS-R3        |
@@ -86,7 +87,7 @@ _(empty — no stalls)_
 | AC-061  | P4    | P3  | OPEN    | —            |
 | AC-062  | P4    | P3  | CLOSED  | PS-R6        |
 | AC-063  | P4    | P3  | OPEN    | —            |
-| AC-064  | P4    | P2  | OPEN    | —            |
+| AC-064  | P4    | P2  | CLOSED  | PS-R8        |
 | AC-065  | P4    | P2  | CLOSED  | PS-R6        |
 | AC-070  | P1    | P1  | CLOSED  | PS-R4        |
 | AC-071  | P1    | P0  | CLOSED  | PS-R4        |
@@ -112,7 +113,7 @@ _(empty — no stalls)_
 | AC-106  | P5    | P2  | OPEN    | —            |
 | AC-107  | P5    | P3  | OPEN    | —            |
 
-**Total: 69 ACs · 51 CLOSED · 15 OPEN · 3 BLOCKED · 0 BACKLOG · 74% converged**
+**Total: 69 ACs · 57 CLOSED · 9 OPEN · 3 BLOCKED · 0 BACKLOG · 83% converged**
 
 > **Environment ceiling.** ~6 ACs need a real browser engine (CSS `::before`,
 > layout geometry, `@media print`, cross-origin, screenshots) and will move to
@@ -135,11 +136,12 @@ _(empty — no stalls)_
   4 closed.
 - **PS-R7** — visual overlays (Rulers, Crosshair, GridOverlay, Measurement,
   VoidBadges). 5 closed.
+- **PS-R8** — control surface (SelectionManager, TopBar, CommandBar,
+  StatePanel, keyboard shortcuts, touch). 6 closed.
 
-## Next round — PS-R8 (proposed)
+## Next round — PS-R9 (terminal, proposed)
 
-Build the control components — TopBar, CommandBar, StatePanel,
-SelectionManager — plus the remaining InfoPanel sections and keyboard
-shortcuts (AC-031, 032, 033, 037, 038, 040, 041, 043, 064). Then PS-R9 —
-APEX finalisation (AC-106, AC-107), AC-076, and the terminal convergence
-report.
+Remaining InfoPanel sections + collapsible persistence + color swatches
+(AC-031, 032, 033), lazy `html2canvas` (AC-076), APEX finalisation (AC-106,
+AC-107). Reclassify the genuinely browser-only ACs (AC-061, AC-063, AC-083)
+to `BLOCKED`. Then the terminal convergence report.
