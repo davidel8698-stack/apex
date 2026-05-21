@@ -11,9 +11,10 @@
 
 `closed_AC / total_AC` — must be monotonically non-decreasing.
 
-| Round | Closed | Total | %   | Date       | Notes |
-|-------|--------|-------|-----|------------|-------|
-| baseline | 0   | 69    | 0%  | 2026-05-21 | North-Star frozen; Stage 1 scaffolding committed. PS-R1 not yet run. |
+| Round    | Closed | Total | %   | Date       | Notes |
+|----------|--------|-------|-----|------------|-------|
+| baseline | 0      | 69    | 0%  | 2026-05-21 | North-Star frozen; Stage 1 scaffolding committed. |
+| PS-R1    | 20     | 69    | 29% | 2026-05-21 | Build-time module implemented (86 unit tests pass); APEX integration verified. |
 
 ## Status legend
 
@@ -40,19 +41,19 @@ Source of definitions: `pinscope/SPEC.md` Appendix A.
 
 | AC      | Phase | Sev | Status | Round closed |
 |---------|-------|-----|--------|--------------|
-| AC-001  | P1    | P0  | OPEN   | —            |
-| AC-002  | P1    | P0  | OPEN   | —            |
-| AC-003  | P1    | P2  | OPEN   | —            |
-| AC-004  | P1    | P1  | OPEN   | —            |
-| AC-005  | P1    | P0  | OPEN   | —            |
-| AC-006  | P1    | P1  | OPEN   | —            |
-| AC-007  | P1    | P1  | OPEN   | —            |
-| AC-008  | P1    | P2  | OPEN   | —            |
-| AC-009  | P1    | P0  | OPEN   | —            |
+| AC-001  | P1    | P0  | CLOSED | PS-R1        |
+| AC-002  | P1    | P0  | CLOSED | PS-R1        |
+| AC-003  | P1    | P2  | CLOSED | PS-R1        |
+| AC-004  | P1    | P1  | CLOSED | PS-R1        |
+| AC-005  | P1    | P0  | CLOSED | PS-R1        |
+| AC-006  | P1    | P1  | CLOSED | PS-R1        |
+| AC-007  | P1    | P1  | CLOSED | PS-R1        |
+| AC-008  | P1    | P2  | CLOSED | PS-R1        |
+| AC-009  | P1    | P0  | CLOSED | PS-R1        |
 | AC-010  | P1    | P0  | OPEN   | —            |
-| AC-011  | P1    | P2  | OPEN   | —            |
-| AC-012  | P1    | P2  | OPEN   | —            |
-| AC-013  | P1    | P1  | OPEN   | —            |
+| AC-011  | P1    | P2  | CLOSED | PS-R1        |
+| AC-012  | P1    | P2  | CLOSED | PS-R1        |
+| AC-013  | P1    | P1  | CLOSED | PS-R1        |
 | AC-020  | P1    | P0  | OPEN   | —            |
 | AC-021  | P1    | P1  | OPEN   | —            |
 | AC-022  | P1    | P1  | OPEN   | —            |
@@ -93,26 +94,31 @@ Source of definitions: `pinscope/SPEC.md` Appendix A.
 | AC-074  | P1    | P0  | OPEN   | —            |
 | AC-075  | P4    | P2  | OPEN   | —            |
 | AC-076  | P4    | P2  | OPEN   | —            |
-| AC-080  | P1    | P1  | OPEN   | —            |
+| AC-080  | P1    | P1  | CLOSED | PS-R1        |
 | AC-081  | P3    | P1  | OPEN   | —            |
 | AC-082  | P2    | P1  | OPEN   | —            |
 | AC-083  | P4    | P3  | OPEN   | —            |
-| AC-084  | P1    | P2  | OPEN   | —            |
+| AC-084  | P1    | P2  | CLOSED | PS-R1        |
 | AC-090  | P3    | P1  | OPEN   | —            |
 | AC-091  | P1    | P1  | OPEN   | —            |
 | AC-092  | P4    | P2  | OPEN   | —            |
-| AC-100  | P5    | P1  | OPEN   | —            |
-| AC-101  | P5    | P1  | OPEN   | —            |
-| AC-102  | P5    | P1  | OPEN   | —            |
-| AC-103  | P5    | P2  | OPEN   | —            |
-| AC-104  | P5    | P2  | OPEN   | —            |
-| AC-105  | P5    | P1  | OPEN   | —            |
+| AC-100  | P5    | P1  | CLOSED | PS-R1        |
+| AC-101  | P5    | P1  | CLOSED | PS-R1        |
+| AC-102  | P5    | P1  | CLOSED | PS-R1        |
+| AC-103  | P5    | P2  | CLOSED | PS-R1        |
+| AC-104  | P5    | P2  | CLOSED | PS-R1        |
+| AC-105  | P5    | P1  | CLOSED | PS-R1        |
 | AC-106  | P5    | P2  | OPEN   | —            |
 | AC-107  | P5    | P3  | OPEN   | —            |
 
-**Total: 69 ACs · 0 CLOSED · 69 OPEN · 0 BACKLOG**
+**Total: 69 ACs · 20 CLOSED · 49 OPEN · 0 BACKLOG · 29% converged**
 
-> Stage 1 has already implemented the APEX-integration components behind
-> AC-100, AC-101, AC-102, AC-103, AC-104, AC-105. They remain `OPEN` here by
-> design — the loop verifies before it claims. PS-R1's audit will run each
-> `verify:` check and close the ones that pass.
+## Round history
+
+- **PS-R1** — build-time module (Cluster A) + APEX-integration verification
+  (Cluster H). 20 ACs closed. See `ROUND-R1-CLOSURE.md`.
+
+## Next round — PS-R2 (proposed)
+
+Re-audit, then scope to runtime core (Cluster B, AC-020–027), InfoPanel base
+sections (AC-030), and package public-API/export wiring (AC-090, AC-091).
