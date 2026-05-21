@@ -48,6 +48,19 @@ export function validateLoop(obj) {
   }
   if (!Array.isArray(obj.findings)) e.push('loop.json: `findings` must be an array');
   if (!isObject(obj.current_round)) e.push('loop.json: `current_round` must be an object');
+  // `narrative_coverage` is an optional, additive block — the narrative
+  // deep-scan signal. Old loop.json files predate it and stay valid.
+  if (obj.narrative_coverage !== undefined) {
+    if (!isObject(obj.narrative_coverage)) {
+      e.push('loop.json: `narrative_coverage` must be an object');
+    } else {
+      for (const k of ['total_claims', 'covered', 'uncovered', 'candidate_acs']) {
+        if (typeof obj.narrative_coverage[k] !== 'number') {
+          e.push(`loop.json: \`narrative_coverage.${k}\` must be a number`);
+        }
+      }
+    }
+  }
   return { ok: e.length === 0, errors: e };
 }
 

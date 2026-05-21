@@ -50,3 +50,21 @@ test('renderStatus surfaces MANUAL_PENDING in the total line', () => {
   };
   assert.match(renderStatus(withManual, matrix), /1 MANUAL_PENDING/);
 });
+
+test('renderStatus emits the Narrative coverage section when present', () => {
+  const withNc = {
+    ...loop,
+    narrative_coverage: {
+      last_scanned_round: 9, total_claims: 84, covered: 71, uncovered: 13,
+      candidate_acs: 13, strengthen_proposals: 4, uncovered_satisfied: 9, uncovered_unsatisfied: 4,
+    },
+  };
+  const md = renderStatus(withNc, matrix);
+  assert.match(md, /## Narrative coverage/);
+  assert.match(md, /71\/84/);
+  assert.match(md, /uncovered claim\(s\) the code does NOT/);
+});
+
+test('renderStatus omits Narrative coverage when the block is absent', () => {
+  assert.doesNotMatch(renderStatus(loop, matrix), /## Narrative coverage/);
+});

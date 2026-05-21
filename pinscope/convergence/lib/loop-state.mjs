@@ -5,6 +5,7 @@
  *   node loop-state.mjs read [field]            field: round|loop_status|phase|metric
  *   node loop-state.mjs set-phase <phase>
  *   node loop-state.mjs record-round <ac-results.json> <round>
+ *   node loop-state.mjs record-narrative <narrative-scan.json> <round>
  *   node loop-state.mjs add-finding '<json>'
  *   node loop-state.mjs breaker-check
  *   node loop-state.mjs manual-attest <AC-id> <pass|fail> "<evidence>" [--by <name>]
@@ -22,6 +23,7 @@ import { EXIT } from './core/verdict.mjs';
 import { validateLoop, validateMatrix, validateResults } from './core/schema.mjs';
 import {
   applyResults,
+  applyNarrativeCoverage,
   breakerState,
   breakerAutoReset,
   hasHarnessError,
@@ -149,6 +151,34 @@ if (cmd === 'record-round') {
   process.exit(EXIT.OK);
 }
 
+if (cmd === 'record-narrative') {
+  const scanPath = process.argv[3];
+  const round = Number(process.argv[4]);
+  if (!scanPath || !Number.isInteger(round)) {
+    die('record-narrative: usage: record-narrative <narrative-scan.json> <round>');
+  }
+  const resolved = path.resolve(scanPath);
+  if (!existsSync(resolved)) die(`record-narrative: scan file not found at ${resolved}`);
+  let scan;
+  try {
+    scan = JSON.parse(readFileSync(resolved, 'utf8'));
+  } catch (e) {
+    die(`record-narrative: scan file is not valid JSON — ${e.message}`, EXIT.SCHEMA_INVALID);
+  }
+  if (typeof scan !== 'object' || scan === null || typeof scan.coverage !== 'object' || scan.coverage === null) {
+    die('record-narrative: scan file has no `coverage` object', EXIT.SCHEMA_INVALID);
+  }
+  const loop = loadLoop();
+  const next = applyNarrativeCoverage(loop, scan, round);
+  saveLoop(next);
+  const nc = next.narrative_coverage;
+  console.log(
+    `loop-state: narrative coverage recorded — round ${round}: ${nc.covered}/${nc.total_claims} ` +
+      `claims AC-covered · ${nc.candidate_acs} candidate ACs · ${nc.strengthen_proposals} strengthen proposals`,
+  );
+  process.exit(EXIT.OK);
+}
+
 if (cmd === 'breaker-check') {
   const loop = loadLoop();
   const reset = breakerAutoReset(loop, now());
@@ -201,4 +231,7 @@ if (cmd === 'manual-attest') {
   process.exit(EXIT.OK);
 }
 
-die(`unknown command '${cmd ?? ''}' (read|set-phase|record-round|add-finding|breaker-check|manual-attest)`);
+die(
+  `unknown command '${cmd ?? ''}' ` +
+    '(read|set-phase|record-round|record-narrative|add-finding|breaker-check|manual-attest)',
+);

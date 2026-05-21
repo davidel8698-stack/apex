@@ -49,6 +49,35 @@ export function renderStatus(loop, matrixById) {
     P(`Not yet met — **${m.open}** OPEN criteria remain.`);
   }
   P();
+  if (loop.narrative_coverage) {
+    const nc = loop.narrative_coverage;
+    P('## Narrative coverage');
+    P();
+    P('The narrative deep-scan compares the whole SPEC narrative (§1–§17)');
+    P('against the code every round. **Secondary signal — it does NOT affect');
+    P('AC convergence.** Candidate ACs are reviewed manually and adopted via a');
+    P('user-approved SPEC version bump.');
+    P();
+    P(
+      `Last scanned: round ${nc.last_scanned_round ?? '—'} — ` +
+        `**${nc.covered ?? 0}/${nc.total_claims ?? 0}** normative claims AC-covered.`,
+    );
+    P();
+    P('| Metric | Count |');
+    P('|--------|-------|');
+    P(`| Normative claims | ${nc.total_claims ?? 0} |`);
+    P(`| AC-covered | ${nc.covered ?? 0} |`);
+    P(`| Uncovered | ${nc.uncovered ?? 0} |`);
+    P(`| Candidate ACs (await review) | ${nc.candidate_acs ?? 0} |`);
+    P(`| Strengthen-AC proposals | ${nc.strengthen_proposals ?? 0} |`);
+    P();
+    if ((nc.uncovered_unsatisfied || 0) > 0) {
+      P(`> ⚠ **${nc.uncovered_unsatisfied}** uncovered claim(s) the code does NOT`);
+      P('> satisfy — narrative behavior with no AC *and* a real code gap. See the');
+      P('> latest `narrative-scan-R{N}.md`.');
+      P();
+    }
+  }
   P('## Circuit breaker log');
   P();
   const stalled = (loop.findings || []).filter(

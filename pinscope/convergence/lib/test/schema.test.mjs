@@ -48,3 +48,21 @@ test('validateResults accepts known verdicts including HARNESS_ERROR', () => {
   });
   assert.equal(r.ok, true);
 });
+
+test('validateLoop accepts a well-formed narrative_coverage block', () => {
+  const withNc = {
+    ...goodLoop,
+    narrative_coverage: { total_claims: 80, covered: 70, uncovered: 10, candidate_acs: 10 },
+  };
+  assert.equal(validateLoop(withNc).ok, true);
+});
+
+test('validateLoop rejects a non-numeric narrative_coverage field', () => {
+  const bad = {
+    ...goodLoop,
+    narrative_coverage: { total_claims: 80, covered: 'lots', uncovered: 10, candidate_acs: 10 },
+  };
+  const r = validateLoop(bad);
+  assert.equal(r.ok, false);
+  assert.ok(r.errors.some((e) => e.includes('narrative_coverage.covered')));
+});

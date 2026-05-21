@@ -4,13 +4,15 @@
 # Source this file, then call:  round_path <kind> <N>
 #
 # Kinds:
-#   audit-md      audit-findings-R{N}.md
-#   audit-json    audit-findings-R{N}.json
-#   remediation   REMEDIATION-PLAN-R{N}.md
-#   waves         WAVES-R{N}.md
-#   wave-result   WAVE-R{N}-RESULT.md
-#   closure       ROUND-R{N}-CLOSURE.md
-#   ac-results    ac-results-R{N}.json
+#   audit-md        audit-findings-R{N}.md
+#   audit-json      audit-findings-R{N}.json
+#   narrative-md    narrative-scan-R{N}.md
+#   narrative-json  narrative-scan-R{N}.json
+#   remediation     REMEDIATION-PLAN-R{N}.md
+#   waves           WAVES-R{N}.md
+#   wave-result     WAVE-R{N}-RESULT.md
+#   closure         ROUND-R{N}-CLOSURE.md
+#   ac-results      ac-results-R{N}.json
 #
 # Every artifact uses the uniform `-R{N}` infix — this kills the
 # WAVE-1-RESULT vs WAVE-R2-RESULT drift seen in the original 9-round run.
@@ -25,8 +27,10 @@ round_path() {
     return 1
   fi
   case "$kind" in
-    audit-md)    echo "${CONV_DIR}/audit-findings-R${n}.md" ;;
-    audit-json)  echo "${CONV_DIR}/audit-findings-R${n}.json" ;;
+    audit-md)       echo "${CONV_DIR}/audit-findings-R${n}.md" ;;
+    audit-json)     echo "${CONV_DIR}/audit-findings-R${n}.json" ;;
+    narrative-md)   echo "${CONV_DIR}/narrative-scan-R${n}.md" ;;
+    narrative-json) echo "${CONV_DIR}/narrative-scan-R${n}.json" ;;
     remediation) echo "${CONV_DIR}/REMEDIATION-PLAN-R${n}.md" ;;
     waves)       echo "${CONV_DIR}/WAVES-R${n}.md" ;;
     wave-result) echo "${CONV_DIR}/WAVE-R${n}-RESULT.md" ;;

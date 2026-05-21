@@ -32,12 +32,14 @@ Mode from $ARGUMENTS:
 - All loop machinery lives in `pinscope/convergence/`.
 
 ## INPUTS
-- North-Star: `pinscope/SPEC.md` — Appendix A (69 acceptance criteria),
-  Appendix B (loop contract).
+- North-Star: `pinscope/SPEC.md` — §1–§17 (design narrative), Appendix A
+  (69 acceptance criteria), Appendix B (loop contract).
 - `pinscope/convergence/ac-matrix.json` — the verification matrix.
 - `pinscope/convergence/loop.json` — live loop state (source of truth).
 - `framework/docs/REMEDIATION-STYLE.md` — remediation authoring standard.
 - `pinscope/convergence/LOOP.md` — conventions + JSON shapes.
+- Agent roles: `framework/agents/{spec-auditor,narrative-auditor,architect,
+  verifier,executor}.md` and `specialist/frontend.md`.
 - Artifact paths: source `pinscope/convergence/lib/round-paths.sh`, then call
   `round_path <kind> <N>`.
 
@@ -51,7 +53,7 @@ Mode from $ARGUMENTS:
 - If `current_round.phase != idle` → **resume** at that phase. Otherwise
   `N = round + 1` and begin a new round.
 
-### STEP 1 — Audit  *(fresh `spec-auditor` sub-agent)*
+### STEP 1A — AC matrix audit  *(fresh `spec-auditor` sub-agent)*
 - Run `node pinscope/convergence/lib/ac-verify.mjs --round N` → writes
   `ac-results-R{N}.json` (per-AC `PASS`/`FAIL`/`UNAVAILABLE`/`MANUAL`).
   - **Exit 2 (HARNESS_ERROR)** — the test harness itself failed; this is NOT
@@ -60,6 +62,8 @@ Mode from $ARGUMENTS:
   - **Exit 4 (SPEC drift)** — `pinscope/SPEC.md` changed and `ac-matrix.json`
     is stale. STOP. Regenerating the matrix from SPEC Appendix A is a
     deliberate, user-approved step — the loop never auto-edits the matrix.
+    (This is also the path by which adopted narrative candidate ACs enter the
+    loop — see STEP 1B and `LOOP.md`.)
   - **Exit 5 (schema-invalid)** — a loop JSON file is malformed. STOP, fix it.
 - Spawn the `spec-auditor` agent with a clean context, given: the SPEC
   Appendix A + B paths, `ac-matrix.json`, `ac-results-R{N}.json`,
@@ -67,16 +71,42 @@ Mode from $ARGUMENTS:
   It re-confirms every `FAIL` by re-reading current code (AP-006) and writes
   `audit-findings-R{N}.{json,md}`. It never sees prior remediation reasoning.
 
+### STEP 1B — Narrative deep-scan  *(fresh `narrative-auditor` sub-agent)*
+Runs every round. Skipped under `--verify` (mechanical-only mode); runs under
+`--audit`.
+- Resolve the scan artifact paths: `round_path narrative-md N` and
+  `round_path narrative-json N`.
+- Spawn the `narrative-auditor` agent with a clean context, given: the
+  `pinscope/SPEC.md` path (it reads §1–§17 + Appendix A), `ac-matrix.json`,
+  round `N`, the two scan-artifact paths, and — if it exists — the prior
+  round's `narrative-scan-R{N-1}.json` (for stable `claim_id`s). It compares
+  the whole narrative against the code and writes
+  `narrative-scan-R{N}.{json,md}`: `claims`, `candidate_acs`,
+  `strengthen_proposals`, and a `coverage` block. It is READ-ONLY — it never
+  edits `SPEC.md`, `ac-matrix.json`, or code; it **proposes** ACs, never
+  adopts them.
+- `node …/loop-state.mjs record-narrative <narrative-scan-R{N}.json> N` merges
+  the `coverage` block into `loop.json` under `narrative_coverage`. This is a
+  SECONDARY signal — it never changes an AC status and never blocks
+  convergence. Adopting candidate ACs is a separate, user-approved `SPEC.md`
+  version bump (see `LOOP.md` § Narrative deep-scan).
+
 ### STEP 2 — Record + terminal check  *(deterministic)*
 - `node …/loop-state.mjs record-round <ac-results-R{N}.json> N`.
   - Exit 2 = the round carries a `HARNESS_ERROR` — record-round refuses it.
     STOP; fix the harness, never commit a harness-error round.
   - Exit 3 = monotonicity violation (a regression dropped `closed`): STOP and
     report the regression — do NOT commit this as convergence.
-- Read `loop-state.mjs read metric`. If `open == 0` **and** the auditor
+- Read `loop-state.mjs read metric`. The AC convergence metric is unchanged by
+  the narrative deep-scan — `metric.open == 0` alone decides convergence;
+  narrative coverage NEVER blocks. If `open == 0` **and** the `spec-auditor`
   confirmed zero real findings: run `render-status.mjs`, print
   **"✅ CONVERGED — nothing to heal"** with the metric, `set-phase idle`,
   STOP. *(This is the safe no-op on an already-healthy tree.)*
+  - The CONVERGED message MUST also surface narrative coverage as a secondary
+    line — read `loop.json.narrative_coverage`, e.g. *"Narrative coverage:
+    71/84 claims AC-covered; 13 candidate ACs await review."* Convergence with
+    open candidate ACs is still valid convergence.
 
 ### STEP 3 — Circuit-breaker gate  *(deterministic)*
 - `node …/loop-state.mjs breaker-check`. Exit 2 = a finding survived 3
@@ -124,12 +154,16 @@ Mode from $ARGUMENTS:
   + monotonic guard.
 - `node pinscope/convergence/lib/render-status.mjs` — regenerate `STATUS.md`.
 - Write `ROUND-R{N}-CLOSURE.md` — closed this round, still-open, BLOCKED,
-  the metric, circuit-breaker status.
+  the metric, circuit-breaker status, and a **Narrative coverage** subsection
+  (claim counts, a pointer to `narrative-scan-R{N}.md`, and any
+  `uncovered_unsatisfied` claims — narrative behavior with no AC *and* a real
+  code gap, the most urgent class).
 - `loop-state.mjs set-phase idle`.
 
 ### STEP 8 — Commit + loop
-- Commit all `-R{N}` artifacts + `loop.json` + `STATUS.md` + the `pinscope/`
-  source changes; push to the working branch.
+- Commit all `-R{N}` artifacts (including `narrative-scan-R{N}.{md,json}`) +
+  `loop.json` + `STATUS.md` + the `pinscope/` source changes; push to the
+  working branch.
 - If mode is `once`, or `--max-rounds N` is reached: STOP.
 - Otherwise loop back to STEP 1 for round `N+1`.
 

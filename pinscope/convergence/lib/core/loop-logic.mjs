@@ -145,6 +145,41 @@ export function updateFindings(findingsIn, results, matrixById, round) {
   return findings;
 }
 
+/**
+ * Merge a narrative-scan `coverage` block into the loop — the pure core of
+ * `record-narrative`. The narrative deep-scan is a SECONDARY signal: this
+ * function never touches `criteria`, `metric`, or `loop_status`, so AC
+ * convergence is wholly unaffected. There is no monotonicity guard — coverage
+ * may legitimately fall when a candidate AC is adopted (a claim moves to
+ * `covered`). Returns a new loop; never mutates the input.
+ */
+export function applyNarrativeCoverage(loopIn, scan, round) {
+  const loop = clone(loopIn);
+  const cov = (scan && scan.coverage) || {};
+  const num = (v) => (typeof v === 'number' ? v : 0);
+  const prior = loop.narrative_coverage || {};
+  const history = (prior.history || []).filter((h) => h.round !== round);
+  history.push({
+    round,
+    covered: num(cov.covered),
+    total: num(cov.total_claims),
+    candidate_acs: num(cov.candidate_acs),
+  });
+  history.sort((a, b) => a.round - b.round);
+  loop.narrative_coverage = {
+    last_scanned_round: round,
+    total_claims: num(cov.total_claims),
+    covered: num(cov.covered),
+    uncovered: num(cov.uncovered),
+    candidate_acs: num(cov.candidate_acs),
+    strengthen_proposals: num(cov.strengthen_proposals),
+    uncovered_satisfied: num(cov.uncovered_satisfied),
+    uncovered_unsatisfied: num(cov.uncovered_unsatisfied),
+    history,
+  };
+  return loop;
+}
+
 /** Record a human/agent manual verification — the only path that closes a manual AC. */
 export function attestManual(loopIn, acId, pass, note, by, round, now, matrixById) {
   const loop = clone(loopIn);

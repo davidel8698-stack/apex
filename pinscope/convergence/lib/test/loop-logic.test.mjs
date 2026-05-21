@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   recomputeMetric,
   applyResults,
+  applyNarrativeCoverage,
   updateFindings,
   attestManual,
   breakerState,
@@ -134,4 +135,36 @@ test('attestManual rejects a non-manual AC', () => {
 test('checkMonotonicity', () => {
   assert.equal(checkMonotonicity({ closed: 5 }, 4).ok, true);
   assert.equal(checkMonotonicity({ closed: 3 }, 4).ok, false);
+});
+
+test('applyNarrativeCoverage merges the coverage block without touching ACs', () => {
+  const before = baseLoop();
+  const scan = {
+    coverage: {
+      total_claims: 80, covered: 70, uncovered: 10, candidate_acs: 10,
+      strengthen_proposals: 3, uncovered_satisfied: 7, uncovered_unsatisfied: 3,
+    },
+  };
+  const loop = applyNarrativeCoverage(before, scan, 5);
+  assert.equal(loop.narrative_coverage.covered, 70);
+  assert.equal(loop.narrative_coverage.last_scanned_round, 5);
+  assert.equal(loop.narrative_coverage.history.length, 1);
+  assert.equal(loop.narrative_coverage.history[0].covered, 70);
+  // AC convergence state is untouched — the narrative scan is a secondary signal.
+  assert.deepEqual(loop.criteria, before.criteria);
+  assert.deepEqual(loop.metric, before.metric);
+  assert.equal(loop.loop_status, before.loop_status);
+});
+
+test('applyNarrativeCoverage upserts the history row on a re-run round', () => {
+  let loop = applyNarrativeCoverage(baseLoop(), { coverage: { total_claims: 80, covered: 70 } }, 5);
+  loop = applyNarrativeCoverage(loop, { coverage: { total_claims: 80, covered: 72 } }, 5);
+  assert.equal(loop.narrative_coverage.history.length, 1);
+  assert.equal(loop.narrative_coverage.history[0].covered, 72);
+});
+
+test('applyNarrativeCoverage tolerates a missing coverage block', () => {
+  const loop = applyNarrativeCoverage(baseLoop(), {}, 5);
+  assert.equal(loop.narrative_coverage.total_claims, 0);
+  assert.equal(loop.narrative_coverage.candidate_acs, 0);
 });
