@@ -6,3 +6,5 @@
 {"at":"2026-05-22T10:51:40.983Z","round":15,"event":"phase:remediate","note":null}
 {"at":"2026-05-22T10:51:41.044Z","round":15,"event":"replan","note":"STEP 4b rejected R15 plan: F-15-05 unrouted"}
 {"at":"2026-05-22T10:58:16.797Z","round":15,"event":"phase:schedule","note":null}
+{"at":"2026-05-22T11:04:38.304Z","round":15,"event":"phase:wave","note":null}
+{"at":"2026-05-22T11:05:06.717Z","round":15,"event":"spawn:ps-wave-executor","note":"wave 1"}
