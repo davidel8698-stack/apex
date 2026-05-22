@@ -8,6 +8,7 @@ import {
   attestManual,
   breakerState,
   breakerAutoReset,
+  trajectoryState,
   hasHarnessError,
   checkMonotonicity,
 } from '../core/loop-logic.mjs';
@@ -167,4 +168,103 @@ test('applyNarrativeCoverage tolerates a missing coverage block', () => {
   const loop = applyNarrativeCoverage(baseLoop(), {}, 5);
   assert.equal(loop.narrative_coverage.total_claims, 0);
   assert.equal(loop.narrative_coverage.candidate_acs, 0);
+});
+
+// --- D4.2 divergence breaker -------------------------------------------------
+
+test('applyResults records open and p01_open in metric_history', () => {
+  const matrix = { 'AC-002': { severity: 'P0' } };
+  const { loop } = applyResults(baseLoop(), { 'AC-002': { verdict: 'FAIL' } }, matrix, 2, 'now');
+  const row = loop.metric_history.find((m) => m.round === 2);
+  assert.equal(row.open, 1);
+  assert.equal(row.p01_open, 1);
+});
+
+test('trajectoryState is UNKNOWN with fewer than two p01-bearing samples', () => {
+  assert.equal(trajectoryState({ metric_history: [] }).classification, 'UNKNOWN');
+  assert.equal(
+    trajectoryState({ metric_history: [{ round: 1, p01_open: 3 }] }).classification, 'UNKNOWN');
+});
+
+test('trajectoryState classifies IMPROVING / STAGNANT / DIVERGING', () => {
+  const t = (a, b) =>
+    trajectoryState({ metric_history: [{ round: 1, p01_open: a }, { round: 2, p01_open: b }] });
+  assert.equal(t(5, 3).classification, 'IMPROVING');
+  assert.equal(t(3, 4).classification, 'STAGNANT');
+  assert.equal(t(3, 3).classification, 'STAGNANT');
+  const d = t(3, 6);
+  assert.equal(d.classification, 'DIVERGING');
+  assert.equal(d.diverging, true);
+  assert.equal(d.delta, 3);
+});
+
+test('trajectoryState ignores history rows without a p01_open count', () => {
+  const t = trajectoryState({
+    metric_history: [{ round: 1, closed: 2 }, { round: 2, p01_open: 1 }, { round: 3, p01_open: 5 }],
+  });
+  assert.equal(t.classification, 'DIVERGING');
+});
+
+test('breakerState trips on a diverging trajectory', () => {
+  const loop = baseLoop();
+  loop.metric_history = [{ round: 1, p01_open: 2 }, { round: 2, p01_open: 6 }];
+  const s = breakerState(loop);
+  assert.equal(s.tripped, true);
+  assert.equal(s.diverging, true);
+  assert.equal(s.trajectory.classification, 'DIVERGING');
+});
+
+// --- D1.2 narrative-gap convergence block ------------------------------------
+
+test('applyResults does NOT converge while a narrative gap is unsatisfied', () => {
+  const loop = baseLoop();
+  loop.narrative_coverage = { uncovered_unsatisfied: 2 };
+  const out = applyResults(loop, { 'AC-002': { verdict: 'PASS' } }, {}, 2, 'now');
+  assert.equal(out.metric.open, 0);
+  assert.equal(out.loop.loop_status, 'IN_PROGRESS');
+});
+
+test('attestManual does not converge while a narrative gap stands', () => {
+  const loop = baseLoop();
+  loop.criteria['AC-002'] = { status: 'MANUAL_PENDING', round: 1 };
+  loop.narrative_coverage = { uncovered_unsatisfied: 1 };
+  const matrix = { 'AC-002': { verify: { kind: 'manual' } } };
+  const r = attestManual(loop, 'AC-002', true, 'evidence', 'tester', 2, 'now', matrix);
+  assert.equal(r.ok, true);
+  assert.equal(r.loop.criteria['AC-002'].status, 'CLOSED');
+  assert.equal(r.loop.metric.open, 0);
+  assert.equal(r.loop.loop_status, 'IN_PROGRESS');
+});
+
+// --- D5.5 provenance ledger --------------------------------------------------
+
+test('applyResults records provenance on a CLOSED criterion', () => {
+  const matrix = { 'AC-002': { verify: { kind: 'vitest-tag', tag: 'ac-002' } } };
+  const { loop } = applyResults(
+    baseLoop(),
+    { 'AC-002': { verdict: 'PASS', evidence: 'ac-results-R2.json', wave: 2 } },
+    matrix, 2, '2026-05-22T00:00:00Z');
+  const p = loop.criteria['AC-002'].provenance;
+  assert.equal(p.closed_round, 2);
+  assert.equal(p.evidence, 'ac-results-R2.json');
+  assert.equal(p.wave, 2);
+  assert.equal(p.verify.kind, 'vitest-tag');
+  assert.equal(p.at, '2026-05-22T00:00:00Z');
+});
+
+test('applyResults drops provenance when a criterion regresses out of CLOSED', () => {
+  const loop = baseLoop();
+  loop.criteria['AC-001'] = { status: 'CLOSED', round: 1, provenance: { closed_round: 1 } };
+  const { loop: out } = applyResults(loop, { 'AC-001': { verdict: 'FAIL' } }, {}, 2, 'now');
+  assert.equal(out.criteria['AC-001'].status, 'OPEN');
+  assert.equal(out.criteria['AC-001'].provenance, undefined);
+});
+
+test('attestManual records provenance on the closed manual AC', () => {
+  const loop = baseLoop();
+  loop.criteria['AC-002'] = { status: 'MANUAL_PENDING', round: 1 };
+  const matrix = { 'AC-002': { verify: { kind: 'manual' } } };
+  const r = attestManual(loop, 'AC-002', true, 'screenshot diff', 'tester', 2, 'now', matrix);
+  assert.equal(r.loop.criteria['AC-002'].provenance.manual, true);
+  assert.equal(r.loop.criteria['AC-002'].provenance.evidence, 'screenshot diff');
 });

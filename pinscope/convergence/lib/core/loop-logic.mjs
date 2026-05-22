@@ -8,6 +8,10 @@ import { VERDICT_TO_STATUS } from './verdict.mjs';
 
 const BREAKER_ROUNDS = 3;
 const BREAKER_WAVE_FAILS = 3;
+// Divergence: OPEN P0/P1 findings growing by more than this between the two
+// most recent recorded rounds means the loop is making things worse — it must
+// halt + escalate, even when no single finding is individually stalled.
+const BREAKER_DIVERGENCE_DELTA = 2;
 
 function clone(obj) {
   return structuredClone(obj);
@@ -77,6 +81,20 @@ export function applyResults(loopIn, results, matrixById, round, now) {
       delete cur.blocked_reason;
       delete cur.unblocks_on;
     }
+    // Provenance ledger (D5.5): every CLOSED criterion records HOW it closed —
+    // an auditable trail of round, verify method, evidence artifact, and wave.
+    // A closure with no provenance is indistinguishable from a fabricated one.
+    if (status === 'CLOSED') {
+      cur.provenance = {
+        closed_round: round,
+        verify: matrixById[id]?.verify ?? null,
+        evidence: r.evidence ?? null,
+        wave: r.wave ?? null,
+        at: now,
+      };
+    } else {
+      delete cur.provenance;
+    }
     loop.criteria[id] = cur;
   }
 
@@ -85,11 +103,19 @@ export function applyResults(loopIn, results, matrixById, round, now) {
   const metric = recomputeMetric(loop.criteria);
   loop.metric = metric;
   loop.round = round;
+  // OPEN P0/P1 findings — the trajectory signal the divergence breaker reads.
+  const p01Open = loop.findings.filter(
+    (f) => f.status === 'OPEN' && (f.severity === 'P0' || f.severity === 'P1'),
+  ).length;
+  // Convergence gate (D1.2): a narrative claim with a real, un-AC'd code gap
+  // (`uncovered_unsatisfied`) blocks CONVERGED exactly as an OPEN AC would.
+  // The loop must never declare victory while a known real failure stands.
+  const narrativeBlocks = (loop.narrative_coverage?.uncovered_unsatisfied ?? 0) > 0;
   // A genuinely-tripped breaker is preserved — only breakerAutoReset clears it.
   loop.loop_status =
     loop.loop_status === 'BREAKER_TRIPPED'
       ? 'BREAKER_TRIPPED'
-      : metric.open === 0
+      : metric.open === 0 && !narrativeBlocks
         ? 'CONVERGED'
         : 'IN_PROGRESS';
 
@@ -98,6 +124,8 @@ export function applyResults(loopIn, results, matrixById, round, now) {
   loop.metric_history.push({
     round,
     closed: metric.closed,
+    open: metric.open,
+    p01_open: p01Open,
     pct: metric.pct,
     ...(priorNote ? { note: priorNote } : {}),
   });
@@ -206,19 +234,64 @@ export function attestManual(loopIn, acId, pass, note, by, round, now, matrixByI
     cur.status = 'CLOSED';
     cur.round = round;
     cur.last_verified_round = round;
+    cur.provenance = {
+      closed_round: round,
+      verify: matrixById[acId]?.verify ?? null,
+      evidence: note ?? null,
+      wave: null,
+      manual: true,
+      at: now,
+    };
     delete cur.blocked_reason;
     delete cur.unblocks_on;
   } else {
     cur.status = 'OPEN';
     cur.round = round;
+    delete cur.provenance;
   }
   loop.criteria[acId] = cur;
   const metric = recomputeMetric(loop.criteria);
   loop.metric = metric;
   if (loop.loop_status !== 'BREAKER_TRIPPED') {
-    loop.loop_status = metric.open === 0 ? 'CONVERGED' : 'IN_PROGRESS';
+    const narrativeBlocks = (loop.narrative_coverage?.uncovered_unsatisfied ?? 0) > 0;
+    loop.loop_status = metric.open === 0 && !narrativeBlocks ? 'CONVERGED' : 'IN_PROGRESS';
   }
   return { ok: true, loop, metric, monotonic: checkMonotonicity(metric, prevClosed) };
+}
+
+/**
+ * Trajectory analysis (D4.2) — is the loop IMPROVING, STAGNANT, or DIVERGING?
+ *
+ * Reads the two most recent `metric_history` rows that carry a `p01_open`
+ * count. DIVERGING = OPEN P0/P1 findings grew by more than
+ * `divergenceDelta` between them: the loop is actively making things worse.
+ * This catches the thrash case the stall breaker misses entirely — findings
+ * churning (new ones open while old ones resolve) so no single finding is
+ * ever "unchanged 3 rounds", yet the failure count climbs every round.
+ *
+ * Returns `{ classification, diverging, delta, samples }`. With fewer than
+ * two p01-bearing rows the verdict is `UNKNOWN` (never diverging) — the
+ * signal needs history to exist.
+ */
+export function trajectoryState(loop, opts) {
+  const o = { divergenceDelta: BREAKER_DIVERGENCE_DELTA, ...(opts || {}) };
+  const hist = (loop.metric_history || [])
+    .filter((m) => m && typeof m.p01_open === 'number')
+    .slice(-2);
+  if (hist.length < 2) {
+    return { classification: 'UNKNOWN', diverging: false, delta: 0, samples: hist };
+  }
+  const [prev, cur] = hist;
+  const delta = cur.p01_open - prev.p01_open;
+  let classification = 'STAGNANT';
+  if (delta < 0) classification = 'IMPROVING';
+  else if (delta > o.divergenceDelta) classification = 'DIVERGING';
+  return {
+    classification,
+    diverging: classification === 'DIVERGING',
+    delta,
+    samples: [prev, cur],
+  };
 }
 
 /** Current circuit-breaker state — a function of present findings, not a latch. */
@@ -228,10 +301,13 @@ export function breakerState(loop, opts) {
     (f) => f.status === 'OPEN' && (f.rounds_unchanged || 0) >= o.breakerRounds,
   );
   const waveFails = loop.current_round?.wave_verify_fails || 0;
+  const trajectory = trajectoryState(loop, opts);
   return {
-    tripped: stalled.length > 0 || waveFails >= o.breakerWaveFails,
+    tripped: stalled.length > 0 || waveFails >= o.breakerWaveFails || trajectory.diverging,
     stalled,
     waveFails,
+    diverging: trajectory.diverging,
+    trajectory,
   };
 }
 
