@@ -14,6 +14,8 @@ afterEach(() => {
   cleanup();
   document.body.innerHTML = '';
   document.documentElement.removeAttribute('data-state-override');
+  // Restore any `globalThis.fetch` stub so it never bleeds into sibling tests.
+  vi.unstubAllGlobals();
 });
 
 describe('TopBar (AC-037)', () => {
@@ -111,7 +113,7 @@ describe('StatePanel stylesheet-scan override rules (R-15-04, §8.8)', () => {
   });
 });
 
-describe('Crosshair disable conditions (R-15-02, §8.3)', () => {
+describe('Crosshair disable conditions — AC-035 (R-15-02, §8.3)', () => {
   it('does not render while in measurement mode', () => {
     const { container } = render(<Crosshair measuring />);
     fireEvent.mouseMove(document.body, { clientX: 200, clientY: 200 });
@@ -219,5 +221,47 @@ describe('CommandBar §8.6 — focus-expand / Tab autocomplete / history (R-15-0
     expect(input.value).toBe('');
     fireEvent.keyDown(input, { key: 'ArrowUp' });
     expect(input.value).toBe('e_2.fg → blue');
+  });
+
+  it('fires the §8.6 fetch POST to the /__pinscope/history endpoint on submit', async () => {
+    // §8.6 — "History persisted to `.pinscope/history.json` (last 1000)";
+    // §10-C — "Operation via CommandBar — … clipboard + history". The browser
+    // runtime stays `fs`-free, so the CommandBar persists each appended entry
+    // through the dev-server `/__pinscope/history` route. This test stubs
+    // `globalThis.fetch` with a spy and asserts the POST actually fires —
+    // closing F-16-08. The `persistHistory` guard `typeof fetch !== 'function'`
+    // gates this call; the assertions below fail if that guard is flipped
+    // (mutant M2 `!==` → `===`) since the spy would never be invoked.
+    const fetchSpy = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response(null, { status: 200 }));
+    vi.stubGlobal('fetch', fetchSpy);
+
+    const { container } = render(<CommandBar />);
+    const input = container.querySelector(
+      '[data-pinscope-command]',
+    ) as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'e_5.bg → red' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    // The persistence POST fired exactly once at the history endpoint.
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchSpy.mock.calls[0] ?? [];
+    expect(url).toBe('/__pinscope/history');
+    expect(init?.method).toBe('POST');
+
+    // The request body parses to a `{ version, entries }` payload, and the
+    // submitted command is present in the persisted entries.
+    const body = JSON.parse(String(init?.body)) as {
+      version: string;
+      entries: { raw_input: string }[];
+    };
+    expect(body.version).toBe('1.0');
+    expect(Array.isArray(body.entries)).toBe(true);
+    expect(body.entries.map((e) => e.raw_input)).toContain('e_5.bg → red');
+
+    // Drain the resolved fetch promise so no unhandled rejection leaks.
+    await Promise.resolve();
+    vi.unstubAllGlobals();
   });
 });

@@ -243,3 +243,158 @@ tests were already authored and proven RED against the mutated source; the fix
 is the correct source. The file's final content equals committed HEAD, so no
 net source change ships from this wave. No other file outside the R-items'
 named set was modified.
+
+---
+
+## Wave 2 — R-16-02
+
+**Executor:** ps-wave-executor · **Round:** PS-R16 · **Wave:** 2 (final)
+**Baseline at wave start:** 297 passed / 0 failed (29 test files) — the
+committed state after Wave 1 (`f9b2186` flow-seam wiring, incl. the live
+`CommandBar` `onSubmit` Flow-C path). The working tree at wave start carried
+the already-authored R-16-02 test strengthening in
+`tests/unit/runtime/controls.test.tsx` (the §8.6 `fetch`-POST persistence test
++ the `AC-035` Crosshair `describe` rename), staged by the Wave-2 start commit
+`31ecdae`. The wave's job: prove the strengthened test catches a broken
+`CommandBar → fetch` seam (RED via transient M2 mutation), restore the source
+(GREEN), verify the AC-035 tag-filter visibility, and confirm no regression.
+**Suite at wave end:** 298 passed / 0 failed (29 test files). (+1 vs 297 = the
+new `controls.test.tsx` CommandBar persistence case.)
+
+---
+
+### R-16-02 — `CommandBar → fetch` POST persistence seam coverage + AC-035 tag visibility — status: `closed`
+
+**Linked finding:** F-16-08 (P2) — the `CommandBar → fetch` POST persistence
+seam is un-asserted (R15 mutation survivor M2: `typeof fetch !== 'function'`
+survives `!==` → `===` because no test confirms the CommandBar fires the
+persistence `fetch` POST). Folds the advisory AC-035 tag-visibility fix.
+
+**Files modified:** `tests/unit/runtime/controls.test.tsx` (test-only —
+`src/runtime/components/CommandBar.tsx` NOT edited, per the R-16-02 untouched
+list).
+
+**Red → green transition** (`tests/unit/runtime/controls.test.tsx` ›
+`fires the §8.6 fetch POST to the /__pinscope/history endpoint on submit`):
+
+RED — the new test run against a transiently mutated `CommandBar.tsx`
+`persistHistory` guard (`typeof fetch !== 'function'` → `=== 'function'`, the
+M2 mutant — flipped so the guard returns early whenever `fetch` IS available,
+disabling all persistence):
+```
+ FAIL  tests/unit/runtime/controls.test.tsx > CommandBar §8.6 — focus-expand / Tab autocomplete / history (R-15-07) > fires the §8.6 fetch POST to the /__pinscope/history endpoint on submit
+AssertionError: expected "spy" to be called 1 times, but got 0 times
+ ❯ tests/unit/runtime/controls.test.tsx:248:22
+    246|
+    247|     // The persistence POST fired exactly once at the history endpoint.
+    248|     expect(fetchSpy).toHaveBeenCalledTimes(1);
+       |                      ^
+ Test Files  1 failed (1)
+      Tests  1 failed | 14 skipped (15)
+```
+The failure is for the right reason: with the seam broken the CommandBar never
+fires the `fetch` POST, so the spy is called 0 times — the test catches it.
+
+GREEN — `src/runtime/components/CommandBar.tsx` restored to its correct
+committed state via `git checkout HEAD -- src/runtime/components/CommandBar.tsx`
+(R-16-02 forbids editing this source; the mutation was transient):
+```
+ ✓ tests/unit/runtime/controls.test.tsx  (15 tests | 14 skipped) 36ms
+ Test Files  1 passed (1)
+      Tests  1 passed | 14 skipped (15)
+```
+
+**Definition of Done — clause-by-clause:**
+
+1. **CommandBar `fetch`-POST test exists** — `verified: true`. `controls.test.tsx`
+   contains the test `fires the §8.6 fetch POST to the /__pinscope/history
+   endpoint on submit` (line 226) inside the CommandBar §8.6 `describe`. It
+   stubs `globalThis.fetch` with a `vi.fn()` spy (`vi.stubGlobal('fetch', …)`),
+   renders `<CommandBar/>`, types `e_5.bg → red`, presses Enter, and asserts:
+   the spy's first argument is `'/__pinscope/history'`, `init.method` is
+   `'POST'`, and the request body `JSON.parse`s to `{ version: '1.0',
+   entries: [...] }` with the submitted command present in `entries`.
+   ```
+   $ grep -n 'fetch' tests/unit/runtime/controls.test.tsx
+   226:  it('fires the §8.6 fetch POST to the /__pinscope/history endpoint on submit', async () => {
+   235:    const fetchSpy = vi
+   238:    vi.stubGlobal('fetch', fetchSpy);
+   248:    expect(fetchSpy).toHaveBeenCalledTimes(1);
+   $ grep -n '__pinscope/history' tests/unit/runtime/controls.test.tsx
+   226:  ...fetch POST to the /__pinscope/history endpoint on submit...
+   250:    expect(url).toBe('/__pinscope/history');
+   ```
+
+2. **Test kills mutant M2** — `verified: true`. With the `CommandBar` guard
+   transiently changed to `if (typeof fetch === 'function') return;` the test
+   FAILED (RED output above — `spy ... called 0 times`); with the real source
+   (`!== 'function'`) it PASSED (GREEN output above). The transient mutation
+   was reverted with `git checkout HEAD -- src/runtime/components/CommandBar.tsx`;
+   `grep -n 'typeof fetch' src/runtime/components/CommandBar.tsx` confirms the
+   restored guard is `if (typeof fetch !== 'function') return;` — byte-identical
+   to committed HEAD, no source change ships.
+
+3. **AC-035 tag visibility** — `verified: true`. The formerly-untagged
+   `describe('Crosshair disable conditions (R-15-02, §8.3)')` is renamed to
+   `describe('Crosshair disable conditions — AC-035 (R-15-02, §8.3)')`.
+   ```
+   $ grep -c 'AC-035' tests/unit/runtime/controls.test.tsx
+   1
+   $ grep -n 'AC-035' tests/unit/runtime/controls.test.tsx
+   116:describe('Crosshair disable conditions — AC-035 (R-15-02, §8.3)', () => {
+   ```
+   The matched `describe` is the Crosshair §8.3 disable-conditions block (its
+   three `it`s: "does not render while in measurement mode", "does not render
+   while the HUD is hidden", "renders normally with no disable props").
+   `vitest --testNamePattern AC-035` now runs exactly those three §8.3 guard
+   tests — before the rename it matched 0:
+   ```
+   $ npx vitest run tests/unit/runtime/controls.test.tsx --testNamePattern AC-035
+    ✓ tests/unit/runtime/controls.test.tsx  (15 tests | 12 skipped) 33ms
+    Test Files  1 passed (1)
+         Tests  3 passed | 12 skipped (15)
+   ```
+   3 passed = the §8.3 disable tests now visible to the matrix filter.
+
+4. **`npm test` exits 0** — `verified: true`. `npx vitest run` →
+   `Test Files 29 passed (29) · Tests 298 passed (298)`.
+
+**Notes:** R-16-02 is a pure test-coverage fix — `CommandBar.tsx`'s
+`persistHistory` POST is already correct (per SPEC §8.6 "History persisted to
+`.pinscope/history.json` (last 1000)" and §10-C "Operation via CommandBar — …
+clipboard + history"); only the network seam was unasserted. The `fetch` spy
+is restored after each test by the file-level `afterEach`
+(`vi.unstubAllGlobals()`, line 17) plus an explicit `vi.unstubAllGlobals()` in
+the test body, so it never bleeds into sibling `controls.test.tsx` tests. The
+benign `[pinscope] history persist failed` happy-dom `stderr` lines in other
+CommandBar tests (which use a real relative-URL `fetch` outside a dev server)
+are pre-existing console noise — `persistHistory`'s `.catch`/`try` surfaces the
+failure to the console rather than swallowing it; the suite still reports all
+files passed.
+
+---
+
+### Wave-2 regression check
+
+```
+$ npx vitest run
+ Test Files  29 passed (29)
+      Tests  298 passed (298)
+```
+No previously-green test turned red. 297 → 298 (+1 = the new CommandBar §8.6
+`fetch`-POST persistence case). The full §8.3 Crosshair disable suite is
+unchanged behaviorally — only its `describe` name now carries the `AC-035`
+token. The `iframe-overlay.test.ts` `NetworkError` / `[pinscope] history
+persist failed` console lines are pre-existing benign happy-dom noise unrelated
+to this wave.
+
+### Scope notes
+
+`src/runtime/components/CommandBar.tsx` was touched only transiently: it was
+mutated in-place (M2 `!==` → `===`) to demonstrate the RED state, then
+immediately restored with `git checkout HEAD -- src/runtime/components/CommandBar.tsx`.
+Its final content is byte-identical to committed HEAD — `grep` confirms the
+guard is `typeof fetch !== 'function'`. No net source change ships from this
+wave; the only file modified for the commit is
+`tests/unit/runtime/controls.test.tsx`, exactly the file R-16-02 names. No
+other file outside the R-item's named set was modified.
