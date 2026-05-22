@@ -39,3 +39,4 @@
 {"at":"2026-05-22T13:20:00.340Z","round":18,"event":"phase:record","note":null}
 {"at":"2026-05-22T13:20:00.406Z","round":18,"event":"phase:breaker","note":null}
 {"at":"2026-05-22T13:20:14.056Z","round":18,"event":"phase:remediate","note":null}
+{"at":"2026-05-22T13:25:42.490Z","round":18,"event":"phase:schedule","note":null}
