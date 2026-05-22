@@ -1,0 +1,60 @@
+{
+  "round": 19,
+  "generated_at": "2026-05-22T13:50:00Z",
+  "findings": [],
+  "investigation_findings": [
+    {
+      "id": "F-19-01",
+      "axis": "7 — Operation protocol / test coverage margin",
+      "confidence": "SUSPECTED",
+      "severity": "P3",
+      "current_state": "src/runtime/components/CommandBar.tsx:49 — isLocalOnlyCommand returns `kind === 'select' || kind === 'measure' || kind === 'snapshot'`. The production code is correct: a `snapshot` (or valid `measure ... to ...`) command typed in the CommandBar correctly returns true and gets its single recall-supporting history entry.",
+      "gap": "No test submits a valid `snapshot`-kind or valid `measure e_N to e_M`-kind command through the CommandBar Enter path. controls.test.tsx submits only `select e_1` (exercises the 1st disjunct) and `measure e_2 e_3` — the latter is invalid grammar (RE_MEASURE requires the `to` keyword) so parseCommand throws and isLocalOnlyCommand returns true via its `catch` branch, never reaching L49's `measure`/`snapshot` disjuncts. The `measure`/`snapshot` disjuncts of L49 are therefore unexercised, leaving the R18 `or-to-and` mutant (`select || (measure && snapshot)`, which reduces to `select`-only) alive. This is a benign coverage margin, NOT a behavioral gap, dead path, or swallowed failure — the shipping code path is correct and matches SPEC §8.6/§9.4. Recorded P3/SUSPECTED so the planner can decide whether to close the margin with a `snapshot foo` + `measure e_2 to e_3` CommandBar Enter test; it does not block convergence.",
+      "re_read": "Empirically reproduced: `sed` injected the R18 `or-to-and` mutant into CommandBar.tsx:49, ran `npx vitest run tests/unit/runtime/controls.test.tsx tests/unit/runtime/history-persist-ownership.test.tsx` -> 17/17 still passed (mutant survives), then restored the file. Confirmed source: `grep -n 'snapshot\\|measure\\|select' tests/unit/runtime/controls.test.tsx` -> only `select e_1` (L184,L237) and `measure e_2 e_3` (L260, invalid grammar) are ever submitted. `grep -n 'RE_MEASURE' src/runtime/parsers/operation-parser.ts` -> `/^measure\\s+(e_\\d+)\\s+to\\s+(e_\\d+)$/i` confirms `measure e_2 e_3` does not parse."
+    }
+  ],
+  "blocked": [
+    { "ac": "AC-023", "severity": "P0", "reason": "verify env 'browser' unavailable (env-capabilities.browser=false) — Playwright ::before content read needs a browser engine; closeable only on a capable CI." },
+    { "ac": "AC-030", "severity": "P1", "reason": "verify env 'browser' unavailable — Playwright InfoPanel hover assertion needs a browser engine." },
+    { "ac": "AC-061", "severity": "P3", "reason": "verify kind 'manual' / env 'browser' — cross-origin iframe needs two real origins + a browser." },
+    { "ac": "AC-063", "severity": "P3", "reason": "verify kind 'manual' / env 'browser' — @media print rendering needs a browser print engine." },
+    { "ac": "AC-082", "severity": "P1", "reason": "verify kind 'manual' / env 'browser' — Playwright integration suite, browser binary unavailable." },
+    { "ac": "AC-083", "severity": "P3", "reason": "verify kind 'manual' / env 'browser' — visual-regression screenshots need a browser." },
+    { "ac": "AC-106", "severity": "P2", "reason": "verify env 'apex-install' unavailable (env-capabilities.apex_install=false) — /apex:health-check needs APEX synced to ~/.claude/." }
+  ],
+  "coverage": {
+    "axes_swept": [
+      "1 — Build pipeline (transformJSX data-pin injection, enabled/filePattern/excludePattern gating, excludeTags + data-pin-ignore honored)",
+      "2 — Pin-ID stability (stableKey file:line:column, getOrAssign monotonic, reconcile soft-delete no-reuse)",
+      "3 — Production-zero (transformIndexHtml stripPins; AC-010/AC-074 build-grep over dist returns 0)",
+      "4 — Runtime isolation (createPortal to document.body under data-pinscope-ui=root, z-index 2147483645-647)",
+      "5 — Inspection layer (useHoveredElement nearest [data-pin] ancestor, InfoPanel sections, PinBadges/VoidBadges)",
+      "6 — Measurement layer (Rulers, Crosshair, GridOverlay 4 modes, MeasurementTool dx/dy/diagonal/gap)",
+      "7 — Operation protocol (parseCommand all SPEC §11 grammar forms + typed OperationParseError; CommandBar Enter path)",
+      "8 — Data schemas (Operation/Snapshot/History types vs §9; 32 TRACKED_STYLES verified; history persist body {version,entries})",
+      "9 — Edge cases (iframe-overlay, shadow-dom, throttle, long-press, rect-math, screenshot utils all present)",
+      "10 — Performance budgets (AC-070/071/072/073/074/075/076 all PASS; html2canvas dynamic import verified)",
+      "11 — Integration surface (Vite plugin functional; package.json exports map; Next/Webpack scoped P4/P5 per §18 I-1)",
+      "12 — Phase DoD (P1-P5 DoD ACs all PASS or BLOCKED-by-env)"
+    ],
+    "sections_reviewed": [
+      "§3 System Architecture", "§4 Technical Stack", "§5 File Structure",
+      "§6 Build-Time Module", "§7 Runtime Module", "§8 Component Specs",
+      "§9 Data Schemas", "§10 Behavioral Flows", "§11 Operation Protocol",
+      "§12 Edge Cases", "§13 Performance", "§14 Testing Strategy",
+      "§15 Deployment", "§16 Phase Plan/DoD", "§17 APEX Integration",
+      "§18 Resolved Inconsistencies", "Appendix A (69 ACs)", "Appendix B (loop contract)"
+    ],
+    "notes": [
+      "withPinScope (next.ts) and PinScopeWebpackPlugin (webpack.ts) carry explicit 'a later round registers the data-pin loader' comments and do not yet inject data-pin. This is NOT an off-matrix finding: §18 resolution I-1 explicitly scopes the Next.js wrapper and Webpack plugin as P4/P5, and the only AC naming them, AC-092, requires solely that they 'are importable and return valid config objects' — which they do (AC-092 PASS). The frozen spec does not require functional Next/Webpack injection at north-star v2.0; the 'later round' comments match the spec's phased intent. Recorded here for round-over-round blind-spot visibility, not as a finding.",
+      "package.json size-limit config has a single entry (runtime dev, 80 KB) and lacks discrete <25 KB gzip / <30 KB P1 sub-budget / prod 0-byte entries that §13's prose table enumerates. Not an off-matrix finding: AC-073 verify is `npm run size` exit 0 and AC-074 verify is the dist build-grep (AC-074 explicitly 'covered by AC-010 at artifact level') — both PASS. §13 is non-normative prose; AC-073/074 are the normative contract and they pass."
+    ]
+  },
+  "summary": {
+    "open": 0,
+    "blocked": 7,
+    "regressions": 0,
+    "confirmed": 0,
+    "suspected": 1
+  }
+}
