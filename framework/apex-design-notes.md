@@ -32,6 +32,7 @@ Reference the research round (R1-R8) for full evidence.
 - AI delegation patterns score <40% comprehension (R5)
 - METR RCT: experienced devs 19% slower with AI, 43-point perception gap (R5)
 - Per-verify-level autonomy: D=always ask, C=cap level 1, A/B=can reach level 2 (R5)
+- Set and forget is the design intent: APEX is deliberately designed to run autonomously for days without constant hand-holding — the v7.1 Auto-Continuity Layer (`session-auto-resume.sh`, `turn-checkpoint.sh`, `memory-watchdog.sh`, `apex-watchdog.ps1`) is the enabling mechanism (IMP-078)
 
 ## Learning & Memory
 - Cross-project learning: 5-22% improvement with quality-controlled memory (R6)
