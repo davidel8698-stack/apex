@@ -1,0 +1,99 @@
+{
+  "round": 20,
+  "generated_at": "2026-05-22T14:30:00Z",
+  "findings": [],
+  "investigation_findings": [
+    {
+      "id": "F-20-01",
+      "axis": "5 — Inspection layer / dormant mechanism (void-element badges)",
+      "confidence": "CONFIRMED",
+      "severity": "P2",
+      "current_state": "src/runtime/components/VoidBadges.tsx implements a complete JS-overlay badge path for void elements (img/input/br/hr/area/embed) and AC-024 PASSES — but only because tests/unit/runtime/overlays.test.tsx:203 renders `<VoidBadges/>` directly. src/runtime/PinScope.tsx's HUD tree (lines 287-306) renders PinBadges, Rulers, Crosshair, GridOverlay, InfoPanel, TopBar, StatePanel, MeasurementTool, CommandBar — VoidBadges is never mounted. In the shipped `<PinScope/>`, void elements get NO badge: PinBadges is the CSS-`::before` path only, and `::before` does not render on void elements.",
+      "gap": "SPEC §7.2 ('JS-overlay path for void elements; a MutationObserver detects new void elements at runtime') and AC-024 ('void elements (img,input,br) receive a JS-overlay badge positioned over them') require the void-badge overlay to be live in the running HUD. The component exists but is dead code from the runtime's perspective — a dormant mechanism. AC-024 PASSES on an isolated unit render, masking the missing end-to-end wiring.",
+      "re_read": "grep -nE '<(PinBadges|VoidBadges|Rulers|Crosshair|GridOverlay|InfoPanel|TopBar|StatePanel|MeasurementTool|CommandBar|FloatingToggle)' src/runtime/PinScope.tsx -> VoidBadges absent from the 10-component HUD tree. grep -rn 'VoidBadges' src/ -> sole hit is its own definition (VoidBadges.tsx:28); no src/ consumer. grep -rn 'VoidBadges' tests/ -> only overlays.test.tsx imports/renders it directly. PinBadges.tsx:11-13 renders solely `<style>{badgeCss}` (CSS ::before path); its own comment line 8-9 says 'The JS-overlay path for void elements (img, input) is deferred (SPEC §7.2, AC-024)' — i.e. self-documented as not wired."
+    },
+    {
+      "id": "F-20-02",
+      "axis": "9 — Edge cases / dormant mechanism (runtime pin assignment for dynamic content)",
+      "confidence": "CONFIRMED",
+      "severity": "P2",
+      "current_state": "src/runtime/managers/RuntimePinObserver.ts implements a complete MutationObserver that assigns `e_r{N}` ids to elements added after build time, and AC-025 PASSES — but only because tests/unit/runtime/edge-cases.test.ts:14/25/33 constructs `new RuntimePinObserver()` and calls `.start()`/`.assign()` directly. src/runtime/PinScope.tsx never imports, constructs, or `.start()`s a RuntimePinObserver; there is no `useEffect` in PinScope.tsx at all. In the shipped `<PinScope/>`, dynamically-rendered DOM nodes are never assigned `e_r{N}` ids and are therefore not inspectable.",
+      "gap": "SPEC §12 ('Dynamic content (MutationObserver assigns `e_r{N}` runtime IDs)') and AC-025 ('a MutationObserver assigns `e_r{N}` IDs to elements added at runtime') require the observer to be running inside the live HUD. The class exists but is never invoked end-to-end — a dormant mechanism. AC-025 PASSES on an isolated unit construction, masking the missing runtime wiring.",
+      "re_read": "grep -rn 'RuntimePinObserver' src/ -> sole hit is its own definition (RuntimePinObserver.ts:10); no src/ consumer. grep -n 'useEffect|RuntimePinObserver|.start(' src/runtime/PinScope.tsx -> no matches (PinScope.tsx has zero useEffect and no observer). grep -rn 'RuntimePinObserver' tests/ -> only edge-cases.test.ts constructs it directly."
+    },
+    {
+      "id": "F-20-03",
+      "axis": "7 — Operation protocol / dead shortcut ids (Shift+P toggle-pins, Shift+C crosshair)",
+      "confidence": "CONFIRMED",
+      "severity": "P2",
+      "current_state": "src/runtime/hooks/useKeyboardShortcuts.ts:14,17,35 defines the shortcut ids `toggle-pins` (Shift+P) and `crosshair` (Shift+C) in the SHORTCUTS table. src/runtime/PinScope.tsx:258-273 wires handlers for only 9 of the 13 ids: toggle-hud, grid-cycle, grid-0..4, measure, snapshot. `command` and `escape` are independently serviced by CommandBar.tsx (Cmd+K/'/'/Esc). But `toggle-pins` and `crosshair` have NO handler anywhere: PinBadges.tsx exposes no visibility prop and Crosshair.tsx (lines 7-12) accepts only `measuring`/`hudHidden` props — no enable/disable toggle. Pressing Shift+P or Shift+C in the running HUD does nothing.",
+      "gap": "SPEC §8.11 names the full v1.0 key table explicitly including `Shift+P` and `Shift+C`. Two of the table's ids are dead: the production HUD has no code path to hide/show pin badges (Shift+P) or to toggle the crosshair on/off (Shift+C). AC-043 ('>=95% of the §8.11 shortcuts perform their action') PASSES only because shortcuts.test.tsx:43-58 supplies synthetic test handlers for ALL 13 ids and asserts dispatch of those fakes — it never exercises the real PinScope.tsx wiring, so the 2 unwired ids are invisible to it. Real-HUD functional ratio is 11/13 = 0.846 (counting Cmd+K/Esc via CommandBar), below the §16 P2-DoD '>=95% shortcuts functional' threshold.",
+      "re_read": "grep -rn 'toggle-pins|togglePins|hidePins|pinsVisible' src/ -> only the type-union member and the table entry in useKeyboardShortcuts.ts; zero consumer. grep -rn \"'crosshair'|crosshairEnabled|showCrosshair\" src/ -> only useKeyboardShortcuts.ts:17. grep -n 'Crosshair' src/runtime/PinScope.tsx -> line 291 `<Crosshair measuring={measuring} hudHidden={!hudVisible} />` (no toggle prop). PinBadges.tsx full read -> component takes no props, no visibility control. PinScope.tsx:258-273 useKeyboardShortcuts handler object lists exactly 9 ids, omitting command/escape/toggle-pins/crosshair."
+    },
+    {
+      "id": "F-20-04",
+      "axis": "8 — Data schemas / 10-E flow (annotation request_type never produced)",
+      "confidence": "SUSPECTED",
+      "severity": "P3",
+      "current_state": "SPEC §9.3 lists `request_type: 'operation'|'annotation'|'diagnostic'` as the three valid values, and §10 flow E ('Send to Claude (annotation)') describes a select -> modal (screenshot + context + note) -> Operation with `request_type:'annotation'` -> clipboard flow. src/runtime/parsers/operation-builder.ts produces only `'operation'` (line 52) and `'diagnostic'` (line 93) — `'annotation'` is never emitted by any code path. src/runtime/utils/screenshot.ts (captureScreenshot, html2canvas dynamic import) is fully implemented but has zero callers in src/runtime/ (grep confirms only its own definition); no annotation/screenshot modal component exists.",
+      "gap": "The §10-E annotation flow and the `request_type:'annotation'` arm of the §9.3 schema have no implementation: no screenshot-modal component, no code path that builds an annotation Operation. captureScreenshot is a working but uncalled unit. This is recorded P3/SUSPECTED, not P2: §10-E is non-normative prose, AC-076 (the only AC touching screenshot) verifies solely the html2canvas *dynamic-import* property — which holds (AC-076 PASS) — and no AC requires emitting an `annotation` request_type or a screenshot modal. The frozen Appendix-A contract does not name this flow; recorded so the planner can decide whether the gap warrants an AC or is genuinely out of v2.0 scope.",
+      "re_read": "grep -rn 'annotation|request_type|captureScreenshot|ScreenshotModal' src/runtime/ -> request_type set to 'operation' (operation-builder.ts:52) and 'diagnostic' (:93) only; `operation.annotation` assigned the query topic (:94) but request_type 'annotation' never set; captureScreenshot defined (screenshot.ts:14) with no src/ caller. grep -rn 'screenshot|html2canvas' src/runtime/ -> sole hit screenshot.ts itself. No file matching *Modal* or *Annotation* under src/runtime/components/."
+    },
+    {
+      "id": "F-20-05",
+      "axis": "7 — Operation protocol / test coverage margin (carried from F-19-01)",
+      "confidence": "SUSPECTED",
+      "severity": "P3",
+      "current_state": "src/runtime/components/CommandBar.tsx:46-53 isLocalOnlyCommand returns `kind === 'select' || kind === 'measure' || kind === 'snapshot'`. The production code is correct: a valid `snapshot` or `measure e_N to e_M` typed in the CommandBar correctly returns true and gets its single recall-supporting history entry. controls.test.tsx still submits only `select e_1` (1st disjunct) and the invalid-grammar `measure e_2 e_3` (caught -> returns true via the `catch` branch, never reaching L49's measure/snapshot disjuncts).",
+      "gap": "No test submits a VALID `snapshot`-kind or VALID `measure e_N to e_M`-kind command through the CommandBar Enter path, so the `measure`/`snapshot` disjuncts of L49 remain unexercised — the R18 `or-to-and` mutant on that line survives. This is a benign coverage margin carried from F-19-01, NOT a behavioral gap, dead path, or swallowed failure — the shipping code path matches SPEC §8.6/§9.4. Recorded P3/SUSPECTED for round-over-round visibility; it does not block convergence. The planner may close it with a `snapshot foo` + `measure e_2 to e_3` CommandBar Enter test.",
+      "re_read": "grep -n 'RE_MEASURE' src/runtime/parsers/operation-parser.ts -> `/^measure\\s+(e_\\d+)\\s+to\\s+(e_\\d+)$/i` (line 45) confirms `measure e_2 e_3` does not parse (no `to`). Read CommandBar.tsx:46-53 -> isLocalOnlyCommand body unchanged from R19; the three-way disjunction is correct. Carried verbatim from audit-findings-R19.json F-19-01 (no status change across R19->R20)."
+    }
+  ],
+  "blocked": [
+    { "ac": "AC-023", "severity": "P0", "reason": "verify env 'browser' unavailable (env-capabilities.browser=false) — Playwright ::before content read needs a browser engine; closeable only on a capable CI." },
+    { "ac": "AC-030", "severity": "P1", "reason": "verify env 'browser' unavailable — Playwright InfoPanel hover assertion needs a browser engine." },
+    { "ac": "AC-061", "severity": "P3", "reason": "verify kind 'manual' / env 'browser' — cross-origin iframe needs two real origins + a browser." },
+    { "ac": "AC-063", "severity": "P3", "reason": "verify kind 'manual' / env 'browser' — @media print rendering needs a browser print engine." },
+    { "ac": "AC-082", "severity": "P1", "reason": "verify kind 'manual' / env 'browser' — Playwright integration suite, browser binary unavailable." },
+    { "ac": "AC-083", "severity": "P3", "reason": "verify kind 'manual' / env 'browser' — visual-regression screenshots need a browser." },
+    { "ac": "AC-106", "severity": "P2", "reason": "verify env 'apex-install' unavailable (env-capabilities.apex_install=false) — /apex:health-check needs APEX synced to ~/.claude/." }
+  ],
+  "coverage": {
+    "axes_swept": [
+      "1 — Build pipeline (transformJSX data-pin injection, enabled/filePattern/excludePattern gating, excludeTags + data-pin-ignore honored; plugin.test + ast-transformer.test 66 cases)",
+      "2 — Pin-ID stability (stableKey file:line:column, getOrAssign monotonic + no-reuse, reconcile soft-delete; pin-map.ts re-read)",
+      "3 — Production-zero (transformIndexHtml stripPins; rebuilt examples/vite-react/dist -> grep data-pin|PinScope|pinscope = 0 in both index.html and the emitted JS chunk; AC-010/AC-074 confirmed)",
+      "4 — Runtime isolation (createPortal to document.body under data-pinscope-ui=root; z-index constants; PinScope.tsx re-read)",
+      "5 — Inspection layer (useHoveredElement, InfoPanel, PinBadges CSS path) — DEFICIT FOUND: VoidBadges JS-overlay path never mounted in the HUD (F-20-01)",
+      "6 — Measurement layer (Rulers, Crosshair, GridOverlay 4 modes + cycle order, MeasurementTool) — Crosshair has no on/off toggle (contributes to F-20-03)",
+      "7 — Operation protocol (parseCommand all §11 grammar forms + typed OperationParseError; CommandBar Enter path) — DEFICIT FOUND: Shift+P/Shift+C shortcut ids dead (F-20-03); coverage margin carried (F-20-05)",
+      "8 — Data schemas (Operation/Snapshot/History vs §9; 32 TRACKED_STYLES; buildOperation request_type) — annotation request_type / §10-E flow unimplemented (F-20-04)",
+      "9 — Edge cases (shadow-dom, iframe-overlay, throttle, long-press, rect-math utils present) — DEFICIT FOUND: RuntimePinObserver never started in the HUD (F-20-02)",
+      "10 — Performance budgets (npm run size exit 0, 8.3 KB << 80 KB; AC-070..076 all PASS; html2canvas dynamic import verified in screenshot.ts)",
+      "11 — Integration surface (Vite plugin functional; package.json exports map .|/vite|/runtime|/next|/webpack; Next/Webpack scoped P4/P5 per §18 I-1)",
+      "12 — Phase DoD (P1-P5 DoD ACs PASS or BLOCKED-by-env; build+typecheck+303 unit tests green)"
+    ],
+    "sections_reviewed": [
+      "§3 System Architecture", "§4 Technical Stack", "§5 File Structure",
+      "§6 Build-Time Module", "§7 Runtime Module", "§8 Component Specs",
+      "§9 Data Schemas", "§10 Behavioral Flows", "§11 Operation Protocol",
+      "§12 Edge Cases", "§13 Performance", "§14 Testing Strategy",
+      "§15 Deployment", "§16 Phase Plan/DoD", "§17 APEX Integration",
+      "§18 Resolved Inconsistencies", "Appendix A (69 ACs)", "Appendix B (loop contract)"
+    ],
+    "notes": [
+      "STEP 1 (re-confirm): ac-results-R20.json reports 62 PASS / 7 UNAVAILABLE / 0 FAIL. No machine FAIL to re-confirm. Independently re-ran the env-capable verify checks: npm test -> 30 files / 303 tests pass; npm run typecheck -> exit 0; npm run build -> exit 0; npm run size -> 8.3 KB <= 80 KB exit 0; examples/vite-react production build rebuilt and grepped -> 0 pinscope tokens in dist. All machine PASS verdicts independently reproduced.",
+      "STEP 4 (regression scan): every AC the loop previously recorded CLOSED still shows PASS in ac-results-R20.json. Diffed against ac-results-R19.json verdict-for-verdict — identical (62 PASS, same 7 UNAVAILABLE). Zero regressions.",
+      "F-20-01/02/03 are off-matrix STEP-5 findings: the named mechanisms (VoidBadges, RuntimePinObserver, Shift+P/Shift+C shortcuts) all PASS their ACs because the AC verify methods exercise the unit in isolation (direct component render / direct class construction / synthetic-handler dispatch) rather than the assembled <PinScope/> HUD. This is the exact false-convergence pattern the auditor role warns of: a converged matrix hiding hollow end-to-end wiring. The components are well-implemented; only their integration into the runtime tree is missing.",
+      "F-20-03 severity reasoning: §16 P2-DoD requires '>=95% shortcuts functional'. The real HUD wires 11/13 ids (9 in PinScope.tsx + Cmd+K/Esc in CommandBar) = 0.846 < 0.95. AC-043 PASSES only via synthetic handlers, so this DoD shortfall is matrix-invisible — classified P2 (a §16 Phase-DoD threshold is not met in the shipped HUD).",
+      "Next.js withPinScope and PinScopeWebpackPlugin still carry 'a later round registers the data-pin loader' comments and do not inject data-pin. NOT a finding: §18 I-1 explicitly scopes them P4/P5 and AC-092 requires only that they 'are importable and return valid config objects' (AC-092 PASS). Recorded for blind-spot continuity, consistent with R19."
+    ]
+  },
+  "summary": {
+    "open": 0,
+    "blocked": 7,
+    "regressions": 0,
+    "confirmed": 3,
+    "suspected": 2
+  }
+}
