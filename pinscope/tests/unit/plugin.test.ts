@@ -73,12 +73,17 @@ interface FakeServer {
   config: { root: string };
 }
 
-/** Drive a POST request body through a middleware and await the response. */
+/**
+ * Drive a POST request body through a middleware and await the response.
+ * The resolved object carries the HTTP response **body** string alongside
+ * `status` so route tests can assert the `{ ok }` success flag, not only the
+ * status code.
+ */
 function postThrough(
   mw: FakeMiddleware,
   url: string,
   body: string,
-): Promise<{ status: number }> {
+): Promise<{ status: number; body: string }> {
   return new Promise((resolve, reject) => {
     const req = new EventEmitter() as EventEmitter & {
       url: string;
@@ -90,9 +95,9 @@ function postThrough(
     const res = {
       statusCode: 200,
       setHeader(): void {},
-      end(): void {
+      end(responseBody?: string): void {
         status = res.statusCode;
-        resolve({ status });
+        resolve({ status, body: responseBody ?? '' });
       },
     };
     mw(req, res, () => reject(new Error('next() called — route not matched')));
@@ -141,10 +146,62 @@ describe('pinscope() snapshot dev-server route (R-15-06, §10-D)', () => {
     );
     expect(result.status).toBe(200);
 
+    // F-16-05 — the HTTP response body, not only the status, carries the
+    // `{ ok: true }` success flag (kills mutant M3: `ok: true → false`).
+    const response = JSON.parse(result.body) as { ok: boolean; id: string };
+    expect(response.ok).toBe(true);
+    expect(response.id).toBe('s_1717000000000');
+
     const file = path.join(root, '.pinscope', 'snapshots', 's_1717000000000.json');
     expect(fs.existsSync(file)).toBe(true);
     const written = JSON.parse(fs.readFileSync(file, 'utf8')) as { id: string };
     expect(written.id).toBe('s_1717000000000');
+  });
+
+  it('creates the snapshot directory chain when the project root is nested', async () => {
+    // F-16-07 — the project root is a multi-level path that is NOT created on
+    // disk before the POST, so `.pinscope/snapshots/` must be built by the
+    // handler's `mkdirSync(dir, { recursive: true })`. Kills mutant M4
+    // (`recursive: true → false`): with `recursive: false` the `mkdirSync`
+    // throws `ENOENT`, the route answers 400 and no file is written.
+    const base = fs.mkdtempSync(path.join(os.tmpdir(), 'pinscope-snap-nested-'));
+    tmpRoots.push(base);
+    const root = path.join(base, 'workspace', 'apps', 'web');
+    // Deliberately uncreated — only `base` exists on disk.
+    expect(fs.existsSync(root)).toBe(false);
+
+    const p = pinscope({ enabled: true });
+    const configureServer = p.configureServer;
+    expect(configureServer).toBeDefined();
+
+    let captured: FakeMiddleware | null = null;
+    const server: FakeServer = {
+      config: { root },
+      middlewares: {
+        use(fn): void {
+          captured = fn;
+        },
+      },
+    };
+    const hook =
+      typeof configureServer === 'function'
+        ? configureServer
+        : configureServer?.handler;
+    await (hook as (s: FakeServer) => void)(server);
+    expect(captured).not.toBeNull();
+
+    const snapshot = { version: '1.0', id: 's_1717000099999', elements: {} };
+    const result = await postThrough(
+      captured as FakeMiddleware,
+      '/__pinscope/snapshot',
+      JSON.stringify(snapshot),
+    );
+    expect(result.status).toBe(200);
+    const response = JSON.parse(result.body) as { ok: boolean };
+    expect(response.ok).toBe(true);
+
+    const file = path.join(root, '.pinscope', 'snapshots', 's_1717000099999.json');
+    expect(fs.existsSync(file)).toBe(true);
   });
 });
 
@@ -193,6 +250,12 @@ describe('pinscope() history dev-server route (R-15-07, §8.6)', () => {
     const result = await postThrough(mw, '/__pinscope/history', body);
     expect(result.status).toBe(200);
 
+    // F-16-06 — the HTTP response body carries the `{ ok: true, count }`
+    // success flag (kills mutant M5: `ok: true → false`).
+    const response = JSON.parse(result.body) as { ok: boolean; count: number };
+    expect(response.ok).toBe(true);
+    expect(response.count).toBe(1);
+
     const file = path.join(root, '.pinscope', 'history.json');
     expect(fs.existsSync(file)).toBe(true);
     const written = JSON.parse(fs.readFileSync(file, 'utf8')) as {
@@ -219,6 +282,12 @@ describe('pinscope() history dev-server route (R-15-07, §8.6)', () => {
       JSON.stringify({ version: '1.0', entries }),
     );
     expect(result.status).toBe(200);
+
+    // F-16-06 — the response body's `{ ok, count }` reflects the capped count
+    // (kills mutant M5: `ok: true → false`).
+    const response = JSON.parse(result.body) as { ok: boolean; count: number };
+    expect(response.ok).toBe(true);
+    expect(response.count).toBe(1000);
 
     const file = path.join(root, '.pinscope', 'history.json');
     const written = JSON.parse(fs.readFileSync(file, 'utf8')) as {

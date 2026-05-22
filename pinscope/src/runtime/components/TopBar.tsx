@@ -8,6 +8,8 @@ export interface TopBarProps {
   viewport: { width: number; height: number };
   gridMode: GridMode;
   stateOverride: string | null;
+  /** §8.5 snapshot button — triggers §10 flow D (Shift+S equivalent). */
+  onSnapshot?: () => void;
 }
 
 function countPins(): number {
@@ -19,6 +21,7 @@ export function TopBar({
   viewport,
   gridMode,
   stateOverride,
+  onSnapshot,
 }: TopBarProps): ReactElement {
   const style: CSSProperties = {
     position: 'fixed',
@@ -43,6 +46,22 @@ export function TopBar({
       <span data-field="grid">grid: {gridMode}</span>
       <span data-field="state">state: {stateOverride ?? 'none'}</span>
       <span data-field="pins">{countPins()} pins</span>
+      <button
+        type="button"
+        data-pinscope-snapshot-btn=""
+        onClick={onSnapshot}
+        style={{
+          background: '#1e293b',
+          color: 'inherit',
+          font: 'inherit',
+          border: '1px solid #334155',
+          borderRadius: 4,
+          padding: '2px 8px',
+          cursor: 'pointer',
+        }}
+      >
+        snapshot
+      </button>
     </div>
   );
 }
