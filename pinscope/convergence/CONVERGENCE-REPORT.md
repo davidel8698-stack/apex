@@ -1,6 +1,6 @@
 # PinScope — Convergence Report
 
-> Terminal report for the PinScope self-healing loop (`PS-R1` … `PS-R13`).
+> Terminal report for the PinScope self-healing loop (`PS-R1` … `PS-R14`).
 > **North-Star:** `pinscope/SPEC.md` v2.0.0 (FROZEN 2026-05-21).
 > **Status:** **CONVERGED** — loop terminal condition reached and
 > independently re-confirmed.
@@ -13,7 +13,7 @@
 | **CLOSED** (verified) | **62 (90%)** |
 | **BLOCKED** (environment-limited) | **7** |
 | **OPEN** (unresolved gap) | **0** |
-| Rounds run | 13 (`PS-R1` … `PS-R13`) |
+| Rounds run | 14 (`PS-R1` … `PS-R14`) |
 | Automated tests | **257 passing**, 0 failing |
 | Strict typecheck | `tsc --noEmit` clean |
 | Dev bundle | 1.21 kB (budget 80 kB) |
@@ -108,9 +108,41 @@ PS-R10 ██████████████████████░░ 
 PS-R11 ██████████████████████░░ 90%   confirmation re-audit — NO_FINDINGS
 PS-R12 ██████████████████████░░ 90%   re-confirmation re-audit — NO_FINDINGS
 PS-R13 ██████████████████████░░ 90%   re-confirmation re-audit — NO_FINDINGS
+PS-R14 ██████████████████████░░ 90%   first narrative deep-scan — NO_FINDINGS
 ```
 
-The PinScope north-star spec is realised. The loop is complete — and rounds 10
-through 13 prove the self-check works: round 10 found that round 9's
-"converged" was not fully honest, fixed it, and rounds 11 through 13 each
-independently re-confirmed the result with a fresh, context-isolated auditor.
+The PinScope acceptance-criteria contract is realised. The loop is complete —
+and rounds 10 through 14 prove the self-check works: round 10 found that round
+9's "converged" was not fully honest and fixed it; rounds 11 through 13 each
+independently re-confirmed the result with a fresh, context-isolated auditor;
+and round 14's new narrative deep-scan (§6) extends that honesty to the SPEC
+prose — the AC ledger is complete, but 18 narrative behaviors are flagged as
+candidate ACs for review.
+
+## 6. Narrative coverage (PS-R14)
+
+Round 14 introduced the **narrative deep-scan** — a secondary auditor that
+compares the whole SPEC narrative (§1–§17) against the code, independent of the
+69-AC contract. It is a *secondary signal*: it never changes an AC status and
+never blocks convergence, which `metric.open === 0` alone decides.
+
+The first scan found **34 / 52** normative narrative claims are AC-covered. The
+other 18 are normative §1–§17 behavior that Appendix A never reduced to an AC —
+the loop is structurally blind to them. They surface as **18 candidate ACs**;
+**8** are `uncovered_unsatisfied` — a real code gap behind an un-contracted
+behavior:
+
+- **§7.1** — `<PinScope/>` mounts only PinBadges + InfoPanel; the HUD tree also
+  mandates Rulers, Crosshair, GridOverlay, TopBar, CommandBar (all built, none
+  root-rendered), the `defaultGridMode` / `shortcutsEnabled` props, and a
+  HUD-hidden `FloatingToggle` branch.
+- **§8.6 / §8.8** — CommandBar focus-expand to 120 px, Tab autocomplete, and
+  StatePanel auto-generated `:hover/:focus/:active` override rules.
+- **§10-D** — the `/__pinscope/snapshot` dev-server endpoint.
+- **§12** — `!important` hardening against hostile host CSS.
+
+A further **5 strengthen-AC proposals** flag ACs whose `verify:` under-checks
+its narrative claim. None of this reopens convergence — per the loop contract,
+convergence with open candidate ACs is still valid convergence. Adoption is a
+deliberate, **user-approved** step: bump `SPEC.md` to v2.1.0, add the rows to
+Appendix A, regenerate `ac-matrix.json`. Full detail: `narrative-scan-R14.md`.

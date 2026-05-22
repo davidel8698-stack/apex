@@ -1,0 +1,146 @@
+{
+  "round": 14,
+  "generated_at": "2026-05-21T23:10:00Z",
+  "findings": [],
+  "blocked": [
+    {
+      "ac": "AC-023",
+      "phase": "P1",
+      "severity": "P0",
+      "blocked_reason": "browser",
+      "detail": "Playwright reads CSS ::before content for 5 pins; needs a browser engine. env-capabilities.json browser=false.",
+      "unblocks_on": "browser-capable CI"
+    },
+    {
+      "ac": "AC-030",
+      "phase": "P1",
+      "severity": "P1",
+      "blocked_reason": "browser",
+      "detail": "Playwright hover asserts InfoPanel width/height/padding/font; needs a browser engine. env-capabilities.json browser=false.",
+      "unblocks_on": "browser-capable CI"
+    },
+    {
+      "ac": "AC-061",
+      "phase": "P4",
+      "severity": "P3",
+      "blocked_reason": "browser",
+      "detail": "Cross-origin iframe outline+label; verify method is manual, needs two real origins / browser. env-capabilities.json browser=false.",
+      "unblocks_on": "browser-capable CI"
+    },
+    {
+      "ac": "AC-063",
+      "phase": "P4",
+      "severity": "P3",
+      "blocked_reason": "browser",
+      "detail": "@media print HUD-hide screenshot diff; needs a browser print engine. env-capabilities.json browser=false.",
+      "unblocks_on": "browser-capable CI"
+    },
+    {
+      "ac": "AC-082",
+      "phase": "P2",
+      "severity": "P1",
+      "blocked_reason": "browser",
+      "detail": "Playwright integration suite over examples/vite-react; browser binary unavailable. env-capabilities.json browser=false.",
+      "unblocks_on": "browser-capable CI"
+    },
+    {
+      "ac": "AC-083",
+      "phase": "P4",
+      "severity": "P3",
+      "blocked_reason": "browser",
+      "detail": "Visual-regression screenshot matrix; needs a browser. env-capabilities.json browser=false.",
+      "unblocks_on": "browser-capable CI"
+    },
+    {
+      "ac": "AC-106",
+      "phase": "P5",
+      "severity": "P2",
+      "blocked_reason": "apex-install",
+      "detail": "/apex:health-check needs APEX synced to ~/.claude/. env-capabilities.json apex_install=false.",
+      "unblocks_on": "APEX-installed CI"
+    }
+  ],
+  "summary": {
+    "open": 0,
+    "blocked": 7,
+    "regressions": 0
+  },
+  "regression_scan": {
+    "previously_closed": 62,
+    "still_pass_R14": 62,
+    "regressed": [],
+    "method": "Cross-checked every loop.json criteria entry with status=CLOSED against ac-results-R14.json; all 62 verdicts are PASS."
+  },
+  "ap006_spot_checks": [
+    {
+      "ac": "AC-001",
+      "kind": "vitest-tag",
+      "re_read": "Read pinscope/src/plugin/index.ts",
+      "result": "CONFIRMED",
+      "note": "pinscope() returns a Vite plugin with name 'vite-plugin-pinscope', enforce 'pre', and buildStart/transform/buildEnd/transformIndexHtml hooks."
+    },
+    {
+      "ac": "AC-005",
+      "kind": "vitest-tag",
+      "re_read": "Read pinscope/src/plugin/stable-id-generator.ts + pin-map.ts; grep -n 'AC-005' tests/unit/ast-transformer.test.ts",
+      "result": "CONFIRMED",
+      "note": "stableKey builds file:line:column; PinMap.getOrAssign returns the existing id for a known key, so two transforms of identical source yield identical ids. Test 'assigns identical ids across two runs of the same source (AC-005)' present."
+    },
+    {
+      "ac": "AC-008",
+      "kind": "vitest-tag",
+      "re_read": "Read pinscope/src/plugin/pin-map.ts",
+      "result": "CONFIRMED",
+      "note": "PinMap.reconcile marks entries whose key was not seen this build with deleted:true; the e_N id is retained, never reused (getOrAssign uses next_id++ only for new keys)."
+    },
+    {
+      "ac": "AC-009",
+      "kind": "vitest-tag",
+      "re_read": "Read pinscope/src/plugin/production-stripper.ts + index.ts transformIndexHtml hook",
+      "result": "CONFIRMED",
+      "note": "stripPins removes every /\\sdata-pin=\"[^\"]*\"/g; transformIndexHtml returns stripPins(html) when the plugin is disabled."
+    },
+    {
+      "ac": "AC-010",
+      "kind": "build-grep",
+      "re_read": "grep -rEl 'data-pin|PinScope|pinscope' pinscope/examples/vite-react/dist",
+      "result": "CONFIRMED",
+      "note": "dist/ (index.html + assets/) contains 0 files matching the pattern; production build is clean."
+    },
+    {
+      "ac": "AC-050",
+      "kind": "vitest-tag",
+      "re_read": "Read pinscope/src/runtime/parsers/operation-parser.ts; grep describe/it in tests/unit/operation-parser.test.ts",
+      "result": "CONFIRMED",
+      "note": "parseCommand handles all five SPEC §11 target forms and every operator (set/increment/decrement/add-class/remove-class), throwing typed OperationParseError on malformed input; suite drives >=30 grammar cases (machine: 40 tests)."
+    },
+    {
+      "ac": "AC-073",
+      "kind": "command",
+      "re_read": "Read package.json size-limit config",
+      "result": "CONFIRMED",
+      "note": "size-limit has a 'runtime (dev)' entry at the 80 KB SPEC §13 budget; npm run size verified exit 0."
+    },
+    {
+      "ac": "AC-100",
+      "kind": "grep",
+      "re_read": "grep -nE '^## (Conventions|Anti-Patterns|Common Patterns|Testing|Common Gotchas)' framework/apex-skills/pinscope.md",
+      "result": "CONFIRMED",
+      "note": "All five apex-skill headings present in framework/apex-skills/pinscope.md."
+    },
+    {
+      "ac": "AC-102",
+      "kind": "grep",
+      "re_read": "grep -n 'PINSCOPE INSTRUMENTATION' framework/commands/apex/ui-phase.md",
+      "result": "CONFIRMED",
+      "note": "ui-phase.md contains a '## PINSCOPE INSTRUMENTATION' scaffold step."
+    },
+    {
+      "ac": "AC-104",
+      "kind": "grep",
+      "re_read": "grep -l 'pinscope' framework/agents/architect.md framework/agents/specialist/frontend.md",
+      "result": "CONFIRMED",
+      "note": "Both architect.md and frontend.md reference pinscope in skill-selection logic."
+    }
+  ]
+}
