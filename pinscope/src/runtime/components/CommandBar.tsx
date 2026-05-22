@@ -8,6 +8,7 @@ import type {
 } from 'react';
 import { Z_SELECTED } from '../constants.js';
 import { getSuggestions } from '../parsers/autocomplete.js';
+import { parseCommand } from '../parsers/operation-parser.js';
 import { SHORTCUT_PROPERTIES } from '../parsers/property-shortcuts.js';
 import {
   HistoryManager,
@@ -15,15 +16,13 @@ import {
   type HistoryEntry,
 } from '../managers/HistoryManager.js';
 
-/** Dev-server route the command history is persisted through (§8.6). */
-const HISTORY_ENDPOINT = '/__pinscope/history';
-
 export interface CommandBarProps {
   onSubmit?: (command: string) => void;
   /**
    * Command-history backing manager (§8.6). Injectable for tests; defaults to
-   * an in-memory store. The CommandBar additionally persists each append to
-   * `.pinscope/history.json` via the dev-server endpoint.
+   * an in-memory store. R-18-01 — persistence is owned by the
+   * `HistoryManager`'s persist hook (wired in `PinScope.tsx`), not the
+   * CommandBar; every append persists through that one site.
    */
   history?: HistoryManager;
 }
@@ -36,26 +35,20 @@ function readPins(): string[] {
 }
 
 /**
- * POST the full history list to the dev-server so it lands in
- * `.pinscope/history.json` (§8.6). The browser runtime stays `fs`-free; the
- * file write happens server-side. A failed persist is surfaced on the console
- * rather than silently swallowed — the in-memory history is unaffected.
+ * R-18-01 — true for command kinds that never reach `ClaudeBridge` and so
+ * produce no `Operation` (`select`/`measure`/`snapshot`). The CommandBar
+ * appends a single recall-supporting entry only for these; `operation`/
+ * `class`/`query` submits get their one real `parsed: <Operation>` history
+ * row from `ClaudeBridge.send` instead — no `parsed: null` placeholder. A
+ * command that fails to parse is treated as local-only so its `raw_input`
+ * still recalls.
  */
-function persistHistory(entries: readonly HistoryEntry[]): void {
-  if (typeof fetch !== 'function') return;
+function isLocalOnlyCommand(command: string): boolean {
   try {
-    void fetch(HISTORY_ENDPOINT, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ version: '1.0', entries }),
-    }).catch((cause: unknown) => {
-      // Dev-only endpoint — log instead of failing the command flow.
-      console.warn('[pinscope] history persist failed', cause);
-    });
-  } catch (cause) {
-    // Some environments throw synchronously (e.g. an unsupported relative
-    // URL outside a dev server) — never let it break the command flow.
-    console.warn('[pinscope] history persist failed', cause);
+    const kind = parseCommand(command).kind;
+    return kind === 'select' || kind === 'measure' || kind === 'snapshot';
+  } catch {
+    return true;
   }
 }
 
@@ -111,14 +104,21 @@ export function CommandBar({
     } else if (e.key === 'Enter') {
       const command = value.trim();
       if (command) {
-        const entry: HistoryEntry = {
-          timestamp: new Date().toISOString(),
-          raw_input: command,
-          parsed: null,
-          result: 'sent',
-        };
-        history.append(entry);
-        persistHistory(history.list());
+        // R-18-01 — `operation`/`class`/`query` submits get their single real
+        // `parsed: <Operation>` history row from `ClaudeBridge.send` (which
+        // persists through the manager's persist hook). The CommandBar appends
+        // only for local-only kinds (`select`/`measure`/`snapshot`), which
+        // never reach `ClaudeBridge` — that one entry keeps ArrowUp/ArrowDown
+        // recall working for them without creating a duplicate persisted row.
+        if (isLocalOnlyCommand(command)) {
+          const entry: HistoryEntry = {
+            timestamp: new Date().toISOString(),
+            raw_input: command,
+            parsed: null,
+            result: 'applied',
+          };
+          history.append(entry);
+        }
         cursor.current = -1;
         onSubmit?.(command);
         setValue('');

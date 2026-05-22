@@ -27,6 +27,7 @@ import { ClaudeBridge } from './managers/ClaudeBridge.js';
 import { SnapshotManager } from './managers/SnapshotManager.js';
 import { EndpointSnapshotStore } from './managers/EndpointSnapshotStore.js';
 import { HistoryManager, MemoryHistoryStore } from './managers/HistoryManager.js';
+import type { HistoryData } from './managers/HistoryManager.js';
 
 export interface PinScopeProps {
   /** Runtime kill-switch. */
@@ -111,6 +112,36 @@ function buildContextFor(pin: string): BuildContext | null {
   };
 }
 
+/** Dev-server route the command history is persisted through (§8.6). */
+const HISTORY_ENDPOINT = '/__pinscope/history';
+
+/**
+ * R-18-01 — the single command-history persist owner. POSTs the full capped
+ * history to the dev-server route so it lands in `.pinscope/history.json`
+ * (§8.6); the browser runtime stays `fs`-free, the file write is server-side.
+ * Wired as the `HistoryManager` persist hook so every append — the CommandBar's
+ * and `ClaudeBridge.send`'s alike — persists through exactly this one site. A
+ * failed persist is surfaced on the console, never silently swallowed; the
+ * in-memory history is unaffected.
+ */
+function persistHistory(data: HistoryData): void {
+  if (typeof fetch !== 'function') return;
+  try {
+    void fetch(HISTORY_ENDPOINT, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ version: data.version, entries: data.entries }),
+    }).catch((cause: unknown) => {
+      // Dev-only endpoint — log instead of failing the command flow.
+      console.warn('[pinscope] history persist failed', cause);
+    });
+  } catch (cause) {
+    // Some environments throw synchronously (e.g. an unsupported relative
+    // URL outside a dev server) — never let it break the command flow.
+    console.warn('[pinscope] history persist failed', cause);
+  }
+}
+
 function PinScopeHud({
   hudPosition,
   defaultGridMode,
@@ -134,7 +165,13 @@ function PinScopeHud({
 
   // §10-C / §10-D flow primitives — instantiated once per HUD mount.
   const command = useMemo(() => {
-    const history = new HistoryManager(new MemoryHistoryStore());
+    // R-18-01 — `persistHistory` is the single history persist owner; wiring
+    // it as the manager's persist hook makes every append (CommandBar's and
+    // `ClaudeBridge.send`'s) persist through exactly one site.
+    const history = new HistoryManager(
+      new MemoryHistoryStore(),
+      persistHistory,
+    );
     // §10-D — the store is held alongside `snapshots` so `onSnapshot` can
     // `flush()` it: `EndpointSnapshotStore.write` is synchronous, so a failed
     // persist is only observable via `flush()`'s rejectable promise.

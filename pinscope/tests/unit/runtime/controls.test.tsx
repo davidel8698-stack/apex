@@ -173,15 +173,19 @@ describe('CommandBar (AC-038)', () => {
   });
 
   it('recalls history with ArrowUp', () => {
+    // R-18-01 — the CommandBar appends its own recall entry only for local-only
+    // command kinds (`select`/`measure`/`snapshot`), which never reach
+    // `ClaudeBridge`. Operation-kind recall is covered end-to-end (via the
+    // shared manager `ClaudeBridge` appends to) by the R-18-01 ownership test.
     const { container } = render(<CommandBar />);
     const input = container.querySelector(
       '[data-pinscope-command]',
     ) as HTMLInputElement;
-    fireEvent.change(input, { target: { value: 'e_1.bg → red' } });
+    fireEvent.change(input, { target: { value: 'select e_1' } });
     fireEvent.keyDown(input, { key: 'Enter' });
     expect(input.value).toBe('');
     fireEvent.keyDown(input, { key: 'ArrowUp' });
-    expect(input.value).toBe('e_1.bg → red');
+    expect(input.value).toBe('select e_1');
   });
 });
 
@@ -219,6 +223,10 @@ describe('CommandBar §8.6 — focus-expand / Tab autocomplete / history (R-15-0
   });
 
   it('appends a submitted command through the injected HistoryManager', () => {
+    // R-18-01 — the CommandBar appends its own history row only for local-only
+    // command kinds. An `operation`/`class`/`query` submit gets its single
+    // real `parsed: <Operation>` row from `ClaudeBridge.send` instead, so the
+    // CommandBar does not append for it (no `parsed: null` placeholder).
     const history = new HistoryManager(new MemoryHistoryStore());
     const appendSpy = vi.spyOn(history, 'append');
 
@@ -226,58 +234,75 @@ describe('CommandBar §8.6 — focus-expand / Tab autocomplete / history (R-15-0
     const input = container.querySelector(
       '[data-pinscope-command]',
     ) as HTMLInputElement;
-    fireEvent.change(input, { target: { value: 'e_1.bg → red' } });
+    fireEvent.change(input, { target: { value: 'select e_1' } });
     fireEvent.keyDown(input, { key: 'Enter' });
 
     expect(appendSpy).toHaveBeenCalledTimes(1);
     const entry = appendSpy.mock.calls[0]?.[0];
-    expect(entry?.raw_input).toBe('e_1.bg → red');
+    expect(entry?.raw_input).toBe('select e_1');
     // The entry landed in the manager's store (last 1000 enforced by §8.6).
-    expect(history.list().map((e) => e.raw_input)).toContain('e_1.bg → red');
+    expect(history.list().map((e) => e.raw_input)).toContain('select e_1');
+
+    // An operation-kind submit does NOT add a CommandBar placeholder row.
+    appendSpy.mockClear();
+    fireEvent.change(input, { target: { value: 'e_1.bg → red' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(appendSpy).not.toHaveBeenCalled();
   });
 
   it('navigates the HistoryManager store with ArrowUp', () => {
+    // R-18-01 — recall via the CommandBar's own append covers local-only kinds.
     const history = new HistoryManager(new MemoryHistoryStore());
     const { container } = render(<CommandBar history={history} />);
     const input = container.querySelector(
       '[data-pinscope-command]',
     ) as HTMLInputElement;
-    fireEvent.change(input, { target: { value: 'e_2.fg → blue' } });
+    fireEvent.change(input, { target: { value: 'measure e_2 e_3' } });
     fireEvent.keyDown(input, { key: 'Enter' });
     expect(input.value).toBe('');
     fireEvent.keyDown(input, { key: 'ArrowUp' });
-    expect(input.value).toBe('e_2.fg → blue');
+    expect(input.value).toBe('measure e_2 e_3');
   });
 
-  it('fires the §8.6 fetch POST to the /__pinscope/history endpoint on submit', async () => {
+  it('persists history through a single owner — the HistoryManager hook (R-18-01)', async () => {
     // §8.6 — "History persisted to `.pinscope/history.json` (last 1000)";
-    // §10-C — "Operation via CommandBar — … clipboard + history". The browser
-    // runtime stays `fs`-free, so the CommandBar persists each appended entry
-    // through the dev-server `/__pinscope/history` route. This test stubs
-    // `globalThis.fetch` with a spy and asserts the POST actually fires —
-    // closing F-16-08. The `persistHistory` guard `typeof fetch !== 'function'`
-    // gates this call; the assertions below fail if that guard is flipped
-    // (mutant M2 `!==` → `===`) since the spy would never be invoked.
+    // §10-C — "Operation via CommandBar — … clipboard + history". R-18-01
+    // moved persistence off the CommandBar onto the `HistoryManager` persist
+    // hook wired in `PinScope.tsx`: every append (CommandBar's and
+    // `ClaudeBridge.send`'s) POSTs through exactly one `/__pinscope/history`
+    // site. This test renders the real `<PinScope/>`, submits an operation,
+    // and asserts the POST fires once with a `{ version, entries }` body.
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: (): Promise<void> => Promise.resolve() },
+    });
     const fetchSpy = vi
       .fn<typeof fetch>()
       .mockResolvedValue(new Response(null, { status: 200 }));
     vi.stubGlobal('fetch', fetchSpy);
 
-    const { container } = render(<CommandBar />);
-    const input = container.querySelector(
-      '[data-pinscope-command]',
-    ) as HTMLInputElement;
+    const pin = document.createElement('div');
+    pin.setAttribute('data-pin', 'e_5');
+    document.body.appendChild(pin);
+    render(<PinScope />);
+    const input = document
+      .querySelector('[data-pinscope-ui="root"]')
+      ?.querySelector('[data-pinscope-command]') as HTMLInputElement;
     fireEvent.change(input, { target: { value: 'e_5.bg → red' } });
     fireEvent.keyDown(input, { key: 'Enter' });
 
-    // The persistence POST fired exactly once at the history endpoint.
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
-    const [url, init] = fetchSpy.mock.calls[0] ?? [];
-    expect(url).toBe('/__pinscope/history');
-    expect(init?.method).toBe('POST');
+    await vi.waitFor(() => {
+      const historyCalls = fetchSpy.mock.calls.filter(
+        ([url]) => url === '/__pinscope/history',
+      );
+      expect(historyCalls.length).toBe(1);
+    });
 
-    // The request body parses to a `{ version, entries }` payload, and the
-    // submitted command is present in the persisted entries.
+    const historyCall = fetchSpy.mock.calls.find(
+      ([url]) => url === '/__pinscope/history',
+    );
+    const init = historyCall?.[1];
+    expect(init?.method).toBe('POST');
     const body = JSON.parse(String(init?.body)) as {
       version: string;
       entries: { raw_input: string }[];
@@ -286,7 +311,6 @@ describe('CommandBar §8.6 — focus-expand / Tab autocomplete / history (R-15-0
     expect(Array.isArray(body.entries)).toBe(true);
     expect(body.entries.map((e) => e.raw_input)).toContain('e_5.bg → red');
 
-    // Drain the resolved fetch promise so no unhandled rejection leaks.
     await Promise.resolve();
     vi.unstubAllGlobals();
   });

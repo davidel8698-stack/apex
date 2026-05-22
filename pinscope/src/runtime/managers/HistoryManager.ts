@@ -26,11 +26,23 @@ export interface HistoryStore {
 
 const MAX_ENTRIES = 1000;
 
+/**
+ * Single persist hook (SPEC §8.6 / R-18-01). When supplied, it is invoked
+ * exactly once at the end of every `append()` — after the `MAX_ENTRIES` cap is
+ * applied — with the capped `HistoryData`. This makes an `append` the one
+ * commit point: whoever appends (the CommandBar or `ClaudeBridge.send`)
+ * triggers exactly one persist through a single owner. Absent in
+ * directly-constructed test managers, where behaviour is unchanged.
+ */
+export type HistoryPersist = (data: HistoryData) => void;
+
 export class HistoryManager {
   private readonly store: HistoryStore;
+  private readonly onPersist: HistoryPersist | undefined;
 
-  constructor(store: HistoryStore) {
+  constructor(store: HistoryStore, onPersist?: HistoryPersist) {
     this.store = store;
+    this.onPersist = onPersist;
   }
 
   /** Append an entry, keeping at most the last 1000 (SPEC §8.6). */
@@ -41,6 +53,11 @@ export class HistoryManager {
       data.entries = data.entries.slice(-MAX_ENTRIES);
     }
     this.store.write(data);
+    // R-18-01 — the append is the single commit point. Persist the capped
+    // data through the one caller-supplied owner, if any.
+    if (this.onPersist) {
+      this.onPersist(this.store.read());
+    }
   }
 
   list(): HistoryEntry[] {
