@@ -1222,7 +1222,7 @@
     "wave_snapshot_ref": null
   },
   "narrative_coverage": {
-    "last_scanned_round": 19,
+    "last_scanned_round": 20,
     "total_claims": 52,
     "covered": 33,
     "uncovered": 19,
@@ -1263,6 +1263,12 @@
       },
       {
         "round": 19,
+        "covered": 33,
+        "total": 52,
+        "candidate_acs": 19
+      },
+      {
+        "round": 20,
         "covered": 33,
         "total": 52,
         "candidate_acs": 19
