@@ -172,3 +172,217 @@ Preservation-list files confirmed untouched:
 src/runtime/managers/EndpointSnapshotStore.ts src/runtime/components/TopBar.tsx`
 produced empty output. No edit to `pinscope/SPEC.md`. R-17-02 and R-17-03 were
 not read or touched.
+
+---
+
+## Wave 2
+
+### R-17-02
+
+**id:** R-17-02
+**linked finding:** F-17-02 (SUSPECTED — investigation R-item, P2)
+**status:** closed
+
+**summary:** Flow D (`onSnapshot` in `PinScope.tsx`) called
+`SnapshotManager.capture()` but never `flush()`ed the `EndpointSnapshotStore`,
+so a `SnapshotPersistError` from a failed dev-server persist became an unhandled
+promise rejection — the exact "swallowed §10-D failure" of F-17-02. Implemented
+the plan's **option (a)** (smallest diff, recommended default): the `command`
+`useMemo` now holds the `EndpointSnapshotStore` instance (`snapshotStore`)
+alongside `snapshots`, and `onSnapshot` ends in an observed
+`command.snapshotStore.flush().catch(...)` that surfaces the failure via
+`console.warn('[pinscope] snapshot persist failed', err)` — mirroring the
+flow-C `bridge.send().catch('[pinscope] operation send failed')` convention in
+the same file. No change to snapshot building or to the store's error
+semantics.
+
+#### STEP 1 — Confirm or refute (mandatory, SUSPECTED finding)
+
+Finding **CONFIRMED** — the §10-D snapshot persist failure was genuinely
+swallowed. Evidence, all run against the committed pre-fix baseline (`HEAD` =
+`b09bb53`, the "Wave 2 execution start" checkpoint):
+
+1. `git show HEAD:pinscope/src/runtime/PinScope.tsx | grep -n 'flush'` →
+   **0 matches** (grep exit 1). The committed `onSnapshot` callback is
+   `command.snapshots.capture(name);` and nothing else — no `flush()`, so the
+   persist promise is never observed.
+
+2. `EndpointSnapshotStore` (re-read, unchanged): its docstring states `flush()`
+   awaits the in-flight write "so callers (and tests) can observe a failed
+   persist instead of a silently swallowed one"; `post()` throws a typed
+   `SnapshotPersistError` on network error or non-OK response. `write()` is
+   synchronous and only stashes the promise in `pending` — `flush()` is the
+   sole observation seam. The failure signal is real and, pre-fix, lost.
+
+3. Flow C reference (`git show HEAD:.../PinScope.tsx | grep -n catch`):
+   `void command.bridge.send(operation, raw).catch((err) => { ... })` with the
+   "surface a failed clipboard/history write, never swallow" comment. Flow C
+   observes its async failure; flow D omitted the equivalent step.
+
+4. SPEC §10-D mandates a user-visible terminus ("→ toast") for snapshot
+   creation, so a swallowed failure is a genuine spec gap, not a benign
+   omission. The minimum that removes the *swallowed*-error defect is the
+   in-repo flow-C `console.warn` convention.
+
+The audit `re_read` expectation ("the finding CONFIRMS") holds — proceeded to
+the fix.
+
+#### Red -> Green transition
+
+Named test: **"Flow D — a failed snapshot persist is surfaced, never
+swallowed"** in `tests/unit/runtime/flow-wiring.test.tsx`. It mounts the real
+`<PinScope/>`, stubs `globalThis.fetch` to resolve `{ ok: false, status: 500 }`,
+spies on `console.warn`, registers an `unhandledrejection` listener, clicks the
+`[data-pinscope-snapshot-btn]` TopBar button, awaits microtask settlement, and
+asserts a `[pinscope]`-prefixed snapshot-failure `console.warn` fired AND that
+no unhandled rejection escaped.
+
+**RED** — test run with `PinScope.tsx` reverted to the committed pre-fix
+baseline (via `git stash push -- src/runtime/PinScope.tsx`, keeping the new
+test):
+
+```
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/unit/runtime/flow-wiring.test.tsx:172:24
+    170|             /snapshot/i.test(call[0]),
+    171|         );
+    172|         expect(warned).toBe(true);
+       |                        ^
+
+⎯⎯⎯⎯⎯⎯ Unhandled Errors ⎯⎯⎯⎯⎯⎯
+Vitest caught 1 unhandled error during the test run.
+
+⎯⎯⎯⎯ Unhandled Rejection ⎯⎯⎯⎯⎯
+SnapshotPersistError: snapshot persist failed: /__pinscope/snapshot returned 500
+ ❯ EndpointSnapshotStore.post src/runtime/managers/EndpointSnapshotStore.ts:65:13
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 3 passed (4)
+     Errors  1 error
+```
+
+Red for the right reason: against the unfixed `onSnapshot`, (a) `console.warn`
+was never called with a `[pinscope]` snapshot-failure message (`warned ===
+false`), and (b) Vitest caught the `SnapshotPersistError` as an **Unhandled
+Rejection** — the exact F-17-02 swallowed/unobserved §10-D failure.
+
+**GREEN** — test run with the R-17-02 fix in place:
+
+```
+ RUN  v1.6.1 /home/user/apex/pinscope
+
+ ✓ tests/unit/runtime/flow-wiring.test.tsx  (4 tests) 249ms
+
+ Test Files  1 passed (1)
+      Tests  4 passed (4)
+```
+
+No unhandled rejection — the `flush()` promise is `.catch()`-ed and the failure
+reaches `console.warn`.
+
+#### Files modified
+
+- `pinscope/src/runtime/PinScope.tsx` — plan option (a):
+  - `command` `useMemo`: extracted the `EndpointSnapshotStore` into a local
+    `snapshotStore` const, passed it to `new SnapshotManager(snapshotStore)`,
+    and added `snapshotStore` to the returned `command` object so `onSnapshot`
+    can reach `flush()`.
+  - `onSnapshot` `useCallback`: after `command.snapshots.capture(name)`, added
+    `void command.snapshotStore.flush().catch((err: unknown) => { console.warn(
+    '[pinscope] snapshot persist failed', err); });` — the observed
+    `.catch()` that mirrors the flow-C swallow-prevention shape. The
+    `useCallback` dependency array stays `[command]` (correct — `command` is the
+    only captured value; `snapshotStore` is a member of it).
+- `pinscope/tests/unit/runtime/flow-wiring.test.tsx` — added the named DoD test
+  "Flow D — a failed snapshot persist is surfaced, never swallowed" (the test
+  file the DoD names under `tests/`).
+
+`SnapshotManager.ts` was NOT modified — option (a) was chosen over option (b),
+so the `flush()` passthrough on `SnapshotManager` was not needed.
+
+#### DoD clause verification
+
+R-17-02 closure conditions (from REMEDIATION-PLAN-R17.md §R-17-02):
+
+1. **The named test passes.** verified: true.
+   `npx vitest run tests/unit/runtime/flow-wiring.test.tsx` → `4 passed (4)` —
+   includes "Flow D — a failed snapshot persist is surfaced, never swallowed"
+   (see GREEN above). Red→green transition demonstrated above.
+
+2. **`npm test` green; the two existing `EndpointSnapshotStore` `flush()` tests
+   in `snapshot.test.tsx` still pass.** verified: true.
+   Full suite: `Test Files 29 passed (29) / Tests 301 passed (301)` (300 prior
+   + 1 new R-17-02 test). `npx vitest run tests/unit/runtime/snapshot.test.tsx`
+   → `6 passed (6)`, which includes "POSTs the snapshot to /__pinscope/snapshot"
+   and "surfaces a non-ok response as a typed error, never swallows it" — the
+   two `EndpointSnapshotStore` `flush()` tests.
+
+3. **`grep -n 'flush' src/runtime/PinScope.tsx` ≥ 1 match AND the
+   `EndpointSnapshotStore.ts` diff is empty.** verified: true.
+
+   ```
+   $ grep -cn 'flush' src/runtime/PinScope.tsx
+   4
+   $ grep -n 'flush().catch' src/runtime/PinScope.tsx
+   154:      void command.snapshotStore.flush().catch((err: unknown) => {
+   $ git diff --stat src/runtime/managers/EndpointSnapshotStore.ts
+   (empty output — file unchanged)
+   ```
+
+Acceptance criteria (all four):
+
+- [x] `grep -n 'flush' src/runtime/PinScope.tsx` returns ≥ 1 match inside the
+      `onSnapshot` callback (4 matches; the operative one is line 154).
+      verified: true.
+- [x] The `flush()` promise in `onSnapshot` is observed — `flush().catch(` on
+      line 154, not a bare `flush()` call. verified: true.
+- [x] A `console.warn` with a `'[pinscope]'`-prefixed snapshot-failure message
+      is in the `onSnapshot` failure path: line 155,
+      `console.warn('[pinscope] snapshot persist failed', err)` — mirrors the
+      flow-C `'[pinscope] operation send failed'` convention. verified: true.
+- [x] `EndpointSnapshotStore.ts` is unchanged — `git diff --stat` on it
+      produced empty output. verified: true.
+
+#### Wave regression check
+
+`cd pinscope && npx vitest run` (full suite):
+
+```
+ ✓ tests/unit/runtime/edge-cases.test.ts  (5 tests) 64ms
+ ✓ tests/unit/runtime/pinscope-assembly.test.tsx  (7 tests) 240ms
+ ✓ tests/unit/runtime/infopanel.test.tsx  (3 tests) 119ms
+ ✓ tests/unit/runtime/element-walker.test.ts  (7 tests) 11ms
+ ✓ tests/unit/runtime/shortcuts.test.tsx  (15 tests) 19ms
+ ✓ tests/unit/runtime/perf.test.tsx  (2 tests) 135ms
+ ✓ tests/unit/runtime/components.test.tsx  (3 tests) 67ms
+ ✓ tests/unit/runtime/pinscope.test.tsx  (3 tests) 71ms
+ ✓ tests/unit/runtime/public-api.test.ts  (2 tests) 3ms
+
+ Test Files  29 passed (29)
+      Tests  301 passed (301)
+```
+
+`npx tsc --noEmit` → exit 0 (no type errors).
+
+The `DOMException [NetworkError]` console output during the run is pre-existing,
+unrelated noise (an `iframe-overlay` test deliberately exercises a failed
+`fetch`) — documented in the Wave 1 block; all 29 test files passed.
+
+#### scope notes
+
+Files modified: `src/runtime/PinScope.tsx` (the `command` `useMemo` + the
+`onSnapshot` `useCallback` — both anchors the R-17-02 Execution plan names) and
+the DoD test file `tests/unit/runtime/flow-wiring.test.tsx`. Plan **option (a)**
+was chosen, so `SnapshotManager.ts` was deliberately NOT touched (option (b)
+was not taken). No other source file modified.
+
+Preservation-list files confirmed untouched:
+`git diff --stat src/runtime/managers/EndpointSnapshotStore.ts
+src/runtime/managers/SelectionManager.ts src/runtime/components/TopBar.tsx`
+produced empty output. No edit to `pinscope/SPEC.md`. R-17-01 (done) and
+R-17-03 (later wave) were not read or touched. No scope mutation.

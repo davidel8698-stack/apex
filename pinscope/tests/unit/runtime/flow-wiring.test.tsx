@@ -128,4 +128,57 @@ describe('PinScope §10 flow wiring (R-16-01)', () => {
     // §8.9 — the selection is mirrored to the URL hash.
     expect(location.hash).toBe('#select=e_9');
   });
+
+  // §10-D — a snapshot persist that fails on the dev-server route must surface
+  // a user-visible failure signal (the spec's "→ toast" terminus). The minimum
+  // that removes the *swallowed*-error defect is the flow-C `console.warn`
+  // convention; the wiring (`PinScope.tsx` `onSnapshot`) must `flush()` the
+  // `EndpointSnapshotStore` and `.catch()` its rejection — never drop it.
+  it('Flow D — a failed snapshot persist is surfaced, never swallowed', async () => {
+    plantPin('e_3');
+    // The dev-server route rejects with a non-OK response — the persist POST
+    // throws a typed `SnapshotPersistError` inside `EndpointSnapshotStore`.
+    vi.stubGlobal('fetch', () =>
+      Promise.resolve({ ok: false, status: 500 } as Response),
+    );
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    // Capture any unhandled rejection — a swallowed flow-D failure escapes here.
+    const rejections: unknown[] = [];
+    const onRejection = (e: PromiseRejectionEvent): void => {
+      rejections.push(e.reason);
+    };
+    window.addEventListener('unhandledrejection', onRejection);
+
+    try {
+      render(<PinScope />);
+
+      // Trigger §10-D — click the §8.5 TopBar snapshot button.
+      const snapshotBtn = hud().querySelector(
+        '[data-pinscope-snapshot-btn]',
+      ) as HTMLButtonElement;
+      expect(snapshotBtn).not.toBeNull();
+      fireEvent.click(snapshotBtn);
+
+      // `onSnapshot` must observe the persist: await microtask settlement,
+      // then assert the failure reached `console.warn` with the `[pinscope]`
+      // prefix — mirroring the flow-C "operation send failed" convention.
+      await vi.waitFor(() => {
+        const warned = warn.mock.calls.some(
+          (call) =>
+            typeof call[0] === 'string' &&
+            call[0].includes('[pinscope]') &&
+            /snapshot/i.test(call[0]),
+        );
+        expect(warned).toBe(true);
+      });
+
+      // The rejection was observed (`.catch`-ed) — it never escaped as an
+      // unhandled promise rejection. That is the whole point of R-17-02.
+      await Promise.resolve();
+      expect(rejections).toHaveLength(0);
+    } finally {
+      window.removeEventListener('unhandledrejection', onRejection);
+      warn.mockRestore();
+    }
+  });
 });

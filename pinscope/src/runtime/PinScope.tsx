@@ -131,10 +131,15 @@ function PinScopeHud({
   // §10-C / §10-D flow primitives — instantiated once per HUD mount.
   const command = useMemo(() => {
     const history = new HistoryManager(new MemoryHistoryStore());
+    // §10-D — the store is held alongside `snapshots` so `onSnapshot` can
+    // `flush()` it: `EndpointSnapshotStore.write` is synchronous, so a failed
+    // persist is only observable via `flush()`'s rejectable promise.
+    const snapshotStore = new EndpointSnapshotStore();
     return {
       history,
       bridge: new ClaudeBridge(history),
-      snapshots: new SnapshotManager(new EndpointSnapshotStore()),
+      snapshots: new SnapshotManager(snapshotStore),
+      snapshotStore,
     };
   }, []);
 
@@ -142,6 +147,13 @@ function PinScopeHud({
   const onSnapshot = useCallback(
     (name?: string): void => {
       command.snapshots.capture(name);
+      // Flow D — observe the persist exactly as flow C observes `bridge.send`:
+      // `flush()` resolves the in-flight POST and rejects with a typed
+      // `SnapshotPersistError`. Surface a failure on the console, never swallow
+      // it (a dropped rejection would otherwise be an unhandled rejection).
+      void command.snapshotStore.flush().catch((err: unknown) => {
+        console.warn('[pinscope] snapshot persist failed', err);
+      });
     },
     [command],
   );
