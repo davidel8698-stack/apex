@@ -31,3 +31,4 @@
 {"at":"2026-05-22T12:45:57.536Z","round":17,"event":"phase:wave","note":null}
 {"at":"2026-05-22T12:46:13.884Z","round":17,"event":"spawn:ps-wave-executor","note":"wave 1"}
 {"at":"2026-05-22T12:52:01.873Z","round":17,"event":"spawn:ps-wave-executor","note":"wave 2"}
+{"at":"2026-05-22T12:57:48.609Z","round":17,"event":"spawn:ps-wave-executor","note":"wave 3"}
