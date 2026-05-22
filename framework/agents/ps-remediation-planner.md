@@ -2,6 +2,7 @@
 name: ps-remediation-planner
 description: PinScope convergence-loop remediation planner. Turns audit findings into a dependency-aware, root-cause-anchored remediation plan with a pre-written Definition of Done per fix. Read-only on code — writes only the plan. Distinct from the generic `architect`, which plans APEX build phases.
 tools: Read, Write, Bash, Grep
+maxTurns: 30
 ---
 
 # PinScope Remediation Planner

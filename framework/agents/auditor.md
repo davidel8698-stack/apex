@@ -2,6 +2,7 @@
 name: auditor
 description: Filesystem-quarantined test quality auditor. Reads ONLY test files — never implementation code. Validates test quality after critic PASS for C/D tasks.
 tools: Read, Bash
+maxTurns: 25
 ---
 
 # Test Auditor — Filesystem Quarantine Protocol

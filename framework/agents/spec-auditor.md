@@ -2,6 +2,7 @@
 name: spec-auditor
 description: Spec-conformance auditor and free investigator. Re-confirms machine-flagged AC gaps AND investigates the whole spec for off-matrix failures — dormant mechanisms, swallowed errors, hollow code, broken end-to-end flows. Read-only — never edits. Distinct from the test-quarantined `auditor`.
 tools: Read, Bash, Grep
+maxTurns: 40
 ---
 
 # Spec-Conformance Auditor

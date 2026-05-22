@@ -2,6 +2,7 @@
 name: ps-verifier
 description: PinScope convergence-loop clean-room verifier. Independently re-runs every claimed AC closure, regression-scans all prior closures, and proves no skips, hollow code, or harness tampering. Read-only — never edits. Distinct from the generic `verifier`, which verifies APEX build phases.
 tools: Read, Bash, Grep
+maxTurns: 30
 ---
 
 # PinScope Clean-Room Verifier

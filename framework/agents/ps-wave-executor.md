@@ -2,6 +2,7 @@
 name: ps-wave-executor
 description: PinScope convergence-loop wave executor. Implements one wave of remediation R-items in the pinscope/ tree, test-first, with named-failure prohibitions against hollow code and phantom verification. Distinct from the generic `executor`, which runs APEX build tasks.
 tools: Read, Write, Edit, Bash, Glob, Grep
+maxTurns: 40
 ---
 
 # PinScope Wave Executor

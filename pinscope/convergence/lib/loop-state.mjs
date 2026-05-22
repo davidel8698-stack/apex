@@ -8,15 +8,17 @@
  *   node loop-state.mjs record-narrative <narrative-scan.json> <round>
  *   node loop-state.mjs add-finding '<json>'
  *   node loop-state.mjs breaker-check
+ *   node loop-state.mjs log-event <event> [note]
  *   node loop-state.mjs manual-attest <AC-id> <pass|fail> "<evidence>" [--by <name>]
  *
  * Pure transforms live in core/loop-logic.mjs; this driver only does I/O,
- * schema validation, and exit codes.
+ * schema validation, and exit codes. loop.json is written atomically
+ * (temp + rename) so a crash mid-write can never corrupt loop state.
  *
  * Exit: 0 ok · 1 bad input · 2 breaker tripped / harness-error round refused ·
  *       3 monotonicity violation · 5 schema-invalid.
  */
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, renameSync, appendFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { EXIT } from './core/verdict.mjs';
@@ -57,8 +59,25 @@ function loadValidated(file, name, validator) {
   return obj;
 }
 
+const LOOP_TMP = `${LOOP}.tmp`;
+const EVENTS = path.join(CONV, 'loop-events.jsonl');
+
 const loadLoop = () => loadValidated(LOOP, 'loop.json', validateLoop);
-const saveLoop = (loop) => writeFileSync(LOOP, `${JSON.stringify(loop, null, 2)}\n`);
+
+// Atomic write — a crash mid-write must never leave loop.json half-written.
+function saveLoop(loop) {
+  writeFileSync(LOOP_TMP, `${JSON.stringify(loop, null, 2)}\n`);
+  renameSync(LOOP_TMP, LOOP);
+}
+
+// Append-only round event log (D4.5) — every phase transition and orchestrator
+// event, one JSON object per line, for full round auditability.
+function logEvent(round, event, note) {
+  appendFileSync(
+    EVENTS,
+    `${JSON.stringify({ at: now(), round: round ?? null, event, note: note ?? null })}\n`,
+  );
+}
 function loadMatrixById() {
   const m = loadValidated(MATRIX, 'ac-matrix.json', validateMatrix);
   const byId = {};
@@ -91,7 +110,18 @@ if (cmd === 'set-phase') {
     if (!loop.current_round.started_at) loop.current_round.started_at = now();
   }
   saveLoop(loop);
+  logEvent(loop.round, `phase:${phase}`);
   console.log(`loop-state: phase = ${phase}`);
+  process.exit(EXIT.OK);
+}
+
+if (cmd === 'log-event') {
+  const event = process.argv[3];
+  if (!event) die('log-event: usage: log-event <event> [note]');
+  const note = process.argv[4];
+  const loop = loadLoop();
+  logEvent(loop.round, event, note);
+  console.log(`loop-state: event '${event}' logged`);
   process.exit(EXIT.OK);
 }
 
@@ -191,16 +221,30 @@ if (cmd === 'breaker-check') {
   if (state.tripped) {
     const wasTripped = loop.loop_status === 'BREAKER_TRIPPED';
     loop.loop_status = 'BREAKER_TRIPPED';
+    const reasons = [];
+    if (state.stalled.length > 0) reasons.push('stalled-finding');
+    if (state.waveFails >= 3) reasons.push('wave-fails');
+    if (state.diverging) reasons.push('diverging');
+    const reason = reasons.join('+');
     if (!wasTripped) {
       loop.breaker_log = loop.breaker_log || [];
-      loop.breaker_log.push({ round: loop.round, event: 'breaker_tripped', at: now() });
+      loop.breaker_log.push({ round: loop.round, event: 'breaker_tripped', reason, at: now() });
     }
     saveLoop(loop);
+    logEvent(loop.round, 'breaker_tripped', reason);
     console.error('loop-state: CIRCUIT BREAKER TRIPPED');
     for (const f of state.stalled) {
       console.error(`  finding ${f.id} (${f.ac}) unchanged for ${f.rounds_unchanged} rounds`);
     }
     if (state.waveFails >= 3) console.error(`  a wave failed verification ${state.waveFails} times`);
+    if (state.diverging) {
+      const t = state.trajectory;
+      console.error(
+        `  trajectory DIVERGING — OPEN P0/P1 findings grew by ${t.delta} between rounds ` +
+          `${t.samples[0].round} and ${t.samples[1].round}. The loop is making things ` +
+          'worse round over round; halt and escalate to a human.',
+      );
+    }
     process.exit(EXIT.BREAKER);
   }
   console.log('loop-state: circuit breaker clear');
@@ -233,5 +277,6 @@ if (cmd === 'manual-attest') {
 
 die(
   `unknown command '${cmd ?? ''}' ` +
-    '(read|set-phase|record-round|record-narrative|add-finding|breaker-check|manual-attest)',
+    '(read|set-phase|record-round|record-narrative|add-finding|breaker-check|' +
+    'log-event|manual-attest)',
 );

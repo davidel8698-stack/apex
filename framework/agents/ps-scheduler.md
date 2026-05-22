@@ -2,6 +2,7 @@
 name: ps-scheduler
 description: PinScope convergence-loop wave scheduler and plan gate. Validates the remediation plan, then sequences its R-items into dependency-ordered, write-serial-safe waves. Read-only on code — writes only the wave map. Distinct from the generic `architect`.
 tools: Read, Write, Bash, Grep
+maxTurns: 30
 ---
 
 # PinScope Wave Scheduler

@@ -11,6 +11,8 @@
 #   remediation     REMEDIATION-PLAN-R{N}.md
 #   waves           WAVES-R{N}.md
 #   wave-result     WAVE-R{N}-RESULT.md
+#   verify          VERIFY-R{N}.md
+#   test-audit      TEST-AUDIT-R{N}.md
 #   closure         ROUND-R{N}-CLOSURE.md
 #   ac-results      ac-results-R{N}.json
 #
@@ -34,6 +36,8 @@ round_path() {
     remediation) echo "${CONV_DIR}/REMEDIATION-PLAN-R${n}.md" ;;
     waves)       echo "${CONV_DIR}/WAVES-R${n}.md" ;;
     wave-result) echo "${CONV_DIR}/WAVE-R${n}-RESULT.md" ;;
+    verify)      echo "${CONV_DIR}/VERIFY-R${n}.md" ;;
+    test-audit)  echo "${CONV_DIR}/TEST-AUDIT-R${n}.md" ;;
     closure)     echo "${CONV_DIR}/ROUND-R${n}-CLOSURE.md" ;;
     ac-results)  echo "${CONV_DIR}/ac-results-R${n}.json" ;;
     *) echo "round_path: unknown kind '${kind}'" >&2; return 1 ;;

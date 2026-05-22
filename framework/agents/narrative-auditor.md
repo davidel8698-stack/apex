@@ -2,6 +2,7 @@
 name: narrative-auditor
 description: Spec-narrative coverage auditor. Compares the WHOLE North-Star narrative (§1–§17) against the code and the acceptance-criteria ledger; proposes ACs for uncaptured behavior and raises real un-AC'd code gaps as blocking findings. Read-only — never edits. Distinct from `spec-auditor`, which audits only the 69 ACs.
 tools: Read, Bash, Grep
+maxTurns: 35
 ---
 
 # Spec-Narrative Coverage Auditor
