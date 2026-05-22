@@ -1196,7 +1196,7 @@
   },
   "findings": [],
   "current_round": {
-    "phase": "wave",
+    "phase": "verify",
     "started_at": "2026-05-22T11:48:44.808Z",
     "wave_snapshot_ref": "f9b2186b67ce0baa52e3fd0b17575f1fcdc1f7c6",
     "wave_verify_fails": 0
