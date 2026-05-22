@@ -25,7 +25,6 @@ import type { BuildContext } from './parsers/operation-builder.js';
 import { ClaudeBridge } from './managers/ClaudeBridge.js';
 import { SnapshotManager } from './managers/SnapshotManager.js';
 import { EndpointSnapshotStore } from './managers/EndpointSnapshotStore.js';
-import { SelectionManager } from './managers/SelectionManager.js';
 import { HistoryManager, MemoryHistoryStore } from './managers/HistoryManager.js';
 
 export interface PinScopeProps {
@@ -125,8 +124,9 @@ function PinScopeHud({
   const [hudVisible, setHudVisible] = useState(true);
   const [gridMode, setGridMode] = useState<GridMode>(defaultGridMode);
   const [measuring, setMeasuring] = useState(false);
-  // §10 flow B — the locked selection survives mouse-out (§8.1).
-  const { selected } = useSelectedElement(measuring);
+  // §10 flow B — the locked selection survives mouse-out (§8.1). `selectPin`
+  // is the §10-B/§11 programmatic lock the `select e_N` command routes through.
+  const { selected, select: selectPin } = useSelectedElement(measuring);
 
   // §10-C / §10-D flow primitives — instantiated once per HUD mount.
   const command = useMemo(() => {
@@ -134,7 +134,6 @@ function PinScopeHud({
     return {
       history,
       bridge: new ClaudeBridge(history),
-      selection: new SelectionManager(),
       snapshots: new SnapshotManager(new EndpointSnapshotStore()),
     };
   }, []);
@@ -164,7 +163,9 @@ function PinScopeHud({
         return;
       }
       if (parsed.kind === 'select') {
-        command.selection.select(parsed.pin);
+        // §10-B / §11 — route through the hook's canonical SelectionManager so
+        // the InfoPanel locks (the orphan manager instance was removed).
+        selectPin(parsed.pin);
         return;
       }
       if (parsed.kind === 'measure') {
@@ -196,7 +197,7 @@ function PinScopeHud({
         console.warn('[pinscope] operation build failed', err);
       }
     },
-    [command, onSnapshot],
+    [command, onSnapshot, selectPin],
   );
 
   // §8.11 keyboard shortcuts drive the root-owned HUD state. Gated on the

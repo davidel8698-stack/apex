@@ -9,6 +9,12 @@ import { escapeHud, findPinnedAncestor } from '../utils/element-walker.js';
 export interface SelectedElement {
   /** The pinned element currently locked by `SelectionManager`, or `null`. */
   selected: HoveredElement | null;
+  /**
+   * Programmatically lock a pin (§10-B / §11 `select` command) — runs the same
+   * `SelectionManager.select` + `setSelected` pair the `[data-pin]` click path
+   * uses, so the InfoPanel locks without a click.
+   */
+  select: (pinId: string) => void;
   /** Clear the locked selection (§8.9 `SelectionManager.clear`). */
   clear: () => void;
 }
@@ -78,10 +84,18 @@ export function useSelectedElement(measuring: boolean): SelectedElement {
     };
   }, [manager]);
 
+  // §10-B / §11 — the `select e_N` command locks a pin without a click. It
+  // routes through the *same* owned manager and `setSelected` pair as the
+  // click handler above, so the InfoPanel locks identically.
+  const select = (pinId: string): void => {
+    manager.select(pinId);
+    setSelected(resolveSelected(pinId));
+  };
+
   const clear = (): void => {
     manager.clear();
     setSelected(null);
   };
 
-  return { selected, clear };
+  return { selected, select, clear };
 }
