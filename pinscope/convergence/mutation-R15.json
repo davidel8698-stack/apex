@@ -1,0 +1,65 @@
+{
+  "round": 15,
+  "generated_at": "2026-05-22T11:35:46.191Z",
+  "files": [
+    {
+      "file": "pinscope/src/index.ts",
+      "mutants_run": 0,
+      "killed": 0,
+      "survived": []
+    },
+    {
+      "file": "pinscope/src/plugin/index.ts",
+      "mutants_run": 5,
+      "killed": 2,
+      "survived": [
+        {
+          "id": "M3",
+          "rule": "true-to-false",
+          "line": 65,
+          "original": "res.end(JSON.stringify({ ok: true, id }));",
+          "mutated": "res.end(JSON.stringify({ ok: false, id }));"
+        },
+        {
+          "id": "M4",
+          "rule": "true-to-false",
+          "line": 103,
+          "original": "fs.mkdirSync(dir, { recursive: true });",
+          "mutated": "fs.mkdirSync(dir, { recursive: false });"
+        },
+        {
+          "id": "M5",
+          "rule": "true-to-false",
+          "line": 111,
+          "original": "res.end(JSON.stringify({ ok: true, count: entries.length }));",
+          "mutated": "res.end(JSON.stringify({ ok: false, count: entries.length }));"
+        }
+      ]
+    },
+    {
+      "file": "pinscope/src/runtime/PinScope.tsx",
+      "mutants_run": 5,
+      "killed": 5,
+      "survived": []
+    },
+    {
+      "file": "pinscope/src/runtime/components/CommandBar.tsx",
+      "mutants_run": 2,
+      "killed": 1,
+      "survived": [
+        {
+          "id": "M2",
+          "rule": "strict-ne-to-eq",
+          "line": 45,
+          "original": "if (typeof fetch !== 'function') return;",
+          "mutated": "if (typeof fetch === 'function') return;"
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "mutants": 12,
+    "killed": 8,
+    "survived": 4
+  }
+}
