@@ -1210,8 +1210,8 @@
   },
   "findings": [],
   "current_round": {
-    "phase": "idle",
-    "started_at": null,
+    "phase": "audit",
+    "started_at": "2026-05-22T13:44:35.858Z",
     "wave_snapshot_ref": null
   },
   "narrative_coverage": {

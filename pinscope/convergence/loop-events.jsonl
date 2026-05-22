@@ -45,3 +45,4 @@
 {"at":"2026-05-22T13:35:41.808Z","round":18,"event":"phase:verify","note":null}
 {"at":"2026-05-22T13:43:26.301Z","round":18,"event":"phase:close","note":null}
 {"at":"2026-05-22T13:44:04.983Z","round":18,"event":"phase:idle","note":null}
+{"at":"2026-05-22T13:44:35.859Z","round":18,"event":"phase:audit","note":null}
