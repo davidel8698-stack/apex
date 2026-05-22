@@ -2,7 +2,7 @@
 
 ## Round summary
 
-R15 carries **13 distinct findings** across three sources — 11 spec-auditor investigation findings (9 CONFIRMED, 2 SUSPECTED), 9 narrative `blocking_findings` (NF-15-01..09), and 2 hollow-test findings from the TEST-AUDIT (AC-076, AC-107) — collapsed into **10 R-items** after shared-root-cause grouping. Severity tally of the 10 R-items: **P1 ×3** (R-15-01 root assembly, R-15-04 hostile-CSS hardening, R-15-09 / R-15-10 hollow tests are P2/P2), **P2 ×6**, **P3 ×1**. The dominant root cause is one fault behind 3 findings: `<PinScope.tsx>` was frozen at "PS-R2 scope" (inspection layer only) and never re-assembled — that single un-wired root is the cause of F-15-01/NF-15-01, F-15-02/NF-15-02 and F-15-03/NF-15-03, and is also why every measurement/control/state component is dead code despite passing isolated tests. **Shared-root-cause groups: 4** — Group A: R-15-01 closes F-15-01+NF-15-01+F-15-02+NF-15-02+F-15-03+NF-15-03 (one un-assembled root); Group B: R-15-04 closes F-15-04+NF-15-08 (badge CSS never hardened with `!important`); Group C: R-15-06 closes F-15-07+NF-15-04+NF-15-05 (CommandBar built to a partial §8.6 contract); Group D: each remaining R-item closes one finding plus its narrative twin where one exists (R-15-03=F-15-08+NF-15-06, R-15-05=F-15-09+NF-15-07, R-15-07=F-15-10+NF-15-09). The `candidate_acs` and `strengthen_proposals` in the narrative scan are PROPOSALS and out of scope. The 7 BLOCKED ACs (browser / apex-install env limits) are not findings and are not planned. `pinscope/SPEC.md` is frozen — every R-item fixes reality to the spec, never the reverse.
+R15 carries **22 raw findings** across three sources — 11 spec-auditor investigation findings `F-15-01..F-15-11` (9 CONFIRMED, 2 SUSPECTED = `F-15-10`/`F-15-11`), 9 narrative `blocking_findings` `NF-15-01..NF-15-09`, and 2 hollow-test findings from `TEST-AUDIT-R15.md` (`AC-076`, `AC-107`) — collapsed into **11 R-items** after shared-root-cause grouping. Every one of the 11 spec-auditor findings is routed: each of `F-15-01..F-15-11` maps to exactly one R-item, including `F-15-05` (Rulers §8.2), which is closed by **R-15-03**. Severity tally of the 11 R-items: **P1 ×2** (`R-15-01` root assembly, `R-15-05` hostile-CSS hardening), **P2 ×7** (`R-15-02`, `R-15-03`, `R-15-04`, `R-15-06`, `R-15-07`, `R-15-10`, `R-15-11`), **P3 ×2** (`R-15-08`, `R-15-09`). The dominant root cause is one fault behind three findings: `src/runtime/PinScope.tsx` was frozen at "PS-R2 scope" (inspection layer only) and never re-assembled — that single un-wired root is the cause of `F-15-01`/`NF-15-01`, `F-15-02`/`NF-15-02` and `F-15-03`/`NF-15-03`, and is also why every measurement/control/state component is dead code despite passing isolated tests. **Shared-root-cause groups: 4** — Group A: `R-15-01` closes `F-15-01`+`NF-15-01`+`F-15-02`+`NF-15-02`+`F-15-03`+`NF-15-03` (one un-assembled root); Group B: `R-15-05` closes `F-15-04`+`NF-15-08` (badge CSS never hardened with `!important`); Group C: `R-15-07` closes `F-15-07`+`NF-15-04`+`NF-15-05` (CommandBar built to a partial §8.6 contract); Group D: each remaining R-item closes one finding plus its narrative twin where one exists (`R-15-04`=`F-15-08`+`NF-15-06`, `R-15-06`=`F-15-09`+`NF-15-07`, `R-15-08`=`F-15-10`+`NF-15-09`). `F-15-05` (Rulers §8.2) has no entry in the narrative `blocking_findings` list — its narrative twin `NC-08-03` (`code_satisfied: false`) is a `claims` entry, not a blocking finding — so `R-15-03` closes `F-15-05` alone, corroborated by `NC-08-03`. `F-15-06` (`R-15-02`) and `F-15-11` (`R-15-09`) likewise have one spec-auditor finding each. The `candidate_acs` and `strengthen_proposals` in the narrative scan are PROPOSALS and out of scope. The 7 BLOCKED ACs (browser / apex-install env limits) are not findings and are not planned. `pinscope/SPEC.md` is frozen — every R-item fixes reality to the spec, never the reverse. Finding-routing arithmetic: 11 spec-auditor + 9 narrative + 2 test-audit = 22 raw findings → 11 R-items; 11 of 11 spec-auditor findings routed, 9 of 9 narrative findings routed, 2 of 2 test-audit findings routed.
 
 ---
 
@@ -47,11 +47,11 @@ R15 carries **13 distinct findings** across three sources — 11 spec-auditor in
 - [ ] The full vitest suite stays green (no regression among the 257 existing tests).
 
 ### Definition of Done
-A new RTL test file `tests/unit/runtime/pinscope-assembly.test.tsx` (tag `AC-NEW-09`-style, but authored as a behavioral test, not a count) is added by the executor and transitions red → green: it renders `<PinScope/>`, then asserts a present query handle for **all seven** §7.1 components via their data attributes — `[data-pinscope-rulers]`, `[data-pinscope-crosshair]`, `[data-pinscope-grid]` (with a non-`off` `defaultGridMode`), `[data-pinscope-topbar]`, `[data-pinscope-command]`, plus the PinBadges `<style>` and InfoPanel root. A second case sets HUD-hidden and asserts `[data-pinscope-toggle]` is the only PinScope element rendered. A third case passes `shortcutsEnabled={false}` and asserts a `Shift+G` keydown does NOT change the rendered grid mode. R-15-01 is closed when this file passes AND `grep -cE 'Rulers|Crosshair|GridOverlay|TopBar|CommandBar' src/runtime/PinScope.tsx` ≥ 5 AND `npm test` exits 0.
+A new RTL test file `tests/unit/runtime/pinscope-assembly.test.tsx` (authored as a behavioral test, not a count) is added by the executor and transitions red → green: it renders `<PinScope/>`, then asserts a present query handle for **all seven** §7.1 components via their data attributes — `[data-pinscope-rulers]`, `[data-pinscope-crosshair]`, `[data-pinscope-grid]` (with a non-`off` `defaultGridMode`), `[data-pinscope-topbar]`, `[data-pinscope-command]`, plus the PinBadges `<style>` and InfoPanel root. A second case sets HUD-hidden and asserts `[data-pinscope-toggle]` is the only PinScope element rendered. A third case passes `shortcutsEnabled={false}` and asserts a `Shift+G` keydown does NOT change the rendered grid mode. R-15-01 is closed when this file passes AND `grep -cE 'Rulers|Crosshair|GridOverlay|TopBar|CommandBar' src/runtime/PinScope.tsx` ≥ 5 AND `npm test` exits 0.
 
 ### Dependencies
 - R-15-02 (Crosshair guards) supplies the `measuring`/`hudVisible` props this R-item passes to `Crosshair`; if R-15-02 lands in the same wave, serialize R-15-02 before the Crosshair wiring step here. If R-15-02 lands later, this R-item may pass the props to a Crosshair that ignores them — acceptable, no regression.
-- No dependency on R-15-04..R-15-08 (those harden components this R-item merely mounts).
+- No dependency on R-15-03..R-15-09 (those harden components this R-item merely mounts).
 
 ### Risk assessment
 **High** — this is the largest R-item and touches the shipping root. Risk is mounting a component that throws on mount (e.g. a manager expecting a store). Mitigation: each component is already test-passing in isolation, so failures will surface as integration faults caught by the DoD RTL test and the existing perf test. The production-zero guard is explicitly in the preservation list, so AC-010/AC-074 cannot regress.
@@ -101,6 +101,50 @@ A test case is added to `tests/unit/runtime/controls.test.tsx` and transitions r
 ## Remediation R-15-03
 
 **id:** R-15-03
+**Linked finding:** F-15-05
+**Severity:** P2
+**Spec anchor:** §8.2 — "Rulers — horizontal (top) + vertical (left), 24px, ticks at `10/50/100/200` px, monospace labels, corner shows live mouse coords."
+**Root cause:** `Rulers.tsx` was built against the AC, not the spec. `AC-034` verifies only that ticks render "at 100px intervals", so the component author wrote a single-scale `ticks(extent, interval)` loop with `interval` defaulting to 100 and stopped — the §8.2 multi-scale tick set (`10/50/100/200` px) and the corner live-coordinate readout were never written. The component passes the matrix because the matrix under-checks §8.2; the gap is a component built to satisfy an under-specified AC rather than the frozen spec. Independently corroborated by narrative claim `NC-08-03` (`code_satisfied: false`), which is a `claims`-list entry (not a `blocking_findings` entry), so `F-15-05` is the sole routed finding here.
+
+### Ecosystem analysis
+1. What does §8.2 require beyond the current code? A multi-scale tick set — ticks at the four scales `10`, `50`, `100`, `200` px (a major/minor hierarchy, not one uniform spacing) — and a corner element that shows the live mouse coordinates.
+2. What does the code currently produce? `ticks(extent, interval)` loops `v += interval` for a single `interval` (default 100); the returned tree has only the two `bar` divs (horizontal + vertical) and no corner element.
+3. What is the natural multi-scale model? Render minor ticks at the 10px scale, progressively longer/labelled ticks at 50/100/200 px — e.g. a tick's length/label class is chosen by the largest scale of `{10,50,100,200}` that divides its position. Labels stay monospace per §8.2.
+4. Where does the live-coords readout get its data? A `mousemove` listener (or the existing hovered-position source) feeds the corner element with `x`/`y`; the corner sits where the horizontal and vertical bars meet (top-left, 24×24px).
+5. Does the corner element need isolation from host CSS? Yes — it renders inside the `data-pinscope-ui` portal subtree; it inherits the HUD's isolation, no new !important needed beyond what R-15-05 hardens.
+6. Will this change `AC-034`? No — `AC-034` counts 100px-interval tick labels; a multi-scale set still contains the 100px ticks, so `AC-034` continues to pass. The new behavior (10/50/200 scales + corner coords) is additive and is the gap STEP 5 caught.
+7. Is this testable without a browser? Yes — jsdom renders the tick DOM; a unit test can count ticks at each scale and assert the corner element updates on a synthetic `mousemove`.
+8. Does the root assembly depend on this? No — R-15-01 mounts `Rulers` regardless; this R-item upgrades the mounted component's internals. The `data-pinscope-rulers` handle R-15-01's DoD queries is preserved.
+
+### Execution plan
+**Files to modify:** `src/runtime/components/Rulers.tsx` — the `ticks(...)` generator and the `Rulers` returned tree.
+**Files that MUST remain untouched:** the `24px` bar dimensions and the monospace label styling (both already correct per §8.2); the `data-pinscope-rulers`/`data-pinscope-ui` attributes that R-15-01's assembly DoD queries — only the tick-generation logic and the new corner element are added.
+**Order of operations:**
+1. Replace the single-`interval` `ticks` generator with a multi-scale generator: produce ticks at the 10px base step and tag each tick with the largest of `{10,50,100,200}` that divides its position (driving tick length and whether it carries a label).
+2. Render the multi-scale ticks in both the horizontal and vertical `bar` divs, keeping monospace labels.
+3. Add a corner element (24×24px, at the top-left where the bars meet) that subscribes to `mousemove` and renders the live `x`/`y` mouse coordinates; tag it with a `data-pinscope-ruler-corner` attribute for the DoD test.
+**Rollback trigger:** `AC-034`'s tagged test (100px-interval tick count) regresses, or `tests/unit/runtime/components.test.tsx` Rulers cases regress.
+
+### Acceptance criteria
+- [ ] `Rulers.tsx` generates ticks at the four scales 10/50/100/200 px, not one uniform `interval`.
+- [ ] `Rulers.tsx` renders a corner element carrying `data-pinscope-ruler-corner`.
+- [ ] The corner element displays live mouse coordinates that update on `mousemove`.
+- [ ] The 24px bar dimensions and monospace labels are unchanged; `AC-034` stays green.
+
+### Definition of Done
+A test in `tests/unit/runtime/components.test.tsx` (Rulers block) transitions red → green: it renders `<Rulers/>` for a known viewport extent and asserts the horizontal bar contains ticks at the 10px scale AND distinctly-marked (longer/labelled) ticks at the 50, 100, and 200 px scales — i.e. more than one tick class is present, proving the multi-scale set. A second case asserts a `[data-pinscope-ruler-corner]` element exists, then fires a synthetic `mousemove` to `(x=137, y=84)` and asserts the corner's text content reports those coordinates. The current single-uniform-interval implementation must FAIL the first case. Closed when both cases pass AND `grep -E '10|50|200' src/runtime/components/Rulers.tsx` shows the multi-scale tick scales are present in code AND `grep 'data-pinscope-ruler-corner' src/runtime/components/Rulers.tsx` matches AND `npm test` exits 0 (including the unchanged `AC-034` test).
+
+### Dependencies
+None — `Rulers` is mounted by R-15-01 but this internal upgrade is independent of the mount; it touches only `Rulers.tsx`.
+
+### Risk assessment
+**Low–Medium** — isolated to one component file. Risk is the multi-scale tick generator producing a different count at the 100px scale and regressing `AC-034`; mitigation: the 100px ticks remain a subset of the multi-scale set, and the rollback trigger names the `AC-034` test explicitly as the regression signal. The corner `mousemove` listener must be cleaned up on unmount to avoid a listener leak.
+
+---
+
+## Remediation R-15-04
+
+**id:** R-15-04
 **Linked finding:** F-15-08, NF-15-06
 **Severity:** P2
 **Spec anchor:** §8.8 — "auto-generates override rules by scanning host stylesheets for `:hover`/`:focus`/`:active`."
@@ -138,9 +182,9 @@ None — `StatePanel` is mounted by R-15-01 but this hardening is independent of
 
 ---
 
-## Remediation R-15-04
+## Remediation R-15-05
 
-**id:** R-15-04
+**id:** R-15-05
 **Linked finding:** F-15-04, NF-15-08
 **Severity:** P1
 **Spec anchor:** §12 — "hostile CSS (PinScope styles use `!important`)" and "z-index conflicts (PinScope reserves `2147483647`)."
@@ -178,9 +222,9 @@ None.
 
 ---
 
-## Remediation R-15-05
+## Remediation R-15-06
 
-**id:** R-15-05
+**id:** R-15-06
 **Linked finding:** F-15-09, NF-15-07
 **Severity:** P2
 **Spec anchor:** §8.10 — "writes `.pinscope/snapshots/s_*.json`"; §10 flow D — "persist via dev-server endpoint `/__pinscope/snapshot`."
@@ -214,16 +258,16 @@ None.
 Two tests transition red → green. (a) A new `tests/unit/runtime/snapshot.test.tsx` case constructs an `EndpointSnapshotStore`, stubs global `fetch`, calls `new SnapshotManager(store).capture('x')`, and asserts `fetch` was called with `/__pinscope/snapshot` and a POST body that JSON-parses to a §9.2-shaped Snapshot. (b) A `tests/unit/plugin.test.ts` (or `deployment.test.ts`) case invokes the dev-server middleware handler with a fake request carrying a snapshot body and asserts a file `s_*.json` was written under a temp `.pinscope/snapshots/` directory with matching content. Closed when both pass AND `grep -rl '__pinscope/snapshot' src` returns ≥ 2 files AND `npm test` exits 0.
 
 ### Dependencies
-None — independent of the root assembly; the endpoint and store can land in any wave. (R-15-01 mounts nothing snapshot-related; `SnapshotManager` is invoked via shortcuts wired in R-15-01 but the persistence path is self-contained.)
+- Soft dependency on R-15-07's dev-server-middleware pattern: both R-15-06 and R-15-07 add a route to `src/plugin/index.ts`'s `configureServer`. If both land in the same wave, serialize this R-item's `configureServer` edit before R-15-07's history-route edit (conflict matrix: both touch `src/plugin/index.ts`). Independent of the root assembly otherwise.
 
 ### Risk assessment
 **Medium** — introduces a dev-server middleware and a `node:fs` write; the preservation contract keeps the write strictly in `src/plugin/` so the `runtime/` no-`fs` invariant (stated in `HistoryManager.ts`) holds. Path-traversal risk on the snapshot filename is mitigated by deriving the filename from `snapshot.id` (`s_<digits>`), never from untrusted input.
 
 ---
 
-## Remediation R-15-06
+## Remediation R-15-07
 
-**id:** R-15-06
+**id:** R-15-07
 **Linked finding:** F-15-07, NF-15-04, NF-15-05
 **Severity:** P2
 **Spec anchor:** §8.6 — "`fixed; bottom:0; height:40px` (expands to 120px on focus). … Autocomplete for pins/properties/values. … Tab autocomplete … History persisted to `.pinscope/history.json` (last 1000)."
@@ -233,8 +277,8 @@ None — independent of the root assembly; the endpoint and store can land in an
 1. How is the 120px expand expressed? A focus boolean in component state drives `style.height` (40 → 120) on `onFocus`/`onBlur`.
 2. What does Tab autocomplete call? `getSuggestions(input, pins, properties)` from `src/runtime/parsers/autocomplete.ts` — already built and tested; a `Tab` branch in `onInputKey` applies the first suggestion.
 3. Where do `pins` come from? `document.querySelectorAll('[data-pin]')` → the `data-pin` values; `properties` from the `SHORTCUTS` keys or a static property list.
-4. How is history persisted? Via `HistoryManager.append` against a store; §8.6 names `.pinscope/history.json`. The browser runtime store is in-memory/dev-server (mirrors R-15-05's snapshot pattern) — the CommandBar must call `HistoryManager` instead of its private `useRef`.
-5. Does persisting to `.pinscope/history.json` need a dev-server endpoint? Yes — analogous to R-15-05; a `POST /__pinscope/history` (or reuse a history endpoint) writes the file. The runtime stays `fs`-free.
+4. How is history persisted? Via `HistoryManager.append` against a store; §8.6 names `.pinscope/history.json`. The browser runtime store is in-memory/dev-server (mirrors R-15-06's snapshot pattern) — the CommandBar must call `HistoryManager` instead of its private `useRef`.
+5. Does persisting to `.pinscope/history.json` need a dev-server endpoint? Yes — analogous to R-15-06; a `POST /__pinscope/history` (or reuse a history endpoint) writes the file. The runtime stays `fs`-free.
 6. Does the `Cmd+K`/`/` focus path stay? Yes — it is correct §8.6 behavior and is preserved.
 
 ### Execution plan
@@ -257,17 +301,17 @@ None — independent of the root assembly; the endpoint and store can land in an
 Three test cases (extend `tests/unit/runtime/controls.test.tsx`, CommandBar block) transition red → green. (a) Render `<CommandBar/>`, focus the input, assert the computed/style height is 120; blur, assert 40. (b) Type a partial pin `e_4` (with `data-pin="e_47"` elements present in the DOM), press `Tab`, assert the input value completes to `e_47`. (c) Submit a command with Enter, then assert it was appended through a `HistoryManager` whose store received it (spy on `HistoryManager.append`), and a `tests/unit/plugin.test.ts` case asserts the `/__pinscope/history` middleware writes `.pinscope/history.json` capped at 1000 entries. Closed when all cases pass AND `grep -E 'getSuggestions|HistoryManager' src/runtime/components/CommandBar.tsx` matches AND `npm test` exits 0.
 
 ### Dependencies
-- Soft dependency on R-15-05's dev-server-middleware pattern: if both land in the same wave, serialize R-15-05's `configureServer` edit to `src/plugin/index.ts` before this R-item's history-route edit to avoid a same-file conflict (conflict matrix: both touch `src/plugin/index.ts`).
+- Soft dependency on R-15-06's dev-server-middleware pattern: if both land in the same wave, serialize R-15-06's `configureServer` edit to `src/plugin/index.ts` before this R-item's history-route edit to avoid a same-file conflict (conflict matrix: both touch `src/plugin/index.ts`).
 - Consumed by R-15-01 (the root mounts `CommandBar`), but the contract here is self-contained.
 
 ### Risk assessment
-**Medium** — touches `src/plugin/index.ts` (shared with R-15-05) and changes the CommandBar's history backing store. The conflict matrix flags `src/plugin/index.ts` as shared between R-15-05 and R-15-06 — the scheduler must serialize those two intra-wave by the named `configureServer` anchor. Preservation list pins the focus/nav key behavior so AC-038 cannot regress.
+**Medium** — touches `src/plugin/index.ts` (shared with R-15-06) and changes the CommandBar's history backing store. The conflict matrix flags `src/plugin/index.ts` as shared between R-15-06 and R-15-07 — the scheduler must serialize those two intra-wave by the named `configureServer` anchor. Preservation list pins the focus/nav key behavior so AC-038 cannot regress.
 
 ---
 
-## Remediation R-15-07
+## Remediation R-15-08
 
-**id:** R-15-07
+**id:** R-15-08
 **Linked finding:** F-15-10, NF-15-09
 **Severity:** P3
 **Spec anchor:** §15 — "`src/index.ts` re-exports `pinscope`, `withPinScope`, `PinScope`, `useDevState` and the four public types."
@@ -303,9 +347,9 @@ None.
 
 ---
 
-## Remediation R-15-08
+## Remediation R-15-09
 
-**id:** R-15-08
+**id:** R-15-09
 **Linked finding:** F-15-11
 **Severity:** P3
 **Spec anchor:** §9.3 — "`operations[]` items: `{ property, operation: 'set'|'increment'|'decrement'|'remove'|'add-class'|'remove-class', value?, delta? }`."
@@ -317,7 +361,7 @@ None.
 3. Is `delta` typed as a number? Yes — `OperationItem.delta?: number`; `parsed.value` is a string, so a numeric coercion is needed when routing to `delta`.
 4. What about non-numeric increment values? If `parsed.value` does not parse to a finite number, fall back to `value` (string) — never produce a `NaN` delta.
 5. Does AC-052 break? No — AC-052 validates the §9.3 schema; populating `delta` instead of `value` for increments is still schema-valid (both optional).
-6. Does the round-trip example (R-15-09's replacement) depend on `value`? The `examples/roundtrip/scenario.ts` uses `padding-y → 12px` (a `set`) — unaffected; only increment/decrement routing changes.
+6. Does the round-trip example (R-15-11's replacement) depend on `value`? The `examples/roundtrip/scenario.ts` uses `padding-y → 12px` (a `set`) — unaffected; only increment/decrement routing changes.
 
 ### Execution plan
 **Step 1 — CONFIRM/REFUTE (mandatory first step):** Re-read `pinscope/SPEC.md` §9.3. If §9.3 intends `delta?` to carry the numeric magnitude of `increment`/`decrement` operations → CONFIRMED, proceed. If §9.3's text supports `value?` being correct for all kinds and `delta?` serving another purpose → REFUTED; record a `### Resolution` note citing the §9.3 line and leave `operation-builder.ts` unchanged.
@@ -343,9 +387,9 @@ None.
 
 ---
 
-## Remediation R-15-09
+## Remediation R-15-10
 
-**id:** R-15-09
+**id:** R-15-10
 **Linked finding:** TEST-AUDIT-R15 — AC-076 hollow test
 **Severity:** P2
 **Spec anchor:** §4 / resolution I-4 — "`html2canvas` … loads only when a screenshot is actually requested" (lazy dynamic import).
@@ -382,9 +426,9 @@ None.
 
 ---
 
-## Remediation R-15-10
+## Remediation R-15-11
 
-**id:** R-15-10
+**id:** R-15-11
 **Linked finding:** TEST-AUDIT-R15 — AC-107 hollow test
 **Severity:** P2
 **Spec anchor:** §1 / §17.6 — "95% of UI requests resolved in ≤ 2 communication rounds"; round-trip end-state "average communication rounds per UI change < 2."
@@ -417,7 +461,9 @@ None.
 `grep 'examples/roundtrip' tests/unit/roundtrip.test.ts` returns NO match, AND `grep -E 'operation-parser|operation-builder' tests/unit/roundtrip.test.ts` returns matches (production primitives exercised). The AC-107-tagged test is a genuine red/green dual: the positive case passes against the current parser/builder, and the negative case demonstrates the ≤ 2-round assertion can fail for an incomplete Operation. Closed when the rewritten AC-107 test passes AND `npm test` exits 0.
 
 ### Dependencies
-- Soft relation to R-15-08: if R-15-08 changes increment/decrement routing to `delta`, the round-trip completeness predicate in this test must accept `delta` as well as `value` as evidence of a concrete operation. If both land in the same wave, author this test's completeness check to treat `value !== undefined || delta !== undefined` as complete. No file conflict (different files).
+- Soft relation to R-15-09: if R-15-09 changes increment/decrement routing to `delta`, the round-trip completeness predicate in this test must accept `delta` as well as `value` as evidence of a concrete operation. If both land in the same wave, author this test's completeness check to treat `value !== undefined || delta !== undefined` as complete. No file conflict (different files).
 
 ### Risk assessment
 **Low** — test-only change. The negative case is the safeguard against re-authoring another self-fulfilling test; the rollback trigger guards against the test being stricter than the correct primitives.
+</content>
+</invoke>
