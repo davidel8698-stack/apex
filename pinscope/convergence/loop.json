@@ -1196,9 +1196,10 @@
   },
   "findings": [],
   "current_round": {
-    "phase": "schedule",
+    "phase": "wave",
     "started_at": "2026-05-22T11:48:44.808Z",
-    "wave_snapshot_ref": null
+    "wave_snapshot_ref": "9471cf19cf54308a149669dd908deba9e9f6219a",
+    "wave_verify_fails": 0
   },
   "narrative_coverage": {
     "last_scanned_round": 16,
