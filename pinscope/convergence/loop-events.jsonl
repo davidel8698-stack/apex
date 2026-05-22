@@ -51,3 +51,4 @@
 {"at":"2026-05-22T14:06:26.896Z","round":19,"event":"phase:audit","note":null}
 {"at":"2026-05-22T14:14:47.495Z","round":20,"event":"phase:record","note":null}
 {"at":"2026-05-22T14:14:55.007Z","round":20,"event":"phase:breaker","note":null}
+{"at":"2026-05-22T14:15:20.022Z","round":20,"event":"phase:remediate","note":null}

@@ -1224,7 +1224,7 @@
   },
   "findings": [],
   "current_round": {
-    "phase": "breaker",
+    "phase": "remediate",
     "started_at": "2026-05-22T14:06:26.896Z",
     "wave_snapshot_ref": null
   },
