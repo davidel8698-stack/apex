@@ -1,0 +1,683 @@
+{
+  "round": 18,
+  "generated_at": "2026-05-22T00:00:00Z",
+  "spec_version": "2.0.0",
+  "spec_hash": "sha256:1779526021db1f5bc7ffe36647e6deb08ba3f8234e82cee31dc0bca5357c7a45",
+  "claims": [
+    {
+      "claim_id": "NC-01-01",
+      "section": "§1",
+      "claim": "Success metric: 95% of UI requests resolved in <=2 communication rounds.",
+      "normative": true,
+      "covered_by": ["AC-107"],
+      "code_satisfied": "unknown",
+      "re_read": "R18 re-read pinscope/SPEC.md §1 'Success metric' and tests/unit/roundtrip.test.ts: the suite (tagged AC-107) asserts ONE scripted scenario resolves in <=2 rounds via the parseCommand->buildOperation completeness path. The 95%-of-population statistical rate is an aggregate metric no harness measures — code_satisfied stays unknown (aggregate statistic, not a per-build falsifiable behaviour)."
+    },
+    {
+      "claim_id": "NC-03-01",
+      "section": "§3",
+      "claim": "Runtime module is organised into 6 layers: Inspection, Measurement, Control, State, Operation (plus root).",
+      "normative": false,
+      "covered_by": [],
+      "code_satisfied": "unknown",
+      "re_read": "R18 re-read §3 architecture diagram; the layer grouping is descriptive context — individual components carry their own ACs. Not a falsifiable behaviour; normative:false."
+    },
+    {
+      "claim_id": "NC-04-01",
+      "section": "§4",
+      "claim": "Dev build bundle budget: < 80 KB minified, < 25 KB gzipped.",
+      "normative": true,
+      "covered_by": ["AC-073"],
+      "code_satisfied": true,
+      "re_read": "R18 re-read pinscope/package.json `size-limit`: a single entry 'runtime (dev)', path dist/runtime/PinScope.js, limit '80 KB', ignore [react, react-dom]. AC-073 verify is the `npm run size` command exit 0."
+    },
+    {
+      "claim_id": "NC-04-02",
+      "section": "§4",
+      "claim": "Prod build budget: exactly 0 bytes of PinScope.",
+      "normative": true,
+      "covered_by": ["AC-010", "AC-074"],
+      "code_satisfied": true,
+      "re_read": "R18 re-read ac-matrix.json AC-010/AC-074 (build-grep over pinscope/examples/vite-react/dist, expect_count 0 for /data-pin|PinScope|pinscope/) and src/plugin/index.ts transformIndexHtml: when `!opts.enabled && opts.stripInProduction` it returns `stripPins(html)`, removing data-pin from prod HTML."
+    },
+    {
+      "claim_id": "NC-04-03",
+      "section": "§4",
+      "claim": "State is React hooks only — no Redux/Zustand.",
+      "normative": true,
+      "covered_by": [],
+      "code_satisfied": true,
+      "re_read": "R18 `grep -rniE 'redux|zustand' pinscope/src pinscope/package.json` -> 0 matches; runtime components and hooks use useState/useRef/useEffect/useMemo/useCallback only. No AC asserts the dependency exclusion."
+    },
+    {
+      "claim_id": "NC-06-01",
+      "section": "§6.1",
+      "claim": "pinscope() returns a Vite plugin with name 'vite-plugin-pinscope' and enforce 'pre'.",
+      "normative": true,
+      "covered_by": ["AC-001"],
+      "code_satisfied": true,
+      "re_read": "R18 re-read src/plugin/index.ts pinscope(): returns { name: 'vite-plugin-pinscope', enforce: 'pre', buildStart, configureServer, transform, buildEnd, transformIndexHtml }. AC-001 vitest-tag asserts the plugin shape."
+    },
+    {
+      "claim_id": "NC-06-02",
+      "section": "§6.1",
+      "claim": "PinScopeOptions defaults: enabled=NODE_ENV!=='production', filePattern=/\\.(jsx|tsx)$/, excludePattern=/node_modules|\\.test\\./, pinMapPath='.pinmap.json', stripInProduction=true, excludeTags=['Fragment','Suspense'].",
+      "normative": true,
+      "covered_by": [],
+      "code_satisfied": true,
+      "re_read": "R18 re-read src/plugin/index.ts resolveOptions(): enabled `?? process.env['NODE_ENV'] !== 'production'`, filePattern `?? /\\.(jsx|tsx)$/`, excludePattern `?? /node_modules|\\.test\\./`, pinMapPath `?? '.pinmap.json'`, stripInProduction `?? true`, excludeTags `?? ['Fragment','Suspense']` — every default matches §6.1. No AC asserts the resolved default values."
+    },
+    {
+      "claim_id": "NC-06-03",
+      "section": "§6.1",
+      "claim": "Plugin buildStart calls pinMap.load(); buildEnd calls pinMap.save().",
+      "normative": true,
+      "covered_by": [],
+      "code_satisfied": true,
+      "re_read": "R18 re-read src/plugin/index.ts: buildStart() -> `pinMap.load()`; buildEnd() -> `pinMap.reconcile(); pinMap.save()`. No AC drives the Vite lifecycle hooks directly."
+    },
+    {
+      "claim_id": "NC-06-04",
+      "section": "§6.2",
+      "claim": "AST transformer parses with @babel/parser plugins jsx, typescript, decorators-legacy.",
+      "normative": true,
+      "covered_by": [],
+      "code_satisfied": true,
+      "re_read": "R18 re-read src/plugin/ast-transformer.ts transformJSX(): `parse(code, { sourceType:'module', plugins:['jsx','typescript','decorators-legacy'], sourceFilename:filePath })`. No AC asserts the parser plugin set."
+    },
+    {
+      "claim_id": "NC-06-05",
+      "section": "§6.2",
+      "claim": "Only JSXOpeningElements with a source loc receive a data-pin; elements lacking loc are skipped.",
+      "normative": true,
+      "covered_by": [],
+      "code_satisfied": true,
+      "re_read": "R18 re-read src/plugin/ast-transformer.ts JSXOpeningElement visitor: `const loc = node.loc?.start; if (!loc) return;` precedes stableKey/getOrAssign/attribute push. AC-002/004/005 cover injection/skip/stability but none asserts the loc-absent skip path."
+    },
+    {
+      "claim_id": "NC-06-06",
+      "section": "§6.2",
+      "claim": "transformJSX emits both transformed code AND a source map.",
+      "normative": true,
+      "covered_by": ["AC-011"],
+      "code_satisfied": true,
+      "re_read": "R18 re-read src/plugin/ast-transformer.ts: `generate(ast, { sourceMaps: true, sourceFileName: filePath }, code)`; returns `{ code: output.code, map: (output.map as RawSourceMap|null) ?? null }`. AC-011 vitest-tag asserts result.map is defined."
+    },
+    {
+      "claim_id": "NC-06-07",
+      "section": "§6.3",
+      "claim": "PinMap.save() is dirty-gated — no write occurs when nothing changed.",
+      "normative": true,
+      "covered_by": [],
+      "code_satisfied": true,
+      "re_read": "R18 re-read src/plugin/pin-map.ts save(): `if (!this.dirty) return;` precedes fs.writeFileSync; `dirty` is set true only by getOrAssign/reconcile and cleared after a write. No AC asserts the dirty-gate; AC-006 validates the on-disk schema only."
+    },
+    {
+      "claim_id": "NC-06-08",
+      "section": "§6.3",
+      "claim": "getOrAssign refreshes last_seen and clears the deleted flag when an existing key is re-seen.",
+      "normative": true,
+      "covered_by": [],
+      "code_satisfied": true,
+      "re_read": "R18 re-read src/plugin/pin-map.ts getOrAssign(): on the `existing` branch sets `existing.last_seen = now` and `delete existing.deleted`, sets dirty, returns existing.id. AC-008 covers reconcile setting deleted:true but no AC covers the un-delete / last_seen refresh on re-sight."
+    },
+    {
+      "claim_id": "NC-06-09",
+      "section": "§6.4",
+      "claim": "A removed element's PinMap entry is marked deleted:true and its ID is never reused.",
+      "normative": true,
+      "covered_by": ["AC-008"],
+      "code_satisfied": true,
+      "re_read": "R18 re-read src/plugin/pin-map.ts reconcile(): iterates entries, sets `entry.deleted = true` for any key not in `seen`; getOrAssign allocates only via `e_${this.data.next_id++}` for new keys (next_id never decremented). AC-008 verifies the deleted:true mark."
+    },
+    {
+      "claim_id": "NC-06-10",
+      "section": "§6.4",
+      "claim": "A moved element produces a new file:line:column key and therefore a new ID.",
+      "normative": true,
+      "covered_by": [],
+      "code_satisfied": true,
+      "re_read": "R18 re-read src/plugin/stable-id-generator.ts stableKey(): returns `${filePath}:${line}:${column}` — a moved element changes line/column -> a new key -> getOrAssign allocates a new id. No AC exercises a moved element."
+    },
+    {
+      "claim_id": "NC-07-01",
+      "section": "§7.1",
+      "claim": "<PinScope/> portal-renders the HUD tree containing PinBadges, Rulers, Crosshair, GridOverlay, InfoPanel, TopBar, and CommandBar into document.body.",
+      "normative": true,
+      "covered_by": [],
+      "code_satisfied": true,
+      "re_read": "R18 re-read src/runtime/PinScope.tsx PinScopeHud visible branch (lines 250-269): `createPortal(<div data-pinscope-ui=\"root\"> ...` containing <PinBadges/>, <Rulers/>, <Crosshair/>, <GridOverlay/>, <InfoPanel/>, <TopBar/>, <CommandBar/> (all 7 §7.1 components present) into document.body. AC-022 asserts only the portal wrapper exists, so the full-tree claim remains uncovered though satisfied."
+    },
+    {
+      "claim_id": "NC-07-02",
+      "section": "§7.1",
+      "claim": "<PinScope/> accepts props hudPosition, defaultGridMode, and shortcutsEnabled.",
+      "normative": true,
+      "covered_by": [],
+      "code_satisfied": true,
+      "re_read": "R18 re-read src/runtime/PinScope.tsx PinScopeProps (lines 31-40): declares enabled, hudPosition, defaultGridMode, shortcutsEnabled; PinScope() forwards all three with defaults `?? 'right'` / `?? 'off'` / `!== false` (lines 52-56); PinScopeHud honours them — defaultGridMode seeds gridMode state, hudPosition passes to InfoPanel, shortcutsEnabled gates useKeyboardShortcuts. No AC asserts the prop surface."
+    },
+    {
+      "claim_id": "NC-07-03",
+      "section": "§7.1",
+      "claim": "When the HUD is hidden, <PinScope/> renders only a FloatingToggle.",
+      "normative": true,
+      "covered_by": [],
+      "code_satisfied": true,
+      "re_read": "R18 re-read src/runtime/PinScope.tsx PinScopeHud `if (!hudVisible)` branch (lines 241-248): `createPortal(<div data-pinscope-ui=\"root\"><FloatingToggle onShow=…/></div>, document.body)` — only the toggle. src/runtime/components/FloatingToggle.tsx exports FloatingToggle. No AC asserts the HUD-hidden branch."
+    },
+    {
+      "claim_id": "NC-07-04",
+      "section": "§7.2",
+      "claim": "Pin badges use z-index in the range 2147483645-2147483647 (blue default, red hover, green selected).",
+      "normative": true,
+      "covered_by": ["AC-023"],
+      "code_satisfied": true,
+      "re_read": "R18 re-read src/runtime/styles/badges.css.ts: ::before z-index 2147483645, :hover::before 2147483646, [data-pin-selected]::before 2147483647; backgrounds rgba(59,130,246,.92) blue / rgba(239,68,68,.95) red / rgba(34,197,94,.95) green. AC-023 verifies only badge ::before text == pin id, not z-index or colour states — covered but under-checked (strengthen proposal)."
+    },
+    {
+      "claim_id": "NC-07-05",
+      "section": "§7.2",
+      "claim": "Void elements get a JS-overlay badge and a MutationObserver detects new void elements at runtime.",
+      "normative": true,
+      "covered_by": ["AC-024", "AC-025"],
+      "code_satisfied": true,
+      "re_read": "R18 re-read src/runtime/components/VoidBadges.tsx (VOID_TAGS Set = IMG/INPUT/BR/HR/AREA/EMBED; one overlay div per void [data-pin]) and src/runtime/managers/RuntimePinObserver.ts MutationObserver callback `node.setAttribute(PIN_ATTR, \\`e_r${++this.counter}\\`)` for runtime-added subtrees. AC-024/AC-025 cover both."
+    },
+    {
+      "claim_id": "NC-07-06",
+      "section": "§7.3",
+      "claim": "useHoveredElement throttles mousemove through requestAnimationFrame (one resolve per frame).",
+      "normative": true,
+      "covered_by": [],
+      "code_satisfied": true,
+      "re_read": "R18 re-read src/runtime/hooks/useHoveredElement.ts: handleMove records lastPos, `if (rafRef.current !== null) return;` guard, the resolve runs inside the requestAnimationFrame callback which nulls rafRef; cleanup cancelAnimationFrame. AC-026/027 assert nearest-ancestor / HUD-skip only, not the per-frame throttle."
+    },
+    {
+      "claim_id": "NC-08-01",
+      "section": "§8.1",
+      "claim": "InfoPanel is positioned position:fixed; right:16px; top:56px; width:320px.",
+      "normative": true,
+      "covered_by": [],
+      "code_satisfied": true,
+      "re_read": "R18 re-read src/runtime/components/InfoPanel.tsx style: `position:'fixed', top:56, width:320` (lines 130-132); `if (position === 'right') style.right = 16` (line 140); default position 'right'. No AC asserts panel geometry."
+    },
+    {
+      "claim_id": "NC-08-02",
+      "section": "§8.1",
+      "claim": "InfoPanel empty values render '—', not '0px'.",
+      "normative": true,
+      "covered_by": ["AC-033"],
+      "code_satisfied": true,
+      "re_read": "R18 re-read src/runtime/components/InfoPanel.tsx isEmptyValue() (line 80) + StyleRow (line 89): an empty value renders `<span data-empty>—</span>`. AC-033 asserts swatch + the `—` empty rendering."
+    },
+    {
+      "claim_id": "NC-08-03",
+      "section": "§8.2",
+      "claim": "Rulers are 24px wide/tall with ticks at 10/50/100/200 px and the corner shows live mouse coords.",
+      "normative": true,
+      "covered_by": ["AC-034"],
+      "code_satisfied": true,
+      "re_read": "R18 re-read src/runtime/components/Rulers.tsx: BAR_X height 24 / BAR_Y width 24; MINOR_SCALES [10,50] rendered as repeating stripes, MAJOR_SCALES [100,200] as labelled tick spans; a 24x24 corner cell renders live mouse coords from a mousemove listener. AC-034 verifies only 100px-interval ticks — covered but under-checked (strengthen proposal)."
+    },
+    {
+      "claim_id": "NC-08-04",
+      "section": "§8.3",
+      "claim": "Crosshair is disabled over the HUD, in measurement mode, or when the HUD is hidden.",
+      "normative": true,
+      "covered_by": ["AC-035"],
+      "code_satisfied": true,
+      "re_read": "R18 re-read src/runtime/components/Crosshair.tsx: props `measuring`/`hudHidden`; `if (measuring || hudHidden) return null;` (line 35); onMove sets pos null when `target.closest('[data-pinscope-ui]')` (line 23). PinScope.tsx passes <Crosshair measuring={measuring} hudHidden={!hudVisible}/>. AC-035 verifies only the over-HUD hide — covered but under-checked (strengthen proposal)."
+    },
+    {
+      "claim_id": "NC-08-05",
+      "section": "§8.4",
+      "claim": "GridOverlay supports 4 modes (pixel 8px, baseline 4px, column 12-col, spacing-scale) cycling off->pixel->baseline->column->spacing->off, implemented via SVG <pattern>.",
+      "normative": true,
+      "covered_by": ["AC-036"],
+      "code_satisfied": true,
+      "re_read": "R18 re-read src/runtime/components/GridOverlay.tsx: ORDER=[off,pixel,baseline,column,spacing], nextGridMode cycles modulo ORDER.length; CELL pixel=8 baseline=4 column=96 spacing=8; rendered via `<svg><defs><pattern …/></defs><rect fill=url(#patternId)/></svg>`. AC-036 cycles Shift+G and asserts each mode's SVG pattern."
+    },
+    {
+      "claim_id": "NC-08-06",
+      "section": "§8.5",
+      "claim": "TopBar is fixed; top:0; height:32px and shows viewport, grid mode, state override, and live pin count.",
+      "normative": true,
+      "covered_by": ["AC-037"],
+      "code_satisfied": true,
+      "re_read": "R18 re-read src/runtime/components/TopBar.tsx: style `position:'fixed', top:0, height:32`; data-field spans viewport/grid/state/pins; `countPins()` = document.querySelectorAll('[data-pin]').length. AC-037 asserts the four fields + pin count."
+    },
+    {
+      "claim_id": "NC-08-07",
+      "section": "§8.6",
+      "claim": "CommandBar is fixed; bottom:0; height:40px and expands to 120px on focus.",
+      "normative": true,
+      "covered_by": [],
+      "code_satisfied": true,
+      "re_read": "R18 re-read src/runtime/components/CommandBar.tsx: style `position:'fixed', bottom:0, height: focused ? 120 : 40` (lines 149-150); `focused` state toggled by onFocus/onBlur. AC-038 covers focus/history/blur keys only, not the expand height."
+    },
+    {
+      "claim_id": "NC-08-08",
+      "section": "§8.6",
+      "claim": "CommandBar history is persisted to .pinscope/history.json, last 1000 entries.",
+      "normative": true,
+      "covered_by": ["AC-053"],
+      "code_satisfied": true,
+      "re_read": "R18 re-read src/runtime/components/CommandBar.tsx (persistHistory POSTs {version,entries} to '/__pinscope/history') and src/plugin/index.ts handleHistoryRequest: slices `parsed.entries.slice(-HISTORY_MAX_ENTRIES)` with HISTORY_MAX_ENTRIES=1000 and writes .pinscope/history.json. AC-053 checks the clipboard+history append path, not the .pinscope/history.json persistence cap — covered but under-checked (strengthen proposal)."
+    },
+    {
+      "claim_id": "NC-08-09",
+      "section": "§8.6",
+      "claim": "CommandBar provides Tab autocomplete for pins/properties/values.",
+      "normative": true,
+      "covered_by": [],
+      "code_satisfied": true,
+      "re_read": "R18 re-read src/runtime/components/CommandBar.tsx onInputKey: `else if (e.key === 'Tab')` branch (line 96) preventDefault then `getSuggestions(value, readPins(), SHORTCUT_PROPERTIES)[0]` applied; autocomplete.ts imported (line 10). AC-054 measures autocomplete latency but no AC asserts Tab is wired into CommandBar."
+    },
+    {
+      "claim_id": "NC-08-10",
+      "section": "§8.7",
+      "claim": "MeasurementTool renders Δx/Δy/diagonal/gap labels and Alt-hover shows all sibling distances.",
+      "normative": true,
+      "covered_by": ["AC-039"],
+      "code_satisfied": false,
+      "re_read": "R18 re-read src/runtime/components/MeasurementTool.tsx (full file): two-click measurement renders data-measure dx/dy/diagonal/gap from measure() — AC-039 covered. `grep -niE 'alt|sibling' src/runtime/components/MeasurementTool.tsx` -> 0 matches; no altKey handler, no sibling-distance rendering. The Alt-hover sibling-distances sub-behaviour remains absent. NOT a blocking finding — the claim is covered_by AC-039 (whose check still passes); the unmet sub-behaviour is carried as the AC-039 strengthen proposal, not an un-AC'd gap."
+    },
+    {
+      "claim_id": "NC-08-11",
+      "section": "§8.8",
+      "claim": "StatePanel auto-generates override rules by scanning host stylesheets for :hover/:focus/:active.",
+      "normative": true,
+      "covered_by": [],
+      "code_satisfied": true,
+      "re_read": "R18 re-read src/runtime/components/StatePanel.tsx generateOverrideRules(): iterates `Array.from(document.styleSheets)`, reads `sheet.cssRules` inside a try/catch guarding the cross-origin SecurityError, keeps rules whose selectorText contains the forced pseudo-class, strips it, re-scopes under `[data-state-override=\"<state>\"]`; applyStateOverride injects them. AC-040 asserts the [data-state-override] attribute path only."
+    },
+    {
+      "claim_id": "NC-08-12",
+      "section": "§8.10",
+      "claim": "SnapshotManager.createSnapshot extracts exactly 32 computed-style properties per element.",
+      "normative": true,
+      "covered_by": ["AC-042"],
+      "code_satisfied": true,
+      "re_read": "R18 counted src/runtime/managers/SnapshotManager.ts TRACKED_STYLES literal (lines 8-14): exactly 32 quoted property names; snapshotElement() loops `for (const prop of TRACKED_STYLES) computed[prop] = cs.getPropertyValue(prop)`. AC-042 validates the snapshot file against §9.2 which does not pin the count to 32 — covered but under-checked (strengthen proposal)."
+    },
+    {
+      "claim_id": "NC-09-01",
+      "section": "§9.1",
+      "claim": ".pinmap.json conforms to the schema: version:1, numeric next_id, entries map of {id,tag,created,last_seen,deleted?}.",
+      "normative": true,
+      "covered_by": ["AC-006"],
+      "code_satisfied": true,
+      "re_read": "R18 re-read src/types/pin-map.ts + src/plugin/pin-map.ts: PinMapData { version:1, next_id:number, entries:Record<string,PinMapEntry> }; PinMapEntry { id, tag, created, last_seen, deleted? }; default `{ version:1, next_id:1, entries:{} }`. AC-006 validates the on-disk schema."
+    },
+    {
+      "claim_id": "NC-09-02",
+      "section": "§9.3",
+      "claim": "An Operation conforms to the §9.3 schema with request_type one of 'operation'|'annotation'|'diagnostic'.",
+      "normative": true,
+      "covered_by": ["AC-052"],
+      "code_satisfied": true,
+      "re_read": "R18 re-read src/types/operation.ts (Operation.request_type union 'operation'|'annotation'|'diagnostic') and src/runtime/parsers/operation-builder.ts buildOperation (base request_type:'operation', overridden to 'diagnostic' for the query kind). AC-052 validates the §9.3 schema on sample operations."
+    },
+    {
+      "claim_id": "NC-10-01",
+      "section": "§10-D",
+      "claim": "Snapshot creation persists via the dev-server endpoint /__pinscope/snapshot.",
+      "normative": true,
+      "covered_by": [],
+      "code_satisfied": true,
+      "re_read": "R18 re-read src/runtime/managers/EndpointSnapshotStore.ts (SNAPSHOT_ENDPOINT='/__pinscope/snapshot', write() POSTs the snapshot via fetch) and src/plugin/index.ts configureServer (SNAPSHOT_ROUTE='/__pinscope/snapshot' -> handleSnapshotRequest writes .pinscope/snapshots/<id>.json). PinScope.tsx wires SnapshotManager(new EndpointSnapshotStore()). AC-042 verifies a snapshot file via a test store, not the dev-server endpoint of flow D."
+    },
+    {
+      "claim_id": "NC-10-02",
+      "section": "§10-A",
+      "claim": "Hover inspection completes within a < 8 ms/frame budget.",
+      "normative": true,
+      "covered_by": ["AC-071"],
+      "code_satisfied": true,
+      "re_read": "R18 re-read ac-matrix.json AC-071 (vitest-tag) and tests/unit/runtime/perf.test.tsx 'keeps hover per-frame work under 8 ms (AC-071)' which asserts the rAF callback duration < 8 ms."
+    },
+    {
+      "claim_id": "NC-11-01",
+      "section": "§11",
+      "claim": "Operation grammar supports Target.Property Operator Value, Target Operator Class, select Target, measure Target to Target, snapshot [Name], ? [Topic].",
+      "normative": true,
+      "covered_by": ["AC-050"],
+      "code_satisfied": true,
+      "re_read": "R18 re-read src/runtime/parsers/operation-parser.ts parseCommand: RE_QUERY, RE_SNAPSHOT, RE_MEASURE, RE_SELECT, RE_OPERATION, RE_CLASS cover all six §11 forms; OPERATORS map covers set/increment/decrement, RE_CLASS covers += / -=. AC-050 exercises >=30 valid+invalid cases."
+    },
+    {
+      "claim_id": "NC-11-02",
+      "section": "§11",
+      "claim": "Shortcut properties padding-y/x, margin-y/x, bg, fg, radius, weight, size, shadow resolve to CSS equivalents.",
+      "normative": true,
+      "covered_by": ["AC-051"],
+      "code_satisfied": true,
+      "re_read": "R18 re-read src/runtime/parsers/property-shortcuts.ts SHORTCUTS map — all 10 shortcuts present: padding-y/x->padding-block/inline, margin-y/x->margin-block/inline, bg->background-color, fg->color, radius->border-radius, weight->font-weight, size->font-size, shadow->box-shadow. AC-051 has a unit test per shortcut."
+    },
+    {
+      "claim_id": "NC-12-01",
+      "section": "§12",
+      "claim": "PinScope reserves z-index 2147483647 and PinScope styles use !important against hostile CSS.",
+      "normative": true,
+      "covered_by": [],
+      "code_satisfied": true,
+      "re_read": "R18 re-read src/runtime/constants.ts (Z_SELECTED=2147483647 reserved) and src/runtime/styles/badges.css.ts: the ::before badge rules carry !important on content/position/top/left/background/padding/border-radius/pointer-events/z-index; :hover::before and [data-pin-selected]::before carry !important on background+z-index; the :hover/selected outlines carry !important. No AC covers the !important hardening."
+    },
+    {
+      "claim_id": "NC-12-02",
+      "section": "§12",
+      "claim": "With > 500 pinned elements mousemove throttles to 30fps and badges < 16x16px are skipped.",
+      "normative": true,
+      "covered_by": ["AC-065"],
+      "code_satisfied": "unknown",
+      "re_read": "R18: src/runtime/utils/throttle.ts present; AC-065 tagged in tests/unit/edge-utils.test.ts. `grep -nE '500|16' src/runtime/components/PinBadges.tsx src/runtime/components/VoidBadges.tsx` -> 0 matches; the degrade behaviour is exercised by the AC-065 fixture/util test, not wired into a live badge component — covered by AC-065, component-level wiring unconfirmed, code_satisfied stays unknown (consistent with R17)."
+    },
+    {
+      "claim_id": "NC-13-01",
+      "section": "§13",
+      "claim": "Initial <PinScope/> mount budget < 50 ms.",
+      "normative": true,
+      "covered_by": ["AC-070"],
+      "code_satisfied": true,
+      "re_read": "R18 re-read ac-matrix.json AC-070 (vitest-tag) and tests/unit/runtime/perf.test.tsx 'mounts <PinScope/> in under 50 ms (AC-070)' which asserts mount < 50 ms."
+    },
+    {
+      "claim_id": "NC-13-02",
+      "section": "§13",
+      "claim": "Operation parse budget < 4 ms.",
+      "normative": true,
+      "covered_by": ["AC-072"],
+      "code_satisfied": true,
+      "re_read": "R18: tests/unit/operation-perf.test.ts 'parses a command in under 4 ms (AC-072)' asserts the parse benchmark < 4 ms."
+    },
+    {
+      "claim_id": "NC-14-01",
+      "section": "§14",
+      "claim": "The AST transformer unit suite has >= 50 input/output pairs.",
+      "normative": true,
+      "covered_by": ["AC-080"],
+      "code_satisfied": true,
+      "re_read": "R18 re-read tests/unit/fixtures/transformer-cases.ts transformerCases: HTML_TAGS (44) + COMPONENT_TAGS (8) + 4 explicit cases (Fragment, Suspense, Ns.Item, A.B.C) = 56 input/output pairs (>= 50). AC-080 vitest-tag requires the transformer suite >= 50 pairs."
+    },
+    {
+      "claim_id": "NC-14-02",
+      "section": "§14",
+      "claim": "The operation-parser unit suite has >= 30 grammar variants.",
+      "normative": true,
+      "covered_by": ["AC-081"],
+      "code_satisfied": true,
+      "re_read": "R18: tests/unit/operation-parser.test.ts present and tagged AC-081 (vitest-tag); AC-081 requires >= 30 cases."
+    },
+    {
+      "claim_id": "NC-15-01",
+      "section": "§15",
+      "claim": "package.json exposes export subpaths pinscope/vite, pinscope/runtime, pinscope/next, pinscope/webpack.",
+      "normative": true,
+      "covered_by": ["AC-090"],
+      "code_satisfied": true,
+      "re_read": "R18 re-read pinscope/package.json `exports`: '.', './vite', './runtime', './next', './webpack' all present. AC-090 vitest-tag resolves each subpath."
+    },
+    {
+      "claim_id": "NC-15-02",
+      "section": "§15",
+      "claim": "src/index.ts re-exports pinscope, withPinScope, PinScope, useDevState and the four public types.",
+      "normative": true,
+      "covered_by": [],
+      "code_satisfied": true,
+      "re_read": "R18 re-read src/index.ts: re-exports pinscope (line 3), withPinScope (line 6, from './plugin/next.js'), PinScope (line 8), useDevState (line 10), and the public types PinScopeOptions/Operation/Snapshot/ElementSnapshot. AC-091's description lists only pinscope/PinScope/useDevState + four types — removing withPinScope from index.ts would not fail AC-091, so the withPinScope re-export is satisfied but uncovered."
+    },
+    {
+      "claim_id": "NC-16-01",
+      "section": "§16",
+      "claim": "P5 (APEX Integration) is a defined phase with DoD deferred to §17.",
+      "normative": false,
+      "covered_by": [],
+      "code_satisfied": "unknown",
+      "re_read": "R18 re-read §16 phase table — a descriptive phase plan; the concrete P5 behaviours are claimed in §17 and carry their own ACs. Not a falsifiable behaviour; normative:false."
+    },
+    {
+      "claim_id": "NC-17-01",
+      "section": "§17.1",
+      "claim": "framework/apex-skills/pinscope.md teaches the Pin/Operation/Snapshot model in apex-skill format.",
+      "normative": true,
+      "covered_by": ["AC-100"],
+      "code_satisfied": true,
+      "re_read": "R18 `grep -nE '^## (Conventions|Anti-Patterns|Common Patterns|Testing|Common Gotchas)' framework/apex-skills/pinscope.md` -> all five apex-skill headings present (Conventions, Anti-Patterns, Common Patterns, Testing, Common Gotchas). AC-100 greps the five headings, min_count 5."
+    },
+    {
+      "claim_id": "NC-17-02",
+      "section": "§17.2",
+      "claim": "/apex:ui-phase scaffolds the PinScope plugin + <PinScope/> into the target project.",
+      "normative": true,
+      "covered_by": ["AC-102"],
+      "code_satisfied": true,
+      "re_read": "R18 `grep -c 'PINSCOPE INSTRUMENTATION' framework/commands/apex/ui-phase.md` -> 1. AC-102 greps the scaffold step, min_count 1."
+    },
+    {
+      "claim_id": "NC-17-03",
+      "section": "§17.3",
+      "claim": "/apex:ui-review can ingest a PinScope Snapshot/Operation as review evidence.",
+      "normative": true,
+      "covered_by": ["AC-103"],
+      "code_satisfied": true,
+      "re_read": "R18 `grep -c 'PINSCOPE EVIDENCE' framework/commands/apex/ui-review.md` -> 1. AC-103 greps the evidence step, min_count 1."
+    },
+    {
+      "claim_id": "NC-17-04",
+      "section": "§17.4",
+      "claim": "architect / frontend-specialist add pinscope to STATE.json.stack_skills for frontend projects.",
+      "normative": true,
+      "covered_by": ["AC-104"],
+      "code_satisfied": true,
+      "re_read": "R18 `grep -lc 'pinscope' framework/agents/architect.md framework/agents/specialist/frontend.md` -> both files match. AC-104 greps pinscope across both files, min_count 2."
+    },
+    {
+      "claim_id": "NC-17-05",
+      "section": "§17.5",
+      "claim": "apex-spec.md registers PinScope as a sanctioned extension/module.",
+      "normative": true,
+      "covered_by": ["AC-105"],
+      "code_satisfied": true,
+      "re_read": "R18 `grep -c 'PinScope' apex-spec.md` -> 1. AC-105 greps PinScope in apex-spec.md, min_count 1."
+    },
+    {
+      "claim_id": "NC-17-06",
+      "section": "§17.6",
+      "claim": "Round-trip end-state: average communication rounds per UI change < 2.",
+      "normative": true,
+      "covered_by": ["AC-107"],
+      "code_satisfied": "unknown",
+      "re_read": "R18 re-read SPEC §17.6 and tests/unit/roundtrip.test.ts: AC-107 (vitest-tag) asserts ONE scripted scenario resolves within the bound via the parseCommand->buildOperation completeness path. The 'average < 2' aggregate metric is not measured by any harness — code_satisfied stays unknown (aggregate statistic)."
+    }
+  ],
+  "candidate_acs": [
+    {
+      "claim_id": "NC-04-03",
+      "proposed_ac": "AC-NEW-01 · P1 · P2 · build — the runtime ships with no Redux/Zustand dependency; state is React-hooks only (§4). **verify:** grep 'redux|zustand' over src/ and package.json dependencies returns 0.",
+      "phase": "P1", "severity": "P2", "category": "build",
+      "verify": { "kind": "grep" },
+      "code_satisfied": true, "carried_over": true
+    },
+    {
+      "claim_id": "NC-06-02",
+      "proposed_ac": "AC-NEW-02 · P1 · P1 · build — PinScopeOptions resolves to the §6.1 default values when no options are passed (enabled, filePattern, excludePattern, pinMapPath, stripInProduction, excludeTags). **verify:** unit test calls resolveOptions({}) and asserts each default.",
+      "phase": "P1", "severity": "P1", "category": "build",
+      "verify": { "kind": "vitest-tag" },
+      "code_satisfied": true, "carried_over": true
+    },
+    {
+      "claim_id": "NC-06-03",
+      "proposed_ac": "AC-NEW-03 · P1 · P1 · build — the Vite plugin's buildStart hook loads the PinMap and buildEnd reconciles + saves it. **verify:** unit test spies on PinMap.load/reconcile/save and invokes the plugin lifecycle hooks.",
+      "phase": "P1", "severity": "P1", "category": "build",
+      "verify": { "kind": "vitest-tag" },
+      "code_satisfied": true, "carried_over": true
+    },
+    {
+      "claim_id": "NC-06-04",
+      "proposed_ac": "AC-NEW-04 · P1 · P2 · build — transformJSX parses with @babel/parser plugins jsx, typescript, and decorators-legacy. **verify:** unit fixture using a TS decorator transforms without a parse error.",
+      "phase": "P1", "severity": "P2", "category": "build",
+      "verify": { "kind": "vitest-tag" },
+      "code_satisfied": true, "carried_over": true
+    },
+    {
+      "claim_id": "NC-06-05",
+      "proposed_ac": "AC-NEW-05 · P1 · P2 · build — a JSXOpeningElement with no source loc receives no data-pin. **verify:** unit test transforms a synthetic AST node lacking loc and asserts no attribute pushed.",
+      "phase": "P1", "severity": "P2", "category": "build",
+      "verify": { "kind": "vitest-tag" },
+      "code_satisfied": true, "carried_over": true
+    },
+    {
+      "claim_id": "NC-06-07",
+      "proposed_ac": "AC-NEW-06 · P1 · P2 · build — PinMap.save() performs no disk write when nothing changed since load (dirty-gated). **verify:** unit test load()s, calls save() with no assigns, asserts fs.writeFileSync not called.",
+      "phase": "P1", "severity": "P2", "category": "build",
+      "verify": { "kind": "vitest-tag" },
+      "code_satisfied": true, "carried_over": true
+    },
+    {
+      "claim_id": "NC-06-08",
+      "proposed_ac": "AC-NEW-07 · P1 · P1 · build — re-seeing a previously-deleted key in getOrAssign clears its deleted flag and refreshes last_seen. **verify:** unit test marks an entry deleted, calls getOrAssign with that key, asserts deleted absent and last_seen updated.",
+      "phase": "P1", "severity": "P1", "category": "build",
+      "verify": { "kind": "vitest-tag" },
+      "code_satisfied": true, "carried_over": true
+    },
+    {
+      "claim_id": "NC-06-10",
+      "proposed_ac": "AC-NEW-08 · P1 · P1 · build — a moved element (changed line/column) yields a new e_N id, not the prior one. **verify:** unit test transforms a fixture, shifts the element's line, re-transforms, asserts a different id.",
+      "phase": "P1", "severity": "P1", "category": "build",
+      "verify": { "kind": "vitest-tag" },
+      "code_satisfied": true, "carried_over": true
+    },
+    {
+      "claim_id": "NC-07-01",
+      "proposed_ac": "AC-NEW-09 · P2 · P1 · runtime — <PinScope/> mounts the full §7.1 HUD tree (PinBadges, Rulers, Crosshair, GridOverlay, InfoPanel, TopBar, CommandBar) inside [data-pinscope-ui=root]. **verify:** RTL test renders <PinScope/> and asserts a query handle for each of the 7 components.",
+      "phase": "P2", "severity": "P1", "category": "runtime",
+      "verify": { "kind": "vitest-tag" },
+      "code_satisfied": true, "carried_over": true
+    },
+    {
+      "claim_id": "NC-07-02",
+      "proposed_ac": "AC-NEW-10 · P2 · P2 · runtime — <PinScope/> accepts and honours props hudPosition, defaultGridMode, and shortcutsEnabled. **verify:** RTL test passes each prop and asserts the corresponding behaviour.",
+      "phase": "P2", "severity": "P2", "category": "runtime",
+      "verify": { "kind": "vitest-tag" },
+      "code_satisfied": true, "carried_over": true
+    },
+    {
+      "claim_id": "NC-07-03",
+      "proposed_ac": "AC-NEW-11 · P2 · P2 · runtime — when the HUD is hidden, <PinScope/> renders only a FloatingToggle. **verify:** RTL test hides the HUD and asserts only the FloatingToggle element is present.",
+      "phase": "P2", "severity": "P2", "category": "runtime",
+      "verify": { "kind": "vitest-tag" },
+      "code_satisfied": true, "carried_over": true
+    },
+    {
+      "claim_id": "NC-07-06",
+      "proposed_ac": "AC-NEW-12 · P2 · P2 · runtime — useHoveredElement throttles mousemove through requestAnimationFrame, resolving the hovered element at most once per frame (§7.3). **verify:** unit test fires N rapid mousemove events within one frame and asserts a single hover resolution.",
+      "phase": "P2", "severity": "P2", "category": "runtime",
+      "verify": { "kind": "vitest-tag" },
+      "code_satisfied": true, "carried_over": true
+    },
+    {
+      "claim_id": "NC-08-01",
+      "proposed_ac": "AC-NEW-13 · P1 · P2 · runtime — InfoPanel is rendered position:fixed at right:16px, top:56px, width:320px. **verify:** RTL/Playwright asserts the four computed style values.",
+      "phase": "P1", "severity": "P2", "category": "runtime",
+      "verify": { "kind": "vitest-tag" },
+      "code_satisfied": true, "carried_over": true
+    },
+    {
+      "claim_id": "NC-08-07",
+      "proposed_ac": "AC-NEW-14 · P2 · P2 · runtime — CommandBar (40px) expands to 120px height while focused. **verify:** Playwright focuses the bar and asserts height transitions to 120px.",
+      "phase": "P2", "severity": "P2", "category": "runtime",
+      "verify": { "kind": "vitest-tag" },
+      "code_satisfied": true, "carried_over": true
+    },
+    {
+      "claim_id": "NC-08-09",
+      "proposed_ac": "AC-NEW-15 · P3 · P2 · runtime — CommandBar Tab key triggers autocomplete for pins/properties/values. **verify:** RTL test types a partial pin, presses Tab, asserts the completed value.",
+      "phase": "P3", "severity": "P2", "category": "runtime",
+      "verify": { "kind": "vitest-tag" },
+      "code_satisfied": true, "carried_over": true
+    },
+    {
+      "claim_id": "NC-08-11",
+      "proposed_ac": "AC-NEW-16 · P2 · P2 · runtime — StatePanel auto-generates override rules by scanning host stylesheets for :hover/:focus/:active. **verify:** unit test seeds a stylesheet with a :hover rule and asserts an override rule is generated.",
+      "phase": "P2", "severity": "P2", "category": "runtime",
+      "verify": { "kind": "vitest-tag" },
+      "code_satisfied": true, "carried_over": true
+    },
+    {
+      "claim_id": "NC-10-01",
+      "proposed_ac": "AC-NEW-17 · P4 · P2 · runtime — snapshot creation persists through the dev-server endpoint /__pinscope/snapshot (flow D). **verify:** integration test triggers a snapshot and asserts a POST to /__pinscope/snapshot.",
+      "phase": "P4", "severity": "P2", "category": "runtime",
+      "verify": { "kind": "vitest-tag" },
+      "code_satisfied": true, "carried_over": true
+    },
+    {
+      "claim_id": "NC-12-01",
+      "proposed_ac": "AC-NEW-18 · P2 · P1 · runtime — PinScope badge/overlay CSS rules carry !important so hostile host CSS cannot override them (§12 hostile CSS). **verify:** grep badges.css.ts asserts the z-index/background/positioning badge rules include !important.",
+      "phase": "P2", "severity": "P1", "category": "runtime",
+      "verify": { "kind": "grep" },
+      "code_satisfied": true, "carried_over": true
+    },
+    {
+      "claim_id": "NC-15-02",
+      "proposed_ac": "AC-NEW-19 · P1 · P1 · integration — src/index.ts re-exports withPinScope (alongside pinscope, PinScope, useDevState and the public types) per §15. **verify:** runtime import test asserts `withPinScope` is exported from the package root entry, not only from the pinscope/next subpath.",
+      "phase": "P1", "severity": "P1", "category": "integration",
+      "verify": { "kind": "vitest-tag" },
+      "code_satisfied": true, "carried_over": true
+    }
+  ],
+  "strengthen_proposals": [
+    {
+      "ac": "AC-023",
+      "claim_id": "NC-07-04",
+      "current_verify": "Playwright reads ::before content for a sample of 5 pins (badge text == data-pin value).",
+      "claim_quote": "blue badge, red on hover, green when [data-pin-selected], z-index 2147483645-2147483647 (§7.2).",
+      "proposed_verify": "Playwright additionally asserts the badge ::before z-index is 2147483645 by default, and that background colour shifts to the red rgba on :hover and the green rgba on [data-pin-selected]."
+    },
+    {
+      "ac": "AC-034",
+      "claim_id": "NC-08-03",
+      "current_verify": "Playwright counts tick labels at 100px intervals for a 1440px viewport, monospace.",
+      "claim_quote": "ticks at 10/50/100/200 px, monospace labels, corner shows live mouse coords (§8.2).",
+      "proposed_verify": "Playwright asserts the multi-scale tick set (10/50/100/200 px) is rendered — including the 10/50 minor stripe scales — and that the ruler corner element displays the live mouse coordinates as the cursor moves."
+    },
+    {
+      "ac": "AC-035",
+      "claim_id": "NC-08-04",
+      "current_verify": "Playwright moves the mouse, asserts crosshair line position, then asserts absence over the HUD.",
+      "claim_quote": "[Crosshair is] disabled over HUD, in measurement mode, or when HUD hidden (§8.3).",
+      "proposed_verify": "Playwright additionally asserts the crosshair is absent while measurement mode (M) is active and while the HUD is hidden, not only when the cursor is over the HUD."
+    },
+    {
+      "ac": "AC-039",
+      "claim_id": "NC-08-10",
+      "current_verify": "Playwright clicks two fixtures, asserts the four numeric labels (Δx/Δy/diagonal/gap) match computed rects.",
+      "claim_quote": "smart alignment + on-scale hints; Alt-hover shows all sibling distances (§8.7).",
+      "proposed_verify": "In addition to the two-click measurement, assert that Alt-hovering an element renders distance labels to every sibling element. NOTE: the Alt-hover sibling-distance behaviour is currently UNIMPLEMENTED in MeasurementTool.tsx — adopting this strengthened verify would re-open AC-039 until the behaviour is built."
+    },
+    {
+      "ac": "AC-042",
+      "claim_id": "NC-08-12",
+      "current_verify": "Integration test triggers a snapshot and validates the JSON against the §9.2 schema.",
+      "claim_quote": "extracts 32 computed-style properties + rect + hierarchy (§8.10).",
+      "proposed_verify": "In addition to schema validation, assert each element's computed_styles object has exactly 32 keys, matching the §8.10 property count."
+    },
+    {
+      "ac": "AC-053",
+      "claim_id": "NC-08-08",
+      "current_verify": "Integration test reads the clipboard and the history file after sending an operation.",
+      "claim_quote": "History persisted to .pinscope/history.json (last 1000) (§8.6).",
+      "proposed_verify": "Assert the CommandBar's own input history is persisted to .pinscope/history.json (via the /__pinscope/history dev-server route) and capped at the last 1000 entries, not only that ClaudeBridge appends a sent operation to a HistoryManager store."
+    }
+  ],
+  "blocking_findings": [],
+  "coverage": {
+    "total_claims": 52,
+    "covered": 33,
+    "uncovered": 19,
+    "candidate_acs": 19,
+    "strengthen_proposals": 6,
+    "uncovered_satisfied": 19,
+    "uncovered_unsatisfied": 0
+  }
+}
