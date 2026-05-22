@@ -3,6 +3,8 @@ import { render, cleanup, fireEvent } from '@testing-library/react';
 import { TopBar } from '../../../src/runtime/components/TopBar.js';
 import { StatePanel } from '../../../src/runtime/components/StatePanel.js';
 import { CommandBar } from '../../../src/runtime/components/CommandBar.js';
+import { Crosshair } from '../../../src/runtime/components/Crosshair.js';
+import { applyStateOverride } from '../../../src/runtime/components/StatePanel.js';
 
 afterEach(() => {
   cleanup();
@@ -52,6 +54,76 @@ describe('StatePanel (AC-040)', () => {
     expect(
       document.documentElement.hasAttribute('data-state-override'),
     ).toBe(false);
+  });
+});
+
+describe('StatePanel stylesheet-scan override rules (R-15-04, §8.8)', () => {
+  afterEach(() => {
+    for (const s of Array.from(
+      document.querySelectorAll('[data-pinscope-state-rules]'),
+    )) {
+      s.remove();
+    }
+    for (const s of Array.from(document.querySelectorAll('style.host-css'))) {
+      s.remove();
+    }
+  });
+
+  it('generates override rules from host :hover stylesheet rules', () => {
+    const host = document.createElement('style');
+    host.className = 'host-css';
+    host.textContent = '.btn:hover { color: red }';
+    document.head.appendChild(host);
+
+    applyStateOverride('hover');
+
+    const gen = document.querySelector(
+      '[data-pinscope-state-rules]',
+    ) as HTMLStyleElement | null;
+    expect(gen).not.toBeNull();
+    const css = gen?.textContent ?? '';
+    expect(css).toContain('[data-state-override="hover"]');
+    expect(css).toContain('.btn');
+    expect(css).not.toContain(':hover');
+  });
+
+  it('clears the generated rules when the override is "none"', () => {
+    const host = document.createElement('style');
+    host.className = 'host-css';
+    host.textContent = '.link:focus { outline: blue }';
+    document.head.appendChild(host);
+
+    applyStateOverride('focus');
+    const gen = document.querySelector(
+      '[data-pinscope-state-rules]',
+    ) as HTMLStyleElement | null;
+    expect(gen?.textContent).toContain('[data-state-override="focus"]');
+
+    applyStateOverride('none');
+    const cleared = document.querySelector(
+      '[data-pinscope-state-rules]',
+    ) as HTMLStyleElement | null;
+    expect(cleared?.textContent ?? '').toBe('');
+  });
+});
+
+describe('Crosshair disable conditions (R-15-02, §8.3)', () => {
+  it('does not render while in measurement mode', () => {
+    const { container } = render(<Crosshair measuring />);
+    fireEvent.mouseMove(document.body, { clientX: 200, clientY: 200 });
+    expect(container.querySelector('[data-pinscope-crosshair]')).toBeNull();
+  });
+
+  it('does not render while the HUD is hidden', () => {
+    const { container } = render(<Crosshair hudHidden />);
+    fireEvent.mouseMove(document.body, { clientX: 200, clientY: 200 });
+    expect(container.querySelector('[data-pinscope-crosshair]')).toBeNull();
+  });
+
+  it('renders normally with no disable props (guard is conditional)', () => {
+    const { container } = render(<Crosshair />);
+    fireEvent.mouseMove(document.body, { clientX: 200, clientY: 200 });
+    expect(container.querySelector('[data-pinscope-crosshair]')).not.toBeNull();
   });
 });
 

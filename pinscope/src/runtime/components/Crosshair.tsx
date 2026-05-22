@@ -4,7 +4,17 @@ import { useEffect, useState } from 'react';
 import type { CSSProperties, ReactElement } from 'react';
 import { HUD_ROOT_ATTR, Z_HOVER } from '../constants.js';
 
-export function Crosshair(): ReactElement | null {
+export interface CrosshairProps {
+  /** Disabled while the MeasurementTool owns the pointer (§8.3). */
+  measuring?: boolean;
+  /** Disabled while the HUD is hidden (§8.3). */
+  hudHidden?: boolean;
+}
+
+export function Crosshair({
+  measuring = false,
+  hudHidden = false,
+}: CrosshairProps = {}): ReactElement | null {
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
@@ -20,6 +30,9 @@ export function Crosshair(): ReactElement | null {
     return () => document.removeEventListener('mousemove', onMove);
   }, []);
 
+  // §8.3 — disabled over HUD (handled in onMove), in measurement mode, or
+  // when the HUD is hidden.
+  if (measuring || hudHidden) return null;
   if (!pos) return null;
 
   const line: CSSProperties = {

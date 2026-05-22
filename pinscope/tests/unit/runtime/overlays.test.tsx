@@ -12,6 +12,7 @@ import {
   measure,
 } from '../../../src/runtime/components/MeasurementTool.js';
 import { VoidBadges } from '../../../src/runtime/components/VoidBadges.js';
+import { badgeCss } from '../../../src/runtime/styles/badges.css.js';
 
 afterEach(() => {
   cleanup();
@@ -30,6 +31,51 @@ describe('Rulers (AC-034)', () => {
     const { container } = render(<Rulers width={300} height={300} />);
     const bar = container.querySelector('[data-pinscope-rulers] > div');
     expect(bar?.getAttribute('style')).toContain('monospace');
+  });
+});
+
+describe('Rulers multi-scale + corner (R-15-03, §8.2)', () => {
+  it('renders ticks at the 10/50/100/200 px scales (multi-scale set)', () => {
+    const { container } = render(<Rulers width={400} height={400} />);
+    const rulers = container.querySelector('[data-pinscope-rulers]');
+    // The four §8.2 scales are recorded on the rulers root.
+    expect(rulers?.getAttribute('data-ruler-scales')).toBe('10,50,100,200');
+
+    // Minor scales (10, 50) are drawn as repeating-gradient stripe elements,
+    // one per scale on the horizontal bar — each tagged with its scale.
+    const stripeScales = new Set<string>();
+    for (const s of Array.from(
+      container.querySelectorAll('[data-ruler-stripe="x"]'),
+    )) {
+      const sc = s.getAttribute('data-ruler-scale');
+      if (sc) stripeScales.add(sc);
+    }
+    expect(stripeScales.has('10')).toBe(true);
+    expect(stripeScales.has('50')).toBe(true);
+
+    // Major scales (100, 200) are individual labelled tick nodes; for a 400px
+    // extent both the 100 and 200 scales must be present.
+    const tickScales = new Set<string>();
+    for (const t of Array.from(container.querySelectorAll('[data-ruler-tick="x"]'))) {
+      const s = t.getAttribute('data-ruler-scale');
+      if (s) tickScales.add(s);
+    }
+    expect(tickScales.has('100')).toBe(true);
+    expect(tickScales.has('200')).toBe(true);
+
+    // All four scales present, via two distinct tick classes (stripe + tick)
+    // — proving the multi-scale hierarchy the old uniform-interval lacked.
+    const allScales = new Set<string>([...stripeScales, ...tickScales]);
+    expect(allScales).toEqual(new Set(['10', '50', '100', '200']));
+  });
+
+  it('renders a corner element reporting live mouse coordinates', () => {
+    const { container } = render(<Rulers width={400} height={400} />);
+    const corner = container.querySelector('[data-pinscope-ruler-corner]');
+    expect(corner).not.toBeNull();
+    fireEvent.mouseMove(document.body, { clientX: 137, clientY: 84 });
+    expect(corner?.textContent).toContain('137');
+    expect(corner?.textContent).toContain('84');
   });
 });
 
@@ -99,6 +145,54 @@ describe('MeasurementTool (AC-039)', () => {
     expect(label('dy')).toContain('40');
     expect(label('diagonal')).toContain('50');
     expect(label('gap')).toContain('30');
+  });
+});
+
+describe('badge CSS hostile-CSS hardening (R-15-05, §12)', () => {
+  it('hardens the load-bearing badge ::before declarations with !important', () => {
+    // §12: PinScope styles use !important so a hostile host rule cannot win.
+    const count = (badgeCss.match(/!important/g) ?? []).length;
+    expect(count).toBeGreaterThanOrEqual(12);
+  });
+
+  it('hardens the badge z-index against a host z-index override', () => {
+    expect(badgeCss).toMatch(/z-index:\s*2147483645\s*!important/);
+  });
+
+  it('hardens the badge background against a host background override', () => {
+    // The first ::before block carries the blue badge background.
+    expect(badgeCss).toMatch(/background:[^;]*!important/);
+  });
+
+  it('keeps the HUD-exempt ::before rule winning over the hardened badge', () => {
+    // The exempt rule must also be !important or the hardened badge leaks
+    // into the HUD subtree.
+    expect(badgeCss).toMatch(
+      /\[data-pinscope-ui\] \[data-pin\]::before\s*\{\s*display:\s*none\s*!important/,
+    );
+  });
+
+  it('wins over a hostile host ::before rule via getPropertyPriority', () => {
+    // Parse the badgeCss into a stylesheet and confirm the badge ::before
+    // declarations report `important` priority — the reliable jsdom predicate.
+    const style = document.createElement('style');
+    style.textContent = badgeCss;
+    document.head.appendChild(style);
+    const sheet = style.sheet as CSSStyleSheet;
+    let badgeRule: CSSStyleRule | null = null;
+    for (const rule of Array.from(sheet.cssRules)) {
+      if (
+        rule instanceof CSSStyleRule &&
+        rule.selectorText === '[data-pin]::before'
+      ) {
+        badgeRule = rule;
+        break;
+      }
+    }
+    expect(badgeRule).not.toBeNull();
+    expect(badgeRule?.style.getPropertyPriority('background')).toBe('important');
+    expect(badgeRule?.style.getPropertyPriority('z-index')).toBe('important');
+    style.remove();
   });
 });
 

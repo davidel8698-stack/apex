@@ -60,8 +60,21 @@ export function buildOperation(
     const item: OperationItem = {
       property: resolveProperty(parsed.property),
       operation: parsed.op,
-      value: parsed.value,
     };
+    if (parsed.op === 'increment' || parsed.op === 'decrement') {
+      // §9.3 — increment/decrement magnitudes belong in `delta` (a number),
+      // not `value`. A magnitude that is not a bare number (e.g. `4px`,
+      // `1em`) falls back to `value` so the payload is never lossy and
+      // `delta` is never NaN.
+      const magnitude = numericMagnitude(parsed.value);
+      if (magnitude !== null) {
+        item.delta = magnitude;
+      } else {
+        item.value = parsed.value;
+      }
+    } else {
+      item.value = parsed.value;
+    }
     operation.operations = [item];
     return operation;
   }
@@ -85,6 +98,21 @@ export function buildOperation(
   throw new OperationBuildError(
     `Command kind "${parsed.kind}" is a local action, not a Claude operation`,
   );
+}
+
+/**
+ * Parse an increment/decrement magnitude string to a bare number.
+ * Returns `null` for any value that is not a finite plain number (e.g.
+ * `4px`, `1em`, `auto`) so the caller can fall back to `value` and never
+ * emits a `NaN` `delta` (SPEC §9.3).
+ */
+function numericMagnitude(raw: string): number | null {
+  const trimmed = raw.trim();
+  if (trimmed === '') return null;
+  // Reject anything carrying a unit/suffix — only a bare number is a delta.
+  if (!/^[+-]?(?:\d+\.?\d*|\.\d+)$/.test(trimmed)) return null;
+  const n = Number(trimmed);
+  return Number.isFinite(n) ? n : null;
 }
 
 function pinOf(parsed: ParsedCommand): string {

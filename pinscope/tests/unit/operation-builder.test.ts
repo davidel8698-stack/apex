@@ -83,4 +83,32 @@ describe('buildOperation — §9.3 conformance (AC-052)', () => {
       OperationBuildError,
     );
   });
+
+  it('routes an increment magnitude to delta, not value (SPEC §9.3)', () => {
+    const op = buildOperation(parseCommand('e_47.padding +→ 4'), ctx);
+    expect(op.operations?.[0]?.operation).toBe('increment');
+    expect(op.operations?.[0]?.delta).toBe(4);
+    expect(op.operations?.[0]?.value).toBeUndefined();
+  });
+
+  it('routes a decrement magnitude to delta, not value (SPEC §9.3)', () => {
+    const op = buildOperation(parseCommand('e_47.padding -→ 8'), ctx);
+    expect(op.operations?.[0]?.operation).toBe('decrement');
+    expect(op.operations?.[0]?.delta).toBe(8);
+    expect(op.operations?.[0]?.value).toBeUndefined();
+  });
+
+  it('keeps value for a set operation, with no delta', () => {
+    const op = buildOperation(parseCommand('e_47.padding → 12px'), ctx);
+    expect(op.operations?.[0]?.operation).toBe('set');
+    expect(op.operations?.[0]?.value).toBe('12px');
+    expect(op.operations?.[0]?.delta).toBeUndefined();
+  });
+
+  it('falls back to value when an increment magnitude is non-numeric', () => {
+    const op = buildOperation(parseCommand('e_47.padding +→ 1em'), ctx);
+    expect(op.operations?.[0]?.operation).toBe('increment');
+    expect(op.operations?.[0]?.value).toBe('1em');
+    expect(op.operations?.[0]?.delta).toBeUndefined();
+  });
 });

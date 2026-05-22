@@ -7,4 +7,8 @@ describe('public API surface (AC-091)', () => {
     expect(typeof api.PinScope).toBe('function');
     expect(typeof api.useDevState).toBe('function');
   });
+
+  it('re-exports withPinScope from the package root (SPEC §15)', () => {
+    expect(typeof api.withPinScope).toBe('function');
+  });
 });
