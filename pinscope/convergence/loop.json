@@ -1196,7 +1196,7 @@
   },
   "findings": [],
   "current_round": {
-    "phase": "remediate",
+    "phase": "schedule",
     "started_at": "2026-05-22T11:48:44.808Z",
     "wave_snapshot_ref": null
   },
