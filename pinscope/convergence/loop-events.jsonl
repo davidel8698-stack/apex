@@ -21,3 +21,5 @@
 {"at":"2026-05-22T12:05:24.427Z","round":16,"event":"spawn:ps-wave-executor","note":"wave 1"}
 {"at":"2026-05-22T12:15:44.155Z","round":16,"event":"spawn:ps-wave-executor","note":"wave 2"}
 {"at":"2026-05-22T12:20:33.182Z","round":16,"event":"phase:verify","note":null}
+{"at":"2026-05-22T12:28:13.425Z","round":16,"event":"phase:close","note":null}
+{"at":"2026-05-22T12:29:04.041Z","round":16,"event":"phase:idle","note":null}
