@@ -1198,7 +1198,7 @@
   "current_round": {
     "phase": "wave",
     "started_at": "2026-05-22T11:48:44.808Z",
-    "wave_snapshot_ref": "9471cf19cf54308a149669dd908deba9e9f6219a",
+    "wave_snapshot_ref": "f9b2186b67ce0baa52e3fd0b17575f1fcdc1f7c6",
     "wave_verify_fails": 0
   },
   "narrative_coverage": {
