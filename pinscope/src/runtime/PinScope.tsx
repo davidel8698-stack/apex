@@ -13,6 +13,7 @@ import { TopBar } from './components/TopBar.js';
 import { CommandBar } from './components/CommandBar.js';
 import { MeasurementTool } from './components/MeasurementTool.js';
 import { StatePanel } from './components/StatePanel.js';
+import type { StateOverride } from './components/StatePanel.js';
 import { FloatingToggle } from './components/FloatingToggle.js';
 import { useHoveredElement } from './hooks/useHoveredElement.js';
 import { useViewportSize } from './hooks/useViewportSize.js';
@@ -124,6 +125,9 @@ function PinScopeHud({
   const [hudVisible, setHudVisible] = useState(true);
   const [gridMode, setGridMode] = useState<GridMode>(defaultGridMode);
   const [measuring, setMeasuring] = useState(false);
+  // §8.5/§8.8 — the live state-override is owned by `PinScopeHud`, the common
+  // parent of `StatePanel` (which chooses it) and `TopBar` (which reports it).
+  const [stateOverride, setStateOverride] = useState<StateOverride>('none');
   // §10 flow B — the locked selection survives mouse-out (§8.1). `selectPin`
   // is the §10-B/§11 programmatic lock the `select e_N` command routes through.
   const { selected, select: selectPin } = useSelectedElement(measuring);
@@ -254,10 +258,10 @@ function PinScopeHud({
       <TopBar
         viewport={viewport}
         gridMode={gridMode}
-        stateOverride={null}
+        stateOverride={stateOverride}
         onSnapshot={() => onSnapshot()}
       />
-      <StatePanel />
+      <StatePanel onStateChange={setStateOverride} />
       {measuring && <MeasurementTool />}
       <CommandBar onSubmit={onSubmit} history={command.history} />
     </div>,

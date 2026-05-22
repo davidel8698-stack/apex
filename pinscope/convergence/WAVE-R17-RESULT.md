@@ -386,3 +386,257 @@ Preservation-list files confirmed untouched:
 src/runtime/managers/SelectionManager.ts src/runtime/components/TopBar.tsx`
 produced empty output. No edit to `pinscope/SPEC.md`. R-17-01 (done) and
 R-17-03 (later wave) were not read or touched. No scope mutation.
+
+---
+
+## Wave 3
+
+### R-17-03
+
+**id:** R-17-03
+**linked finding:** F-17-03 (SUSPECTED — investigation R-item, P3)
+**status:** closed
+
+**summary:** `PinScope.tsx` rendered `<TopBar ... stateOverride={null} />` — a
+hardcoded constant — so the §8.5 TopBar `[data-field="state"]` span always read
+`state: none` regardless of the live §8.8 `StatePanel` override. Root cause:
+`StatePanel`'s override lived in a component-local `useState`, never lifted to
+the common `PinScopeHud` parent that also renders `TopBar`. Implemented the
+plan's recommended **callback** approach: `StatePanel` gained an optional
+`onStateChange?: (state: StateOverride) => void` prop invoked inside `choose`
+after `setState`/`applyStateOverride`; `PinScopeHud` gained a `stateOverride`
+`useState` (initial `'none'`), wires `onStateChange={setStateOverride}` onto
+`<StatePanel>`, and feeds the live `stateOverride` state value into the existing
+`<TopBar stateOverride={...}>` prop in place of the literal `null`. The §8.8
+`applyStateOverride` `<html data-state-override>` mechanism is untouched;
+`TopBar.tsx` is not edited (its `string | null` prop already renders the value
+correctly — `StateOverride` is assignable).
+
+#### STEP 1 — Confirm or refute (mandatory, SUSPECTED finding)
+
+Finding **CONFIRMED** — the §8.5 TopBar state readout was genuinely stale
+(cosmetic staleness, P3). Evidence, all run against the committed pre-fix
+baseline (`HEAD` = `f6ba54b`, the "Wave 3 execution start" checkpoint — verified
+via `git stash` of the two source files, keeping the new test):
+
+1. `git show HEAD:pinscope/src/runtime/PinScope.tsx | grep -n 'stateOverride'`
+   showed exactly **1 match** — `stateOverride={null}` — the hardcoded `<TopBar>`
+   prop. No `useState` for an override existed in `PinScopeHud`.
+
+2. `TopBar.tsx` (re-read, unchanged): line 47 renders
+   `<span data-field="state">state: {stateOverride ?? 'none'}</span>`. With a
+   constant `null` fed in, the `?? 'none'` collapses it permanently to
+   `state: none`.
+
+3. `StatePanel` (pre-fix, re-read): its override was `const [state, setState] =
+   useState<StateOverride>('none')`, **local** to `StatePanel`. `choose` called
+   `setState` + `applyStateOverride` — `applyStateOverride` writes
+   `<html data-state-override>` (§8.8) but nothing reported the chosen value
+   upward. `StatePanel` exported no `onStateChange`/callback prop.
+
+4. SPEC §8.5 lists a "state-override selector" readout *in the TopBar*; §8.8
+   owns the actual `[data-state-override]` override mechanism. The TopBar
+   readout is spec-meant to reflect the live override and pre-fix could not.
+
+5. **Direct red-test proof** — the named DoD test run against the stashed
+   pre-fix source (test present, fix absent):
+
+   ```
+    ❯ tests/unit/runtime/controls.test.tsx  (16 tests | 1 failed | 15 skipped)
+      ❯ ... > TopBar reflects the live StatePanel override
+        → expected 'state: none' to contain 'hover'
+
+    FAIL  tests/unit/runtime/controls.test.tsx > TopBar ↔ StatePanel wiring (R-17-03, F-17-03) > TopBar reflects the live StatePanel override
+   AssertionError: expected 'state: none' to contain 'hover'
+
+   - Expected
+   + Received
+
+   - hover
+   + state: none
+
+    ❯ tests/unit/runtime/controls.test.tsx:87:26
+   ```
+
+The audit `re_read` expectation ("the finding CONFIRMS — cosmetic staleness")
+holds — proceeded to the fix.
+
+#### Red -> Green transition
+
+Named test: **"TopBar reflects the live StatePanel override"** in
+`tests/unit/runtime/controls.test.tsx`. It mounts the real `<PinScope/>`,
+asserts the TopBar `[data-field="state"]` span first reads `none`, clicks the
+StatePanel's `[data-state-btn="hover"]` button, and asserts the TopBar state
+field text now contains `hover` and not `none`. This single test exercises the
+now-live non-null `stateOverride` branch — simultaneously resolving the AC-037
+TEST-AUDIT-R17 advisory ("the non-null `stateOverride` branch is never
+exercised").
+
+**RED** — test run with `PinScope.tsx` and `StatePanel.tsx` reverted to the
+committed pre-fix baseline (via `git stash push -- src/runtime/PinScope.tsx
+src/runtime/components/StatePanel.tsx`, keeping the new test):
+
+```
+ ❯ tests/unit/runtime/controls.test.tsx  (16 tests | 1 failed | 15 skipped) 78ms
+   ❯ ... > TopBar reflects the live StatePanel override
+     → expected 'state: none' to contain 'hover'
+
+ FAIL  tests/unit/runtime/controls.test.tsx > TopBar ↔ StatePanel wiring (R-17-03, F-17-03) > TopBar reflects the live StatePanel override
+AssertionError: expected 'state: none' to contain 'hover'
+
+- Expected
++ Received
+
+- hover
++ state: none
+
+ ❯ tests/unit/runtime/controls.test.tsx:87:26
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 15 skipped (16)
+```
+
+Red for the right reason: against the unfixed source the TopBar
+`[data-field="state"]` span still read `state: none` after the StatePanel
+`hover` button was clicked — the override never reached `TopBar` because
+`stateOverride={null}` is hardcoded and `StatePanel`'s state was never lifted.
+That is exactly the F-17-03 defect.
+
+**GREEN** — test run with the R-17-03 fix in place (`git stash pop` restored
+the two source files):
+
+```
+ RUN  v1.6.1 /home/user/apex/pinscope
+
+ ✓ tests/unit/runtime/controls.test.tsx  (16 tests | 15 skipped) 72ms
+
+ Test Files  1 passed (1)
+      Tests  1 passed | 15 skipped (16)
+```
+
+The lifted `stateOverride` state flows StatePanel → `PinScopeHud` → TopBar; the
+state field reflects the live `hover` override.
+
+#### Files modified
+
+- `pinscope/src/runtime/components/StatePanel.tsx` — added the optional
+  `StatePanelProps` interface with `onStateChange?: (state: StateOverride) =>
+  void`; `StatePanel` now destructures `{ onStateChange }` (default `= {}`, so
+  it stays usable standalone); `choose` invokes `onStateChange?.(next)` after
+  `setState(next)` + `applyStateOverride(next)`. `applyStateOverride` /
+  `generateOverrideRules` / the `<html data-state-override>` write are
+  byte-for-byte unchanged.
+- `pinscope/src/runtime/PinScope.tsx` — `PinScopeHud`: added
+  `const [stateOverride, setStateOverride] = useState<StateOverride>('none')`;
+  added `import type { StateOverride }` from `StatePanel.js` (the type now used
+  in this file); replaced the hardcoded `stateOverride={null}` on `<TopBar>`
+  with the live `stateOverride` state value; wired
+  `onStateChange={setStateOverride}` onto `<StatePanel>`.
+- `pinscope/tests/unit/runtime/controls.test.tsx` — added the named DoD test
+  "TopBar reflects the live StatePanel override" in a new `describe('TopBar ↔
+  StatePanel wiring (R-17-03, F-17-03)')` block (the test file the DoD names
+  under `tests/`).
+
+`TopBar.tsx` was NOT modified — the fix is purely in the data feeding its
+existing `stateOverride` prop, per the preservation-list directive.
+
+#### DoD clause verification
+
+R-17-03 closure conditions (from REMEDIATION-PLAN-R17.md §R-17-03):
+
+1. **The named test passes.** verified: true.
+   `npx vitest run tests/unit/runtime/controls.test.tsx -t "TopBar reflects the
+   live StatePanel override"` → `1 passed | 15 skipped (16)` (see GREEN above).
+   Red→green transition demonstrated above.
+
+2. **`npm test` green — the existing AC-037 TopBar test and the AC-040
+   StatePanel `data-state-override` test in `controls.test.tsx` still pass.**
+   verified: true.
+   `npx vitest run tests/unit/runtime/controls.test.tsx` → `16 passed (16)` —
+   the full file, including the AC-037 and AC-040 tests. Full suite below:
+   `Test Files 29 passed (29) / Tests 302 passed (302)` (301 prior + 1 new
+   R-17-03 test).
+
+3. **`grep -n 'stateOverride={null}' src/runtime/PinScope.tsx` returns 0 AND the
+   `TopBar.tsx` diff is empty.** verified: true.
+
+   ```
+   $ grep -n 'stateOverride={null}' src/runtime/PinScope.tsx
+   (no match — grep exit 1)
+   $ grep -n 'stateOverride' src/runtime/PinScope.tsx
+   130:  const [stateOverride, setStateOverride] = useState<StateOverride>('none');
+   261:        stateOverride={stateOverride}
+   $ git diff --stat src/runtime/components/TopBar.tsx
+   (empty output — file unchanged)
+   ```
+
+Acceptance criteria (all five):
+
+- [x] `grep -n 'stateOverride={null}' src/runtime/PinScope.tsx` → 0 matches —
+      the hardcoded constant is gone. verified: true.
+- [x] `<TopBar>` in `PinScope.tsx` is passed the `stateOverride` *state value* —
+      a `useState` declaration (line 130) and the prop bound to it (line 261,
+      `stateOverride={stateOverride}`), not a literal `null`. verified: true.
+- [x] `StatePanel` accepts an `onStateChange` callback prop and invokes it —
+      `grep -n 'onStateChange' src/runtime/components/StatePanel.tsx` →
+      `98:  onStateChange?: (state: StateOverride) => void;` (prop type),
+      `101:export function StatePanel({ onStateChange }...` (destructure),
+      `107:    onStateChange?.(next);` (the call inside `choose`). verified: true.
+- [x] `src/runtime/components/TopBar.tsx` is unchanged — `git diff --stat` on it
+      produced empty output. verified: true.
+- [x] `applyStateOverride`'s `<html data-state-override>` write is unchanged —
+      `git diff src/runtime/components/StatePanel.tsx` shows no `-`/`+` line on
+      any `data-state-override` / `setAttribute` / `removeAttribute` statement;
+      the only changes are the new `StatePanelProps` interface, the destructure,
+      and the `onStateChange?.(next)` call in `choose`. verified: true.
+
+AC-037 advisory side effect: the new test exercises the now-live non-null
+`stateOverride` branch of `TopBar`, resolving the carried-over AC-037
+TEST-AUDIT-R17 advisory ("the non-null `stateOverride` branch is never
+exercised") as a documented side effect. verified: true.
+
+#### Wave regression check
+
+`cd pinscope && npx vitest run` (full suite):
+
+```
+ ✓ tests/unit/runtime/controls.test.tsx  (16 tests) 140ms
+ ✓ tests/unit/ast-transformer.test.ts  (66 tests) 71ms
+ ✓ tests/unit/edge-utils.test.ts  (5 tests) 65ms
+ ✓ tests/unit/deployment.test.ts  (10 tests) 499ms
+ ✓ tests/unit/claude-bridge.test.ts  (2 tests) 855ms
+ ✓ tests/unit/operation-perf.test.ts  (3 tests) 5ms
+ ✓ tests/unit/long-press.test.ts  (3 tests) 3ms
+ ✓ tests/unit/property-shortcuts.test.ts  (12 tests) 8ms
+ ✓ tests/unit/production-stripper.test.ts  (4 tests) 3ms
+
+ Test Files  29 passed (29)
+      Tests  302 passed (302)
+```
+
+`npx tsc --noEmit` → exit 0 (no type errors).
+
+Suite count went 301 → 302 (the one new R-17-03 DoD test); no prior test
+regressed. The console error noise during the run (happy-dom `ERR_INVALID_URL`
+on `/__pinscope/history`, pre-existing) is unrelated to this wave — documented
+in the Wave 1 and Wave 2 blocks; all 29 test files passed.
+
+#### scope notes
+
+Files modified: `src/runtime/components/StatePanel.tsx` (the `StatePanel`
+component render + the new `onStateChange` callback), `src/runtime/PinScope.tsx`
+(the `PinScopeHud` `useState` block + the `<StatePanel>`/`<TopBar>` JSX), and
+the DoD test file `tests/unit/runtime/controls.test.tsx` — exactly the three
+files R-17-03 names. No other source file modified.
+
+The `import type { StateOverride }` added to `PinScope.tsx` is within the
+R-item's named file and is the direct, required consequence of typing the new
+`stateOverride` `useState` — not a widening of scope.
+
+Preservation-list files confirmed untouched:
+`git diff --stat src/runtime/components/TopBar.tsx` produced empty output
+(`TopBar.tsx` unchanged, per the explicit preservation directive). The §8.8
+`applyStateOverride` `<html data-state-override>` write is byte-for-byte
+preserved (no `-`/`+` lines on it in the `StatePanel.tsx` diff). No edit to
+`pinscope/SPEC.md`. R-17-01 and R-17-02 (done in Waves 1-2) were not read or
+touched. No scope mutation.

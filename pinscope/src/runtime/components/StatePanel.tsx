@@ -89,11 +89,22 @@ export function applyStateOverride(state: StateOverride): void {
   ensureRulesElement().textContent = generateOverrideRules(state);
 }
 
-export function StatePanel(): ReactElement {
+export interface StatePanelProps {
+  /**
+   * Reports the chosen override upward so a parent (e.g. `PinScopeHud`) can
+   * mirror it — the §8.5 TopBar state readout is fed this value. Optional, so
+   * `StatePanel` stays usable standalone.
+   */
+  onStateChange?: (state: StateOverride) => void;
+}
+
+export function StatePanel({ onStateChange }: StatePanelProps = {}): ReactElement {
   const [state, setState] = useState<StateOverride>('none');
   const choose = (next: StateOverride): void => {
     setState(next);
     applyStateOverride(next);
+    // Report the chosen override to the parent (§8.5 TopBar readout).
+    onStateChange?.(next);
   };
   return (
     <div data-pinscope-state="">

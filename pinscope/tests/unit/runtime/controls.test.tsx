@@ -5,6 +5,7 @@ import { StatePanel } from '../../../src/runtime/components/StatePanel.js';
 import { CommandBar } from '../../../src/runtime/components/CommandBar.js';
 import { Crosshair } from '../../../src/runtime/components/Crosshair.js';
 import { applyStateOverride } from '../../../src/runtime/components/StatePanel.js';
+import { PinScope } from '../../../src/runtime/PinScope.js';
 import {
   HistoryManager,
   MemoryHistoryStore,
@@ -60,6 +61,31 @@ describe('StatePanel (AC-040)', () => {
     expect(
       document.documentElement.hasAttribute('data-state-override'),
     ).toBe(false);
+  });
+});
+
+describe('TopBar ↔ StatePanel wiring (R-17-03, F-17-03)', () => {
+  it('TopBar reflects the live StatePanel override', () => {
+    // §8.5 — the TopBar carries a "state-override selector" readout; §8.8 — the
+    // StatePanel owns the actual `[data-state-override]` mechanism. The TopBar
+    // `[data-field="state"]` span must reflect the live override the StatePanel
+    // chose, not a hardcoded `null`. This exercises the now-live non-null
+    // `stateOverride` branch (resolving the AC-037 TEST-AUDIT-R17 advisory).
+    const { container } = render(<PinScope />);
+    const root = document.querySelector(
+      '[data-pinscope-ui="root"]',
+    ) as HTMLElement;
+    const stateField = (): string =>
+      root.querySelector('[data-field="state"]')?.textContent ?? '';
+    // Before any override is chosen, the readout is `none`.
+    expect(stateField()).toContain('none');
+    // Choose the `hover` override in the StatePanel.
+    fireEvent.click(
+      root.querySelector('[data-state-btn="hover"]') as Element,
+    );
+    // The TopBar state field now reflects the live override.
+    expect(stateField()).toContain('hover');
+    expect(stateField()).not.toContain('none');
   });
 });
 
