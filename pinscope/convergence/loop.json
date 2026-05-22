@@ -3,8 +3,8 @@
   "north_star": "pinscope/SPEC.md",
   "north_star_version": "2.0.0",
   "north_star_hash": "sha256:1779526021db1f5bc7ffe36647e6deb08ba3f8234e82cee31dc0bca5357c7a45",
-  "round": 15,
-  "loop_status": "IN_PROGRESS",
+  "round": 16,
+  "loop_status": "CONVERGED",
   "breaker_log": [],
   "metric": {
     "closed": 62,
@@ -110,6 +110,13 @@
       "open": 0,
       "p01_open": 0,
       "pct": 90
+    },
+    {
+      "round": 16,
+      "closed": 62,
+      "open": 0,
+      "p01_open": 0,
+      "pct": 90
     }
   ],
   "env_capabilities": {
@@ -122,9 +129,9 @@
     "AC-001": {
       "status": "CLOSED",
       "round": 1,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "vitest-tag",
           "tag": "AC-001",
@@ -132,15 +139,15 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-002": {
       "status": "CLOSED",
       "round": 1,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "vitest-tag",
           "tag": "AC-002",
@@ -148,15 +155,15 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-003": {
       "status": "CLOSED",
       "round": 1,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "vitest-tag",
           "tag": "AC-003",
@@ -164,15 +171,15 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-004": {
       "status": "CLOSED",
       "round": 1,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "vitest-tag",
           "tag": "AC-004",
@@ -180,15 +187,15 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-005": {
       "status": "CLOSED",
       "round": 1,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "vitest-tag",
           "tag": "AC-005",
@@ -196,15 +203,15 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-006": {
       "status": "CLOSED",
       "round": 1,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "vitest-tag",
           "tag": "AC-006",
@@ -212,15 +219,15 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-007": {
       "status": "CLOSED",
       "round": 1,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "vitest-tag",
           "tag": "AC-007",
@@ -228,15 +235,15 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-008": {
       "status": "CLOSED",
       "round": 1,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "vitest-tag",
           "tag": "AC-008",
@@ -244,15 +251,15 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-009": {
       "status": "CLOSED",
       "round": 1,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "vitest-tag",
           "tag": "AC-009",
@@ -260,15 +267,15 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-010": {
       "status": "CLOSED",
       "round": 5,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "build-grep",
           "build_cmd": "cd examples/vite-react && npx vite build",
@@ -281,15 +288,15 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-011": {
       "status": "CLOSED",
       "round": 1,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "vitest-tag",
           "tag": "AC-011",
@@ -297,15 +304,15 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-012": {
       "status": "CLOSED",
       "round": 1,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "vitest-tag",
           "tag": "AC-012",
@@ -313,15 +320,15 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-013": {
       "status": "CLOSED",
       "round": 1,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "vitest-tag",
           "tag": "AC-013",
@@ -329,15 +336,15 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-020": {
       "status": "CLOSED",
       "round": 2,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "vitest-tag",
           "tag": "AC-020",
@@ -345,15 +352,15 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-021": {
       "status": "CLOSED",
       "round": 2,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "vitest-tag",
           "tag": "AC-021",
@@ -361,15 +368,15 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-022": {
       "status": "CLOSED",
       "round": 2,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "vitest-tag",
           "tag": "AC-022",
@@ -377,22 +384,22 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-023": {
       "status": "BLOCKED",
       "round": 5,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "blocked_reason": "browser",
       "unblocks_on": "browser-capable CI"
     },
     "AC-024": {
       "status": "CLOSED",
       "round": 7,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "vitest-tag",
           "tag": "AC-024",
@@ -400,15 +407,15 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-025": {
       "status": "CLOSED",
       "round": 6,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "vitest-tag",
           "tag": "AC-025",
@@ -416,15 +423,15 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-026": {
       "status": "CLOSED",
       "round": 2,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "vitest-tag",
           "tag": "AC-026",
@@ -432,15 +439,15 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-027": {
       "status": "CLOSED",
       "round": 2,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "vitest-tag",
           "tag": "AC-027",
@@ -448,22 +455,22 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-030": {
       "status": "BLOCKED",
       "round": 5,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "blocked_reason": "browser",
       "unblocks_on": "browser-capable CI"
     },
     "AC-031": {
       "status": "CLOSED",
       "round": 9,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "vitest-tag",
           "tag": "AC-031",
@@ -471,15 +478,15 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-032": {
       "status": "CLOSED",
       "round": 9,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "vitest-tag",
           "tag": "AC-032",
@@ -487,15 +494,15 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-033": {
       "status": "CLOSED",
       "round": 9,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "vitest-tag",
           "tag": "AC-033",
@@ -503,15 +510,15 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-034": {
       "status": "CLOSED",
       "round": 7,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "vitest-tag",
           "tag": "AC-034",
@@ -519,15 +526,15 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-035": {
       "status": "CLOSED",
       "round": 7,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "vitest-tag",
           "tag": "AC-035",
@@ -535,15 +542,15 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-036": {
       "status": "CLOSED",
       "round": 7,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "vitest-tag",
           "tag": "AC-036",
@@ -551,15 +558,15 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-037": {
       "status": "CLOSED",
       "round": 8,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "vitest-tag",
           "tag": "AC-037",
@@ -567,15 +574,15 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-038": {
       "status": "CLOSED",
       "round": 8,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "vitest-tag",
           "tag": "AC-038",
@@ -583,15 +590,15 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-039": {
       "status": "CLOSED",
       "round": 7,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "vitest-tag",
           "tag": "AC-039",
@@ -599,15 +606,15 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-040": {
       "status": "CLOSED",
       "round": 8,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "vitest-tag",
           "tag": "AC-040",
@@ -615,15 +622,15 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-041": {
       "status": "CLOSED",
       "round": 8,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "vitest-tag",
           "tag": "AC-041",
@@ -631,15 +638,15 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-042": {
       "status": "CLOSED",
       "round": 5,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "vitest-tag",
           "tag": "AC-042",
@@ -647,15 +654,15 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-043": {
       "status": "CLOSED",
       "round": 8,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "vitest-tag",
           "tag": "AC-043",
@@ -663,15 +670,15 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-050": {
       "status": "CLOSED",
       "round": 3,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "vitest-tag",
           "tag": "AC-050",
@@ -679,15 +686,15 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-051": {
       "status": "CLOSED",
       "round": 3,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "vitest-tag",
           "tag": "AC-051",
@@ -695,15 +702,15 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-052": {
       "status": "CLOSED",
       "round": 3,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "vitest-tag",
           "tag": "AC-052",
@@ -711,15 +718,15 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-053": {
       "status": "CLOSED",
       "round": 3,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "vitest-tag",
           "tag": "AC-053",
@@ -727,15 +734,15 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-054": {
       "status": "CLOSED",
       "round": 3,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "vitest-tag",
           "tag": "AC-054",
@@ -743,15 +750,15 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-060": {
       "status": "CLOSED",
       "round": 6,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "vitest-tag",
           "tag": "AC-060",
@@ -759,22 +766,22 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-061": {
       "status": "BLOCKED",
       "round": 9,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "blocked_reason": "browser",
       "unblocks_on": "browser-capable CI"
     },
     "AC-062": {
       "status": "CLOSED",
       "round": 6,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "vitest-tag",
           "tag": "AC-062",
@@ -782,22 +789,22 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-063": {
       "status": "BLOCKED",
       "round": 9,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "blocked_reason": "browser",
       "unblocks_on": "browser-capable CI"
     },
     "AC-064": {
       "status": "CLOSED",
       "round": 8,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "vitest-tag",
           "tag": "AC-064",
@@ -805,15 +812,15 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-065": {
       "status": "CLOSED",
       "round": 6,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "vitest-tag",
           "tag": "AC-065",
@@ -821,15 +828,15 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-070": {
       "status": "CLOSED",
       "round": 4,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "vitest-tag",
           "tag": "AC-070",
@@ -837,15 +844,15 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-071": {
       "status": "CLOSED",
       "round": 4,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "vitest-tag",
           "tag": "AC-071",
@@ -853,15 +860,15 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-072": {
       "status": "CLOSED",
       "round": 3,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "vitest-tag",
           "tag": "AC-072",
@@ -869,15 +876,15 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-073": {
       "status": "CLOSED",
       "round": 4,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "command",
           "cmd": "cd pinscope && npm run size",
@@ -885,15 +892,15 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-074": {
       "status": "CLOSED",
       "round": 5,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "build-grep",
           "build_cmd": "cd examples/vite-react && npx vite build",
@@ -906,15 +913,15 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-075": {
       "status": "CLOSED",
       "round": 5,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "vitest-tag",
           "tag": "AC-075",
@@ -922,15 +929,15 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-076": {
       "status": "CLOSED",
       "round": 9,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "vitest-tag",
           "tag": "AC-076",
@@ -938,15 +945,15 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-080": {
       "status": "CLOSED",
       "round": 1,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "vitest-tag",
           "tag": "AC-080",
@@ -954,15 +961,15 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-081": {
       "status": "CLOSED",
       "round": 3,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "vitest-tag",
           "tag": "AC-081",
@@ -970,29 +977,29 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-082": {
       "status": "BLOCKED",
       "round": 5,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "blocked_reason": "browser",
       "unblocks_on": "browser-capable CI"
     },
     "AC-083": {
       "status": "BLOCKED",
       "round": 9,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "blocked_reason": "browser",
       "unblocks_on": "browser-capable CI"
     },
     "AC-084": {
       "status": "CLOSED",
       "round": 1,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "command",
           "cmd": "cd pinscope && npm run typecheck",
@@ -1000,15 +1007,15 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-090": {
       "status": "CLOSED",
       "round": 4,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "vitest-tag",
           "tag": "AC-090",
@@ -1016,15 +1023,15 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-091": {
       "status": "CLOSED",
       "round": 2,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "vitest-tag",
           "tag": "AC-091",
@@ -1032,15 +1039,15 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-092": {
       "status": "CLOSED",
       "round": 4,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "vitest-tag",
           "tag": "AC-092",
@@ -1048,15 +1055,15 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-100": {
       "status": "CLOSED",
       "round": 1,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "grep",
           "pattern": "^## (Conventions|Anti-Patterns|Common Patterns|Testing|Common Gotchas)",
@@ -1067,15 +1074,15 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-101": {
       "status": "CLOSED",
       "round": 1,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "command",
           "cmd": "bash framework/scripts/sync-to-claude.sh --dry-run | grep -q 'apex-skills/pinscope.md'",
@@ -1083,15 +1090,15 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-102": {
       "status": "CLOSED",
       "round": 1,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "grep",
           "pattern": "PINSCOPE INSTRUMENTATION",
@@ -1102,15 +1109,15 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-103": {
       "status": "CLOSED",
       "round": 1,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "grep",
           "pattern": "PINSCOPE EVIDENCE",
@@ -1121,15 +1128,15 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-104": {
       "status": "CLOSED",
       "round": 1,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "grep",
           "pattern": "pinscope",
@@ -1141,15 +1148,15 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-105": {
       "status": "CLOSED",
       "round": 1,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "grep",
           "pattern": "PinScope",
@@ -1160,22 +1167,22 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     },
     "AC-106": {
       "status": "BLOCKED",
       "round": 9,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "blocked_reason": "apex-install",
       "unblocks_on": "APEX-installed CI"
     },
     "AC-107": {
       "status": "CLOSED",
       "round": 9,
-      "last_verified_round": 15,
+      "last_verified_round": 16,
       "provenance": {
-        "closed_round": 15,
+        "closed_round": 16,
         "verify": {
           "kind": "vitest-tag",
           "tag": "AC-107",
@@ -1183,25 +1190,25 @@
         },
         "evidence": null,
         "wave": null,
-        "at": "2026-05-22T11:46:05.607Z"
+        "at": "2026-05-22T11:55:54.678Z"
       }
     }
   },
   "findings": [],
   "current_round": {
-    "phase": "audit",
+    "phase": "remediate",
     "started_at": "2026-05-22T11:48:44.808Z",
     "wave_snapshot_ref": null
   },
   "narrative_coverage": {
-    "last_scanned_round": 15,
+    "last_scanned_round": 16,
     "total_claims": 52,
     "covered": 33,
     "uncovered": 19,
     "candidate_acs": 19,
     "strengthen_proposals": 6,
-    "uncovered_satisfied": 10,
-    "uncovered_unsatisfied": 9,
+    "uncovered_satisfied": 19,
+    "uncovered_unsatisfied": 0,
     "history": [
       {
         "round": 14,
@@ -1211,6 +1218,12 @@
       },
       {
         "round": 15,
+        "covered": 33,
+        "total": 52,
+        "candidate_acs": 19
+      },
+      {
+        "round": 16,
         "covered": 33,
         "total": 52,
         "candidate_acs": 19

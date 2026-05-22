@@ -13,3 +13,6 @@
 {"at":"2026-05-22T11:46:05.545Z","round":15,"event":"phase:close","note":null}
 {"at":"2026-05-22T11:47:39.386Z","round":15,"event":"phase:idle","note":null}
 {"at":"2026-05-22T11:48:44.809Z","round":15,"event":"phase:audit","note":null}
+{"at":"2026-05-22T11:55:54.742Z","round":16,"event":"phase:record","note":null}
+{"at":"2026-05-22T11:56:05.727Z","round":16,"event":"phase:breaker","note":null}
+{"at":"2026-05-22T11:56:37.649Z","round":16,"event":"phase:remediate","note":null}
