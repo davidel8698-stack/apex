@@ -3,3 +3,6 @@
 env-capabilities.json
 ac-results-R*.json
 .vitest-results.json
+# Atomic-write temp file for loop.json (renamed into place; a leftover means
+# a crash mid-write — loop.json itself is always the last good state).
+loop.json.tmp
