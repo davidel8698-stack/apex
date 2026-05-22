@@ -10,6 +10,12 @@ import { stripPins } from './production-stripper.js';
 /** Dev-server route through which the runtime persists a snapshot (§10-D). */
 const SNAPSHOT_ROUTE = '/__pinscope/snapshot';
 
+/** Dev-server route through which the runtime persists command history (§8.6). */
+const HISTORY_ROUTE = '/__pinscope/history';
+
+/** §8.6 — `.pinscope/history.json` keeps at most the last 1000 entries. */
+const HISTORY_MAX_ENTRIES = 1000;
+
 /** Structural shapes the snapshot middleware relies on (avoids a Vite dep). */
 interface SnapshotReq {
   url?: string;
@@ -60,6 +66,52 @@ function handleSnapshotRequest(
     } catch {
       res.statusCode = 400;
       res.end('snapshot body is not valid JSON');
+    }
+  });
+}
+
+/**
+ * Read a request body carrying `{ version, entries }` command history, cap it
+ * at the last 1000 entries (§8.6), write it to `.pinscope/history.json`, and
+ * answer the request. The `node:fs` write lives only here — the browser
+ * runtime stays `fs`-free.
+ */
+function handleHistoryRequest(
+  req: SnapshotReq,
+  res: SnapshotRes,
+  projectRoot: string,
+): void {
+  const chunks: Buffer[] = [];
+  req.on('data', (chunk) => chunks.push(chunk));
+  req.on('error', () => {
+    res.statusCode = 400;
+    res.end('history request stream error');
+  });
+  req.on('end', () => {
+    try {
+      const raw = Buffer.concat(chunks).toString('utf8');
+      const parsed = JSON.parse(raw) as { version?: unknown; entries?: unknown };
+      if (!Array.isArray(parsed.entries)) {
+        res.statusCode = 400;
+        res.end('history body missing an entries array');
+        return;
+      }
+      // §8.6 — persist only the last 1000 entries.
+      const entries = parsed.entries.slice(-HISTORY_MAX_ENTRIES);
+      const data = { version: '1.0', entries };
+      const dir = path.join(projectRoot, '.pinscope');
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(
+        path.join(dir, 'history.json'),
+        JSON.stringify(data),
+        'utf8',
+      );
+      res.statusCode = 200;
+      res.setHeader('content-type', 'application/json');
+      res.end(JSON.stringify({ ok: true, count: entries.length }));
+    } catch {
+      res.statusCode = 400;
+      res.end('history body is not valid JSON');
     }
   });
 }
@@ -116,15 +168,25 @@ export function pinscope(options: PinScopeOptions = {}): Plugin {
     },
 
     configureServer(server) {
-      // §10-D: register the dev-server endpoint that persists snapshots to
-      // `.pinscope/snapshots/`. The `node:fs` write lives only here — the
-      // browser runtime stays `fs`-free.
+      // §10-D / §8.6: register the dev-server endpoints that persist snapshots
+      // to `.pinscope/snapshots/` and command history to `.pinscope/history.json`.
+      // The `node:fs` writes live only here — the browser runtime stays
+      // `fs`-free.
       const projectRoot = server.config.root;
       server.middlewares.use((req, res, next) => {
         const url = (req as { url?: string }).url ?? '';
         const method = (req as { method?: string }).method ?? '';
-        if (method === 'POST' && url.split('?')[0] === SNAPSHOT_ROUTE) {
+        const route = url.split('?')[0];
+        if (method === 'POST' && route === SNAPSHOT_ROUTE) {
           handleSnapshotRequest(
+            req as unknown as SnapshotReq,
+            res as unknown as SnapshotRes,
+            projectRoot,
+          );
+          return;
+        }
+        if (method === 'POST' && route === HISTORY_ROUTE) {
+          handleHistoryRequest(
             req as unknown as SnapshotReq,
             res as unknown as SnapshotRes,
             projectRoot,

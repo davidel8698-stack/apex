@@ -148,6 +148,89 @@ describe('pinscope() snapshot dev-server route (R-15-06, §10-D)', () => {
   });
 });
 
+describe('pinscope() history dev-server route (R-15-07, §8.6)', () => {
+  const tmpRoots: string[] = [];
+  afterEach(() => {
+    for (const root of tmpRoots.splice(0)) {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  /** Wire up the configureServer hook and return the registered middleware. */
+  async function middlewareFor(root: string): Promise<FakeMiddleware> {
+    const p = pinscope({ enabled: true });
+    const configureServer = p.configureServer;
+    expect(configureServer).toBeDefined();
+    let captured: FakeMiddleware | null = null;
+    const server: FakeServer = {
+      config: { root },
+      middlewares: {
+        use(fn): void {
+          captured = fn;
+        },
+      },
+    };
+    const hook =
+      typeof configureServer === 'function'
+        ? configureServer
+        : configureServer?.handler;
+    await (hook as (s: FakeServer) => void)(server);
+    expect(captured).not.toBeNull();
+    return captured as FakeMiddleware;
+  }
+
+  it('writes the posted command history to .pinscope/history.json', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pinscope-hist-'));
+    tmpRoots.push(root);
+    const mw = await middlewareFor(root);
+
+    const body = JSON.stringify({
+      version: '1.0',
+      entries: [
+        { timestamp: 't0', raw_input: 'e_1.bg → red', parsed: null, result: 'sent' },
+      ],
+    });
+    const result = await postThrough(mw, '/__pinscope/history', body);
+    expect(result.status).toBe(200);
+
+    const file = path.join(root, '.pinscope', 'history.json');
+    expect(fs.existsSync(file)).toBe(true);
+    const written = JSON.parse(fs.readFileSync(file, 'utf8')) as {
+      entries: { raw_input: string }[];
+    };
+    expect(written.entries).toHaveLength(1);
+    expect(written.entries[0]?.raw_input).toBe('e_1.bg → red');
+  });
+
+  it('caps the persisted history at the last 1000 entries', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pinscope-hist-'));
+    tmpRoots.push(root);
+    const mw = await middlewareFor(root);
+
+    const entries = Array.from({ length: 1200 }, (_v, i) => ({
+      timestamp: `t${i}`,
+      raw_input: `cmd_${i}`,
+      parsed: null,
+      result: 'sent' as const,
+    }));
+    const result = await postThrough(
+      mw,
+      '/__pinscope/history',
+      JSON.stringify({ version: '1.0', entries }),
+    );
+    expect(result.status).toBe(200);
+
+    const file = path.join(root, '.pinscope', 'history.json');
+    const written = JSON.parse(fs.readFileSync(file, 'utf8')) as {
+      entries: { raw_input: string }[];
+    };
+    // §8.6 — "History persisted to `.pinscope/history.json` (last 1000)".
+    expect(written.entries).toHaveLength(1000);
+    expect(written.entries[0]?.raw_input).toBe('cmd_200');
+    expect(written.entries[999]?.raw_input).toBe('cmd_1199');
+  });
+});
+
 describe('pinscope() transformIndexHtml (AC-009)', () => {
   it('strips data-pin from HTML when disabled', () => {
     const html = indexHtmlOf(pinscope({ enabled: false, stripInProduction: true }));

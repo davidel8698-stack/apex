@@ -1,10 +1,14 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import { render, cleanup, fireEvent } from '@testing-library/react';
 import { TopBar } from '../../../src/runtime/components/TopBar.js';
 import { StatePanel } from '../../../src/runtime/components/StatePanel.js';
 import { CommandBar } from '../../../src/runtime/components/CommandBar.js';
 import { Crosshair } from '../../../src/runtime/components/Crosshair.js';
 import { applyStateOverride } from '../../../src/runtime/components/StatePanel.js';
+import {
+  HistoryManager,
+  MemoryHistoryStore,
+} from '../../../src/runtime/managers/HistoryManager.js';
 
 afterEach(() => {
   cleanup();
@@ -150,5 +154,70 @@ describe('CommandBar (AC-038)', () => {
     expect(input.value).toBe('');
     fireEvent.keyDown(input, { key: 'ArrowUp' });
     expect(input.value).toBe('e_1.bg → red');
+  });
+});
+
+describe('CommandBar §8.6 — focus-expand / Tab autocomplete / history (R-15-07)', () => {
+  it('expands to 120px on focus and collapses to 40px on blur', () => {
+    const { container } = render(<CommandBar />);
+    const input = container.querySelector(
+      '[data-pinscope-command]',
+    ) as HTMLInputElement;
+    // Collapsed by default (§8.6 — `height:40px`).
+    expect(input.style.height).toBe('40px');
+    fireEvent.focus(input);
+    // Expanded while focused (§8.6 — "expands to 120px on focus").
+    expect(input.style.height).toBe('120px');
+    fireEvent.blur(input);
+    expect(input.style.height).toBe('40px');
+  });
+
+  it('completes a partial pin to a full data-pin id on Tab', () => {
+    // Seed the DOM with the pins §8.6 autocomplete scans for.
+    const a = document.createElement('div');
+    a.setAttribute('data-pin', 'e_47');
+    const b = document.createElement('div');
+    b.setAttribute('data-pin', 'e_12');
+    document.body.append(a, b);
+
+    const { container } = render(<CommandBar />);
+    const input = container.querySelector(
+      '[data-pinscope-command]',
+    ) as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'e_4' } });
+    fireEvent.keyDown(input, { key: 'Tab' });
+    // Tab applies the first `getSuggestions` result — `e_47`.
+    expect(input.value).toBe('e_47');
+  });
+
+  it('appends a submitted command through the injected HistoryManager', () => {
+    const history = new HistoryManager(new MemoryHistoryStore());
+    const appendSpy = vi.spyOn(history, 'append');
+
+    const { container } = render(<CommandBar history={history} />);
+    const input = container.querySelector(
+      '[data-pinscope-command]',
+    ) as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'e_1.bg → red' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    expect(appendSpy).toHaveBeenCalledTimes(1);
+    const entry = appendSpy.mock.calls[0]?.[0];
+    expect(entry?.raw_input).toBe('e_1.bg → red');
+    // The entry landed in the manager's store (last 1000 enforced by §8.6).
+    expect(history.list().map((e) => e.raw_input)).toContain('e_1.bg → red');
+  });
+
+  it('navigates the HistoryManager store with ArrowUp', () => {
+    const history = new HistoryManager(new MemoryHistoryStore());
+    const { container } = render(<CommandBar history={history} />);
+    const input = container.querySelector(
+      '[data-pinscope-command]',
+    ) as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'e_2.fg → blue' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(input.value).toBe('');
+    fireEvent.keyDown(input, { key: 'ArrowUp' });
+    expect(input.value).toBe('e_2.fg → blue');
   });
 });
