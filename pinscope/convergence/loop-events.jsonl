@@ -23,3 +23,4 @@
 {"at":"2026-05-22T12:20:33.182Z","round":16,"event":"phase:verify","note":null}
 {"at":"2026-05-22T12:28:13.425Z","round":16,"event":"phase:close","note":null}
 {"at":"2026-05-22T12:29:04.041Z","round":16,"event":"phase:idle","note":null}
+{"at":"2026-05-22T12:29:40.828Z","round":16,"event":"phase:audit","note":null}
