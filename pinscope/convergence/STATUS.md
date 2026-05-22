@@ -3,7 +3,7 @@
 
 > Live dashboard for the PinScope self-healing loop (`PS-R{N}`).
 > **North-Star:** `pinscope/SPEC.md` — version 2.0.0, **FROZEN**.
-> **Loop status:** **CONVERGED** · round 17.
+> **Loop status:** **CONVERGED** · round 18.
 > Generated from `loop.json`. See `LOOP.md` and `CONVERGENCE-REPORT.md`.
 
 ## Convergence metric
@@ -30,6 +30,7 @@
 | PS-R15 | 62 | 69 | 90% |  |
 | PS-R16 | 62 | 69 | 90% |  |
 | PS-R17 | 62 | 69 | 90% |  |
+| PS-R18 | 62 | 69 | 90% |  |
 
 ## Status legend
 
@@ -53,7 +54,7 @@ against the code every round. **Secondary signal — it does NOT affect
 AC convergence.** Candidate ACs are reviewed manually and adopted via a
 user-approved SPEC version bump.
 
-Last scanned: round 17 — **33/52** normative claims AC-covered.
+Last scanned: round 18 — **33/52** normative claims AC-covered.
 
 | Metric | Count |
 |--------|-------|
@@ -175,6 +176,7 @@ environment. No PinScope code change unblocks them — a capable CI does.
 - **PS-R15** —  62/69 (90%).
 - **PS-R16** —  62/69 (90%).
 - **PS-R17** —  62/69 (90%).
+- **PS-R18** —  62/69 (90%).
 
 ## Loop complete
 
