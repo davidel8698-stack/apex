@@ -199,8 +199,10 @@ Runs every round. Skipped under `--verify`; runs under `--audit`.
 
 ### STEP 6 — Verify  *(fresh `ps-verifier`, clean-room)*
 - `loop-state.mjs set-phase verify`.
-- Re-run `node …/ac-verify.mjs --round N` (this also produces the mutation
-  report for code changed this round).
+- Re-run `node …/ac-verify.mjs --round N`.
+- `node pinscope/convergence/lib/mutation-check.mjs --round N --files <files
+  changed by this round's waves>` → writes `mutation-R{N}.json`. A surviving
+  mutant means a test passes against deliberately-broken code — a hollow test.
 - Spawn `ps-verifier`, given `ac-results-R{N}.json`, the round's R-items and
   their Definitions of Done, `WAVE-R{N}-RESULT.md`, `loop.json` (all prior
   `CLOSED` ACs + the provenance ledger), and the mutation report. It writes
@@ -230,9 +232,9 @@ Runs every round. Skipped under `--verify`; runs under `--audit`.
 
 ### STEP 8 — Commit + loop
 - Commit all `-R{N}` artifacts (`audit-findings`, `narrative-scan`,
-  `TEST-AUDIT`, `REMEDIATION-PLAN`, `WAVES`, `WAVE-…-RESULT`, `VERIFY`,
-  `ROUND-…-CLOSURE`) + `loop.json` + `loop-events.jsonl` + `STATUS.md` + the
-  `pinscope/` source changes; push to the working branch.
+  `TEST-AUDIT`, `REMEDIATION-PLAN`, `WAVES`, `WAVE-…-RESULT`, `mutation`,
+  `VERIFY`, `ROUND-…-CLOSURE`) + `loop.json` + `loop-events.jsonl` +
+  `STATUS.md` + the `pinscope/` source changes; push to the working branch.
 - If mode is `once`, or `--max-rounds N` is reached: STOP.
 - Otherwise loop back to STEP 1 for round `N+1`.
 

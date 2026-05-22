@@ -15,6 +15,7 @@
 #   test-audit      TEST-AUDIT-R{N}.md
 #   closure         ROUND-R{N}-CLOSURE.md
 #   ac-results      ac-results-R{N}.json
+#   mutation        mutation-R{N}.json
 #
 # Every artifact uses the uniform `-R{N}` infix — this kills the
 # WAVE-1-RESULT vs WAVE-R2-RESULT drift seen in the original 9-round run.
@@ -40,6 +41,7 @@ round_path() {
     test-audit)  echo "${CONV_DIR}/TEST-AUDIT-R${n}.md" ;;
     closure)     echo "${CONV_DIR}/ROUND-R${n}-CLOSURE.md" ;;
     ac-results)  echo "${CONV_DIR}/ac-results-R${n}.json" ;;
+    mutation)    echo "${CONV_DIR}/mutation-R${n}.json" ;;
     *) echo "round_path: unknown kind '${kind}'" >&2; return 1 ;;
   esac
 }

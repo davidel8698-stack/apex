@@ -13,6 +13,7 @@
  */
 import { execSync } from 'node:child_process';
 import { readFileSync, writeFileSync, existsSync, rmSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { EXIT } from './core/verdict.mjs';
@@ -53,6 +54,33 @@ function shell(cmd, cwd) {
   } catch (e) {
     return { code: e.status ?? 1, out: `${e.stdout || ''}${e.stderr || ''}` };
   }
+}
+
+// Harness-integrity fingerprint (D5.3) — lets ps-verifier prove, round over
+// round, that a green result was not bought by weakening the checks: a
+// loosened config or a freshly-skipped test changes one of these numbers.
+function harnessIntegrity() {
+  const h = createHash('sha256');
+  for (const f of ['vitest.config.ts', 'playwright.config.ts', 'tsconfig.json']) {
+    const p = path.join(PINSCOPE, f);
+    h.update(`\n--${f}--\n`);
+    h.update(existsSync(p) ? readFileSync(p, 'utf8') : '');
+  }
+  try {
+    const pkg = JSON.parse(readFileSync(path.join(PINSCOPE, 'package.json'), 'utf8'));
+    h.update('\n--package.json--\n');
+    h.update(JSON.stringify({ scripts: pkg.scripts ?? {}, 'size-limit': pkg['size-limit'] ?? [] }));
+  } catch {
+    /* package.json unreadable — the hash simply omits it */
+  }
+  const grep = shell(
+    "grep -rEoh '\\.(skip|only|todo)\\b|\\bxit\\(|\\bxdescribe\\(' " +
+      'pinscope/tests pinscope/convergence/lib/test 2>/dev/null | wc -l',
+  );
+  return {
+    config_hash: `sha256:${h.digest('hex')}`,
+    skip_markers: Number(String(grep.out).trim()) || 0,
+  };
 }
 
 // --- matrix + schema ---
@@ -143,6 +171,7 @@ const out = {
   round: Number(round),
   harness_ok: harnessOk,
   ...(harnessError ? { harness_error: harnessError } : {}),
+  harness: harnessIntegrity(),
   results,
 };
 const outPath = path.join(CONV, `ac-results-R${round}.json`);
