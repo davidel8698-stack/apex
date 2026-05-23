@@ -294,7 +294,15 @@ While `STATE.self_heal.status == "running"`:
 
   Collect all wave-result paths and new-findings paths from this round:
   `$REPO_ROOT/WAVE-R<N>-W<X>-RESULT.md` for X from 1 to last completed,
-  `$REPO_ROOT/NEW-FINDINGS-R<N>-W<X>.md` where they exist.
+  `$REPO_ROOT/NEW-FINDINGS-R<N>-W<X>.md` where they exist, **and**
+  `$REPO_ROOT/NEW-FINDINGS-ORCHESTRATOR-R<N>.md` if it exists
+  (orchestrator-discovered findings outside the wave-executor's scope —
+  e.g. issues spotted during plan-write, schedule, or closure that
+  warrant inheritance into R<N+1>'s audit seed). Additionally, list any
+  file at repo root matching the glob `NEW-FINDINGS-*-R<N>*.md` that is
+  NOT in either list, and pass that orphan list to round-checker as
+  `orphan_new_findings`. An orphan file is a contract violation, not a
+  reason to skip the file.
 
   ```
   CLOSER_CONTEXT = {
@@ -302,7 +310,10 @@ While `STATE.self_heal.status == "running"`:
     plan_path: "$REPO_ROOT/REMEDIATION-PLAN-R<N>.md",
     waves_path: "$REPO_ROOT/WAVES-R<N>.md",
     wave_results: [list of WAVE-R<N>-W<X>-RESULT.md paths],
-    new_findings: [list of NEW-FINDINGS-R<N>-W<X>.md paths],
+    new_findings: [list of NEW-FINDINGS-R<N>-W<X>.md paths
+                   plus NEW-FINDINGS-ORCHESTRATOR-R<N>.md if it exists],
+    orphan_new_findings: [list of NEW-FINDINGS-*-R<N>*.md files at repo
+                          root not in new_findings],
     prev_closure_path: "$REPO_ROOT/ROUND-R<N-1>-CLOSURE.md" if N > 1 else null,
     spec_path: "$REPO_ROOT/apex-spec.md",
     output_path: "$REPO_ROOT/ROUND-R<N>-CLOSURE.md",

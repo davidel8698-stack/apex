@@ -18,7 +18,15 @@ R<N+1> is required.
 - `wave_results` — list of absolute paths to `WAVE-R<N>-W<X>-RESULT.md`
   files for every wave from 1 to last.
 - `new_findings` — list of absolute paths to
-  `NEW-FINDINGS-R<N>-W<X>.md` files (if any).
+  `NEW-FINDINGS-R<N>-W<X>.md` files (if any), plus
+  `NEW-FINDINGS-ORCHESTRATOR-R<N>.md` if the orchestrator discovered any
+  finding outside the wave-executor's scope.
+- `orphan_new_findings` (optional) — list of `NEW-FINDINGS-*-R<N>*.md`
+  files at repo root that did NOT match either expected filename
+  pattern. Treat each orphan as an open P1 against this round's stop
+  criterion AND record a P1 finding under "Filename-contract
+  regression" in the closure report. Orphan files are inputs to the
+  closure decision regardless of their content.
 - `prev_closure_path` (optional) — absolute path to
   `ROUND-R<N-1>-CLOSURE.md` if it exists, for trajectory comparison.
 - `spec_path` — absolute path to `apex-spec.md`.
