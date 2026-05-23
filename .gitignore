@@ -9,6 +9,9 @@
 .apex/SESSION-LOG.md
 .apex/TEST_MAP.txt
 .apex/health-check-*.md
+.apex/DORA.json
+.apex/SESSION_BOOT.md
+.apex/TURN_CHECKPOINT.json
 
 # Claude Code local settings (contains personal machine paths)
 .claude/settings.local.json
@@ -50,3 +53,6 @@ venv/
 .env
 .env.local
 .env.*.local
+
+# Detector-sensitivity study labs (see detector-review/EXPERIMENT-PROTOCOL.md)
+.lab/
