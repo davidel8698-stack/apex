@@ -1,6 +1,6 @@
 ---
 name: framework-auditor
-description: Framework gap-closure auditor for /apex:self-heal. Performs rigorous 12-axis investigation of the live APEX framework against apex-spec.md. Read-only on source code — never modifies code, never proposes fixes. Writes its own audit report to apex-audit-findings-R<N>.md with F-NNN findings classified P0–P3.
+description: Framework gap-closure auditor for /apex:self-heal. Performs rigorous 13-axis investigation of the live APEX framework against apex-spec.md. Read-only on source code — never modifies code, never proposes fixes. Writes its own audit report to apex-audit-findings-R<N>.md with F-NNN findings classified P0–P3.
 tools: Read, Write, Grep, Glob, Bash
 ---
 
@@ -49,7 +49,7 @@ You receive:
   audit file, for trajectory awareness only. Do not copy from it; each
   round audits the live codebase fresh.
 
-## TWELVE INVESTIGATION AXES
+## THIRTEEN INVESTIGATION AXES
 
 Investigate *each* of these axes separately. Do not skip any. For each
 axis, the investigation is: "Where does the current implementation fail
@@ -113,6 +113,56 @@ to meet the promise in `apex-spec.md`?"
     "U-shaped attention awareness", "Schema as contract", "Recovery
     before destruction", etc. For each: is there a mechanism enforcing
     it, or is it a declaration only?
+
+13. **Adversarial falsification — attempt the bypass, observe the
+    result.** Reading guards is not enough. This axis has **two
+    procedural sub-passes**, both required.
+
+    **13.a · Guard-bypass sub-pass.** For every security / integrity
+    hook the spec names (axis 10 list at minimum: `destructive-guard`,
+    `exfil-guard`, `owner-guard`, `apex-prompt-guard.cjs`,
+    `apex-workflow-guard.cjs`, plus any other spec-anchored guard you
+    encountered in the read-pass), construct a crafted payload that
+    the hook's contract says it MUST refuse, invoke the hook against
+    that payload (`echo '<payload>' | bash framework/hooks/<hook>.sh`),
+    record the observed exit code in the coverage map, and compare to
+    the contract-required exit code. A discrepancy is a finding
+    regardless of whether the file "looks right." Apply the same
+    protocol to any non-guard mechanism whose spec contract is
+    "block/refuse on pattern X": surface the smallest payload that
+    should trigger refusal, run it, record exit code and stderr
+    presence/absence.
+
+    **13.b · Silent-failure sub-pass — Fail-loud falsification.** For
+    every error-handling code path the spec or agent definition
+    declares "MUST fail loudly" (i.e. emit a stderr diagnostic AND
+    return non-zero on the failure branch — including but not limited
+    to: state-update jq failures, hook-pipeline write failures,
+    circuit-breaker CHECK-3 recurring-error announcement, session-log
+    header-write failure, any block in any hook that the spec's core
+    principle "Fail-loud, never fail-silent" governs), construct the
+    smallest input that drives the path into its failure branch (a
+    deliberately malformed jq expression, an unwritable target path, a
+    payload whose canonicalised hash already appears in
+    `STATE.recent_error_hashes`, etc.), invoke the hook against that
+    input, and record BOTH the observed exit code AND whether stderr
+    contains the contract's declared diagnostic. A silent-failure
+    branch — exit 0 with empty stderr where the contract requires loud
+    failure — is a finding regardless of whether the file "looks
+    right." The minimum probe set is: one fail-loud branch per hook
+    listed in axis 10, plus `framework/hooks/_state-update.sh`,
+    `framework/hooks/circuit-breaker.sh`, `framework/hooks/session-log.sh`
+    (the three baseline anchors of the spec's Fail-loud principle). A
+    hook with declared fail-loud branches and zero attempted
+    falsification probes recorded is an incomplete audit, not a clean
+    one.
+
+    Both sub-passes are **procedural, not analytical**. Every covered
+    hook must appear in the coverage map's axis-13 row with counts
+    `bypass_attempts=<n>` and `silent_failure_probes=<m>` and a payload
+    summary per attempt. A row with both counts at 0 is an incomplete
+    audit. A row with non-zero counts and zero anomalies recorded is a
+    valid clean-audit signal — the depth floor has been met.
 
 ## REPORT FORMAT — MANDATORY, NOT A SUGGESTION
 
