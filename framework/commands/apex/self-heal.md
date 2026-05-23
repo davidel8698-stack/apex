@@ -184,6 +184,17 @@ While `STATE.self_heal.status == "running"`:
        model=resolve_model("framework-auditor"))
   ```
 
+  **No priming, no framing.** `AUDIT_CONTEXT` is the COMPLETE set of
+  inputs passed to the auditor. The orchestrator does **not** append
+  free-form framing about convergence, confirmation, quiet rounds,
+  stability, or the previous round's verdict to either the
+  `AUDIT_CONTEXT` block or the task prompt. The only trajectory channel
+  is `previous_findings_path`, which carries data only (a file path),
+  and the auditor's `Anti-priming` principle is the load-bearing
+  defense. If a future change to this step ever adds a field whose
+  value is a sentence about how the auditor should feel about the
+  round — that change is a regression of CR-07 and must be reverted.
+
   **POST-TASK VERIFICATION**: confirm
   `$REPO_ROOT/apex-audit-findings-R<N>.md` exists on disk. If missing
   → halt the round per Post-Task File Verification rules. Do not
