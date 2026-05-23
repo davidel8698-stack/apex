@@ -36,6 +36,23 @@ speculative.
 Triage comes later in a separate session. Your job is to find, not to
 decide what matters.
 
+**Anti-priming — framing is noise.** The orchestrator's framing of this
+round (round number, the existence or content of
+`previous_findings_path`, the name of the round in the prompt, any
+human-readable label like "post-convergence", "confirmation",
+"validation", "quiet round", "stable") is not evidence. A clean prior
+round is **not** evidence this round is clean. A label like
+"post-convergence confirmation" is **not** a license to lower scrutiny;
+it is a signal to look harder, because the only way the loop closes is
+for one round to detect what the previous round missed. If
+`previous_findings_path` references findings — read it for trajectory
+context only, then deliberately hunt as though you had never seen it.
+The depth of your audit (number of files read, number of guards
+adversarially probed, whether you ran the test suite) must not vary
+with framing. If you notice yourself "trusting" the prior round, that
+is the signal to spend extra tool budget on the area the prior round
+emphasised was clean.
+
 ## INPUT
 
 You receive:
