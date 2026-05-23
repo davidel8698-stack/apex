@@ -80,14 +80,54 @@ HALTED state — `round-checker` itself produces the closure.
    round — does any of them invalidate a fix we made? (e.g. a wave-2
    fix that broke wave-1?)
 
-5. **Stop criterion:** declare the loop closed if **all three** of the
+5. **Stop criterion:** declare the loop closed if **all four** of the
    following hold:
    - Round R<N> produced 0 P0 findings AND 0 P1 findings, *and*
    - Round R<N-1> produced 0 P0 findings AND 0 P1 findings (two
      consecutive clean rounds), *and*
-   - There are no open NEW-FINDINGS of P0/P1 severity.
+   - There are no open NEW-FINDINGS of P0/P1 severity, *and*
+   - Round R<N>'s audit coverage map shows (a) every axis investigated
+     with at least one piece of recorded evidence, (b) Axis 13
+     Adversarial Falsification exercised on every spec-named guard with
+     a recorded exit code per attempted bypass, and (c) the test suite
+     either OBSERVED (literal `passed:/failed:/skipped:/errored:` line
+     quoted) or recorded as BLIND SPOT per the auditor's Test-suite
+     evidence rule. A "two clean rounds" close means "two *deep* clean
+     rounds." A round where axis 13 records 0 attempted bypasses, or
+     where the test suite is silently inherited, is structurally
+     ineligible to close the loop regardless of P0/P1 count.
 
    Otherwise — round R<N+1> is required.
+
+6. **Audit-credibility spot-check.** Before declaring CLOSED on any
+   `P0+P1==0` round, independently re-verify a small sample of the
+   auditor's compliance claims. Pick exactly **3** items from the
+   audit's coverage map that the auditor marked compliant — prefer (a)
+   any security guard (`destructive-guard`, `exfil-guard`, `owner-guard`,
+   `apex-prompt-guard.cjs`, `apex-workflow-guard.cjs`), and (b) any
+   self-heal-loop file the auditor itself reads (`framework/agents/
+   specialist/framework-auditor.md`, `round-checker.md`,
+   `framework/commands/apex/self-heal.md`). For each pick: re-run the
+   minimal observation that would confirm the claim (one `grep`, one
+   `test -f`, or one hook invocation against a contract-violating
+   payload). If any re-check contradicts the auditor's claim, the round
+   does **not** close; record the discrepancy as a P1 finding under
+   "Audit-credibility regression" in this closure report, set `Status:
+   CONTINUE TO R<N+1>`, and seed the next round on the disputed area.
+   Document each spot-check in a short table inside the closure report
+   under `## Spot-check results` with columns `claim | re-check command
+   | observed | verdict`. The spot-check must be performed on every
+   `P0+P1==0` round — it is the load-bearing defense against the
+   F-204-013 audit-honesty regression (R23 fabricated counts → R24
+   ratified). **Spot-check tool failure rule:** if a spot-check command
+   itself errors (tool unavailable, file-system timeout, jq missing,
+   permission denied on the re-check) so the observation cannot be
+   completed, treat the spot-check as `FAILED` for posture purposes
+   (CR-08 maps the round to `clean-pending-spot-check`, not
+   `stable`/`improving`) — **never** as "skipped" or implicitly
+   "passed." Record the error verbatim under the verdict column and
+   set `Status: CONTINUE TO R<N+1>` with the spot-check tooling issue
+   as a seed.
 
 ## OUTPUT FORMAT — `ROUND-R<N>-CLOSURE.md`
 
