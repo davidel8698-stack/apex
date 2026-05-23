@@ -345,11 +345,14 @@ APEX maintains itself via `/apex:self-heal` — a framework gap-closure
 pipeline anchored on this spec file. Each round runs five sequential
 agents transcribed from the user-validated 6-instruction protocol:
 
-1. **`framework-auditor`** — performs a 12-axis audit against this
+1. **`framework-auditor`** — performs a 13-axis audit against this
    spec, producing `apex-audit-findings-R<N>.md` at repo root with
    F-NNN findings classified P0–P3, status CONFIRMED/SUSPECTED, and
    spec-anchor citations. The agent's only measuring stick is this
-   spec; nothing else.
+   spec; nothing else. Axis 13 (Adversarial Falsification) requires
+   the auditor to attempt a contract-violating payload against every
+   spec-named guard and record the observed exit code — reading is
+   evidence about declarations, running is evidence about behaviour.
 2. **`remediation-planner`** — converts every finding into a typed
    R-item via the 10-question ecosystem analysis, producing
    `REMEDIATION-PLAN-R<N>.md`. Authored under
