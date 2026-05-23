@@ -171,8 +171,18 @@ HALTED state — `round-checker` itself produces the closure.
 
 Mapping (R16-637 / IMP-037 — plain-language UX for non-technical users):
 
-- `P0 + P1 == 0` and trajectory `IMPROVING` → **improving**.
-- `P0 + P1 == 0` and trajectory `STAGNANT` → **stable**.
+- `P0 + P1 == 0` AND trajectory `IMPROVING` AND audit-credibility
+  spot-check (step 6) PASSED AND audit coverage map records ≥1
+  adversarial-axis attempt per spec-named guard AND test-suite line
+  records OBSERVED → **improving**.
+- `P0 + P1 == 0` AND trajectory `STAGNANT` AND the same three
+  audit-quality conditions above → **stable**.
+- `P0 + P1 == 0` AND any of: spot-check skipped or failed, OR
+  adversarial axis records 0 attempts, OR test-suite line records
+  BLIND SPOT or is missing → **clean-pending-spot-check** (the audit
+  did not surface findings, but it also did not exercise the depth
+  needed to distinguish a clean framework from a blind audit; the
+  loop does NOT close at this posture — round R<N+1> is required).
 - `P0 + P1 > 0` OR trajectory `DIVERGING` OR a non-trivial cluster of
   new outcomes `gave_up` / `apology_no_completion` / `answer_thrashing`
   (R-606 outcome enum) → **degrading**.
