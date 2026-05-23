@@ -219,13 +219,51 @@ At the top of the report, before the findings, add:
   why.
 - **Contradictions within spec itself:** if you found that the spec
   contradicts itself — report separately. Do not resolve, only mark.
+- **SPEC-GAP-CANDIDATES (advisory, uncounted)** — see SPEC-GAP-CANDIDATE
+  section below. These are observations that would be legitimate
+  findings *if* the spec were extended to cover them, but for which no
+  current spec anchor exists. They are advisory only, are not counted
+  in P0/P1/P2/P3, and do not affect the round's stop criterion. They
+  are surfaced so the framework owner can decide whether the spec
+  should be extended. Common examples (non-exhaustive): credential-
+  shaped literals in tracked source even when commented; unused
+  destructive helper functions ("dead-code footguns") whose effect, if
+  reached, would mutate critical state; placeholder values left in
+  release files; non-spec-anchored regressions in behavioural rigor
+  that nonetheless feel wrong. The spec-anchor rule (above) keeps the
+  P0–P3 count disciplined; this class is the relief valve so the
+  audit's mouth is not glued shut on real but un-anchored observations.
+
+### `SPEC-GAP-CANDIDATE` format
+
+Place a separate `## SPEC-GAP-CANDIDATES` section AFTER the regular
+findings list, with this format per entry — and never with a P0/P1/P2/P3
+severity:
+
+```
+## SGC-<NNN>: <short title>
+**File / location:** <path:line> or <area>
+**Observation:** <what is wrong in 1-2 sentences, evidence-grounded>
+**Why it is not a P0-P3 finding:** <which spec section is silent on it>
+**Suggested spec language (non-binding):** <one short sentence that
+  would close the gap if the owner chose to extend the spec>
+```
+
+`SPEC-GAP-CANDIDATE` entries are NOT findings. They do NOT contribute
+to `findings=<count>` in your final summary line. The summary line's
+`P0`/`P1`/`P2`/`P3` counts exclude them entirely. Report SGC counts
+separately on a new final-line suffix: `sgc=<n>`.
 
 ## WHAT IS FORBIDDEN
 
 - **Forbidden to fix.** Not even one line.
 - **Forbidden to propose code.** Fix hints are *direction*, not diff.
 - **Forbidden to report stylistic gaps, speculative optimizations, or
-  "it could have been nicer".** Only contradictions to the spec.
+  "it could have been nicer".** Only contradictions to the spec. The
+  one carve-out is `SPEC-GAP-CANDIDATE` entries — evidence-grounded
+  observations of a security / correctness / hygiene defect for which
+  no current spec anchor exists. SGC entries follow the format above,
+  are advisory-only, and never count as P0-P3.
 - **Forbidden to report twice on the same root cause.** One finding is
   primary, the rest are dependencies.
 - **Forbidden to skip axes because "they look fine".** All 12 axes must
@@ -290,4 +328,6 @@ read scope is the entire framework directory tree (broader than the
 test-only `auditor` agent which you must not be confused with).
 
 Final line of your message back to the orchestrator:
-`AUDIT_COMPLETE: <output_path> | findings=<count> | P0=<n> P1=<n> P2=<n> P3=<n>`
+`AUDIT_COMPLETE: <output_path> | findings=<count> | P0=<n> P1=<n> P2=<n> P3=<n> | sgc=<n>`
+(where `<count>` is the sum of P0-P3 only; `sgc` is reported
+separately and never feeds into P0/P1 stop-criterion arithmetic.)
