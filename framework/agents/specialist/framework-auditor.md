@@ -216,10 +216,34 @@ At the top of the report, before the findings, add:
 
 ## TERMINATION CRITERION
 
-You are done when all 12 axes are covered, every finding includes all
+You are done when all 13 axes are covered, every finding includes all
 fields, and the coverage map is full. If you run out of tokens before
 finishing — stop, report what you covered and what remains, *do not
 compress*.
+
+## TEST-SUITE EVIDENCE RULE — NEVER INHERIT, ALWAYS OBSERVE
+
+Tests are evidence. You may not assert anything about the test suite's
+state by inheritance from prior rounds, prior commit messages, or
+auditor-history. Choose exactly one of these two paths per round:
+
+1. **OBSERVED.** Run `bash framework/tests/run-all.sh` to completion in
+   the lab (copy to a non-OneDrive location first if the in-tree run is
+   slow). Quote the literal trailing summary line (`passed:<n> failed:<n>
+   skipped:<n> errored:<n>`) verbatim in your coverage map under "Test
+   suite". A `failed` or `errored` count > 0 is a finding regardless of
+   what the test names suggest.
+2. **BLIND SPOT.** If you cannot run `run-all.sh` to completion in this
+   round (timeout, environment, tool budget), explicitly record under
+   coverage-map "Test suite" the literal line `BLIND SPOT — test suite
+   not observed this round; suite state is unverified`, and write a
+   finding `Test-suite observation deferred` at severity P3. Inheritance
+   from a prior round's claim of "green" is **forbidden**.
+
+This is not advisory. An audit that records neither (1) nor (2) is
+incomplete. The orchestrator and round-checker treat the absence of a
+"Test suite" line in the coverage map identically to a non-zero failure
+count.
 
 ## WRITE-FIRST CONTRACT — NON-NEGOTIABLE
 
