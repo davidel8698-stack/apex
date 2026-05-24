@@ -1,9 +1,10 @@
 /** PinScope root component — see SPEC §7.1, §10 flows B/C/D. */
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ReactElement } from 'react';
 import { createPortal } from 'react-dom';
 import { PinBadges } from './components/PinBadges.js';
+import { VoidBadges } from './components/VoidBadges.js';
 import { InfoPanel } from './components/InfoPanel.js';
 import { Rulers } from './components/Rulers.js';
 import { Crosshair } from './components/Crosshair.js';
@@ -28,6 +29,7 @@ import { SnapshotManager } from './managers/SnapshotManager.js';
 import { EndpointSnapshotStore } from './managers/EndpointSnapshotStore.js';
 import { HistoryManager, MemoryHistoryStore } from './managers/HistoryManager.js';
 import type { HistoryData } from './managers/HistoryManager.js';
+import { RuntimePinObserver } from './managers/RuntimePinObserver.js';
 
 export interface PinScopeProps {
   /** Runtime kill-switch. */
@@ -156,9 +158,37 @@ function PinScopeHud({
   const [hudVisible, setHudVisible] = useState(true);
   const [gridMode, setGridMode] = useState<GridMode>(defaultGridMode);
   const [measuring, setMeasuring] = useState(false);
+  // R-20-03 — §8.11 Shift+P (`toggle-pins`) and Shift+C (`crosshair`) flip
+  // these visibility cells. Default `true` so the HUD opens with pins and
+  // crosshair visible (no behavioral change vs. PS-R19).
+  const [pinsVisible, setPinsVisible] = useState(true);
+  const [crosshairEnabled, setCrosshairEnabled] = useState(true);
   // §8.5/§8.8 — the live state-override is owned by `PinScopeHud`, the common
   // parent of `StatePanel` (which chooses it) and `TopBar` (which reports it).
   const [stateOverride, setStateOverride] = useState<StateOverride>('none');
+
+  // R-20-02 — §12 runtime-added-DOM observer. A `RuntimePinObserver` is a
+  // lifecycle-bound MutationObserver: `.start()` on mount, `.stop()` on
+  // unmount. Guarded for non-DOM test envs (e.g. node `vitest` without
+  // happy-dom). The default observe root is `document.body`.
+  // Deferred via `queueMicrotask` so the observer setup does NOT enter the
+  // synchronous mount path (AC-070 <50ms budget). Cleanup uses a ref-style
+  // closure that observes the post-microtask observer instance.
+  useEffect(() => {
+    if (typeof MutationObserver === 'undefined') return undefined;
+    if (typeof document === 'undefined') return undefined;
+    let observer: RuntimePinObserver | null = null;
+    let disposed = false;
+    queueMicrotask(() => {
+      if (disposed) return;
+      observer = new RuntimePinObserver();
+      observer.start();
+    });
+    return () => {
+      disposed = true;
+      if (observer) observer.stop();
+    };
+  }, []);
   // §10 flow B — the locked selection survives mouse-out (§8.1). `selectPin`
   // is the §10-B/§11 programmatic lock the `select e_N` command routes through.
   const { selected, select: selectPin } = useSelectedElement(measuring);
@@ -268,6 +298,13 @@ function PinScopeHud({
           measure: () => setMeasuring((m) => !m),
           // §10-D — Shift+S captures a snapshot through the dev-server route.
           snapshot: () => onSnapshot(),
+          // R-20-03 — §8.11 Shift+P toggles BOTH the CSS-`::before` badge
+          // layer (`PinBadges`) AND the JS-overlay layer for void elements
+          // (`VoidBadges`, mounted by R-20-01). Driven by `pinsVisible`.
+          'toggle-pins': () => setPinsVisible((v) => !v),
+          // R-20-03 — §8.11 Shift+C toggles the crosshair via the new
+          // `enabled` prop on `<Crosshair/>`.
+          crosshair: () => setCrosshairEnabled((v) => !v),
         }
       : {},
   );
@@ -286,9 +323,17 @@ function PinScopeHud({
 
   return createPortal(
     <div data-pinscope-ui="root">
-      <PinBadges />
+      {/* R-20-03 — Shift+P toggles BOTH badge layers; R-20-01 mounts VoidBadges
+          (JS-overlay for void elements like img/input/br/hr where ::before
+          cannot render). The CSS-`::before` layer is `PinBadges`. */}
+      {pinsVisible && <PinBadges />}
+      {pinsVisible && <VoidBadges />}
       <Rulers />
-      <Crosshair measuring={measuring} hudHidden={!hudVisible} />
+      <Crosshair
+        measuring={measuring}
+        hudHidden={!hudVisible}
+        enabled={crosshairEnabled}
+      />
       <GridOverlay mode={gridMode} />
       {/* §10-B — a locked selection takes precedence over the live hover. */}
       <InfoPanel hovered={selected ?? hovered} position={hudPosition} />

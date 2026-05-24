@@ -9,11 +9,18 @@ export interface CrosshairProps {
   measuring?: boolean;
   /** Disabled while the HUD is hidden (§8.3). */
   hudHidden?: boolean;
+  /**
+   * R-20-03 — §8.11 Shift+C toggle. When `false`, the crosshair is hidden.
+   * Defaults to `true` so the HUD opens with the crosshair on (no behavioral
+   * change vs. PS-R19).
+   */
+  enabled?: boolean;
 }
 
 export function Crosshair({
   measuring = false,
   hudHidden = false,
+  enabled = true,
 }: CrosshairProps = {}): ReactElement | null {
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
 
@@ -31,8 +38,9 @@ export function Crosshair({
   }, []);
 
   // §8.3 — disabled over HUD (handled in onMove), in measurement mode, or
-  // when the HUD is hidden.
-  if (measuring || hudHidden) return null;
+  // when the HUD is hidden. R-20-03 — also disabled when `enabled === false`
+  // (Shift+C toggle).
+  if (measuring || hudHidden || !enabled) return null;
   if (!pos) return null;
 
   const line: CSSProperties = {
