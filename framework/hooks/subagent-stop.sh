@@ -17,9 +17,12 @@ source "$(dirname "$0")/_state-update.sh"
 export APEX_HOOK_SOURCE="${APEX_HOOK_SOURCE:-subagent-stop}"
 
 INPUT=$(cat)
-AGENT=$(echo "$INPUT" | jq -r '.agent_name // empty')
+# Envelope schema drift (Claude Code 2.1.x): native field is .agent_type,
+# legacy synthetic test path uses .agent_name. Read both — fallback order.
+AGENT=$(echo "$INPUT" | jq -r '.agent_name // .agent_type // empty')
 AGENT_ID_ENV=$(echo "$INPUT" | jq -r '.agent_id // empty' 2>/dev/null | tr -d '\r')
 ROUND_TAG_ENV=$(echo "$INPUT" | jq -r '.round_tag // empty' 2>/dev/null | tr -d '\r')
+NATIVE_TRANSCRIPT=$(echo "$INPUT" | jq -r '.agent_transcript_path // empty' 2>/dev/null | tr -d '\r')
 
 # R12-001 (F-201): extract usage.* fields from the SubagentStop payload and
 # accumulate into STATE.tokens.* via apex_tokens_update. Every field defaults
@@ -140,12 +143,16 @@ fi
 # ---------------------------------------------------------------------
 if [ -n "$AGENT" ]; then
   REG=".apex/in-flight-subagents.jsonl"
-  # Resolve the agent_id for this stop event. Preference order:
-  #   1. envelope's own .agent_id (provided when Claude Code surfaces it)
-  #   2. most-recent in_flight registry entry whose .agent_name matches
-  RESOLVED_ID="$AGENT_ID_ENV"
+  # Resolve the agent_id for this stop event. Modern Claude Code provides
+  # .agent_id in the harness-native namespace (e.g. "a298c97760c40f6d7"),
+  # but tool-event-logger.sh stamps tool_call events with the synthesized
+  # ID from pre-subagent-start.sh (e.g. "subagent-general-purpose-24-…").
+  # Cross-reference REQUIRES the synthesized ID — so resolve via the
+  # in-flight registry by agent_name first, fall back to the envelope's
+  # .agent_id only when registry lookup misses.
+  RESOLVED_ID=""
   RESOLVED_ROUND="$ROUND_TAG_ENV"
-  if [ -z "$RESOLVED_ID" ] && [ -f "$REG" ]; then
+  if [ -f "$REG" ]; then
     REG_LINE=$(awk -v want="$AGENT" '
       {
         if (match($0, /"agent_name":"[^"]+"/) > 0) {
@@ -160,6 +167,10 @@ if [ -n "$AGENT" ]; then
       [ -z "$RESOLVED_ROUND" ] && RESOLVED_ROUND=$(echo "$REG_LINE" | jq -r '.round_tag // empty' 2>/dev/null | tr -d '\r')
     fi
   fi
+  # Fall back to envelope's native agent_id if registry missed (degraded
+  # mode — transcript file created but tool_call denormalization will be
+  # empty because event-log uses the synthesized namespace).
+  [ -z "$RESOLVED_ID" ] && RESOLVED_ID="$AGENT_ID_ENV"
 
   if [ -n "$RESOLVED_ID" ]; then
     # Best-effort registry close — flip the most-recent in_flight line
@@ -223,7 +234,8 @@ if [ -n "$AGENT" ]; then
       round_tag "$RESOLVED_ROUND" \
       tool_calls_count "$TC_CLAIMED" \
       observed_tool_call_lines "$TC_COUNT_OBS" \
-      imported_transcript_path "$OUT_FILE"
+      imported_transcript_path "$OUT_FILE" \
+      native_transcript_path "$NATIVE_TRANSCRIPT"
 
     _emit_apex_event "transcript_imported" .apex \
       source_agent_id "$RESOLVED_ID" \
