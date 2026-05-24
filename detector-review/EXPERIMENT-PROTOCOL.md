@@ -401,6 +401,34 @@ date and rationale. Empty = protocol ran exactly as pre-registered.
     3-agent protocol, §9 thresholds — unaffected. Only the agent
     invocation mechanism changed.
 
+- **2026-05-24 (Phase 6 close — Class-E denominator reconciliation,
+  arithmetic correction, NOT a design change).** The §9 threshold row
+  pre-registered "Class E (4 mutants total, working+held-out) ≥ 3/4
+  reliably handled as `SPEC-GAP-CANDIDATE`." The §6 corpus design
+  freezes E counts as: §6.1 working W-E1 + W-E2 = 2, §6.2 held-out
+  H-E1 = 1. Joint total is **3 mutants, not 4.** The "/4" in the §9
+  row is an internal arithmetic error from pre-registration
+  (apparently double-counting one working entry, or carrying over a
+  draft figure). The denominator is corrected to **/3** in this
+  amendment. **The threshold semantics are preserved** — `≥ 3/4`
+  (75%) becomes `≥ 3/3` (100%) under the corrected denominator,
+  which is the stricter reading. Phase 6 measured 1/3 (only H-E1
+  reliably handled, as anchored-P1 per R203 pattern). Verdict
+  unchanged: **MISS** under either denominator.
+  - **Why caught post-hoc:** the discrepancy was surfaced by the
+    Phase-6 critic clean-room review (Finding 1, 2026-05-24) when
+    cross-referencing §9 against the corpus tables. Pre-registration
+    pre-Phase-2 froze §9 without independently verifying the
+    arithmetic against §6.1+§6.2.
+  - **Honesty discipline preserved:** the correction is documented
+    here, with reference to the trial-data verdict (MISS) standing
+    under either denominator, so the change cannot be construed as
+    moving goalposts. Phase-7 R-item 1 (Axis 13.c source-literal
+    scan) is the primary mitigation; closing the Class-E threshold
+    requires the working-corpus E mutants to surface, which budget
+    exhaustion (L-DH-02) prevented in Phase 6. Phase-7 R-item 2
+    (raise auditor budget 400→800) is the secondary mitigation.
+
 ## 13. Freeze declaration
 
 This protocol is frozen as of 2026-05-23 against baseline commit
