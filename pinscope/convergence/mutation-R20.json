@@ -1,0 +1,23 @@
+{
+  "round": 20,
+  "generated_at": "2026-05-24T17:31:16.102Z",
+  "files": [
+    {
+      "file": "pinscope/src/runtime/PinScope.tsx",
+      "mutants_run": 5,
+      "killed": 5,
+      "survived": []
+    },
+    {
+      "file": "pinscope/src/runtime/components/Crosshair.tsx",
+      "mutants_run": 5,
+      "killed": 5,
+      "survived": []
+    }
+  ],
+  "summary": {
+    "mutants": 10,
+    "killed": 10,
+    "survived": 0
+  }
+}

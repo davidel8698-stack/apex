@@ -250,6 +250,57 @@ describe('CommandBar §8.6 — focus-expand / Tab autocomplete / history (R-15-0
     expect(appendSpy).not.toHaveBeenCalled();
   });
 
+  it('appends a snapshot-kind command through the local-only path (R-20-05)', () => {
+    // R-20-05 — exercises the `snapshot` disjunct of `isLocalOnlyCommand`
+    // (CommandBar.tsx L49), which prior R-19 coverage left unexercised: every
+    // CommandBar Enter-path test fed `select e_1` (1st disjunct) or
+    // `measure e_2 e_3` (invalid grammar → catch branch). A VALID
+    // `snapshot foo` parses to `kind: 'snapshot'` and must produce exactly
+    // one local-only `parsed: null` history entry — killing the R18
+    // `or-to-and` mutant on the disjunction.
+    const history = new HistoryManager(new MemoryHistoryStore());
+    const appendSpy = vi.spyOn(history, 'append');
+    const { container } = render(<CommandBar history={history} />);
+    const input = container.querySelector(
+      '[data-pinscope-command]',
+    ) as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'snapshot foo' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    expect(appendSpy).toHaveBeenCalledTimes(1);
+    const entry = appendSpy.mock.calls[0]?.[0];
+    expect(entry?.raw_input).toBe('snapshot foo');
+    expect(entry?.parsed).toBe(null);
+    expect(entry?.result).toBe('applied');
+    expect(history.list().map((e) => e.raw_input)).toContain('snapshot foo');
+  });
+
+  it('appends a measure-kind command through the local-only path (R-20-05)', () => {
+    // R-20-05 — exercises the `measure` disjunct of `isLocalOnlyCommand`
+    // (CommandBar.tsx L49). The valid grammar is `measure e_N to e_M`
+    // (operation-parser RE_MEASURE: /^measure\s+(e_\d+)\s+to\s+(e_\d+)$/i).
+    // A valid `measure e_2 to e_3` parses to `kind: 'measure'` and must
+    // produce exactly one local-only `parsed: null` history entry — the
+    // second arm killing the R18 `or-to-and` mutant on the disjunction.
+    const history = new HistoryManager(new MemoryHistoryStore());
+    const appendSpy = vi.spyOn(history, 'append');
+    const { container } = render(<CommandBar history={history} />);
+    const input = container.querySelector(
+      '[data-pinscope-command]',
+    ) as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'measure e_2 to e_3' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    expect(appendSpy).toHaveBeenCalledTimes(1);
+    const entry = appendSpy.mock.calls[0]?.[0];
+    expect(entry?.raw_input).toBe('measure e_2 to e_3');
+    expect(entry?.parsed).toBe(null);
+    expect(entry?.result).toBe('applied');
+    expect(history.list().map((e) => e.raw_input)).toContain(
+      'measure e_2 to e_3',
+    );
+  });
+
   it('navigates the HistoryManager store with ArrowUp', () => {
     // R-18-01 — recall via the CommandBar's own append covers local-only kinds.
     const history = new HistoryManager(new MemoryHistoryStore());

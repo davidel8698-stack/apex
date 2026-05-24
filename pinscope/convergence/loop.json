@@ -1224,8 +1224,8 @@
   },
   "findings": [],
   "current_round": {
-    "phase": "schedule",
-    "started_at": "2026-05-22T14:06:26.896Z",
+    "phase": "idle",
+    "started_at": null,
     "wave_snapshot_ref": null
   },
   "narrative_coverage": {
