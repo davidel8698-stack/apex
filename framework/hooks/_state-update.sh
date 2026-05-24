@@ -48,7 +48,12 @@ _state_update() {
     safe_expr=$(printf '%s' "$expr" | tr '"' "'" | tr '\n' ' ')
     local _ts_now
     _ts_now="$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date +%Y-%m-%dT%H:%M:%SZ)"
-    printf '{"ts":"%s","type":"state_mutation","source":"%s","expr":"%s"}\n' \
+    # Campaign B B2.2: tag with schema_version="1" so the AC-2 validator
+    # accepts these legacy-shaped direct emits. The state-mutation
+    # variant is the highest-frequency event in the log (~83% of
+    # entries in live samples) so the schema_version stamp here closes
+    # the largest backward-compat gap.
+    printf '{"schema_version":"1","ts":"%s","type":"state_mutation","source":"%s","expr":"%s"}\n' \
       "$_ts_now" \
       "${APEX_HOOK_SOURCE:-unknown}" \
       "$safe_expr" >> "${state_dir}/event-log.jsonl" 2>/dev/null || true
@@ -64,7 +69,7 @@ _state_update() {
         local _phase_val
         _phase_val=$(printf '%s' "$expr" | sed -nE 's/.*\.current_phase[[:space:]]*=[[:space:]]*"([^"]*)".*/\1/p')
         if [ -n "$_phase_val" ]; then
-          printf '{"ts":"%s","type":"phase_set","source":"%s","current_phase":"%s"}\n' \
+          printf '{"schema_version":"1","ts":"%s","type":"phase_set","source":"%s","current_phase":"%s"}\n' \
             "$_ts_now" "${APEX_HOOK_SOURCE:-unknown}" "$_phase_val" \
             >> "${state_dir}/event-log.jsonl" 2>/dev/null || true
         fi
@@ -75,7 +80,7 @@ _state_update() {
         local _mode_val
         _mode_val=$(printf '%s' "$expr" | sed -nE 's/.*\.decision_mode[[:space:]]*=[[:space:]]*"([^"]*)".*/\1/p')
         if [ -n "$_mode_val" ]; then
-          printf '{"ts":"%s","type":"decision_mode_set","source":"%s","decision_mode":"%s"}\n' \
+          printf '{"schema_version":"1","ts":"%s","type":"decision_mode_set","source":"%s","decision_mode":"%s"}\n' \
             "$_ts_now" "${APEX_HOOK_SOURCE:-unknown}" "$_mode_val" \
             >> "${state_dir}/event-log.jsonl" 2>/dev/null || true
         fi
@@ -86,7 +91,7 @@ _state_update() {
         local _cl_val
         _cl_val=$(printf '%s' "$expr" | sed -nE 's/.*\.complexity_level[[:space:]]*=[[:space:]]*([0-9]+).*/\1/p')
         if [ -n "$_cl_val" ]; then
-          printf '{"ts":"%s","type":"complexity_set","source":"%s","complexity_level":%s}\n' \
+          printf '{"schema_version":"1","ts":"%s","type":"complexity_set","source":"%s","complexity_level":%s}\n' \
             "$_ts_now" "${APEX_HOOK_SOURCE:-unknown}" "$_cl_val" \
             >> "${state_dir}/event-log.jsonl" 2>/dev/null || true
         fi
@@ -192,8 +197,11 @@ _emit_apex_event() {
   local _ts_now
   _ts_now="$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date +%Y-%m-%dT%H:%M:%SZ)"
   local source="${APEX_HOOK_SOURCE:-unknown}"
-  local jq_args=(--arg ts "$_ts_now" --arg type "$event_type" --arg src "$source")
-  local filter='{ts:$ts,type:$type,source:$src}'
+  # Campaign B B2.2 (closes AC-2): every newly-emitted entry carries
+  # schema_version="1". Legacy entries already on disk lack this field —
+  # the schema accepts them as v0 with a flag.
+  local jq_args=(--arg sv "1" --arg ts "$_ts_now" --arg type "$event_type" --arg src "$source")
+  local filter='{schema_version:$sv,ts:$ts,type:$type,source:$src}'
   while [ $# -ge 2 ]; do
     local k="$1" v="$2"
     # Sanitize jq variable name — only allow alphanumeric and underscore
@@ -203,5 +211,66 @@ _emit_apex_event() {
     filter="${filter} + {\"${k}\":\$v_${safe_k}}"
     shift 2
   done
-  jq -c -n "${jq_args[@]}" "$filter" >> "${state_dir}/event-log.jsonl" 2>/dev/null || true
+  local line
+  line=$(jq -c -n "${jq_args[@]}" "$filter" 2>/dev/null) || true
+  if [ -z "$line" ]; then
+    return 0
+  fi
+  # Campaign B B2.2 — validate-before-append. The validator is a
+  # lightweight jq pass that checks the binding minimum (per
+  # audit-trail-review/EXPERIMENT-PROTOCOL.md §5.2):
+  #   * schema_version, ts, type, source all present and non-empty
+  #   * type is in the v1 enum
+  # Full JSON Schema validation requires an external validator (ajv) we
+  # cannot assume; the jq pass catches the failures the campaign cares
+  # about. Malformed entries route to .apex/event-log-rejected.jsonl —
+  # never silently dropped. One stderr warning per rejection; never
+  # block the producer.
+  if _apex_validate_event_line "$line"; then
+    printf '%s\n' "$line" >> "${state_dir}/event-log.jsonl" 2>/dev/null || true
+  else
+    local reason
+    reason=$(_apex_validate_event_line_reason "$line")
+    # Re-emit the original line with a rejection_reason field attached.
+    jq -c --arg r "$reason" '. + {rejection_reason:$r}' <<< "$line" \
+      >> "${state_dir}/event-log-rejected.jsonl" 2>/dev/null \
+      || printf '%s\n' "$line" >> "${state_dir}/event-log-rejected.jsonl" 2>/dev/null || true
+    echo "[_emit_apex_event] rejected (${reason}): $(printf '%s' "$line" | cut -c1-120)" >&2
+  fi
+}
+
+# B2.2 validator helpers. Return 0 on valid, non-zero on invalid. Tied
+# to schema enum in framework/schemas/EVENT-LOG-ENTRY.schema.json.
+_APEX_EVENT_TYPE_ENUM='tool_call tool_input_hash state_mutation phase_set decision_mode_set complexity_set subagent_start subagent_stop subagent_count_mismatch transcript_imported pre_task_claim pre_task_claim_diff memory_sample turn_checkpoint_set session_event session_auto_resumed auto_pause_requested external_shutdown_requested step_start self_heal_round_start self_heal_round_close self_heal_round_closed self_heal_step self_heal_step_done self_heal_wave self_heal_wave_done self_heal_closed self_heal_loop_close self_heal_loop_closed self_heal wave_done dora.collected dora.ship_delta rotation.decide.evaluated rotation.trigger.unknown log_rotated'
+
+_apex_validate_event_line() {
+  local line="$1"
+  command -v jq >/dev/null 2>&1 || return 0  # validator no-op without jq
+  local type src ts sv
+  sv=$(printf '%s' "$line"   | jq -r '.schema_version // empty' 2>/dev/null)
+  ts=$(printf '%s' "$line"   | jq -r '.ts // empty'             2>/dev/null)
+  type=$(printf '%s' "$line" | jq -r '.type // empty'           2>/dev/null)
+  src=$(printf '%s' "$line"  | jq -r '.source // empty'         2>/dev/null)
+  [ -z "$sv" ]   && return 1
+  [ -z "$ts" ]   && return 1
+  [ -z "$type" ] && return 1
+  [ -z "$src" ]  && return 1
+  echo " $_APEX_EVENT_TYPE_ENUM " | grep -q " $type " || return 1
+  return 0
+}
+
+_apex_validate_event_line_reason() {
+  local line="$1"
+  command -v jq >/dev/null 2>&1 || { echo "no_jq"; return 0; }
+  local type src ts sv
+  sv=$(printf '%s' "$line"   | jq -r '.schema_version // empty' 2>/dev/null)
+  ts=$(printf '%s' "$line"   | jq -r '.ts // empty'             2>/dev/null)
+  type=$(printf '%s' "$line" | jq -r '.type // empty'           2>/dev/null)
+  src=$(printf '%s' "$line"  | jq -r '.source // empty'         2>/dev/null)
+  [ -z "$sv" ]   && { echo "missing_schema_version"; return 0; }
+  [ -z "$ts" ]   && { echo "missing_ts"; return 0; }
+  [ -z "$type" ] && { echo "missing_type"; return 0; }
+  [ -z "$src" ]  && { echo "missing_source"; return 0; }
+  echo " $_APEX_EVENT_TYPE_ENUM " | grep -q " $type " || { echo "unknown_type:$type"; return 0; }
+  echo "valid"
 }

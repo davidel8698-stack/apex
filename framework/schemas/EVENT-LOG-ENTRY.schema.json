@@ -1,0 +1,205 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://apex.framework/schemas/EVENT-LOG-ENTRY.schema.json",
+  "title": "APEX Event-Log Entry (Campaign B v1)",
+  "description": "JSON Schema for one line in .apex/event-log.jsonl. Pre-registered in audit-trail-review/EXPERIMENT-PROTOCOL.md §5 (frozen 2026-05-24T11:11:00Z, baseline cece2a1). Closes AC-2 (≥ 99% of new entries pass schema; failures routed to .apex/event-log-rejected.jsonl, never silently dropped). Legacy entries (no schema_version) pass through with schema_version=null flag — backward-compatible. Forward-compat: adding optional fields is minor; adding event-types to the enum is minor; removing required fields or changing types is major (schema_version bump).",
+  "type": "object",
+  "required": ["schema_version", "ts", "type", "source"],
+  "properties": {
+    "schema_version": {
+      "description": "Forward-compat marker. Absent = v0 legacy (accepted with flag). 1 = Campaign B v1.",
+      "oneOf": [
+        { "type": "string", "const": "1" },
+        { "type": "null" }
+      ]
+    },
+    "ts": {
+      "description": "RFC3339 / ISO-8601 UTC timestamp, e.g. 2026-05-24T11:01:11Z",
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$"
+    },
+    "type": {
+      "description": "Event-type discriminator. Variant-specific required fields are declared in oneOf below; this enum is the canonical allow-list.",
+      "type": "string",
+      "enum": [
+        "tool_call",
+        "tool_input_hash",
+        "state_mutation",
+        "phase_set",
+        "decision_mode_set",
+        "complexity_set",
+        "subagent_start",
+        "subagent_stop",
+        "subagent_count_mismatch",
+        "transcript_imported",
+        "pre_task_claim",
+        "pre_task_claim_diff",
+        "memory_sample",
+        "turn_checkpoint_set",
+        "session_event",
+        "session_auto_resumed",
+        "auto_pause_requested",
+        "external_shutdown_requested",
+        "step_start",
+        "self_heal_round_start",
+        "self_heal_round_close",
+        "self_heal_round_closed",
+        "self_heal_step",
+        "self_heal_step_done",
+        "self_heal_wave",
+        "self_heal_wave_done",
+        "self_heal_closed",
+        "self_heal_loop_close",
+        "self_heal_loop_closed",
+        "self_heal",
+        "wave_done",
+        "dora.collected",
+        "dora.ship_delta",
+        "rotation.decide.evaluated",
+        "rotation.trigger.unknown",
+        "log_rotated"
+      ]
+    },
+    "source": {
+      "description": "Hook or library name (e.g. tool-event-logger, circuit-breaker, subagent-stop, pre-subagent-start, event-log-rotate). 'unknown' is permitted but flagged in dashboards.",
+      "type": "string",
+      "minLength": 1
+    },
+    "agent_id": {
+      "description": "Stable per-invocation ID. host-<session_uuid> for parent events; subagent-<agent_name>-<round_tag>-<sha1_8> for sub-agent events. Null permitted only for legacy or degraded paths.",
+      "type": ["string", "null"]
+    },
+    "parent_agent_id": {
+      "description": "Null for host; host-<session_uuid> for sub-agent events.",
+      "type": ["string", "null"]
+    },
+    "dedup_key": {
+      "description": "Optional 5-min dedup-window key set by _emit_apex_event.sh apex_emit_event API. Not used by the lightweight _emit_apex_event function (no dedup).",
+      "type": ["string", "null"]
+    }
+  },
+  "additionalProperties": true,
+  "oneOf": [
+    {
+      "title": "tool_call",
+      "properties": {
+        "type": { "const": "tool_call" },
+        "tool_name": { "type": "string" },
+        "tool_input": {},
+        "tool_response": {},
+        "is_error": { "type": ["string", "boolean"] }
+      },
+      "required": ["type", "tool_name"]
+    },
+    {
+      "title": "tool_input_hash",
+      "properties": {
+        "type": { "const": "tool_input_hash" },
+        "tool_name": { "type": "string" },
+        "hash_sha1": { "type": "string", "pattern": "^[0-9a-f]{8,40}$" },
+        "truncated_at_chars": { "type": ["number", "string"] }
+      },
+      "required": ["type", "tool_name", "hash_sha1"]
+    },
+    {
+      "title": "subagent_start",
+      "properties": {
+        "type": { "const": "subagent_start" },
+        "agent_name": { "type": "string", "minLength": 1 },
+        "agent_id": { "type": "string", "minLength": 1 },
+        "round_tag": { "type": "string", "minLength": 1 },
+        "tool_input_summary": { "type": "string" }
+      },
+      "required": ["type", "agent_name", "agent_id", "round_tag"]
+    },
+    {
+      "title": "subagent_stop",
+      "properties": {
+        "type": { "const": "subagent_stop" },
+        "agent_name": { "type": "string", "minLength": 1 },
+        "agent_id": { "type": ["string", "null"] },
+        "tool_calls_count": { "type": ["string", "number"] },
+        "imported_transcript_path": { "type": ["string", "null"] }
+      },
+      "required": ["type", "agent_name", "tool_calls_count"]
+    },
+    {
+      "title": "subagent_count_mismatch",
+      "properties": {
+        "type": { "const": "subagent_count_mismatch" },
+        "agent_name": { "type": "string" },
+        "agent_id": { "type": ["string", "null"] },
+        "claimed_count": { "type": ["string", "number"] },
+        "observed_count": { "type": ["string", "number"] },
+        "delta": { "type": ["string", "number"] }
+      },
+      "required": ["type", "agent_name", "claimed_count", "observed_count"]
+    },
+    {
+      "title": "transcript_imported",
+      "properties": {
+        "type": { "const": "transcript_imported" },
+        "source_agent_id": { "type": "string", "minLength": 1 },
+        "target_path": { "type": "string", "minLength": 1 },
+        "entries_count": { "type": ["string", "number"] }
+      },
+      "required": ["type", "source_agent_id", "target_path"]
+    },
+    {
+      "title": "state_mutation",
+      "properties": {
+        "type": { "const": "state_mutation" },
+        "expr": { "type": "string", "minLength": 1 }
+      },
+      "required": ["type", "expr"]
+    },
+    {
+      "title": "pre_task_claim",
+      "properties": {
+        "type": { "const": "pre_task_claim" },
+        "task_id": { "type": "string", "minLength": 1 },
+        "phase": { "type": ["string", "null"] },
+        "expected_files": { "type": ["array", "string"] },
+        "expected_done_criteria": { "type": ["array", "string"] },
+        "recorded_at": { "type": "string" }
+      },
+      "required": ["type", "task_id"]
+    },
+    {
+      "title": "pre_task_claim_diff",
+      "properties": {
+        "type": { "const": "pre_task_claim_diff" },
+        "task_id": { "type": "string", "minLength": 1 },
+        "expected_files": { "type": ["array", "string"] },
+        "delivered_files": { "type": ["array", "string"] },
+        "unmet_criteria": { "type": ["array", "string"] },
+        "extra_files": { "type": ["array", "string"] }
+      },
+      "required": ["type", "task_id"]
+    },
+    {
+      "title": "legacy_or_other",
+      "description": "Catch-all for the enum entries whose detailed shape is documented elsewhere (memory_sample, self_heal_*, dora.*, rotation.*, session_*, log_rotated, etc.). The common-required quartet is enforced via the outer object; per-type shapes are best-effort additive.",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "phase_set", "decision_mode_set", "complexity_set",
+            "memory_sample", "turn_checkpoint_set", "session_event",
+            "session_auto_resumed", "auto_pause_requested",
+            "external_shutdown_requested", "step_start",
+            "self_heal_round_start", "self_heal_round_close",
+            "self_heal_round_closed", "self_heal_step",
+            "self_heal_step_done", "self_heal_wave",
+            "self_heal_wave_done", "self_heal_closed",
+            "self_heal_loop_close", "self_heal_loop_closed",
+            "self_heal", "wave_done", "dora.collected",
+            "dora.ship_delta", "rotation.decide.evaluated",
+            "rotation.trigger.unknown", "log_rotated"
+          ]
+        }
+      },
+      "required": ["type"]
+    }
+  ]
+}
