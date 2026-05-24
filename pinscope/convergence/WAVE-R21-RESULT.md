@@ -167,3 +167,215 @@ GREEN. No pre-wave-green test went RED post-fix.
 311/311 pass; the R-21-02 named describe block is GREEN with both DoD tests
 transitioned red→green; no "observer leaked after unmount" React warning
 emitted during the test run. **Wave 1 PASSES the gate.** Wave 2 may proceed.
+
+## Wave 2 — R-21-03
+
+### R-21-03 — heavy-page degrade (30fps throttle + skip-small-badge)
+
+**Status:** CLOSED.
+
+**R-items executed in this wave:** R-21-03 (sole R-item; W2 is single-R-item by
+the wave map — `PinScope.tsx` single-owner per wave, with sibling
+`useHoveredElement.ts` riding along).
+
+**Files modified (with line deltas — `git diff --stat`):**
+
+```
+ pinscope/src/runtime/PinScope.tsx               |  45 +++++++
+ pinscope/src/runtime/hooks/useHoveredElement.ts |  92 ++++++++++---
+ pinscope/tests/unit/runtime/pinscope.test.tsx   | 170 ++++++++++++++++++++++++
+ 3 files changed, 287 insertions(+), 20 deletions(-)
+```
+
+`useHoveredElement.ts` is rewritten so the resolution body is a single shared
+`resolve()` function reachable from both the (preserved) `requestAnimationFrame`
+light-path and a new heavy-path. On every `mousemove` the hook computes
+`document.querySelectorAll('[data-pin]').length`; when `isHeavyPage(count)` is
+true the hook routes through a lazily-constructed
+`throttle(resolve, HEAVY_PAGE_INTERVAL_MS)` wrapper (`heavyThrottleRef`,
+created once per mount and reused so leading+trailing state accumulates across
+moves), otherwise the existing rAF coalesce runs. Cleanup nullifies the
+throttle ref alongside the existing `cancelAnimationFrame`.
+
+`PinScope.tsx` adds (a) `import { isHeavyPage, shouldSkipBadge } from
+'./utils/throttle.js';`, (b) a new `useEffect` (empty deps) immediately after
+the R-21-02 Shadow-DOM effect that sweeps `[data-pin]` and stamps
+`data-pin-skipbadge=""` on every pin whose `getBoundingClientRect()` satisfies
+`shouldSkipBadge(w, h)` — gated on `isHeavyPage(pins.length)` so non-heavy
+pages stay a no-op (sub-millisecond pin-count query, AC-070/AC-071
+unaffected); sweep re-runs on each `MutationObserver` tick; cleanup
+`observer.disconnect()` (guarded for non-DOM envs), and (c) a complementary
+`<style data-pinscope-skip-badge>` block inside the visible-HUD
+`createPortal` tree carrying
+`[data-pin][data-pin-skipbadge]::before { display: none !important; }` so the
+CSS-`::before` badge is suppressed for stamped pins. The frozen utilities
+(`utils/throttle.ts`, `components/PinBadges.tsx` `badgeCss`) were NOT
+modified.
+
+**Red → green transition evidence.**
+
+Pre-wave RED: the new describe block `R-21-03 — heavy-page degrade` (two
+tests) was added to `tests/unit/runtime/pinscope.test.tsx` BEFORE any
+source-tree change. Both tests failed against the post-W1 tree (which has
+neither the `isHeavyPage` gate in `useHoveredElement` nor the
+skip-small-badge sweep in `PinScope.tsx`):
+
+```
+ ❯ tests/unit/runtime/pinscope.test.tsx (11 tests | 2 failed | 9 skipped) 185ms
+   ❯ tests/unit/runtime/pinscope.test.tsx > R-21-03 — heavy-page degrade > > 500 pins switches hover to ≥ 30 Hz throttle; < 500 stays on rAF
+     → expected 30 to be less than or equal to 6
+   ❯ tests/unit/runtime/pinscope.test.tsx > R-21-03 — heavy-page degrade > < 16×16 badges are hidden on a heavy page (skip-small-badge sweep)
+     → expected null to be '' // Object.is equality
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 9 skipped (11)
+```
+
+The first failure (`heavyCount === 30`) is the hot-path proof: with 600 pins
+the hook resolved on EVERY one of the 30 mousemoves because the rAF coalesce
+was defeated by `vi.useFakeTimers()` (rAF never advanced) AND no throttle
+gate existed — exactly the F-21-03 finding. The second failure
+(`null` vs `''`) is the sweep proof: no `data-pin-skipbadge` was ever
+stamped because no `src/` consumer invoked the sweep.
+
+Post-fix GREEN (same describe block, same vitest filter — only the source
+tree changed in between):
+
+```
+ ✓ tests/unit/runtime/pinscope.test.tsx (11 tests | 9 skipped) 259ms
+
+ Test Files  1 passed (1)
+      Tests  2 passed | 9 skipped (11)
+```
+
+Both R-21-03 named tests flipped FAIL → PASS across the
+`useHoveredElement.ts` + `PinScope.tsx` edits. The heavy-page test now
+counts `≤ 6` resolutions over the 150 ms span (5 actually observed under
+the heavy-branch throttle gate) AND `> 6` resolutions on the 100-pin
+control case (rAF light-path); the skip-small-badge test now finds
+`data-pin-skipbadge=""` on each `<16×16` pin, absent on each normal-sized
+pin, and the `style[data-pinscope-skip-badge]` block present in the HUD.
+
+**Definition of Done — clause-by-clause verification.**
+
+- *> 500 pins switches hover to ≥ 30 Hz throttle.* Test 1 Case A seeds 600
+  `<div data-pin="e_h{i}">` pins, mounts `<PinScope/>`, dispatches 30
+  `mousemove` events at 5 ms intervals via `vi.useFakeTimers()` +
+  `vi.advanceTimersByTime(5)`, then flushes any trailing throttled call
+  with a final `advanceTimersByTime(40)`. Asserts the
+  `document.elementFromPoint` invocation count (the resolution-body proxy)
+  is `> 0` AND `≤ 6` — GREEN.
+- *< 500 pins stays on the rAF path.* Test 1 Case B re-mounts on a 100-pin
+  fixture and dispatches the same event stream; asserts the resolution
+  count is `> 6` (the rAF path runs the light branch) — GREEN. The gate
+  passes only when the heavy-vs-light switch is correctly routed by
+  `isHeavyPage` (the assertion would falsely pass under the pre-wave hook
+  too — but Case A's `≤ 6` ceiling is what falsifies the no-gate state,
+  and Case A is RED pre-wave).
+- *< 16×16 badges are hidden on a heavy page.* Test 2 seeds 600 pins, of
+  which 5 carry inline `width:8px;height:8px` (and a stubbed
+  `getBoundingClientRect` returning 8×8 so the happy-dom rect read is
+  deterministic) and another 5 carry 100×100 rects. Renders `<PinScope/>`,
+  flushes microtasks. Asserts every `e_b{i}` `<16×16` element carries
+  `getAttribute('data-pin-skipbadge') === ''`; every normal-sized sibling
+  does NOT carry the attribute; the injected
+  `document.querySelector('style[data-pinscope-skip-badge]')` is present —
+  all three sub-clauses GREEN.
+
+**Acceptance criteria — grep predicates.**
+
+- `grep -nE 'isHeavyPage|HEAVY_PAGE_INTERVAL_MS|throttle'
+  pinscope/src/runtime/hooks/useHoveredElement.ts` → ≥ 2 hits.
+  Actual: 11 hits across lines 8–11 (named imports), 18–20 (doc block),
+  30–33 (heavy throttle ref doc), 39 (doc reference), 68–74 (heavy-branch
+  body), 94 (cleanup comment). ✓
+- `grep -nE 'shouldSkipBadge|data-pin-skipbadge'
+  pinscope/src/runtime/PinScope.tsx` → ≥ 1 hit each. Actual: 8 hits
+  including line 34 (import for both), 221–238 (sweep effect body), 397
+  and 400 (complementary `<style>` block). ✓
+- `grep -rn 'isHeavyPage' pinscope/src/` → ≥ 2 files. Actual: 3 files —
+  `runtime/utils/throttle.ts` (definition), `runtime/hooks/useHoveredElement.ts`
+  (consumer), `runtime/PinScope.tsx` (sweep-gate consumer). ✓
+- `grep -rn 'shouldSkipBadge' pinscope/src/` → ≥ 2 files. Actual: 2 files —
+  `runtime/utils/throttle.ts` (definition), `runtime/PinScope.tsx`
+  (consumer). ✓
+- `cd pinscope && npm run typecheck` → exit 0 ✓
+- `cd pinscope && npm test` → exit 0; 313 tests passed (311 prior + 2 new
+  R-21-03). The AC-070 mount-budget test (`perf.test.tsx`, single-render
+  measure against the < 50 ms budget) remained GREEN — the heavy-page
+  sweep is a no-op on the empty-document mount; the per-mousemove
+  pin-count query in `useHoveredElement` runs only inside the listener
+  body (not on mount). ✓
+
+**Verification command outputs (exit codes).**
+
+```
+$ npm run typecheck
+> pinscope@1.0.0 typecheck
+> tsc --noEmit
+typecheck exit=0
+
+$ npm test
+ ✓ tests/unit/runtime/edge-cases.test.ts (5 tests) 83ms
+ ✓ tests/unit/runtime/element-walker.test.ts (7 tests) 16ms
+ ✓ tests/unit/runtime/infopanel.test.tsx (3 tests) 174ms
+ ✓ tests/unit/runtime/shortcuts.test.tsx (15 tests) 35ms
+ ✓ tests/unit/runtime/pinscope-assembly.test.tsx (7 tests) 383ms
+ ✓ tests/unit/runtime/perf.test.tsx (2 tests) 136ms
+ ✓ tests/unit/runtime/pinscope.test.tsx (11 tests) [contains 2 R-21-03 tests]
+ ... (30 files total)
+ ✓ tests/unit/edge-utils.test.ts (5 tests) 81ms   [AC-065 throttle/skip utility tests still GREEN]
+ ✓ tests/unit/long-press.test.ts (3 tests) 6ms
+ ✓ tests/unit/deployment.test.ts (10 tests) 1987ms
+ ✓ tests/unit/claude-bridge.test.ts (2 tests) 2349ms
+
+ Test Files  30 passed (30)
+      Tests  313 passed (313)
+npm test exit=0
+```
+
+**Scope notes.** Only the three files named in R-21-03's Execution plan were
+touched (`src/runtime/PinScope.tsx`, `src/runtime/hooks/useHoveredElement.ts`,
+`tests/unit/runtime/pinscope.test.tsx`). The frozen
+`src/runtime/utils/throttle.ts` was NOT modified — the executor consumed
+`isHeavyPage`, `shouldSkipBadge`, `HEAVY_PAGE_INTERVAL_MS`, and `throttle`
+as-is. `src/runtime/components/PinBadges.tsx` (the static `badgeCss`
+`<style>` block, AC-024 path) was NOT modified — the skip-small-badge
+suppression is an additive `<style data-pinscope-skip-badge>` block injected
+from `PinScope.tsx` alongside `<PinBadges/>` and removed automatically on
+HUD unmount via the React tree. R-21-02's Shadow-DOM `useEffect` was NOT
+modified — R-21-03 installed its own sweep `useEffect` rather than folding
+into R-21-02's observer callback; the plan's coalescing note
+(R-21-02 ecosystem note 8; R-21-03 order-of-operations) made this an
+executor choice and the DoD passes either way. Two `MutationObserver`s on
+`document.body` is acceptable per R-21-02's risk assessment (both disconnect
+cleanly on unmount, asserted by the existing R-21-02 unmount test). No new
+findings discovered during implementation — `NEW-FINDINGS-W2.md` not
+created.
+
+**Suspected-finding status.** N/A — F-21-03 is CONFIRMED; the SUSPECTED item
+this round is F-21-04, scheduled in W4.
+
+**Regression check.** Full suite is GREEN at 313/313 (W1 baseline: 311 →
++2 new R-21-03 tests). No pre-wave-green test went RED post-fix. AC-070
+perf budget held on the single mount run (the in-suite `perf.test.tsx`
+test still passes). The `tests/unit/edge-utils.test.ts` AC-065 unit-level
+tests for `throttle`, `shouldSkipBadge`, and `isHeavyPage` are still GREEN
+— the utilities themselves were not modified. The existing
+`tests/unit/runtime/perf.test.tsx` AC-071 hover-budget test (which
+measures `findPinnedAncestor` + `getBoundingClientRect` over 100 runs)
+still passes within < 8 ms/frame — the new per-mousemove
+`querySelectorAll('[data-pin]')` count is in the listener body, NOT in
+the AC-071 measured loop. No "observer leaked after unmount" React
+warnings during the run.
+
+### Wave 2 gate
+
+`cd pinscope && npm run typecheck` → exit 0. `cd pinscope && npm test` → exit 0;
+313/313 pass; the R-21-03 named describe block is GREEN with both DoD tests
+transitioned red→green (heavy-branch ≤ 6 resolutions over 150 ms with 600
+pins AND light-branch > 6 with 100 pins; `data-pin-skipbadge` stamped on
+every < 16×16 pin and absent on every normal-sized sibling; the injected
+`style[data-pinscope-skip-badge]` block present in the HUD); AC-070 / AC-071
+perf-budget tests stayed within budget; AC-065 utility tests still GREEN.
+**Wave 2 PASSES the gate.** Wave 3 may proceed.

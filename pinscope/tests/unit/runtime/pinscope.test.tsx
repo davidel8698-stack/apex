@@ -268,3 +268,173 @@ describe('R-21-02 — Shadow-DOM marking + InfoPanel limited-inspection report',
     }
   });
 });
+
+// R-21-03 DoD — heavy-page degrade (30fps throttle + skip-small-badge)
+describe('R-21-03 — heavy-page degrade', () => {
+  it('> 500 pins switches hover to ≥ 30 Hz throttle; < 500 stays on rAF', async () => {
+    // Helper — count document.elementFromPoint invocations as a proxy for
+    // resolution-body invocations (each resolution calls it exactly once).
+    // Returns a tuple [resolutionCount, restore].
+    function instrument(): { count: () => number; restore: () => void } {
+      const original = document.elementFromPoint.bind(document);
+      let calls = 0;
+      document.elementFromPoint = ((_x: number, _y: number) => {
+        calls += 1;
+        // Always return null so the hook short-circuits without touching state.
+        return null;
+      }) as typeof document.elementFromPoint;
+      return {
+        count: () => calls,
+        restore: () => {
+          document.elementFromPoint = original;
+        },
+      };
+    }
+
+    // --- Case A: HEAVY page (600 pins) → ≤ 6 resolutions over 150 ms ---
+    for (let i = 0; i < 600; i++) {
+      const el = document.createElement('div');
+      el.setAttribute('data-pin', `e_h${i}`);
+      document.body.appendChild(el);
+    }
+
+    vi.useFakeTimers();
+    try {
+      render(<PinScope />);
+
+      const probeA = instrument();
+      try {
+        // Dispatch 30 mousemoves at 5 ms intervals (150 ms total span).
+        for (let i = 0; i < 30; i++) {
+          await act(async () => {
+            document.dispatchEvent(
+              new MouseEvent('mousemove', {
+                clientX: 10 + i,
+                clientY: 10 + i,
+                bubbles: true,
+              }),
+            );
+            vi.advanceTimersByTime(5);
+          });
+        }
+        // Flush any trailing throttled call still pending.
+        await act(async () => {
+          vi.advanceTimersByTime(40);
+        });
+
+        const heavyCount = probeA.count();
+        // 30fps throttle = one call per HEAVY_PAGE_INTERVAL_MS (33 ms).
+        // Over the 150 ms span + 40 ms flush we expect ≤ 6 resolutions
+        // (1 leading + ~5 trailing windows). A 60 Hz rAF path would
+        // produce ~9–10 resolutions, so this gate fails red if the
+        // heavy-page branch is not wired.
+        expect(heavyCount).toBeGreaterThan(0);
+        expect(heavyCount).toBeLessThanOrEqual(6);
+      } finally {
+        probeA.restore();
+      }
+    } finally {
+      vi.useRealTimers();
+      cleanup();
+      document.body.innerHTML = '';
+    }
+
+    // --- Case B: LIGHT page (100 pins) → > 6 resolutions (rAF path) ---
+    for (let i = 0; i < 100; i++) {
+      const el = document.createElement('div');
+      el.setAttribute('data-pin', `e_l${i}`);
+      document.body.appendChild(el);
+    }
+
+    vi.useFakeTimers();
+    try {
+      render(<PinScope />);
+
+      const probeB = instrument();
+      try {
+        for (let i = 0; i < 30; i++) {
+          await act(async () => {
+            document.dispatchEvent(
+              new MouseEvent('mousemove', {
+                clientX: 10 + i,
+                clientY: 10 + i,
+                bubbles: true,
+              }),
+            );
+            vi.advanceTimersByTime(5);
+          });
+        }
+        // Drain any pending rAF callbacks.
+        await act(async () => {
+          vi.advanceTimersByTime(40);
+        });
+
+        const lightCount = probeB.count();
+        // Light path runs through requestAnimationFrame (~60 Hz) — over
+        // 150 ms it resolves ~9–10 times, comfortably > 6.
+        expect(lightCount).toBeGreaterThan(6);
+      } finally {
+        probeB.restore();
+      }
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('< 16×16 badges are hidden on a heavy page (skip-small-badge sweep)', async () => {
+    // 600 pins on the page → heavy-page branch is active.
+    // Make 5 of them inline-sized 8×8 (below MIN_BADGE_SIZE = 16) and
+    // tag them so we can find them after the sweep.
+    for (let i = 0; i < 600; i++) {
+      const el = document.createElement('div');
+      el.setAttribute('data-pin', `e_b${i}`);
+      if (i < 5) {
+        el.setAttribute('data-test-small', String(i));
+        el.style.cssText =
+          'position:fixed; left:0; top:0; width:8px; height:8px;';
+        // Force the rect lookup to return an 8×8 rect even under happy-dom
+        // (which often returns zeros for elements not in an actual layout).
+        (el as HTMLElement).getBoundingClientRect = () =>
+          ({ x: 0, y: 0, width: 8, height: 8, top: 0, bottom: 8, left: 0, right: 8, toJSON: () => ({}) }) as DOMRect;
+      } else if (i < 10) {
+        el.setAttribute('data-test-large', String(i));
+        el.style.cssText =
+          'position:fixed; left:0; top:0; width:100px; height:100px;';
+        (el as HTMLElement).getBoundingClientRect = () =>
+          ({ x: 0, y: 0, width: 100, height: 100, top: 0, bottom: 100, left: 0, right: 100, toJSON: () => ({}) }) as DOMRect;
+      } else {
+        // Remaining pins also get a non-zero rect so they are NOT mis-stamped.
+        (el as HTMLElement).getBoundingClientRect = () =>
+          ({ x: 0, y: 0, width: 32, height: 32, top: 0, bottom: 32, left: 0, right: 32, toJSON: () => ({}) }) as DOMRect;
+      }
+      document.body.appendChild(el);
+    }
+
+    render(<PinScope />);
+
+    // Let the initial sweep + MutationObserver settle.
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    // Every <16×16 pin carries the skip marker.
+    for (let i = 0; i < 5; i++) {
+      const small = document.querySelector(`[data-test-small="${i}"]`);
+      expect(small).not.toBeNull();
+      expect(small!.getAttribute('data-pin-skipbadge')).toBe('');
+    }
+
+    // Normal-sized siblings do NOT carry the marker.
+    for (let i = 5; i < 10; i++) {
+      const large = document.querySelector(`[data-test-large="${i}"]`);
+      expect(large).not.toBeNull();
+      expect(large!.hasAttribute('data-pin-skipbadge')).toBe(false);
+    }
+
+    // The complementary <style> block is injected into the HUD.
+    const styleBlock = document.querySelector(
+      'style[data-pinscope-skip-badge]',
+    );
+    expect(styleBlock).not.toBeNull();
+  });
+});

@@ -31,6 +31,7 @@ import { HistoryManager, MemoryHistoryStore } from './managers/HistoryManager.js
 import type { HistoryData } from './managers/HistoryManager.js';
 import { RuntimePinObserver } from './managers/RuntimePinObserver.js';
 import { markShadowHosts } from './utils/shadow-dom.js';
+import { isHeavyPage, shouldSkipBadge } from './utils/throttle.js';
 
 export interface PinScopeProps {
   /** Runtime kill-switch. */
@@ -215,6 +216,43 @@ function PinScopeHud({
       observer.disconnect();
     };
   }, []);
+
+  // R-21-03 — §12 / AC-065 skip-small-badge sweep. On heavy pages (> 500
+  // pinned elements), iterate `[data-pin]` and stamp `data-pin-skipbadge` on
+  // every pin whose rect satisfies `shouldSkipBadge(w, h)` (width or height
+  // < 16 px). The complementary `<style data-pinscope-skip-badge>` block
+  // rendered inside the visible-HUD portal hides their `::before` badges.
+  // The sweep runs once on mount and again on each `MutationObserver` tick;
+  // on non-heavy pages it is a no-op (a single `querySelectorAll` count,
+  // sub-millisecond — AC-070 / AC-071 unaffected). Cleanup disconnects the
+  // observer to avoid leaking across test renders.
+  useEffect(() => {
+    if (typeof document === 'undefined') return undefined;
+    const sweep = (): void => {
+      const pins = document.querySelectorAll(`[${PIN_ATTR}]`);
+      if (!isHeavyPage(pins.length)) return;
+      pins.forEach((el) => {
+        if (!(el instanceof HTMLElement)) return;
+        const rect = el.getBoundingClientRect();
+        if (shouldSkipBadge(rect.width, rect.height)) {
+          el.setAttribute('data-pin-skipbadge', '');
+        }
+      });
+    };
+    if (typeof MutationObserver === 'undefined') {
+      // Best-effort one-shot sweep when MutationObserver is unavailable.
+      sweep();
+      return undefined;
+    }
+    sweep();
+    const observer = new MutationObserver(() => {
+      sweep();
+    });
+    observer.observe(document.body, { subtree: true, childList: true });
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
   // §10 flow B — the locked selection survives mouse-out (§8.1). `selectPin`
   // is the §10-B/§11 programmatic lock the `select e_N` command routes through.
   const { selected, select: selectPin } = useSelectedElement(measuring);
@@ -354,6 +392,13 @@ function PinScopeHud({
           cannot render). The CSS-`::before` layer is `PinBadges`. */}
       {pinsVisible && <PinBadges />}
       {pinsVisible && <VoidBadges />}
+      {/* R-21-03 — complementary AC-065 style: hides the CSS-`::before`
+          badge for any pin the heavy-page sweep stamped with
+          `data-pin-skipbadge`. On non-heavy pages the attribute is never
+          set, so this selector matches nothing and is a no-op. */}
+      <style data-pinscope-skip-badge="">
+        {`[data-pin][data-pin-skipbadge]::before { display: none !important; }`}
+      </style>
       <Rulers />
       <Crosshair
         measuring={measuring}
