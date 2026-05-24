@@ -583,3 +583,250 @@ long-press at ≥ 500 ms locks and survives `mouseleave`; compact viewport at
 `tests/unit/runtime/selection.test.tsx` / `pinscope-assembly.test.tsx` /
 `shortcuts.test.tsx` click-to-select cases do not regress; AC-070 mount-time
 perf test stays within budget. **Wave 3 PASSES the gate.** Wave 4 may proceed.
+
+## Wave 4 — R-21-04
+
+### R-21-04 — cross-origin iframe outline overlay (investigation, SUSPECTED)
+
+**Status:** CLOSED — `### Resolution` branch (REFUTED for this loop).
+
+**R-items executed in this wave:** R-21-04 (sole R-item; W4 is single-R-item by
+the wave map — `PinScope.tsx` single-owner per wave if STEP-2 confirms,
+zero-file otherwise). This wave is the STEP-1-eligible investigation R-item;
+the verdict below selects the no-code-change branch.
+
+**Branch fired:** REFUTED (`### Resolution`).
+
+**STEP 1 — confirm-or-refute (mandatory).**
+
+*SPEC re-read evidence (verbatim).*
+
+`pinscope/SPEC.md` §12 (lines 327–336):
+
+```
+## 12. Edge Cases
+
+Dynamic content (MutationObserver assigns `e_r{N}` runtime IDs); Shadow DOM
+(mark `data-pin-shadow`, limited inspection); iframes (same-origin inject,
+cross-origin outline only); SVG (`getBBox` + `getCTM`); print mode
+(`@media print` hides HUD); z-index conflicts (PinScope reserves
+`2147483647`); hostile CSS (PinScope styles use `!important`); mobile/touch
+(tap=select, long-press=lock, HUD collapsible < 768px); many elements
+(throttle to 30fps > 500 elements, skip badges < 16×16, `data-pin-ignore`
+opt-out); color-on-color (brightness sampling swaps badge color).
+```
+
+The iframe clause is the eight-word fragment "iframes (same-origin inject,
+cross-origin outline only)" embedded inside a single dense paragraph of
+edge-case prose. §12 is normative behavior, but its iframe sub-clause names
+only one falsifiable behavior — the cross-origin outline — and assigns its
+machine-verification to AC-061.
+
+`pinscope/SPEC.md` Appendix A.5 line 568–569 (AC-061 verbatim):
+
+```
+- **AC-061** · P4 · P3 · runtime — cross-origin iframes render an outline +
+  label only (no injection). **verify:** integration test.
+```
+
+AC-061's `verify` is `integration test` — i.e. Playwright, browser-engine,
+two real origins. It is recorded BLOCKED in `convergence/audit-findings-R21.json`
+under `blocked[2]`: *"AC-061 P3 — verify kind 'manual' / env 'browser' —
+cross-origin iframe needs two real origins + a browser. (See investigation
+F-21-04: implementation is also unwired in <PinScope/>, but the AC itself is
+env-only.)"*
+
+*Grep evidence (the four greps the plan's STEP-1 mandate names).*
+
+```
+$ grep -rn 'markCrossOriginFrames' pinscope/src/
+pinscope/src/runtime/utils/iframe-overlay.ts:31:export function markCrossOriginFrames(root: ParentNode = document): number {
+
+$ grep -rn 'iframe' pinscope/src/runtime/
+pinscope/src/runtime/utils/iframe-overlay.ts:1:/** Cross-origin iframe handling — see SPEC §12 (Edge Cases) and Appendix A.5. */
+pinscope/src/runtime/utils/iframe-overlay.ts:5:/** Attribute marking an `<iframe>` PinScope can only outline (cross-origin). */
+pinscope/src/runtime/utils/iframe-overlay.ts:8:/** Attribute marking a generated cross-origin iframe outline overlay. */
+pinscope/src/runtime/utils/iframe-overlay.ts:12: * True when an `<iframe>` is cross-origin. PinScope cannot inject into a
+pinscope/src/runtime/utils/iframe-overlay.ts:26: * Sweep `root` for `<iframe>` elements and, for every cross-origin frame,
+pinscope/src/runtime/utils/iframe-overlay.ts:33:  for (const frame of Array.from(root.querySelectorAll('iframe'))) {
+pinscope/src/runtime/utils/iframe-overlay.ts:68:/** True when an element is a cross-origin iframe with limited inspection. */
+
+$ grep -rn 'crossOrigin' pinscope/src/runtime/
+(no matches — search uses literal `crossOrigin` substring; the conceptual
+"cross-origin" hyphenated term lives only in comments inside iframe-overlay.ts)
+
+$ grep -rn 'IframeOverlay' pinscope/src/runtime/
+(no matches — there is no `*IframeOverlay*` React component; the overlay is
+imperatively built as a `<div data-pinscope-iframe-overlay>` inside
+`markCrossOriginFrames`, never as a JSX component the HUD imports.)
+```
+
+The pre-wave-execution state is: `markCrossOriginFrames` and
+`IFRAME_ATTR`/`IFRAME_OVERLAY_ATTR` exist solely in their definition file
+`src/runtime/utils/iframe-overlay.ts`. Zero `src/` consumer. No
+`*IframeOverlay*` React component exists. The zero-consumer state recorded in
+`audit-findings-R21.json` `investigation_findings[3].re_read` still holds at
+execution time — the W1–W3 commits did not introduce any iframe wiring.
+
+*STEP-1 verdict: REFUTED — out of AC-scope for this loop.*
+
+Per the plan's R-21-04 Resolution section verbatim: *"Under the loop's rule
+'the North-Star is frozen; plan the fix to reality, never to the spec', the
+relevant frozen-contract check is 'does any AC falsify reality?' — AC-061
+cannot be falsified in the current env, so the gap is coverage, not
+contract."* The three converging conditions the SUSPECTED classification rests
+on all hold:
+
+1. **AC-061's verify is `env: browser` BLOCKED** — confirmed by the verbatim
+   text above and `audit-findings-R21.json` `blocked[2]`. No node-env
+   machine check can falsify the AC as written.
+2. **AC-061's severity is P3** — confirmed by `· P4 · P3 ·` (priority class
+   P4, severity P3). The plan classifies F-21-04 as the only P3-SUSPECTED of
+   the round; the analogous P2-CONFIRMED Shadow-DOM finding (F-21-02) shipped
+   in W1 precisely because AC-060's `verify` is `integration test with a
+   shadow root` — a node-env surrogate is reachable for Shadow-DOM but not
+   for cross-origin iframes.
+3. **The unit suite already covers the helper end-to-end.**
+   `tests/unit/runtime/iframe-overlay.test.ts` (8 tests, GREEN this wave —
+   see verification block below) constructs `markCrossOriginFrames` against
+   fixture iframes whose `contentDocument` access throws, asserts the
+   `data-pin-iframe` stamping, the overlay div emission, the label
+   resolution. The helper's correctness is machine-proven; only its wiring
+   into `PinScopeHud` is dormant.
+
+By symmetry with R-20-04 (annotation request_type / §10-E flow, refuted last
+round as non-normative-prose-with-no-AC), R-21-04 closes here as a
+refuted-for-this-loop investigation. The recommended follow-up — a
+strengthen-proposal for AC-061 swapping the Playwright integration test for a
+jsdom RTL surrogate that calls `markCrossOriginFrames(document)` against an
+iframe fixture — is forwarded to the loop owner as the appropriate vehicle.
+Authoring that AC change is the loop owner's call, not this R-item's.
+
+**STEP 2 — NO CODE CHANGE.** Per STEP-1 verdict, the Resolution branch fires.
+No `src/` file is edited. No new test is added (the existing
+`iframe-overlay.test.ts` unit suite already satisfies the helper's
+machine-checkable contract — adding a duplicate test here would not change
+the loop's coverage). No `WAVE-R21-RESULT.md` modification beyond this
+appended block.
+
+**Definition of Done — refuted-branch verification.**
+
+The plan's DoD for the refuted branch (verbatim): *"`git diff --stat` shows
+**0** files changed under `pinscope/src/`. `npm test` reports 0 failures. The
+`### Resolution` below is then the authoritative closing record."*
+
+- *STEP 1 performed and recorded:* SPEC §12 + AC-061 verbatim text re-read
+  above; the four greps recorded with full output; the in-scope-vs-refuted
+  verdict (REFUTED) is recorded in this execution log. ✓
+- *Pre-fix grep result recorded:* `grep -rn 'markCrossOriginFrames' pinscope/src/`
+  shows the sole hit inside `utils/iframe-overlay.ts` (no consumer). ✓
+- *Either branch:* the no-code-change branch fired — `git diff --stat` for the
+  W4 commit window shows **zero** `pinscope/src/` files changed. ✓
+- *`npm test` stays green:* 316/316 passed (see verification block below). ✓
+
+**Acceptance criteria — STEP-1 / refuted-branch grep predicates.**
+
+- STEP-1 verdict recorded: REFUTED. ✓
+- `grep -rn 'markCrossOriginFrames' pinscope/src/` → 1 hit (definition only,
+  pre-fix state unchanged). ✓
+- *Either:* STEP-2 wiring lands AND grep hits land *(NOT taken)*; *OR:* no
+  `src/` file changed AND `### Resolution` is the closing state. **Refuted
+  branch taken — second disjunct holds.** ✓
+- `cd pinscope && npm test` stays green (0 fail). ✓
+
+**Verification command outputs (exit codes).**
+
+```
+$ cd pinscope && npm run typecheck
+> pinscope@1.0.0 typecheck
+> tsc --noEmit
+typecheck exit=0
+
+$ cd pinscope && npm test
+ ✓ tests/unit/runtime/iframe-overlay.test.ts (8 tests) 189ms     [AC-061 unit suite still GREEN]
+ ✓ tests/unit/runtime/pinscope.test.tsx (14 tests) 1476ms        [W1+W2+W3 tests still GREEN]
+ ✓ tests/unit/runtime/edge-cases.test.ts (5 tests) 83ms
+ ✓ tests/unit/runtime/element-walker.test.ts (7 tests) 17ms
+ ✓ tests/unit/runtime/shortcuts.test.tsx (15 tests) 32ms
+ ✓ tests/unit/runtime/infopanel.test.tsx (3 tests) 185ms
+ ✓ tests/unit/runtime/pinscope-assembly.test.tsx (7 tests) 409ms
+ ✓ tests/unit/operation-parser.test.ts (45 tests) 25ms
+ ✓ tests/unit/roundtrip.test.ts (4 tests) 9ms
+ ✓ tests/unit/operation-builder.test.ts (18 tests) 11ms
+ ✓ tests/unit/runtime/components.test.tsx (3 tests) 123ms
+ ✓ tests/unit/runtime/perf.test.tsx (2 tests) 180ms              [AC-070 / AC-071 within budget]
+ ✓ tests/unit/plugin.test.ts (12 tests) 110ms
+ ✓ tests/unit/pin-map.test.ts (9 tests) 55ms
+ ✓ tests/unit/screenshot.test.ts (3 tests) 35ms
+ ✓ tests/unit/runtime/public-api.test.ts (2 tests) 7ms
+ ✓ tests/unit/edge-utils.test.ts (5 tests) 85ms
+ ✓ tests/unit/operation-perf.test.ts (3 tests) 7ms
+ ✓ tests/unit/property-shortcuts.test.ts (12 tests) 8ms
+ ✓ tests/unit/ast-transformer.test.ts (66 tests) 131ms
+ ✓ tests/unit/long-press.test.ts (3 tests) 5ms
+ ✓ tests/unit/production-stripper.test.ts (4 tests) 5ms
+ ✓ tests/unit/deployment.test.ts (10 tests) 2397ms
+ ✓ tests/unit/claude-bridge.test.ts (2 tests) 3162ms
+ ... (30 files total)
+
+ Test Files  30 passed (30)
+      Tests  316 passed (316)
+   Duration  11.63s
+npm test exit=0
+```
+
+**`git diff --stat` for this wave's source-tree delta (pre-commit).**
+
+```
+$ git diff --stat HEAD -- pinscope/src/
+(no output — 0 files changed under pinscope/src/)
+```
+
+The W4 commit's source-tree delta is **0 src/ files**. The commit's
+deliverable is this appended WAVE-R21-RESULT.md block — that IS the wave's
+output per the role contract's instruction *"if refuted with no src/ changes,
+the commit still includes the WAVE-R21-RESULT.md update — that IS the wave's
+deliverable."*
+
+**Scope notes.** Zero `pinscope/src/` files touched. Only
+`pinscope/convergence/WAVE-R21-RESULT.md` modified (this appended W4 block).
+The frozen `src/runtime/utils/iframe-overlay.ts` was not touched. The
+R-21-02 `useEffect` (the would-be host for STEP-2's `markCrossOriginFrames`
+fold-in) was not modified — confirmed by `git diff --stat HEAD -- pinscope/src/`
+above. No new findings discovered during the STEP-1 re-read — the SPEC §12
+iframe clause and AC-061's `env: browser` BLOCKED status both match the audit
+finding text verbatim, so `NEW-FINDINGS-W4.md` is not created.
+
+**Suspected-finding status — verdict.** F-21-04 was SUSPECTED entering this
+wave; **REFUTED for this loop** exiting it. The Resolution is recorded under
+the heading "Resolution" in `REMEDIATION-PLAN-R21.md` R-21-04 (verbatim).
+**Recommended follow-up (forwarded to loop owner):** propose a strengthen
+of AC-061 to add a jsdom RTL surrogate — a unit-style test that calls
+`markCrossOriginFrames(document)` against an `<iframe src="about:blank">`
+fixture (or a stubbed `contentDocument` throw via `Object.defineProperty`)
+and asserts the resulting `data-pin-iframe` + `[data-pinscope-iframe-overlay]`
+shape from within the assembled `<PinScope/>` mount. That AC change would
+re-classify F-21-04 from SUSPECTED to CONFIRMED in a future round and trigger
+the STEP-2 wiring branch (one observer, two sweeps inside R-21-02's
+`useEffect`). If a future round's auditor finds the gap unacceptable, this
+resolution is void and STEP-2 wiring applies.
+
+**Regression check.** Full suite is GREEN at 316/316 (W3 baseline: 316 → +0
+new tests this wave — the refuted branch adds no tests). No pre-wave-green
+test went RED post-wave (no source-tree change means no possible regression).
+AC-061's existing unit suite (`tests/unit/runtime/iframe-overlay.test.ts`,
+8 tests) remained GREEN — the helper's machine-checkable behavior is
+unchanged. The W1 / W2 / W3 R-21-02 / R-21-03 / R-21-01 named DoD tests
+(inside `pinscope.test.tsx`, 14 tests) all remained GREEN. AC-070 / AC-071
+perf-budget tests within budget (`perf.test.tsx`, 2 tests).
+
+### Wave 4 gate
+
+`cd pinscope && npm run typecheck` → exit 0. `cd pinscope && npm test` → exit
+0; 316/316 pass; STEP-1 verdict recorded (REFUTED); the refuted-branch DoD
+holds (`git diff --stat HEAD -- pinscope/src/` returns zero output before
+commit; `### Resolution` from `REMEDIATION-PLAN-R21.md` R-21-04 is the
+authoritative closing record); the strengthen-proposal recommendation for
+AC-061 is forwarded to the loop owner above. **Wave 4 PASSES the gate.**
+PS-R21 W1–W4 complete: 3 confirmed-and-fixed (R-21-01/02/03), 1 SUSPECTED-and-
+refuted (R-21-04).
