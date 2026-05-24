@@ -1,0 +1,18 @@
+{
+  "round": 11,
+  "north_star_version": "2.0.0",
+  "harness": { "tests_passed": 257, "typecheck_clean": true },
+  "reality_baseline": { "closed": 62, "blocked": 7, "open": 0, "pct": 90 },
+  "findings": [],
+  "blocked_assessment": [
+    { "ac": "AC-023", "env": "browser", "implementation_present": true, "correctly_blocked": true, "note": "Badge ::before rule in src/runtime/styles/badges.css.ts; data-pin injected by ast-transformer; Playwright test in pinscope.spec.ts:13. Env-only block." },
+    { "ac": "AC-030", "env": "browser", "implementation_present": true, "correctly_blocked": true, "note": "InfoPanel.tsx renders Dimensions/Spacing/Typography sections; Playwright hover test pinscope.spec.ts:24. Env-only block." },
+    { "ac": "AC-061", "env": "browser", "implementation_present": true, "correctly_blocked": true, "note": "Real runtime impl src/runtime/utils/iframe-overlay.ts (isCrossOriginFrame / markCrossOriginFrames / isIframeLimited) renders the SPEC A.5 outline+label overlay with no injection; 8 green unit tests in tests/unit/runtime/iframe-overlay.test.ts. Prior R10 finding F-10-01 remediated. manual-kind, needs two real origins to attest. Env-only block." },
+    { "ac": "AC-063", "env": "browser", "implementation_present": true, "correctly_blocked": true, "note": "@media print rule hiding HUD + badges present in src/runtime/styles/badges.css.ts. Needs a browser print engine. Env-only block." },
+    { "ac": "AC-082", "env": "browser", "implementation_present": true, "correctly_blocked": true, "note": "Playwright integration suite present at tests/integration/pinscope.spec.ts + playwright.config.ts. Needs a browser binary. Env-only block." },
+    { "ac": "AC-083", "env": "browser", "implementation_present": true, "correctly_blocked": true, "note": "Real visual-regression suite tests/integration/visual-regression.spec.ts uses toHaveScreenshot across the SPEC §14 matrix (4 viewports x light/dark x host-css); playwright.config.ts carries toHaveScreenshot config + 3 browser projects. Prior R10 finding F-10-02 remediated. manual-kind, needs a browser binary. Env-only block." },
+    { "ac": "AC-106", "env": "apex-install", "implementation_present": true, "correctly_blocked": true, "note": "/apex:health-check command (framework/commands/apex/health-check.md) invokes ~/.claude/scripts/self-test.sh. Needs APEX synced to ~/.claude/. Env-only block." }
+  ],
+  "verdict": "NO_FINDINGS",
+  "summary": "Independent PS-R11 re-audit: harness re-run confirms 257 tests green (27 files) and typecheck clean; the 62 env:node ACs are all genuinely PASS with no masked FAIL. The two prior-round P3 findings are remediated: AC-061 now has a real runtime cross-origin iframe outline+label implementation (src/runtime/utils/iframe-overlay.ts) plus 8 green unit tests, and AC-083 now has a real visual-regression suite (tests/integration/visual-regression.spec.ts) with toHaveScreenshot across the SPEC §14 matrix. All 7 UNAVAILABLE ACs are correctly env-blocked with implementation/test artifacts present; no closure regressed. Verdict NO_FINDINGS."
+}

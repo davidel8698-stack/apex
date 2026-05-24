@@ -1,0 +1,60 @@
+{
+  "round": 12,
+  "north_star_version": "2.0.0",
+  "harness": { "tests_passed": 257, "typecheck_clean": true },
+  "reality_baseline": { "closed": 62, "blocked": 7, "open": 0, "pct": 90 },
+  "findings": [],
+  "blocked_assessment": [
+    {
+      "ac": "AC-023",
+      "env": "browser",
+      "implementation_present": true,
+      "correctly_blocked": true,
+      "note": "CSS-only badge is implemented in src/runtime/styles/badges.css.ts — the `[data-pin]::before` rule sets `content: attr(data-pin)`, exactly the SPEC Appendix A.2 capability. The browser-only assertion (reading `::before` content for 5 pins) lives in tests/integration/pinscope.spec.ts test 'injects a data-pin badge on each element (AC-023)'. BLOCKED purely because no browser binary (env-capabilities.json browser:false)."
+    },
+    {
+      "ac": "AC-030",
+      "env": "browser",
+      "implementation_present": true,
+      "correctly_blocked": true,
+      "note": "src/runtime/components/InfoPanel.tsx renders the Dimensions, Spacing and Typography CollapsibleSections, computes values via `getComputedStyle`/`getBoundingClientRect`, and emits the `data-pinscope-panel` host with a 'Width' StyleRow. The Playwright hover assertion is tests/integration/pinscope.spec.ts test 'hover opens the InfoPanel with dimensions (AC-030)'. BLOCKED only on the missing browser."
+    },
+    {
+      "ac": "AC-061",
+      "env": "browser",
+      "implementation_present": true,
+      "correctly_blocked": true,
+      "note": "src/runtime/utils/iframe-overlay.ts implements isCrossOriginFrame / markCrossOriginFrames / isIframeLimited — cross-origin frames get `data-pin-iframe` plus an absolutely-positioned, click-through dashed outline overlay with a label, no injection. tests/unit/runtime/iframe-overlay.test.ts ('Cross-origin iframe overlay (AC-061)') already exercises the logic in jsdom; the matrix flags AC-061 env:browser/kind:manual because a true two-origin scenario needs real origins."
+    },
+    {
+      "ac": "AC-063",
+      "env": "browser",
+      "implementation_present": true,
+      "correctly_blocked": true,
+      "note": "The print rule is implemented in src/runtime/styles/badges.css.ts: the `@media print` block sets `[data-pinscope-ui] { display: none }` and `[data-pin]::before { display: none }`, hiding HUD and badges. Verification is a browser print-emulation screenshot diff (matrix kind:manual, env:browser), unavailable without a browser print engine."
+    },
+    {
+      "ac": "AC-082",
+      "env": "browser",
+      "implementation_present": true,
+      "correctly_blocked": true,
+      "note": "playwright.config.ts defines the §14 integration suite (testDir tests/integration, chromium/firefox/webkit projects, webServer driving examples/vite-react) and tests/integration/pinscope.spec.ts is the real checklist suite. @playwright/test ^1.60.0 is in devDependencies. BLOCKED purely because the Playwright browser binary is unavailable."
+    },
+    {
+      "ac": "AC-083",
+      "env": "browser",
+      "implementation_present": true,
+      "correctly_blocked": true,
+      "note": "tests/integration/visual-regression.spec.ts ('PinScope visual regression (AC-083)') generates the §14 matrix — 4 viewports x light/dark x host-css/no-host-css — using `toHaveScreenshot`; playwright.config.ts sets `toHaveScreenshot.maxDiffPixelRatio`. A real artifact for a browser-capable CI; BLOCKED only on the missing browser."
+    },
+    {
+      "ac": "AC-106",
+      "env": "apex-install",
+      "implementation_present": true,
+      "correctly_blocked": true,
+      "note": "The skill/command edits that /apex:health-check would validate are present: framework/apex-skills/pinscope.md (five required headings confirmed for AC-100), framework/commands/apex/ui-phase.md (PINSCOPE INSTRUMENTATION block, AC-102), ui-review.md (AC-103) and architect.md/frontend.md (AC-104). AC-106 is kind:manual/env:apex-install and BLOCKED only because APEX is not synced to ~/.claude/ (env-capabilities.json apex_install:false)."
+    }
+  ],
+  "verdict": "NO_FINDINGS",
+  "summary": "An independent R12 re-audit confirms a healthy code tree. A freshly executed harness reports 257 Vitest tests passing across 27 files (exit 0) and a clean `tsc --noEmit` typecheck (exit 0). Spot-checks of representative env:node PASS ACs (AC-005 stable IDs, AC-050/081 operation-parser grammar, AC-080 transformer fixture table >=50 pairs, AC-073 size-limit, AC-100/102/104 APEX-integration grep targets) found every mechanical PASS backed by a real artifact that genuinely exercises the SPEC capability — no masked FAIL. All 7 UNAVAILABLE ACs have their implementation genuinely present in the pinscope/ tree and are BLOCKED solely because the environment lacks a browser binary or an APEX install, not because of any build gap. Reality baseline: 62 closed / 7 blocked / 0 open, 90%."
+}

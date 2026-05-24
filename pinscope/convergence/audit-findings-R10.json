@@ -1,0 +1,33 @@
+{
+  "round": 10,
+  "north_star_version": "2.0.0",
+  "harness": { "tests_passed": 249, "typecheck_clean": true },
+  "reality_baseline": { "closed": 62, "blocked": 7, "open": 0, "pct": 90 },
+  "findings": [
+    {
+      "id": "F-10-01",
+      "ac": "AC-061",
+      "severity": "P3",
+      "summary": "Cross-origin iframe 'outline + label only' rendering is not implemented; AC is marked BLOCKED but no implementation exists.",
+      "evidence": "grep -rEin 'iframe|cross-origin|contentWindow|frameElement' over src/ and tests/ returns zero hits. No runtime component detects iframe elements or renders the required outline+label overlay. AC-061 requires an active runtime rendering behavior, not merely the absence of build-time injection. Sibling edge-case AC-060 (Shadow DOM) has a real impl at src/runtime/utils/shadow-dom.ts; AC-061 has none. STATUS.md defines BLOCKED as 'implementation built + test authored' — neither holds here."
+    },
+    {
+      "id": "F-10-02",
+      "ac": "AC-083",
+      "severity": "P3",
+      "summary": "Visual-regression suite is not authored; AC is marked BLOCKED but the test artifact is absent.",
+      "evidence": "tests/integration/ contains only pinscope.spec.ts, a functional Playwright assertion suite with zero screenshot/visual-diff calls (no toHaveScreenshot, no snapshot-diff). AC-083 requires 'a visual-regression suite ... across the §14 matrix' with 'CI artifact diff'. The browser env is genuinely unavailable, but the test artifact itself does not exist, so the BLOCKED 'test authored' criterion is not met."
+    }
+  ],
+  "blocked_assessment": [
+    { "ac": "AC-023", "env": "browser", "implementation_present": true, "correctly_blocked": true, "note": "Badge ::before rule in src/runtime/styles/badges.css.ts; data-pin injected by ast-transformer; Playwright test in pinscope.spec.ts:13. Env-only block." },
+    { "ac": "AC-030", "env": "browser", "implementation_present": true, "correctly_blocked": true, "note": "InfoPanel.tsx renders Dimensions/Spacing/Typography sections; Playwright hover test pinscope.spec.ts:24. Env-only block." },
+    { "ac": "AC-061", "env": "browser", "implementation_present": false, "correctly_blocked": false, "note": "No cross-origin iframe outline+label implementation in src/runtime/. See finding F-10-01 — masks an absent implementation." },
+    { "ac": "AC-063", "env": "browser", "implementation_present": true, "correctly_blocked": true, "note": "@media print rule hiding HUD + badges present in src/runtime/styles/badges.css.ts:37. Needs a browser print engine. Env-only block." },
+    { "ac": "AC-082", "env": "browser", "implementation_present": true, "correctly_blocked": true, "note": "Playwright integration suite present at tests/integration/pinscope.spec.ts + playwright.config.ts. Needs a browser binary. Env-only block." },
+    { "ac": "AC-083", "env": "browser", "implementation_present": false, "correctly_blocked": false, "note": "No visual-regression suite authored in tests/integration/. See finding F-10-02 — masks an absent test artifact." },
+    { "ac": "AC-106", "env": "apex-install", "implementation_present": true, "correctly_blocked": true, "note": "/apex:health-check command (framework/commands/apex/health-check.md) invokes ~/.claude/scripts/self-test.sh. Needs APEX synced to ~/.claude/. Env-only block." }
+  ],
+  "verdict": "FINDINGS_PRESENT",
+  "summary": "Independent re-audit: harness re-run confirms 249 tests green and typecheck clean; the 62 env:node ACs are all genuinely PASS with no masked FAIL. Two P3 findings surfaced — AC-061 and AC-083 are marked BLOCKED but their implementation/test artifact is genuinely absent rather than merely environment-gated; the other 5 BLOCKED ACs are correctly env-blocked with implementation present. Both findings are P3 and do not affect the loop's P0-P2 terminal condition."
+}

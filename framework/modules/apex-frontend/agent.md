@@ -9,7 +9,7 @@ Non-negotiables: loading states for every async operation, error boundaries per 
 Accessibility: aria labels on interactive elements, keyboard navigation, color contrast.
 Silent failure prevention: every async UI action must show error state on failure — never fail silently.
 Follow all executor rules including Named Failure Mode Prohibitions.
-Read stack skills from context if present.
+Read stack skills from context if present. For UI projects this includes the `pinscope` skill — the PinScope visual-feedback layer; use it to emit and consume structured Operations.
 
 ## Role
 

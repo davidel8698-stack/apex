@@ -1,0 +1,80 @@
+{
+  "round": 17,
+  "generated_at": "2026-05-22T12:42:00Z",
+  "findings": [],
+  "investigation_findings": [
+    {
+      "id": "F-17-01",
+      "axis": "7-operation-protocol / 11-integration-surface (§10-B, §11, §8.1, §8.9)",
+      "confidence": "CONFIRMED",
+      "severity": "P2",
+      "current_state": "PinScopeHud holds TWO independent SelectionManager instances: one created privately inside useSelectedElement (useSelectedElement.ts:37) and one created as command.selection in PinScope.tsx:137. The §11 `select e_N` CommandBar command (PinScope.tsx:166-169) calls command.selection.select(parsed.pin) on the second manager. The InfoPanel's locked `selected` state (PinScope.tsx:129, rendered at :240 as `hovered={selected ?? hovered}`) is sourced ONLY from the useSelectedElement manager. The two managers never communicate; command.selection is written by exactly one site and read by nothing.",
+      "gap": "§10-B requires selection to lock the InfoPanel; §11 grammar lists `\"select\" Target` as a first-class command form. A click on a [data-pin] element correctly locks the InfoPanel (via useSelectedElement). The `select e_N` CommandBar command does NOT: it moves the data-pin-selected attribute and updates the URL hash (side effects internal to the orphan command.selection manager) but never updates the `selected` React state, so the InfoPanel never locks onto the command-selected pin. One of the two normative trigger paths for the §10-B selection-lock behavior is hollow. No AC names this path (AC-041 verifies only hash mirroring + reload-restore; AC-038 verifies CommandBar focus/history/blur), so it is invisible to STEP 1-4.",
+      "re_read": "grep -rn 'command\\.selection|new SelectionManager' src  ->  PinScope.tsx:137 `selection: new SelectionManager()`, PinScope.tsx:167 `command.selection.select(parsed.pin)` (the ONLY command.selection usage), useSelectedElement.ts:37 `managerRef.current = new SelectionManager()` (separate instance). grep -rn 'useSelectedElement|selected ??' src/runtime/PinScope.tsx  ->  L129 `const { selected } = useSelectedElement(measuring)`, L240 `<InfoPanel hovered={selected ?? hovered}>` — InfoPanel reads `selected` only from the hook's manager, never from command.selection."
+    },
+    {
+      "id": "F-17-02",
+      "axis": "6-measurement-snapshot / 9-edge-cases (§10-D)",
+      "confidence": "SUSPECTED",
+      "severity": "P2",
+      "current_state": "PinScope.tsx onSnapshot (L143-148) calls command.snapshots.capture(name). SnapshotManager.capture -> EndpointSnapshotStore.write fires the /__pinscope/snapshot POST synchronously and stores the resulting promise in `pending`. The flow-D wiring never calls store.flush(), so a SnapshotPersistError (network error or non-OK dev-server response, thrown inside EndpointSnapshotStore.post) becomes an unhandled promise rejection — silently swallowed.",
+      "gap": "EndpointSnapshotStore's own docstring states flush() exists 'so callers (and tests) can observe a failed persist instead of a silently swallowed one' — the contract expects the caller to await/observe it. PinScope.tsx flow C (operation send) correctly does `.catch()` the ClaudeBridge promise with a documented 'surface a failed write, never swallow' comment; flow D does not. A failed §10-D snapshot persist therefore produces no console signal and no toast. The snapshot is still built and written to the in-flight store; only the persist FAILURE signal is lost. §10-D ('persist via dev-server endpoint -> toast') is unsatisfied on the error path.",
+      "re_read": "grep -n 'flush' src/runtime/PinScope.tsx  ->  no match (flush never called from the root). grep -rn '\\.flush(' src tests  ->  only tests/unit/runtime/snapshot.test.tsx:83,103. sed -n '143,148p' src/runtime/PinScope.tsx shows onSnapshot calls capture() with no .catch / no flush, vs sed -n '191,197p' showing flow C `void command.bridge.send(...).catch((err) => console.warn(...))`."
+    },
+    {
+      "id": "F-17-03",
+      "axis": "5-inspection-layer / 12-phase-dod (§8.5)",
+      "confidence": "SUSPECTED",
+      "severity": "P3",
+      "current_state": "PinScope.tsx renders <TopBar ... stateOverride={null} /> (L244) — the prop is hardcoded null. TopBar's `data-field=\"state\"` span therefore always renders 'state: none', even after StatePanel's applyStateOverride has forced a global state onto <html data-state-override>. StatePanel (the actual §8.8 selector) is rendered as a separate sibling component (L247) and is not lifted into PinScopeHud state.",
+      "gap": "§8.5 lists a 'state-override selector' in the TopBar; AC-037 ('TopBar shows ... state override') passes because the field is present and StatePanel is the live selector. But the TopBar state-readout never reflects the real override — two individually-working pieces (StatePanel writes the attribute; TopBar displays a hardcoded null) are not connected. Cosmetic staleness, not a behavioral break; recorded so the planner can decide whether to thread StatePanel's state into TopBar.",
+      "re_read": "grep -n 'stateOverride={null}' src/runtime/PinScope.tsx  ->  L244. grep -n 'data-field=\"state\"' src/runtime/components/TopBar.tsx shows the span renders `state: {stateOverride ?? 'none'}` — receives a constant null; no StatePanel state is lifted to PinScopeHud."
+    }
+  ],
+  "blocked": [
+    { "ac": "AC-023", "phase": "P1", "severity": "P0", "reason": "verify env 'browser' unavailable (env-capabilities.browser=false); Playwright ::before content read needs a browser engine.", "verdict_source": "ac-results-R17.json: UNAVAILABLE" },
+    { "ac": "AC-030", "phase": "P1", "severity": "P1", "reason": "verify env 'browser' unavailable; Playwright hover/InfoPanel assertion needs a browser engine.", "verdict_source": "ac-results-R17.json: UNAVAILABLE" },
+    { "ac": "AC-061", "phase": "P4", "severity": "P3", "reason": "verify env 'browser' unavailable; cross-origin iframe needs two real origins (matrix kind=manual).", "verdict_source": "ac-results-R17.json: UNAVAILABLE" },
+    { "ac": "AC-063", "phase": "P4", "severity": "P3", "reason": "verify env 'browser' unavailable; @media print rendering needs a browser print engine (matrix kind=manual).", "verdict_source": "ac-results-R17.json: UNAVAILABLE" },
+    { "ac": "AC-082", "phase": "P2", "severity": "P1", "reason": "verify env 'browser' unavailable; Playwright integration suite needs a browser binary (matrix kind=manual).", "verdict_source": "ac-results-R17.json: UNAVAILABLE" },
+    { "ac": "AC-083", "phase": "P4", "severity": "P3", "reason": "verify env 'browser' unavailable; visual-regression screenshots need a browser (matrix kind=manual).", "verdict_source": "ac-results-R17.json: UNAVAILABLE" },
+    { "ac": "AC-106", "phase": "P5", "severity": "P2", "reason": "verify env 'apex-install' unavailable (env-capabilities.apex_install=false); /apex:health-check needs APEX synced to ~/.claude/ (matrix kind=manual).", "verdict_source": "ac-results-R17.json: UNAVAILABLE" }
+  ],
+  "coverage": {
+    "axes_swept": [
+      "1-build-pipeline (AST data-pin injection, exclude rules)",
+      "2-pin-id-stability (file:line:column key, IDs never reused)",
+      "3-production-zero (vite-react dist grep = 0 PinScope bytes)",
+      "4-runtime-isolation (portal, data-pinscope-ui root, z-index)",
+      "5-inspection-layer (hover detection, InfoPanel, badges, TopBar)",
+      "6-measurement-snapshot (MeasurementTool render, SnapshotManager/EndpointSnapshotStore persist)",
+      "7-operation-protocol (parser grammar, select-command routing, Operation JSON)",
+      "8-data-schemas (PinMap / Snapshot / Operation / History vs §9)",
+      "9-edge-cases (§12 set; swallowed-error hunt)",
+      "10-performance-budgets (§13; machine AC-070..076 PASS)",
+      "11-integration-surface (src/index.ts public API, Vite/Next/Webpack entry points, §10 flow seams)",
+      "12-phase-dod (§16 DoD items; §17 APEX integration)"
+    ],
+    "sections_reviewed": [
+      "SPEC §6 (build-time module)", "SPEC §7 (runtime module / PinScope root)",
+      "SPEC §8 (component specs §8.1-§8.11)", "SPEC §9 (data schemas)",
+      "SPEC §10 (behavioral flows A-E)", "SPEC §11 (operation protocol)",
+      "SPEC §12 (edge cases)", "SPEC §13 (performance)", "SPEC §14 (testing)",
+      "SPEC §15 (deployment)", "SPEC §16 (phase DoD)", "SPEC §17 (APEX integration)",
+      "Appendix A (69 ACs)", "Appendix B (loop contract)"
+    ],
+    "carry_over_investigated": {
+      "subject": "useSelectedElement.ts — 4 surviving mutants from VERIFY-R16 (M1/M2 SSR-guard L18, M4 logically-equivalent L56, M5 Esc-unlock L67)",
+      "verdict": "BENIGN coverage margin — NOT an off-matrix finding",
+      "detail": "Esc-unlock path (useSelectedElement.ts L65-72): the onKey handler checks `e.key === 'Escape'` then runs manager.unlock() + manager.clear() + setSelected(null). The code is present and CORRECT — clearing the React `selected` state makes InfoPanel (`hovered={selected ?? hovered}`) fall back to live hover, matching §8.1 'Esc unlocks'. SelectionManager.clear() (SelectionManager.ts:43-48) itself sets locked=false, clears the attribute and the hash; the preceding unlock() is harmless redundancy. M5 survives only because no test fires an Escape keydown at `document` while a pin is selected (controls.test.tsx:145 fires Escape at the CommandBar input — a different handler / input-blur path). M4 is a provably-equivalent mutant: pinId = pinned?.getAttribute(PIN_ATTR) ?? null, so pinId is null whenever pinned is null, making `&&` and `||` equivalent for all reachable inputs. M1/M2 are SSR-branch margin (typeof document is never undefined under jsdom). No behavioral gap, no dead or swallowed path — consistent with the VERIFY-R16 adjudication.",
+      "re_read": "Read src/runtime/hooks/useSelectedElement.ts L65-72 (Esc handler) + L17-22 (resolveSelected) cross-checked vs SelectionManager.ts:39-48 (unlock/clear). grep -rln 'Escape' tests/ -> controls.test.tsx only; grep -n 'Escape' tests/unit/runtime/controls.test.tsx -> L137,L145 (CommandBar input blur, not a document-level pin unlock)."
+    }
+  },
+  "summary": {
+    "open": 3,
+    "blocked": 7,
+    "regressions": 0,
+    "confirmed": 1,
+    "suspected": 2
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "round": 18,
+  "generated_at": "2026-05-22T13:36:10.403Z",
+  "files": [
+    {
+      "file": "pinscope/src/runtime/PinScope.tsx",
+      "mutants_run": 5,
+      "killed": 5,
+      "survived": []
+    },
+    {
+      "file": "pinscope/src/runtime/components/CommandBar.tsx",
+      "mutants_run": 5,
+      "killed": 4,
+      "survived": [
+        {
+          "id": "M3",
+          "rule": "or-to-and",
+          "line": 49,
+          "original": "return kind === 'select' || kind === 'measure' || kind === 'snapshot';",
+          "mutated": "return kind === 'select' || kind === 'measure' && kind === 'snapshot';"
+        }
+      ]
+    },
+    {
+      "file": "pinscope/src/runtime/managers/HistoryManager.ts",
+      "mutants_run": 0,
+      "killed": 0,
+      "survived": []
+    }
+  ],
+  "summary": {
+    "mutants": 10,
+    "killed": 9,
+    "survived": 1
+  }
+}

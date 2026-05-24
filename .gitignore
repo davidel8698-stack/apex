@@ -61,3 +61,7 @@ venv/
 # (framework's own .apex/ files are listed individually above; this catches
 #  nested .apex/ dirs created by /apex:* runs inside subprojects)
 **/.apex/
+
+# PinScope convergence artifacts ARE tracked (proof-of-process build log)
+!pinscope/convergence/
+!pinscope/convergence/**

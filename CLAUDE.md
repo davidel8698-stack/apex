@@ -14,6 +14,14 @@ slash commands, agents, hooks, and JSON schemas.
 The authoritative specs are APEX-v5.md (base) and APEX-v6.md (delta).
 Merge rule: v6 wins on conflict. "unchanged" = use v5. "updated/redesigned" = use v6.
 
+## PinScope Sub-Project (`pinscope/`)
+`pinscope/` is a sanctioned APEX extension built in this repo but NOT part of the
+`framework/` → `~/.claude/` build. It is a standalone npm/TypeScript package — a
+visual debug layer for web apps — with its own frozen north-star spec
+(`pinscope/SPEC.md`) and an independent self-healing convergence loop (`PS-R{N}`,
+artifacts in `pinscope/convergence/`). The Build Rules below govern `framework/`;
+`pinscope/` is governed by `pinscope/SPEC.md`.
+
 ## Output File Structure
 ```
 ~/.claude/

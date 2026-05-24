@@ -1,0 +1,55 @@
+{"at":"2026-05-22T10:33:00.386Z","round":14,"event":"phase:audit","note":null}
+{"at":"2026-05-22T10:41:55.112Z","round":15,"event":"phase:record","note":null}
+{"at":"2026-05-22T10:42:05.111Z","round":15,"event":"phase:breaker","note":null}
+{"at":"2026-05-22T10:42:47.390Z","round":15,"event":"phase:remediate","note":null}
+{"at":"2026-05-22T10:50:18.273Z","round":15,"event":"phase:schedule","note":null}
+{"at":"2026-05-22T10:51:40.983Z","round":15,"event":"phase:remediate","note":null}
+{"at":"2026-05-22T10:51:41.044Z","round":15,"event":"replan","note":"STEP 4b rejected R15 plan: F-15-05 unrouted"}
+{"at":"2026-05-22T10:58:16.797Z","round":15,"event":"phase:schedule","note":null}
+{"at":"2026-05-22T11:04:38.304Z","round":15,"event":"phase:wave","note":null}
+{"at":"2026-05-22T11:05:06.717Z","round":15,"event":"spawn:ps-wave-executor","note":"wave 1"}
+{"at":"2026-05-22T11:25:28.590Z","round":15,"event":"spawn:ps-wave-executor","note":"wave 2"}
+{"at":"2026-05-22T11:35:14.121Z","round":15,"event":"phase:verify","note":null}
+{"at":"2026-05-22T11:46:05.545Z","round":15,"event":"phase:close","note":null}
+{"at":"2026-05-22T11:47:39.386Z","round":15,"event":"phase:idle","note":null}
+{"at":"2026-05-22T11:48:44.809Z","round":15,"event":"phase:audit","note":null}
+{"at":"2026-05-22T11:55:54.742Z","round":16,"event":"phase:record","note":null}
+{"at":"2026-05-22T11:56:05.727Z","round":16,"event":"phase:breaker","note":null}
+{"at":"2026-05-22T11:56:37.649Z","round":16,"event":"phase:remediate","note":null}
+{"at":"2026-05-22T12:02:56.599Z","round":16,"event":"phase:schedule","note":null}
+{"at":"2026-05-22T12:04:51.787Z","round":16,"event":"phase:wave","note":null}
+{"at":"2026-05-22T12:05:24.427Z","round":16,"event":"spawn:ps-wave-executor","note":"wave 1"}
+{"at":"2026-05-22T12:15:44.155Z","round":16,"event":"spawn:ps-wave-executor","note":"wave 2"}
+{"at":"2026-05-22T12:20:33.182Z","round":16,"event":"phase:verify","note":null}
+{"at":"2026-05-22T12:28:13.425Z","round":16,"event":"phase:close","note":null}
+{"at":"2026-05-22T12:29:04.041Z","round":16,"event":"phase:idle","note":null}
+{"at":"2026-05-22T12:29:40.828Z","round":16,"event":"phase:audit","note":null}
+{"at":"2026-05-22T12:37:37.792Z","round":17,"event":"phase:record","note":null}
+{"at":"2026-05-22T12:37:48.475Z","round":17,"event":"phase:breaker","note":null}
+{"at":"2026-05-22T12:38:07.692Z","round":17,"event":"phase:remediate","note":null}
+{"at":"2026-05-22T12:43:42.828Z","round":17,"event":"phase:schedule","note":null}
+{"at":"2026-05-22T12:45:57.536Z","round":17,"event":"phase:wave","note":null}
+{"at":"2026-05-22T12:46:13.884Z","round":17,"event":"spawn:ps-wave-executor","note":"wave 1"}
+{"at":"2026-05-22T12:52:01.873Z","round":17,"event":"spawn:ps-wave-executor","note":"wave 2"}
+{"at":"2026-05-22T12:57:48.609Z","round":17,"event":"spawn:ps-wave-executor","note":"wave 3"}
+{"at":"2026-05-22T13:03:19.963Z","round":17,"event":"phase:verify","note":null}
+{"at":"2026-05-22T13:11:00.005Z","round":17,"event":"phase:close","note":null}
+{"at":"2026-05-22T13:11:47.202Z","round":17,"event":"phase:idle","note":null}
+{"at":"2026-05-22T13:12:16.869Z","round":17,"event":"phase:audit","note":null}
+{"at":"2026-05-22T13:20:00.340Z","round":18,"event":"phase:record","note":null}
+{"at":"2026-05-22T13:20:00.406Z","round":18,"event":"phase:breaker","note":null}
+{"at":"2026-05-22T13:20:14.056Z","round":18,"event":"phase:remediate","note":null}
+{"at":"2026-05-22T13:25:42.490Z","round":18,"event":"phase:schedule","note":null}
+{"at":"2026-05-22T13:27:17.732Z","round":18,"event":"phase:wave","note":null}
+{"at":"2026-05-22T13:27:37.592Z","round":18,"event":"spawn:ps-wave-executor","note":"wave 1"}
+{"at":"2026-05-22T13:35:41.808Z","round":18,"event":"phase:verify","note":null}
+{"at":"2026-05-22T13:43:26.301Z","round":18,"event":"phase:close","note":null}
+{"at":"2026-05-22T13:44:04.983Z","round":18,"event":"phase:idle","note":null}
+{"at":"2026-05-22T13:44:35.859Z","round":18,"event":"phase:audit","note":null}
+{"at":"2026-05-22T13:52:15.946Z","round":19,"event":"phase:record","note":null}
+{"at":"2026-05-22T13:52:39.718Z","round":19,"event":"phase:idle","note":null}
+{"at":"2026-05-22T14:06:26.896Z","round":19,"event":"phase:audit","note":null}
+{"at":"2026-05-22T14:14:47.495Z","round":20,"event":"phase:record","note":null}
+{"at":"2026-05-22T14:14:55.007Z","round":20,"event":"phase:breaker","note":null}
+{"at":"2026-05-22T14:15:20.022Z","round":20,"event":"phase:remediate","note":null}
+{"at":"2026-05-22T14:21:16.339Z","round":20,"event":"phase:schedule","note":null}

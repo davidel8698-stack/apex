@@ -1,0 +1,124 @@
+{
+  "round": 16,
+  "generated_at": "2026-05-22T12:10:00Z",
+  "findings": [],
+  "investigation_findings": [
+    {
+      "id": "F-16-01",
+      "axis": "11-integration-surface / 7-operation-protocol",
+      "confidence": "CONFIRMED",
+      "severity": "P1",
+      "current_state": "PinScope.tsx renders <CommandBar /> with no `onSubmit` prop. A command typed into the live HUD only calls `history.append` + `persistHistory`; it is never handed to `parseCommand` / `buildOperation` / `ClaudeBridge`.",
+      "gap": "SPEC §10 Flow C requires the CommandBar path to parse -> validate -> build an Operation -> copy to clipboard + append history -> toast. The CommandBar->operation-pipeline seam is unwired: `parseCommand` and `buildOperation` are referenced only by tests (`grep -rln 'parseCommand' src` returns only operation-parser.ts itself), and `ClaudeBridge` is instantiated nowhere outside its own file. AC-053 passes only because `claude-bridge.test.ts` calls the three primitives directly, so the matrix never sees that the HUD does not connect them.",
+      "re_read": "grep -rn 'onSubmit' src/runtime/PinScope.tsx -> only the import + JSX comment, no onSubmit passed to <CommandBar/>; grep -rln 'parseCommand' src -> operation-parser.ts only; grep -rn 'ClaudeBridge' src -> ClaudeBridge.ts:18 only"
+    },
+    {
+      "id": "F-16-02",
+      "axis": "8-data-schemas / 10-performance / 11-integration-surface",
+      "confidence": "CONFIRMED",
+      "severity": "P2",
+      "current_state": "EndpointSnapshotStore and SnapshotManager are instantiated nowhere in the runtime. PinScope.tsx contains no snapshot wiring; the `'snapshot'` shortcut (Shift+S) defined in useKeyboardShortcuts is not registered as a handler in PinScopeHud; TopBar.tsx renders no snapshot button.",
+      "gap": "SPEC §10 Flow D ('Shift+S -> walk all pins -> build Snapshot -> persist via /__pinscope/snapshot -> toast') and §8.5 ('TopBar ... snapshot button') are not wired end-to-end. The dev-server route and the EndpointSnapshotStore both exist and pass their unit tests, but no live trigger reaches them, so a user can never create a snapshot from the HUD. AC-042/AC-075 pass off `createSnapshot` called directly in `snapshot.test.tsx`.",
+      "re_read": "grep -rn 'EndpointSnapshotStore' src -> EndpointSnapshotStore.ts only; grep -n 'snapshot' src/runtime/PinScope.tsx -> no matches; grep -rn 'snapshot|Snapshot' src/runtime/components/TopBar.tsx -> no matches; useKeyboardShortcuts.ts:37 defines `snapshot` but PinScope.tsx:65-78 registers no `snapshot` handler"
+    },
+    {
+      "id": "F-16-03",
+      "axis": "6-measurement-layer / 12-phase-dod",
+      "confidence": "CONFIRMED",
+      "severity": "P2",
+      "current_state": "PinScopeHud holds a `measuring` state toggled by the Shift+M `measure` shortcut and passes it to <Crosshair measuring=.../>, but never renders <MeasurementTool/>. MeasurementTool.tsx exists but is imported nowhere in PinScope.tsx.",
+      "gap": "SPEC §8.7 + §16 P4 DoD ('Measurement correct') require the two-click MeasurementTool overlay to be reachable in the live HUD. The `measuring` toggle currently only suppresses the Crosshair; the actual measurement overlay can never appear. The mechanism is half-wired: state exists, consuming component is dead.",
+      "re_read": "grep -rn 'MeasurementTool' src/runtime/PinScope.tsx -> no matches; grep -c 'measuring' src/runtime/PinScope.tsx -> 2 (state + Crosshair prop only)"
+    },
+    {
+      "id": "F-16-04",
+      "axis": "5-inspection-layer / 11-integration-surface",
+      "confidence": "CONFIRMED",
+      "severity": "P2",
+      "current_state": "SelectionManager is instantiated nowhere outside SelectionManager.ts; no `useSelectedElement` hook exists (only useDevState/useHoveredElement/useKeyboardShortcuts/useViewportSize). PinScope.tsx wires only hover (useHoveredElement) into InfoPanel and renders no StatePanel.",
+      "gap": "SPEC §10 Flow B (click -> SelectionManager.select -> `data-pin-selected` moved -> URL hash `#select=e_N` -> InfoPanel locks) and §8.8 StatePanel are not wired into the §7.1 root. The §5 file structure even lists a `useSelectedElement` hook that does not exist. InfoPanel has no lock/click-outside/Esc handling (grep for lock/click/selected in InfoPanel.tsx finds none). AC-041 passes off SelectionManager unit tests, not the live click flow.",
+      "re_read": "grep -rn 'SelectionManager' src -> SelectionManager.ts only; ls src/runtime/hooks -> no useSelectedElement.ts; grep -rn 'StatePanel' src/runtime/PinScope.tsx -> no matches; grep -n 'lock|click|selected|Selection' src/runtime/components/InfoPanel.tsx -> no behavioral match"
+    },
+    {
+      "id": "F-16-05",
+      "axis": "8-data-schemas / harness-coverage (VERIFY-R15 carry-over #1)",
+      "confidence": "CONFIRMED",
+      "severity": "P3",
+      "current_state": "handleSnapshotRequest in src/plugin/index.ts:65 answers `JSON.stringify({ ok: true, id })`. The R-15-06 snapshot-route test (plugin.test.ts:112-148) asserts `result.status === 200` and the on-disk file content, but never asserts the response body's `ok` flag.",
+      "gap": "The `{ ok: true }` success flag of the `/__pinscope/snapshot` route is un-asserted by any test (mutation M3 `true->false` survives). Coverage gap, not a behavior break: the file write is genuinely asserted, so the load-bearing DoD holds, but a regression to `ok: false` would pass the suite.",
+      "re_read": "Read src/plugin/index.ts:65 -> `res.end(JSON.stringify({ ok: true, id }))`; Read tests/unit/plugin.test.ts:112-148 -> postThrough() resolves only `{ status }`; the test never JSON.parses the response body or checks `ok`"
+    },
+    {
+      "id": "F-16-06",
+      "axis": "8-data-schemas / harness-coverage (VERIFY-R15 carry-over #2)",
+      "confidence": "CONFIRMED",
+      "severity": "P3",
+      "current_state": "handleHistoryRequest in src/plugin/index.ts:111 answers `JSON.stringify({ ok: true, count: entries.length })`. The R-15-07 history-route tests (plugin.test.ts:182-231) assert status 200 + the on-disk history.json content + entry count, but never assert the response body's `ok` flag.",
+      "gap": "The `{ ok: true, count }` success flag of the `/__pinscope/history` route is un-asserted (mutation M5 `true->false` survives). Coverage gap: the file write and the 1000-cap are genuinely asserted, but a regression to `ok: false` in the response body would pass the suite.",
+      "re_read": "Read src/plugin/index.ts:111 -> `res.end(JSON.stringify({ ok: true, count: entries.length }))`; Read tests/unit/plugin.test.ts:182-231 -> postThrough() resolves only `{ status }`; written-body assertions read history.json from disk, never the HTTP response body"
+    },
+    {
+      "id": "F-16-07",
+      "axis": "8-data-schemas / harness-coverage (VERIFY-R15 carry-over #3)",
+      "confidence": "CONFIRMED",
+      "severity": "P3",
+      "current_state": "Both route handlers call `fs.mkdirSync(dir, { recursive: true })` (index.ts:61 snapshot, :103 history). Every plugin.test.ts route test creates a fresh single-level temp root via `fs.mkdtempSync` and POSTs once, so the recursive multi-level mkdir branch is never exercised.",
+      "gap": "The `mkdirSync(..., { recursive: true })` recursion path is never tested (mutation M4 `true->false` survives). Coverage gap: with a single-level temp dir the `.pinscope/` parent already exists at depth 1, so `recursive:false` would still pass; only a nested-but-absent project root would expose the difference.",
+      "re_read": "Read src/plugin/index.ts:61,103 -> `fs.mkdirSync(dir, { recursive: true })`; Read tests/unit/plugin.test.ts:113,183,206 -> every root is `fs.mkdtempSync(path.join(os.tmpdir(), 'pinscope-...'))` (one level), `.pinscope/snapshots` then writes one level below an existing dir"
+    },
+    {
+      "id": "F-16-08",
+      "axis": "11-integration-surface / harness-coverage (VERIFY-R15 carry-over #4)",
+      "confidence": "CONFIRMED",
+      "severity": "P2",
+      "current_state": "CommandBar.tsx:44-60 `persistHistory` POSTs to `/__pinscope/history` guarded by `if (typeof fetch !== 'function') return;`. controls.test.tsx exercises focus/Tab/history via an injected HistoryManager + an `append` spy; no test stubs `fetch` or asserts the CommandBar actually fires the persistence POST.",
+      "gap": "The CommandBar -> `fetch` POST seam is un-asserted (mutation M2 `!==` -> `===` survives — flipping the guard would silently disable all history persistence and no test would fail). This compounds F-16-01: the only live persistence the CommandBar performs is itself untested at the network seam, so a break there is invisible to both the matrix and the suite.",
+      "re_read": "Read src/runtime/components/CommandBar.tsx:44-60 -> persistHistory() with `if (typeof fetch !== 'function') return;`; grep -rn 'persistHistory|fetch' tests/unit/runtime/controls.test.tsx -> no matches; controls.test.tsx CommandBar tests only spy on `history.append`, never on `fetch`"
+    }
+  ],
+  "blocked": [
+    { "ac": "AC-023", "severity": "P0", "reason": "verify env 'browser' unavailable (Playwright ::before content read)" },
+    { "ac": "AC-030", "severity": "P1", "reason": "verify env 'browser' unavailable (Playwright InfoPanel hover assertion)" },
+    { "ac": "AC-061", "severity": "P3", "reason": "verify kind 'manual' — cross-origin iframe needs two real origins" },
+    { "ac": "AC-063", "severity": "P3", "reason": "verify kind 'manual' — @media print needs a browser print engine" },
+    { "ac": "AC-082", "severity": "P1", "reason": "verify kind 'manual' — Playwright integration suite, browser binary unavailable" },
+    { "ac": "AC-083", "severity": "P3", "reason": "verify kind 'manual' — visual-regression screenshots need a browser" },
+    { "ac": "AC-106", "severity": "P2", "reason": "verify env 'apex-install' unavailable — /apex:health-check needs APEX synced to ~/.claude/" }
+  ],
+  "coverage": {
+    "axes_swept": [
+      "1-build-pipeline",
+      "2-pin-id-stability",
+      "3-production-zero",
+      "4-runtime-isolation",
+      "5-inspection-layer",
+      "6-measurement-layer",
+      "7-operation-protocol",
+      "8-data-schemas",
+      "9-edge-cases",
+      "10-performance-budgets",
+      "11-integration-surface",
+      "12-phase-dod"
+    ],
+    "sections_reviewed": [
+      "SPEC.md §6.1-6.4",
+      "SPEC.md §7.1-7.3",
+      "SPEC.md §8.1-8.11",
+      "SPEC.md §9.1-9.4",
+      "SPEC.md §10 flows A-E",
+      "SPEC.md §11",
+      "SPEC.md §12",
+      "SPEC.md §13",
+      "SPEC.md §15",
+      "SPEC.md §16 Phase DoD",
+      "VERIFY-R15.md mutation-survivor carry-overs"
+    ]
+  },
+  "summary": {
+    "open": 0,
+    "blocked": 7,
+    "regressions": 0,
+    "confirmed": 8,
+    "suspected": 0
+  }
+}

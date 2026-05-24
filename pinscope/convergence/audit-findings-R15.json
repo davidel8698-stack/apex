@@ -1,0 +1,210 @@
+{
+  "round": 15,
+  "generated_at": "2026-05-22T10:40:00Z",
+  "findings": [],
+  "investigation_findings": [
+    {
+      "id": "F-15-01",
+      "axis": "Runtime isolation / Inspection+Measurement+Control layers / Phase DoD",
+      "confidence": "CONFIRMED",
+      "severity": "P1",
+      "current_state": "src/runtime/PinScope.tsx -> PinScopeHud renders ONLY <PinBadges/> and <InfoPanel/> inside the data-pinscope-ui root.",
+      "gap": "SPEC §7.1 requires <PinScope/> to portal-render the full HUD tree: PinBadges, Rulers, Crosshair, GridOverlay, InfoPanel, TopBar, CommandBar. Rulers, Crosshair, GridOverlay, TopBar, CommandBar, MeasurementTool, StatePanel, VoidBadges all exist as components and pass their isolated AC tests, but are never imported or mounted by the shipping root. useKeyboardShortcuts and the SelectionManager / SnapshotManager / RuntimePinObserver / ClaudeBridge managers are likewise referenced only within their own files. The entire measurement, control, state and operation surface is dead code at runtime. §16 P2 DoD (4 grid modes render; rulers align; ≥95% shortcuts functional), P3 DoD (operations via CommandBar) and P4 DoD (measurement) are satisfied only by isolated component/hook tests, never by the assembled product. This is the off-matrix end-to-end break STEP 5 exists to catch: each piece works alone, the whole does not.",
+      "re_read": "grep -rln 'Rulers|Crosshair|GridOverlay|TopBar|CommandBar|MeasurementTool|StatePanel|VoidBadges' pinscope/src/runtime/PinScope.tsx -> no matches; Read pinscope/src/runtime/PinScope.tsx (PinScopeHud body is <PinBadges/> + <InfoPanel/> only); grep -rln 'useKeyboardShortcuts' pinscope/src -> only useKeyboardShortcuts.ts; grep -rln 'SelectionManager|SnapshotManager|RuntimePinObserver' pinscope/src -> each appears only in its own file."
+    },
+    {
+      "id": "F-15-02",
+      "axis": "Integration surface / public API (§7.1 prop contract)",
+      "confidence": "CONFIRMED",
+      "severity": "P2",
+      "current_state": "PinScopeProps in src/runtime/PinScope.tsx declares only `enabled?` and `hudPosition?`.",
+      "gap": "SPEC §7.1 specifies <PinScope/> props `enabled?`, `hudPosition?`, `defaultGridMode?`, `shortcutsEnabled?`. `defaultGridMode` and `shortcutsEnabled` are absent from the prop interface, so a host app cannot configure the grid default or disable shortcuts as the spec promises.",
+      "re_read": "Read pinscope/src/runtime/PinScope.tsx lines 9-14: `interface PinScopeProps { enabled?: boolean; hudPosition?: 'left' | 'right'; }` — no defaultGridMode, no shortcutsEnabled."
+    },
+    {
+      "id": "F-15-03",
+      "axis": "Runtime isolation (§7.1 HUD-hidden state)",
+      "confidence": "CONFIRMED",
+      "severity": "P2",
+      "current_state": "PinScope.tsx has no HUD-hidden branch; no FloatingToggle component exists anywhere in src/.",
+      "gap": "SPEC §7.1 requires that when the HUD is hidden, <PinScope/> renders only a FloatingToggle. There is no hidden state, no toggle, and no FloatingToggle component — the user cannot re-summon a dismissed HUD.",
+      "re_read": "grep -rln 'FloatingToggle' pinscope/src -> no matches; Read pinscope/src/runtime/PinScope.tsx — PinScopeHud has no visibility/hidden state, always returns the full portal."
+    },
+    {
+      "id": "F-15-04",
+      "axis": "Edge cases / runtime isolation (§12 hostile CSS, z-index)",
+      "confidence": "CONFIRMED",
+      "severity": "P2",
+      "current_state": "src/runtime/styles/badges.css.ts: only `[data-pinscope-ui] { outline: none !important; }` uses !important.",
+      "gap": "SPEC §12 states 'hostile CSS (PinScope styles use !important)' and 'z-index conflicts (PinScope reserves 2147483647)'. The badge `::before` rules — content, background, position, z-index (2147483645/6/7), padding — carry no !important. A host page with a hostile or higher-specificity rule targeting `[data-pin]::before` or `[data-pin]` can override the badge background, hide it, or push it below host UI, defeating the §12 isolation guarantee.",
+      "re_read": "Read pinscope/src/runtime/styles/badges.css.ts — grep '!important' yields a single hit on the `[data-pinscope-ui]` outline rule; all `[data-pin]::before` and `[data-pin]` declarations are unqualified."
+    },
+    {
+      "id": "F-15-05",
+      "axis": "Measurement layer (§8.2 Rulers)",
+      "confidence": "CONFIRMED",
+      "severity": "P2",
+      "current_state": "src/runtime/components/Rulers.tsx generates ticks at a single uniform `interval` (default 100) and has no corner element.",
+      "gap": "SPEC §8.2 requires rulers with 'ticks at 10/50/100/200 px' (a multi-scale tick set) and a 'corner [that] shows live mouse coords'. The code emits one uniform tick spacing only and renders no corner / no live-coordinate readout. AC-034 verifies only 100px-interval ticks, so the under-built ruler passes the matrix while violating §8.2.",
+      "re_read": "Read pinscope/src/runtime/components/Rulers.tsx — `ticks(extent, interval)` loops `v += interval` for one interval; no 10/50/100/200 scale logic; the returned tree has only the two `bar` divs, no corner coords element."
+    },
+    {
+      "id": "F-15-06",
+      "axis": "Measurement layer (§8.3 Crosshair)",
+      "confidence": "CONFIRMED",
+      "severity": "P2",
+      "current_state": "src/runtime/components/Crosshair.tsx hides only when the cursor is over `[data-pinscope-ui]`.",
+      "gap": "SPEC §8.3 requires the Crosshair be disabled in three cases: over the HUD, in measurement mode, and when the HUD is hidden. Only the over-HUD case is implemented — no measurement-mode guard and no HUD-hidden guard. The crosshair would visually fight the measurement tool's dashed line.",
+      "re_read": "Read pinscope/src/runtime/components/Crosshair.tsx — onMove only checks `target.closest('[data-pinscope-ui]')`; no measurement-mode prop/state and no HUD-visibility prop are referenced."
+    },
+    {
+      "id": "F-15-07",
+      "axis": "Operation protocol / Control layer (§8.6 CommandBar)",
+      "confidence": "CONFIRMED",
+      "severity": "P2",
+      "current_state": "src/runtime/components/CommandBar.tsx: fixed 40px bar; history is an in-component `useRef<string[]>`; key handler covers Escape/Enter/ArrowUp/ArrowDown only.",
+      "gap": "SPEC §8.6 requires the CommandBar to (a) expand to 120px on focus, (b) provide Tab autocomplete for pins/properties/values, and (c) persist history to .pinscope/history.json (last 1000). None of the three: no focus-driven height change, no 'Tab' key branch and no use of parsers/autocomplete.ts, and the input history lives in a per-mount ref that is never persisted (HistoryManager with MAX_ENTRIES=1000 exists but CommandBar never wires to it; grep 'history.json' src -> no matches).",
+      "re_read": "Read pinscope/src/runtime/components/CommandBar.tsx — `style.height` is the constant 40; `onInputKey` has no 'Tab' case; `history` is `useRef<string[]>([])` with no store; grep -rln 'history.json' pinscope/src -> no matches."
+    },
+    {
+      "id": "F-15-08",
+      "axis": "State layer (§8.8 StatePanel)",
+      "confidence": "CONFIRMED",
+      "severity": "P2",
+      "current_state": "src/runtime/components/StatePanel.tsx: applyStateOverride only toggles `<html data-state-override>`.",
+      "gap": "SPEC §8.8 requires StatePanel to 'auto-generate override rules by scanning host stylesheets for :hover/:focus/:active'. The code never inspects document.styleSheets / cssRules and generates no override rules — setting the attribute alone does nothing unless the host's CSS happens to also key off `[data-state-override]`. AC-040 checks only the attribute path, so the missing stylesheet-scan generator is invisible to the matrix.",
+      "re_read": "Read pinscope/src/runtime/components/StatePanel.tsx — applyStateOverride does `html.setAttribute('data-state-override', state)` and nothing else; grep -rln 'styleSheets|cssRules' pinscope/src/runtime -> no matches."
+    },
+    {
+      "id": "F-15-09",
+      "axis": "Behavioral flows / data persistence (§10-D, §8.10 Snapshot)",
+      "confidence": "CONFIRMED",
+      "severity": "P2",
+      "current_state": "src/runtime/managers/SnapshotManager.ts writes through an injectable SnapshotStore; the only store is MemorySnapshotStore (in-memory array).",
+      "gap": "SPEC §8.10 says SnapshotManager 'writes .pinscope/snapshots/s_*.json' and §10 flow D says snapshot creation 'persist[s] via dev-server endpoint /__pinscope/snapshot'. No /__pinscope/snapshot endpoint and no file-backed snapshot store exist; a real snapshot is never persisted to disk. AC-042 is satisfied by an in-memory test store, so the named persistence mechanism is dormant.",
+      "re_read": "Read pinscope/src/runtime/managers/SnapshotManager.ts — only `MemorySnapshotStore` implements `SnapshotStore`; grep -rln '__pinscope' pinscope/src -> no matches; grep -rln 'snapshots/' pinscope/src -> no matches."
+    },
+    {
+      "id": "F-15-10",
+      "axis": "Integration surface / public API (§15)",
+      "confidence": "SUSPECTED",
+      "severity": "P3",
+      "current_state": "src/index.ts re-exports pinscope, PinScope, useDevState and types Operation/Snapshot/ElementSnapshot; it does NOT re-export withPinScope.",
+      "gap": "SPEC §15 lists 'Public API exports: pinscope, withPinScope, PinScope, useDevState, and types ...'. `withPinScope` is reachable via the `pinscope/next` subpath (AC-090), and AC-091's own text omits withPinScope, so this may be an intentional subpath-only scoping. Flagged SUSPECTED for the planner to confirm whether §15 intends withPinScope re-exported from the package root.",
+      "re_read": "grep -n 'withPinScope' pinscope/src/index.ts -> no matches; package.json exports has './next' -> dist/plugin/next.js, which is where withPinScope lives."
+    },
+    {
+      "id": "F-15-11",
+      "axis": "Data schemas (§9.3 Operation)",
+      "confidence": "SUSPECTED",
+      "severity": "P3",
+      "current_state": "src/runtime/parsers/operation-builder.ts: for kind 'operation' it always sets `value: parsed.value` on the OperationItem, including for increment/decrement operations.",
+      "gap": "SPEC §9.3 defines OperationItem with distinct optional fields `value?` and `delta?`; the `delta?` field exists in src/types/operation.ts but buildOperation never populates it — an increment/decrement command's numeric magnitude is always stored in `value` as a string. The OperationItem schema permits `value?` for every op kind so AC-052 passes, but the `delta` field is dead and an APEX consumer parsing an increment cannot distinguish a delta from an absolute value. Flagged SUSPECTED — may be an intentional simplification.",
+      "re_read": "Read pinscope/src/runtime/parsers/operation-builder.ts lines 59-67 — the `parsed.kind === 'operation'` branch builds `{ property, operation: parsed.op, value: parsed.value }`; no `delta` assignment anywhere; grep -n 'delta' pinscope/src/runtime/parsers/operation-builder.ts -> no matches."
+    }
+  ],
+  "blocked": [
+    {
+      "ac": "AC-023",
+      "phase": "P1",
+      "severity": "P0",
+      "blocked_reason": "browser",
+      "detail": "Playwright reads CSS ::before content for 5 pins; needs a browser engine. env-capabilities.json browser=false.",
+      "unblocks_on": "browser-capable CI"
+    },
+    {
+      "ac": "AC-030",
+      "phase": "P1",
+      "severity": "P1",
+      "blocked_reason": "browser",
+      "detail": "Playwright hover asserts InfoPanel width/height/padding/font; needs a browser engine. env-capabilities.json browser=false.",
+      "unblocks_on": "browser-capable CI"
+    },
+    {
+      "ac": "AC-061",
+      "phase": "P4",
+      "severity": "P3",
+      "blocked_reason": "browser",
+      "detail": "Cross-origin iframe outline+label; manual verify needs two real origins / a browser. env-capabilities.json browser=false.",
+      "unblocks_on": "browser-capable CI"
+    },
+    {
+      "ac": "AC-063",
+      "phase": "P4",
+      "severity": "P3",
+      "blocked_reason": "browser",
+      "detail": "@media print HUD-hide screenshot diff; needs a browser print engine. env-capabilities.json browser=false.",
+      "unblocks_on": "browser-capable CI"
+    },
+    {
+      "ac": "AC-082",
+      "phase": "P2",
+      "severity": "P1",
+      "blocked_reason": "browser",
+      "detail": "Playwright integration suite over examples/vite-react; browser binary unavailable. env-capabilities.json browser=false.",
+      "unblocks_on": "browser-capable CI"
+    },
+    {
+      "ac": "AC-083",
+      "phase": "P4",
+      "severity": "P3",
+      "blocked_reason": "browser",
+      "detail": "Visual-regression screenshot matrix; needs a browser. env-capabilities.json browser=false.",
+      "unblocks_on": "browser-capable CI"
+    },
+    {
+      "ac": "AC-106",
+      "phase": "P5",
+      "severity": "P2",
+      "blocked_reason": "apex-install",
+      "detail": "/apex:health-check needs APEX synced to ~/.claude/. env-capabilities.json apex_install=false.",
+      "unblocks_on": "APEX-installed CI"
+    }
+  ],
+  "coverage": {
+    "axes_swept": [
+      "1. Build pipeline (AST transform / data-pin injection / exclude rules)",
+      "2. Pin-ID stability (file:line:column key, no ID reuse)",
+      "3. Production-zero (prod build carries 0 PinScope bytes)",
+      "4. Runtime isolation (portal, z-index, !important, host non-interference)",
+      "5. Inspection layer (hover detection, InfoPanel, badges)",
+      "6. Measurement layer (rulers, crosshair, grid modes, measurement tool)",
+      "7. Operation protocol (parser grammar, shortcuts, Operation JSON shape)",
+      "8. Data schemas (PinMap / Snapshot / Operation / History vs §9)",
+      "9. Edge cases (§12 set)",
+      "10. Performance budgets (§13)",
+      "11. Integration surface (Vite/Next/Webpack entry points, public API)",
+      "12. Phase DoD (§16 Definition-of-Done items)"
+    ],
+    "sections_reviewed": [
+      "§3 System Architecture",
+      "§4 Technical Stack / bundle budgets",
+      "§6.1-6.4 Build-Time Module",
+      "§7.1-7.3 Runtime Module",
+      "§8.1-8.11 Component Specifications",
+      "§9.1-9.4 Data Schemas",
+      "§10 Behavioral Flows A-E",
+      "§11 Operation Protocol",
+      "§12 Edge Cases",
+      "§13 Performance Requirements",
+      "§15 Deployment & Integration",
+      "§16 Phase Plan with Definition of Done",
+      "§17 APEX Integration End-State",
+      "Appendix A AC ledger, Appendix B loop contract"
+    ]
+  },
+  "summary": {
+    "open": 0,
+    "blocked": 7,
+    "regressions": 0,
+    "confirmed": 9,
+    "suspected": 2
+  },
+  "regression_scan": {
+    "previously_closed": 62,
+    "still_pass_R15": 62,
+    "regressed": [],
+    "method": "Cross-checked every AC marked CLOSED in convergence/STATUS.md against ac-results-R15.json; all 62 verdicts are PASS. No CLOSED AC reverted to FAIL. The full vitest suite was run independently this round: 27 files, 257 tests, all pass."
+  },
+  "note": "STEP 1-4: ac-results-R15.json reports 0 FAIL, so there are no machine-flagged AC gaps to re-confirm and no AC findings. The 7 UNAVAILABLE ACs are recorded as BLOCKED (environment limits, not gaps), never OPEN. STEP 5 free investigation produced 11 off-matrix investigation findings (9 CONFIRMED, 2 SUSPECTED): every Appendix-A AC passes, yet the assembled <PinScope/> product is hollow — only the inspection layer (PinBadges + InfoPanel) is wired into the shipping root, while the measurement, control, state and operation layers are dead code that pass only in isolated component tests. metric.open == 0 is therefore a FALSE CONVERGENCE: the matrix never asserts the §7.1 HUD assembly, so the loop's 90% figure does not reflect a working product. These findings independently corroborate the R14 narrative scan's 8 unsatisfied uncovered claims, re-confirmed here with the auditor's own re-read checks."
+}

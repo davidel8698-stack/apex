@@ -1,0 +1,58 @@
+{
+  "round": 16,
+  "generated_at": "2026-05-22T12:21:01.931Z",
+  "files": [
+    {
+      "file": "pinscope/src/runtime/PinScope.tsx",
+      "mutants_run": 5,
+      "killed": 5,
+      "survived": []
+    },
+    {
+      "file": "pinscope/src/runtime/components/TopBar.tsx",
+      "mutants_run": 1,
+      "killed": 1,
+      "survived": []
+    },
+    {
+      "file": "pinscope/src/runtime/hooks/useSelectedElement.ts",
+      "mutants_run": 5,
+      "killed": 1,
+      "survived": [
+        {
+          "id": "M1",
+          "rule": "or-to-and",
+          "line": 18,
+          "original": "if (!pinId || typeof document === 'undefined') return null;",
+          "mutated": "if (!pinId && typeof document === 'undefined') return null;"
+        },
+        {
+          "id": "M2",
+          "rule": "strict-eq-to-ne",
+          "line": 18,
+          "original": "if (!pinId || typeof document === 'undefined') return null;",
+          "mutated": "if (!pinId || typeof document !== 'undefined') return null;"
+        },
+        {
+          "id": "M4",
+          "rule": "and-to-or",
+          "line": 56,
+          "original": "if (pinned && pinId) {",
+          "mutated": "if (pinned || pinId) {"
+        },
+        {
+          "id": "M5",
+          "rule": "strict-eq-to-ne",
+          "line": 67,
+          "original": "if (e.key === 'Escape') {",
+          "mutated": "if (e.key !== 'Escape') {"
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "mutants": 11,
+    "killed": 7,
+    "survived": 4
+  }
+}

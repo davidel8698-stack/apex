@@ -1,0 +1,12 @@
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Consuming-project artifacts (generated inside examples/)
+.pinmap.json
+.pinscope/
+
+# Test output
+coverage/
+playwright-report/
+test-results/

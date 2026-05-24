@@ -58,6 +58,17 @@ the agent's permanent prompt.
 </ui_contract>
 ```
 
+## PINSCOPE INSTRUMENTATION
+Every UI phase delivers a PinScope-instrumented build so the user can point at
+elements and communicate changes structurally (see the `pinscope` stack skill).
+Before executing UI tasks:
+- If the target project is not yet PinScope-instrumented, add one task to the
+  phase: install the PinScope plugin (`pinscope/vite` or `pinscope/next`) and
+  mount `<PinScope />` at the app root. Dev-only — stripped from production.
+- Pass the `pinscope` stack skill to the frontend-specialist agent as context.
+- When the user supplies a PinScope `Operation` JSON, treat its `pin` + source
+  location as the exact, unambiguous target for the change.
+
 ## EXECUTION
 
 1. Read .apex/SPEC.md for project context.

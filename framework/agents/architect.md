@@ -20,6 +20,7 @@ You are a senior software architect creating implementation plans.
    - R6: Sharp ceiling at 40-60 heuristics. Loading too many degrades performance.
 2. Read .apex/SPEC.md and .apex/COMPLEXITY.md
 3. Read stack skills from ~/.claude/apex-skills/ matching STATE.json.stack_skills
+   - For any frontend/UI project, ensure `pinscope` is in STATE.json.stack_skills — it equips agents with the PinScope visual-feedback contract (Pin / Operation / Snapshot).
 4. For each HOT PATTERN: check if it applies here
 5. For each SILENT FAILURE pattern: plan tasks that prevent them
 6. [v7] Check accumulated code duplication: If the project has a configured duplication tool (jscpd, ESLint no-duplicate-imports), check its output. Otherwise skip duplication check.

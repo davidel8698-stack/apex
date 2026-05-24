@@ -1,0 +1,60 @@
+{
+  "round": 13,
+  "north_star_version": "2.0.0",
+  "harness": { "tests_passed": 257, "typecheck_clean": true },
+  "reality_baseline": { "closed": 62, "blocked": 7, "open": 0, "pct": 90 },
+  "findings": [],
+  "blocked_assessment": [
+    {
+      "ac": "AC-023",
+      "env": "browser",
+      "implementation_present": true,
+      "correctly_blocked": true,
+      "note": "CSS-only badge is implemented in src/runtime/styles/badges.css.ts — the `[data-pin]::before` rule sets `content: attr(data-pin)`, exactly the SPEC Appendix A.2 capability, and is injected by src/runtime/components/PinBadges.tsx. The browser-only assertion (reads `::before` content via getComputedStyle(el,'::before') and matches it against the data-pin value) lives in tests/integration/pinscope.spec.ts test 'injects a data-pin badge on each element (AC-023)'. BLOCKED purely because no browser binary (env-capabilities.json browser:false)."
+    },
+    {
+      "ac": "AC-030",
+      "env": "browser",
+      "implementation_present": true,
+      "correctly_blocked": true,
+      "note": "src/runtime/components/InfoPanel.tsx renders Dimensions/Spacing/Typography (and Appearance/Layout/Hierarchy) CollapsibleSections, computes values via `getComputedStyle` and `getBoundingClientRect`, and emits the `data-pinscope-panel` host with a 'Width' StyleRow (lines 120, 144, 148-179). The Playwright hover assertion is tests/integration/pinscope.spec.ts test 'hover opens the InfoPanel with dimensions (AC-030)', which hovers a button and asserts the panel is visible and contains 'Width'. BLOCKED only on the missing browser."
+    },
+    {
+      "ac": "AC-061",
+      "env": "browser",
+      "implementation_present": true,
+      "correctly_blocked": true,
+      "note": "src/runtime/utils/iframe-overlay.ts implements isCrossOriginFrame / markCrossOriginFrames / isIframeLimited — cross-origin frames get `data-pin-iframe` plus an absolutely-positioned, click-through (`pointerEvents:none`) dashed-outline overlay with a label (data-pin id, else src host), no injection. tests/unit/runtime/iframe-overlay.test.ts ('Cross-origin iframe overlay (AC-061)', 8 jsdom cases) already exercises the logic and runs green in `npm test`; the matrix flags AC-061 env:browser/kind:manual because a true two-origin scenario needs real origins."
+    },
+    {
+      "ac": "AC-063",
+      "env": "browser",
+      "implementation_present": true,
+      "correctly_blocked": true,
+      "note": "The print rule is implemented in src/runtime/styles/badges.css.ts lines 37-40: the `@media print` block sets `[data-pinscope-ui] { display: none }` and `[data-pin]::before { display: none }`, hiding the HUD and all badges. Verification is a browser print-emulation screenshot diff (matrix kind:manual, env:browser), unavailable without a browser print engine."
+    },
+    {
+      "ac": "AC-082",
+      "env": "browser",
+      "implementation_present": true,
+      "correctly_blocked": true,
+      "note": "playwright.config.ts defines the §14 integration suite (testDir ./tests/integration, chromium/firefox/webkit projects, baseURL localhost:5173, webServer driving examples/vite-react) and tests/integration/pinscope.spec.ts is the real §14 checklist suite (5 authored tests: AC-022/023/030/038/041). @playwright/test ^1.60.0 is in devDependencies. BLOCKED purely because the Playwright browser binary is unavailable."
+    },
+    {
+      "ac": "AC-083",
+      "env": "browser",
+      "implementation_present": true,
+      "correctly_blocked": true,
+      "note": "tests/integration/visual-regression.spec.ts ('PinScope visual regression (AC-083)') generates the §14 matrix — 4 viewports (mobile/tablet/laptop/desktop) x light/dark x host-css/no-host-css = 16 tests, each capturing baseline + infopanel-open screenshots via `toHaveScreenshot`; playwright.config.ts sets `expect.toHaveScreenshot.maxDiffPixelRatio: 0.02`. A real artifact for a browser-capable CI; BLOCKED only on the missing browser."
+    },
+    {
+      "ac": "AC-106",
+      "env": "apex-install",
+      "implementation_present": true,
+      "correctly_blocked": true,
+      "note": "The skill/command edits that /apex:health-check would validate are present and verified this round: framework/apex-skills/pinscope.md (all 5 required headings — Conventions, Anti-Patterns, Common Patterns, Testing, Common Gotchas — confirmed for AC-100), framework/commands/apex/ui-phase.md (1 PINSCOPE INSTRUMENTATION match, AC-102), ui-review.md (1 PINSCOPE EVIDENCE match, AC-103) and architect.md/specialist/frontend.md (1 pinscope match each, AC-104). AC-106 is kind:manual/env:apex-install and BLOCKED only because APEX is not synced to ~/.claude/ (env-capabilities.json apex_install:false)."
+    }
+  ],
+  "verdict": "NO_FINDINGS",
+  "summary": "An independent R13 re-audit confirms a healthy code tree. A freshly executed harness reports 257 Vitest tests passing across 27 test files (`npm test` exit 0) and a clean `tsc --noEmit` typecheck (`npm run typecheck` exit 0) — agreeing exactly with `harness_ok:true` in ac-results-R13.json. Spot-checks of representative env:node PASS ACs spanning build (AC-005 stable IDs, AC-080 transformer fixture table >=50 pairs), operation protocol (AC-050/081 parser grammar, AC-052 §9.3 conformance), edge cases (AC-065 heavy-page throttling), deployment (AC-090 export map), performance (AC-073 size-limit, re-run: 1.84 kB vs 80 kB), and APEX integration (AC-100/102/103/104 grep targets) found every mechanical PASS backed by a real artifact that genuinely exercises the SPEC capability — no masked FAIL. All 7 UNAVAILABLE ACs (AC-023, AC-030, AC-061, AC-063, AC-082, AC-083, AC-106) had their implementation source AND authored-but-unrunnable test re-read this round and confirmed genuinely present in the pinscope/ (or framework/) tree; each is BLOCKED solely because the environment lacks a browser binary or an APEX install, not because of any absent deliverable. The R10-class failure mode (AC-061/AC-083 marked BLOCKED with no code) does not recur: iframe-overlay.ts and visual-regression.spec.ts both exist with substantive content. Reality baseline: 62 closed / 7 blocked / 0 open, 90%."
+}

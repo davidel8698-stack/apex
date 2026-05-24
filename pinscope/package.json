@@ -1,0 +1,64 @@
+{
+  "name": "pinscope",
+  "version": "0.0.0",
+  "description": "Visual debug layer that lets non-technical users communicate UI changes to AI agents with certainty.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./dist/index.js",
+    "./vite": "./dist/plugin/index.js",
+    "./runtime": "./dist/runtime/PinScope.js",
+    "./next": "./dist/plugin/next.js",
+    "./webpack": "./dist/plugin/webpack.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "pretest": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:engine": "node --test convergence/lib/test/*.test.mjs",
+    "typecheck": "tsc --noEmit",
+    "size": "size-limit"
+  },
+  "size-limit": [
+    {
+      "name": "runtime (dev)",
+      "path": "dist/runtime/PinScope.js",
+      "import": "{ PinScope }",
+      "ignore": ["react", "react-dom"],
+      "limit": "80 KB"
+    }
+  ],
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18"
+  },
+  "dependencies": {
+    "@babel/generator": "^7.24.0",
+    "@babel/parser": "^7.24.0",
+    "@babel/traverse": "^7.24.0",
+    "@babel/types": "^7.24.0",
+    "html2canvas": "^1.4.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.60.0",
+    "@size-limit/preset-small-lib": "^11.1.0",
+    "@testing-library/react": "^15.0.7",
+    "@types/babel__generator": "^7.6.0",
+    "@types/babel__traverse": "^7.20.0",
+    "@types/node": "^22.5.0",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "happy-dom": "^14.12.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "size-limit": "^11.1.0",
+    "typescript": "^5.4.0",
+    "vite": "^5.2.0",
+    "vitest": "^1.6.0"
+  }
+}
