@@ -77,7 +77,18 @@ the data).
 
 ---
 
-## Doctrine 3 — BLOCKED status (env-unavailable verify ≠ OPEN)
+## Doctrine 3 — BLOCKED status (env-unavailable verify ≠ OPEN) — **ADOPTED 2026-05-24**
+
+> **Status:** Adopted (additive) via Plan APX-PS-CAMPAIGN-001 Followup #4.
+> - `apex-spec.md` §PinScope `**Doctrine 3** ADOPTED` paragraph documents the
+>   semantics.
+> - `framework/agents/specialist/round-checker.md` STEP 6.e excludes
+>   BLOCKED-status findings from the `P0+P1==0` count gate while preserving
+>   visibility in the closure report and `## Spot-check results` table.
+> - Held-out validation HC-04/HC-05 deferred to a dedicated IMP-DOC-03
+>   validation cycle (synthetic fixture infrastructure required).
+> The text below remains the doctrine reference.
+
 
 **PinScope source:** `pinscope/convergence/LOOP.md` doctrine block —
 "BLOCKED — implementation built + test authored, but the verify: needs

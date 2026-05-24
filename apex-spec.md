@@ -650,6 +650,22 @@ See `framework/docs/PS-HEAL-DOCTRINES.md` for the 5 candidates
 auto-rendered STATUS, separated `loop.json` machine state) with
 held-out validation requirements per-doctrine.
 
+**Doctrine 3 (BLOCKED finding status) — ADOPTED 2026-05-24:**
+A finding may carry a `status: BLOCKED` field in addition to the
+existing `status: CONFIRMED | SUSPECTED` axis. `BLOCKED` means the
+fix is implemented and tested, but the `verify:` step needs an
+environment unavailable on the current host (browser engine, network
+access, particular OS, paid CI minutes). Round-checker's
+`P0+P1==0` convergence gate treats BLOCKED findings as
+**not-OPEN-and-not-CONVERGENCE-BLOCKING** — they remain visible in
+`/apex:status` and `ROUND-R<N>-CLOSURE.md` but do not prevent a
+clean round. The `## Spot-check results` table reports BLOCKED
+findings with `re-check via transcript: env-unavailable` and
+`verdict: BLOCKED-not-failed`. Held-out validation (HC-04 / HC-05
+per `framework/docs/PS-HEAL-DOCTRINES.md` §Doctrine 3) is deferred
+to a dedicated IMP-DOC-03 cycle if/when a synthetic test fixture
+infrastructure exists.
+
 **Preservation invariant:** PinScope work prior to this merge is
 preserved via three immortal git tags:
 - `pinscope/PS-R19-converged` (a1b5281) — CONVERGED state

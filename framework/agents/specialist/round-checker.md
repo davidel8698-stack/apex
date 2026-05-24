@@ -159,6 +159,27 @@ HALTED state — `round-checker` itself produces the closure.
       The "two consecutive clean rounds" stop criterion (step 5)
       requires both the count gate AND the re-probe gate to hold.
 
+   e. **BLOCKED-status exclusion (Doctrine 3 — adopted 2026-05-24).**
+      A finding may declare `status: BLOCKED` to signal "fix
+      implemented, test written, but `verify:` requires an
+      environment unavailable here (e.g. browser engine, network,
+      paid CI minute, particular OS)." BLOCKED findings:
+      - DO appear in `coverage_map` and the closure report
+        (visibility preserved)
+      - Are EXCLUDED from the `P0+P1==0` count gate (they are not
+        OPEN; they are env-blocked, which is closeable verbatim on a
+        capable CI)
+      - In the `## Spot-check results` table, render with
+        `re-check via transcript: env-unavailable` and
+        `verdict: BLOCKED-not-failed`
+      - Stay countable as `blocked_count` in
+        `ROUND-R<N>-CLOSURE.md`'s metrics block alongside
+        `closed_count` / `open_count`
+      This preserves convergence honesty: a BLOCKED finding is NOT
+      a CLOSED-by-fiat (the verify never ran) but it is NOT an
+      OPEN gap either (the fix exists). Source doctrine reference:
+      `framework/docs/PS-HEAL-DOCTRINES.md` §Doctrine 3.
+
    Document each re-probe in a short table inside the closure
    report under `## Spot-check results` with columns
    `axis | claim | re-check via transcript | observed | verdict`.
