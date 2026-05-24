@@ -4,6 +4,7 @@ import { useState } from 'react';
 import type { CSSProperties, ReactElement, ReactNode } from 'react';
 import type { HoveredElement } from '../../types/element-info.js';
 import { PIN_ATTR, Z_SELECTED } from '../constants.js';
+import { isShadowLimited } from '../utils/shadow-dom.js';
 
 export interface InfoPanelProps {
   hovered: HoveredElement | null;
@@ -140,11 +141,22 @@ export function InfoPanel({
   if (position === 'right') style.right = 16;
   else style.left = 16;
 
+  // R-21-02 — §12 / AC-060 — when the hovered element is a Shadow-DOM host
+  // marked by `markShadowHosts` (PinScopeHud sweep + MutationObserver), render
+  // an additive "limited inspection" row above the collapsible sections so
+  // the inspector reports the boundary the SPEC names. The row sits outside
+  // any `CollapsibleSection` (AC-032 unaffected) and never replaces an
+  // existing block (AC-033 unaffected).
+  const shadowLimited = isShadowLimited(element);
+
   return (
     <div data-pinscope-panel="" style={style}>
       <div data-testid="pin-id">
         {pinId} · {element.tagName.toLowerCase()}
       </div>
+      {shadowLimited && (
+        <div data-pinscope-shadow-limited="">limited inspection</div>
+      )}
       <CollapsibleSection id="dimensions" title="Dimensions">
         <StyleRow label="Width" value={px(rect.width)} />
         <StyleRow label="Height" value={px(rect.height)} />

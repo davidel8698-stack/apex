@@ -30,6 +30,7 @@ import { EndpointSnapshotStore } from './managers/EndpointSnapshotStore.js';
 import { HistoryManager, MemoryHistoryStore } from './managers/HistoryManager.js';
 import type { HistoryData } from './managers/HistoryManager.js';
 import { RuntimePinObserver } from './managers/RuntimePinObserver.js';
+import { markShadowHosts } from './utils/shadow-dom.js';
 
 export interface PinScopeProps {
   /** Runtime kill-switch. */
@@ -187,6 +188,31 @@ function PinScopeHud({
     return () => {
       disposed = true;
       if (observer) observer.stop();
+    };
+  }, []);
+
+  // R-21-02 — §12 Shadow-DOM host marking. The `markShadowHosts(document)`
+  // sweep stamps `data-pin-shadow` on every Shadow-DOM host so the InfoPanel
+  // can report "limited inspection" (AC-060). One initial sweep on mount, then
+  // a `MutationObserver` on `document.body` (subtree: true, childList: true)
+  // re-runs the sweep when new nodes are added. Cleanup disconnects the
+  // observer to avoid leaking across test renders. Guarded for non-DOM envs.
+  useEffect(() => {
+    if (typeof document === 'undefined') return undefined;
+    if (typeof MutationObserver === 'undefined') {
+      // Best-effort initial sweep even without an observer.
+      markShadowHosts(document);
+      return undefined;
+    }
+    // Initial sweep covers any Shadow-DOM hosts present at mount time.
+    markShadowHosts(document);
+    const observer = new MutationObserver(() => {
+      // Re-sweep on any DOM mutation under body — new shadow hosts get marked.
+      markShadowHosts(document);
+    });
+    observer.observe(document.body, { subtree: true, childList: true });
+    return () => {
+      observer.disconnect();
     };
   }, []);
   // §10 flow B — the locked selection survives mouse-out (§8.1). `selectPin`
