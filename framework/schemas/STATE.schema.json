@@ -369,6 +369,27 @@
         "last_file_hash": { "type": ["string", "null"] },
         "triggered": { "type": "boolean" },
         "trigger_reason": { "type": ["string", "null"] },
+        "cap_original": {
+          "type": ["integer", "null"],
+          "minimum": 1,
+          "description": "v8 CHECK 2: snapshot of max_tool_calls_per_task at task start; task-boundary reset (next.md STEP F, self-heal RESET_BREAKER) restores max_tool_calls_per_task from here. Stamped on first tool-call of a task and survives extensions. Default null → treated as 'use current max_tool_calls_per_task as basis'."
+        },
+        "cap_extensions_used": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "v8 CHECK 2: number of health-gated auto-extensions during the current task (telemetry only — there is no upper bound). Resets to 0 on task boundary. Each extension means the cap was reached, the health probe passed (files moving + no recurring error + no result-fishing), and the cap was bumped by 50% of cap_original to a new checkpoint."
+        },
+        "tool_calls_at_last_change": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "v8 CHECK 2 Probe 1: value of total_tool_calls_this_task captured the last time CHECK 1 observed a file-hash change. When (total_tool_calls_this_task - tool_calls_at_last_change) > 50 at cap boundary, the trajectory is deemed stagnant and CHECK 2 fires regardless of other signals. Default 0; reset on task boundary."
+        },
+        "last_warning_threshold": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "v8 CHECK 2: highest fractional threshold (0.0, 0.5, 0.75, 0.9) at which a stderr warning has been emitted for the current cap. Prevents re-warning on every tool call once the threshold is crossed. Reset to 0 on task boundary AND on every successful auto-extension (so warnings re-trigger against the new, larger cap)."
+        },
         "recent_error_hashes": {
           "type": "array",
           "maxItems": 20,

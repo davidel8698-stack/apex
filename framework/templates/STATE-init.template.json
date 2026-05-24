@@ -96,7 +96,11 @@
     "max_tool_calls_per_task": 80,
     "last_file_hash": null,
     "triggered": false,
-    "trigger_reason": null
+    "trigger_reason": null,
+    "cap_original": 80,
+    "cap_extensions_used": 0,
+    "tool_calls_at_last_change": 0,
+    "last_warning_threshold": 0
   },
   "snapshots": {
     "pre_task_stash": null,

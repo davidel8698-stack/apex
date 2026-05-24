@@ -300,7 +300,7 @@ If no:
          D: {level: 0, consecutive_successes: 0}
        }
      }
-     circuit_breaker: {consecutive_no_change_actions: 0, max_allowed: 3, total_tool_calls_this_task: 0, max_tool_calls_per_task: 80, last_file_hash: null, triggered: false, trigger_reason: null}
+     circuit_breaker: {consecutive_no_change_actions: 0, max_allowed: 3, total_tool_calls_this_task: 0, max_tool_calls_per_task: 80, last_file_hash: null, triggered: false, trigger_reason: null, cap_original: 80, cap_extensions_used: 0, tool_calls_at_last_change: 0, last_warning_threshold: 0}
      snapshots: {pre_task_stash: null, last_snapshot_task: null}
      quality: {rolling_window_tasks: [], baseline_window_tasks: [], current_drift_pct: 0, alert_threshold_pct: 5, baselined_at_phase: null, tasks_since_rebaseline: 0}  # M16 (Phase 12.09) — quality drift instrumentation; three-place contract with STATE.schema.json + STATE-init.template.json
      autopilot: {
