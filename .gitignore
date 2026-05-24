@@ -56,3 +56,8 @@ venv/
 
 # Detector-sensitivity study labs (see detector-review/EXPERIMENT-PROTOCOL.md)
 .lab/
+
+# Ephemeral .apex/ runtime artifacts inside research/lab subdirs
+# (framework's own .apex/ files are listed individually above; this catches
+#  nested .apex/ dirs created by /apex:* runs inside subprojects)
+**/.apex/
