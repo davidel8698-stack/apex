@@ -495,7 +495,13 @@ If hook exit code == 2: snapshot verification failed (filesystem-level).
   If (1): STATE.status = "pending_approval", STOP.
   If (2): log warning to SESSION-LOG.md, continue.
 Else (exit 0): proceed.
-Update STATE: snapshots, circuit_breaker.total_tool_calls_this_task = 0
+Update STATE: snapshots, then atomically reset breaker for new task (via _state_update):
+  .circuit_breaker.total_tool_calls_this_task = 0
+  | .circuit_breaker.cap_extensions_used       = 0
+  | .circuit_breaker.tool_calls_at_last_change = 0
+  | .circuit_breaker.last_warning_threshold    = 0
+  | .circuit_breaker.cap_original              = (.circuit_breaker.cap_original // .circuit_breaker.max_tool_calls_per_task)
+  | .circuit_breaker.max_tool_calls_per_task   = (.circuit_breaker.cap_original // .circuit_breaker.max_tool_calls_per_task)
 
 ## STEP F.5: Test Architecture Review (C/D only) [F-006]
 Read task verify_level from PLAN_META.json.

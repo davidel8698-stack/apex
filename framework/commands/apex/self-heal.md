@@ -57,6 +57,11 @@ APEX_HOOK_SOURCE=self-heal _state_update '
   | .circuit_breaker.last_file_hash = null
   | .circuit_breaker.triggered = false
   | .circuit_breaker.trigger_reason = null
+  | .circuit_breaker.cap_extensions_used = 0
+  | .circuit_breaker.tool_calls_at_last_change = 0
+  | .circuit_breaker.last_warning_threshold = 0
+  | .circuit_breaker.cap_original = (.circuit_breaker.cap_original // .circuit_breaker.max_tool_calls_per_task)
+  | .circuit_breaker.max_tool_calls_per_task = (.circuit_breaker.cap_original // .circuit_breaker.max_tool_calls_per_task)
 '
 ```
 
