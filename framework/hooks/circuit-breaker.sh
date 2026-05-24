@@ -100,65 +100,173 @@ if [ "$CURRENT_HASH" = "$LAST_HASH" ] && [ -n "$LAST_HASH" ]; then
     exit 2
   fi
 else
-  # Files changed — reset no-change counter
-  _state_update --arg hash "$CURRENT_HASH" \
-     '.circuit_breaker.consecutive_no_change_actions = 0 | .circuit_breaker.last_file_hash = $hash | .circuit_breaker.triggered = false' "$STATE_FILE"
+  # Files changed — reset no-change counter. Stamp tool_calls_at_last_change
+  # (v8 CHECK 2 Probe 1) ONLY when git diff is genuinely non-empty — the
+  # empty-diff "empty_<timestamp>" hash trick makes every empty-diff call
+  # look like a change, which would defeat the stagnation probe.
+  if [ -n "$GIT_DIFF_OUTPUT" ]; then
+    CB_TC_NOW=$(jq -r '.circuit_breaker.total_tool_calls_this_task // 0' "$STATE_FILE" 2>/dev/null)
+    case "$CB_TC_NOW" in ''|*[!0-9]*) CB_TC_NOW=0 ;; esac
+    _state_update --arg hash "$CURRENT_HASH" --argjson tc "$CB_TC_NOW" \
+       '.circuit_breaker.consecutive_no_change_actions = 0
+        | .circuit_breaker.last_file_hash = $hash
+        | .circuit_breaker.tool_calls_at_last_change = $tc
+        | .circuit_breaker.triggered = false' "$STATE_FILE"
+  else
+    _state_update --arg hash "$CURRENT_HASH" \
+       '.circuit_breaker.consecutive_no_change_actions = 0
+        | .circuit_breaker.last_file_hash = $hash
+        | .circuit_breaker.triggered = false' "$STATE_FILE"
+  fi
 fi
 
-# === CHECK 2: v7 — Total tool calls per task (prevents token spirals) ===
-# Executor maxTurns = 40. Cap at 80 (2x) to catch spiraling tasks.
-MAX_TOOL_CALLS=$(jq -r '.circuit_breaker.max_tool_calls_per_task // 80' "$STATE_FILE" 2>/dev/null)
+# === CHECK 2: v8 — Health-checkpoint tool-call cap (replaces v7 dumb counter) ===
+# The cap is no longer a ceiling — it is a periodic health checkpoint. When
+# reached, run a probe over CHECK 1/3/4 signals. Healthy → bump cap by 50%
+# of cap_original and continue indefinitely (no extension ceiling).
+# Unhealthy → fire as v7 did, with the specific failing probe in the reason.
+# Stderr warnings at 50/75/90% of current cap (advisory only).
+# Snapshot read + probe done in one jq invocation for atomicity.
 
-# Atomic increment — avoids read-modify-write race condition
+# Atomic increment + snapshot cap_original on first use of this task.
 _state_update \
-   '.circuit_breaker.total_tool_calls_this_task = ((.circuit_breaker.total_tool_calls_this_task // 0) + 1)' "$STATE_FILE"
-TOOL_CALLS=$(jq -r '.circuit_breaker.total_tool_calls_this_task // 0' "$STATE_FILE" 2>/dev/null)
+   '.circuit_breaker.total_tool_calls_this_task = ((.circuit_breaker.total_tool_calls_this_task // 0) + 1)
+    | .circuit_breaker.cap_original = (.circuit_breaker.cap_original // .circuit_breaker.max_tool_calls_per_task // 80)' \
+   "$STATE_FILE"
 
-if [ "$TOOL_CALLS" -ge "$MAX_TOOL_CALLS" ]; then
-  # R5-005 → R5-014: Write structured FIX_PLAN.md via the shared helper
-  # (with RECOVERY_MENU.md alias for backward compat).
-  mkdir -p .apex 2>/dev/null
-  if command -v emit_fix_plan >/dev/null 2>&1; then
-    emit_fix_plan \
-      --also-write-recovery-menu \
-      "circuit-breaker" \
-      "Circuit breaker tripped: TOOL-CALL CAP REACHED. $TOOL_CALLS tool calls on this task (cap: $MAX_TOOL_CALLS). R7: Failed trajectories cost 4x+ more tokens than successful ones." \
-      "Trigger: tool_call_cap (count $TOOL_CALLS, cap $MAX_TOOL_CALLS)" \
-      "/apex:forensics -- diagnose where the trajectory diverged. Use when you want a timeline of the runaway." \
-      "/apex:rollback -- revert recent edits to the last green tag. Use when the task corrupted state you want to discard." \
-      "/apex:recover -- reset and re-plan the unit. Use when you want to keep edits but retry with fresh context." \
-      2>/dev/null || true
-  else
-    # Degraded-install fallback: identical content shape to the helper.
-    {
-      echo "# Recovery Menu"
-      echo ""
-      echo "## Reason"
-      echo "Circuit breaker tripped: TOOL-CALL CAP REACHED."
-      echo "$TOOL_CALLS tool calls on this task (cap: $MAX_TOOL_CALLS). Failed trajectories cost 4x+ more tokens than successful ones."
-      echo ""
-      echo "## Options"
-      echo "- \`/apex:forensics\` — diagnose where the trajectory diverged. Use when you want a timeline of the runaway."
-      echo "- \`/apex:rollback\` — revert recent edits to the last green tag. Use when the task corrupted state you want to discard."
-      echo "- \`/apex:recover\` — reset and re-plan the unit. Use when you want to keep edits but retry with fresh context."
-    } > .apex/RECOVERY_MENU.md 2>/dev/null
+# Single jq read for the probe inputs — race-free.
+CB2_SNAPSHOT=$(jq -r '
+  [
+    (.circuit_breaker.total_tool_calls_this_task // 0),
+    (.circuit_breaker.max_tool_calls_per_task   // 80),
+    (.circuit_breaker.cap_original              // 80),
+    (.circuit_breaker.cap_extensions_used       // 0),
+    (.circuit_breaker.tool_calls_at_last_change // 0),
+    (.circuit_breaker.last_warning_threshold    // 0),
+    ([ .circuit_breaker.recent_error_hashes[]?.hash   ] | group_by(.) | map(length) | max // 0),
+    ([ .circuit_breaker.recent_command_hashes[]?.hash ] | group_by(.) | map(length) | max // 0)
+  ] | @tsv
+' "$STATE_FILE" 2>/dev/null)
+
+IFS=$'\t' read -r TOOL_CALLS SOFT_CAP CAP_ORIGINAL EXT_USED TC_AT_CHANGE LAST_WARN MAX_ERR_COUNT MAX_CMD_COUNT <<<"${CB2_SNAPSHOT:-0	80	80	0	0	0	0	0}"
+for v in TOOL_CALLS SOFT_CAP CAP_ORIGINAL EXT_USED TC_AT_CHANGE MAX_ERR_COUNT MAX_CMD_COUNT; do
+  eval "case \"\${$v:-0}\" in ''|*[!0-9]*) $v=0 ;; esac"
+done
+[ -z "${LAST_WARN:-}" ] && LAST_WARN=0
+
+# --- Escalating stderr warnings (advisory, no block) ---
+cb2_emit_warning() {
+  local pct="$1" frac="$2" need_warn
+  need_warn=$(awk -v tc="$TOOL_CALLS" -v cap="$SOFT_CAP" -v f="$frac" -v lw="$LAST_WARN" \
+    'BEGIN { print ( (tc >= cap*f) && (lw < f) ) ? 1 : 0 }' 2>/dev/null || echo 0)
+  if [ "$need_warn" = "1" ]; then
+    echo "⚠️  CB CHECK 2 (advisory): ${pct}% of cap reached (${TOOL_CALLS}/${SOFT_CAP}). Extensions so far this task: ${EXT_USED}." >&2
+    _state_update --arg f "$frac" '.circuit_breaker.last_warning_threshold = ($f | tonumber)' "$STATE_FILE"
+    LAST_WARN="$frac"
+  fi
+}
+cb2_emit_warning 50  0.5
+cb2_emit_warning 75  0.75
+cb2_emit_warning 90  0.9
+
+# --- Cap reached? Probe + extend-or-fire decision. ---
+if [ "$TOOL_CALLS" -ge "$SOFT_CAP" ]; then
+  HEALTH_OK=1
+  REASON=""
+
+  # Probe 1: files moving in last 50 calls
+  STALE_DELTA=$(( TOOL_CALLS - TC_AT_CHANGE ))
+  if [ "$STALE_DELTA" -gt 50 ]; then
+    HEALTH_OK=0
+    REASON="no file changes in last ${STALE_DELTA} tool calls (stagnant)"
   fi
 
-  {
-    echo "🛑 SAFETY-STOP FIRED (circuit breaker): TOO MANY TOOL CALLS (tool-call cap reached)"
-    echo "   $TOOL_CALLS tool calls on this task (cap: $MAX_TOOL_CALLS)."
-    echo "   R7: Failed trajectories cost 4x+ more tokens than successful ones."
-    echo ""
-    echo "   Fix plan written to: .apex/FIX_PLAN.md (also mirrored to .apex/RECOVERY_MENU.md)"
-    echo ""
-    echo "   Options:"
-    echo "   1. /apex:forensics — diagnose where it went off the rails (timeline reconstruction)"
-    echo "   2. /apex:rollback  — revert recent edits"
-    echo "   3. /apex:recover   — reset and re-plan"
-  } >&2
+  # Probe 2: recurring error (earlier than CHECK 3's own threshold of 5)
+  if [ "$HEALTH_OK" = "1" ] && [ "$MAX_ERR_COUNT" -ge 3 ]; then
+    HEALTH_OK=0
+    REASON="recurring error (same error hash ${MAX_ERR_COUNT} times in last 20 calls)"
+  fi
 
-  _state_update '.circuit_breaker.triggered = true | .circuit_breaker.trigger_reason = "tool_call_cap"' "$STATE_FILE"
-  exit 2
+  # Probe 3: result-fishing
+  if [ "$HEALTH_OK" = "1" ] && [ "$MAX_CMD_COUNT" -ge 5 ]; then
+    HEALTH_OK=0
+    REASON="result-fishing (same tool+args ${MAX_CMD_COUNT} times in last 20 calls)"
+  fi
+
+  FIRE_REASON=""
+  FIRE_MSG=""
+
+  if [ "$HEALTH_OK" = "1" ]; then
+    # Healthy → bump cap by 50% of ORIGINAL and continue. No upper bound on
+    # extensions: as long as the trajectory stays healthy, the task runs.
+    BASIS="$CAP_ORIGINAL"
+    [ "$BASIS" -le 0 ] && BASIS="$SOFT_CAP"
+    EXT_BUMP=$(( BASIS / 2 ))
+    [ "$EXT_BUMP" -lt 1 ] && EXT_BUMP=1
+    NEW_CAP=$(( SOFT_CAP + EXT_BUMP ))
+    NEW_EXT=$(( EXT_USED + 1 ))
+
+    _state_update --argjson nc "$NEW_CAP" --argjson ne "$NEW_EXT" \
+       '.circuit_breaker.max_tool_calls_per_task = $nc
+        | .circuit_breaker.cap_extensions_used   = $ne
+        | .circuit_breaker.last_warning_threshold = 0' "$STATE_FILE"
+
+    mkdir -p .apex 2>/dev/null
+    {
+      printf '[%s] task=%s ext=%d cap=%d->%d basis=%d reason=healthy probes=files_moving,no_recurring_err,no_fishing\n' \
+        "$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo unknown)" \
+        "$(jq -r '.current_task // "unknown"' "$STATE_FILE" 2>/dev/null)" \
+        "$NEW_EXT" "$SOFT_CAP" "$NEW_CAP" "$BASIS"
+    } >> .apex/cb_extensions.log 2>/dev/null || true
+
+    echo "♻️  CB CHECK 2: cap reached but trajectory healthy. Auto-extending ${SOFT_CAP} → ${NEW_CAP} (extension #${NEW_EXT}). Files moving, no recurring errors, no fishing. Will re-check at next cap." >&2
+  else
+    FIRE_REASON="tool_call_cap"
+    FIRE_MSG="Tool-call cap reached AND health probe failed: ${REASON}. Cap=${SOFT_CAP}, calls=${TOOL_CALLS}, extensions so far=${EXT_USED}."
+  fi
+
+  if [ -n "$FIRE_REASON" ]; then
+    mkdir -p .apex 2>/dev/null
+    if command -v emit_fix_plan >/dev/null 2>&1; then
+      emit_fix_plan \
+        --also-write-recovery-menu \
+        "circuit-breaker" \
+        "Circuit breaker tripped: ${FIRE_MSG} R7: Failed trajectories cost 4x+ more tokens than successful ones." \
+        "Trigger: ${FIRE_REASON} (count ${TOOL_CALLS}, cap ${SOFT_CAP}, ext ${EXT_USED})" \
+        "/apex:forensics -- diagnose where the trajectory diverged. Use when you want a timeline of the runaway." \
+        "/apex:rollback -- revert recent edits to the last green tag. Use when the task corrupted state you want to discard." \
+        "/apex:recover -- reset and re-plan the unit. Use when you want to keep edits but retry with fresh context." \
+        2>/dev/null || true
+    else
+      {
+        echo "# Recovery Menu"
+        echo ""
+        echo "## Reason"
+        echo "Circuit breaker tripped: ${FIRE_MSG}"
+        echo ""
+        echo "## Options"
+        echo "- \`/apex:forensics\` — diagnose where the trajectory diverged."
+        echo "- \`/apex:rollback\`  — revert recent edits."
+        echo "- \`/apex:recover\`   — reset and re-plan."
+      } > .apex/RECOVERY_MENU.md 2>/dev/null
+    fi
+
+    {
+      echo "🛑 SAFETY-STOP FIRED (circuit breaker): ${FIRE_REASON}"
+      echo "   ${FIRE_MSG}"
+      echo ""
+      echo "   Fix plan written to: .apex/FIX_PLAN.md (also mirrored to .apex/RECOVERY_MENU.md)"
+      echo ""
+      echo "   Options:"
+      echo "   1. /apex:forensics — diagnose where it went off the rails (timeline reconstruction)"
+      echo "   2. /apex:rollback  — revert recent edits"
+      echo "   3. /apex:recover   — reset and re-plan"
+    } >&2
+
+    _state_update --arg r "$FIRE_REASON" \
+       '.circuit_breaker.triggered = true | .circuit_breaker.trigger_reason = $r' "$STATE_FILE"
+    exit 2
+  fi
 fi
 
 # === CHECK 3: Recurring-error hash (R16-605, F-605, IMP-007) ===
