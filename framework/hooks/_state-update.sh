@@ -241,7 +241,14 @@ _emit_apex_event() {
 
 # B2.2 validator helpers. Return 0 on valid, non-zero on invalid. Tied
 # to schema enum in framework/schemas/EVENT-LOG-ENTRY.schema.json.
-_APEX_EVENT_TYPE_ENUM='tool_call tool_input_hash state_mutation phase_set decision_mode_set complexity_set subagent_start subagent_stop subagent_count_mismatch transcript_imported pre_task_claim pre_task_claim_diff memory_sample turn_checkpoint_set session_event session_auto_resumed auto_pause_requested external_shutdown_requested step_start self_heal_round_start self_heal_round_close self_heal_round_closed self_heal_step self_heal_step_done self_heal_wave self_heal_wave_done self_heal_closed self_heal_loop_close self_heal_loop_closed self_heal wave_done dora.collected dora.ship_delta rotation.decide.evaluated rotation.trigger.unknown log_rotated'
+#
+# The enum is broad-by-design: every type observed in the live
+# framework today is accepted, plus Campaign B's additions
+# (subagent_*, pre_task_claim*, tool_input_hash, log_rotated). Unknown
+# types route to event-log-rejected.jsonl per §5.4 — but the cost of
+# being too STRICT is silently lost events, which is worse than being
+# permissive. Adding a new type = minor schema bump per §5.5.
+_APEX_EVENT_TYPE_ENUM='tool_call tool_input_hash state_mutation phase_set decision_mode_set complexity_set subagent_start subagent_stop subagent_count_mismatch transcript_imported pre_task_claim pre_task_claim_diff memory_sample turn_checkpoint_set session_event session_auto_resumed auto_pause_requested external_shutdown_requested step_start self_heal_round_start self_heal_round_close self_heal_round_closed self_heal_step self_heal_step_done self_heal_wave self_heal_wave_done self_heal_closed self_heal_loop_close self_heal_loop_closed self_heal wave_done dora.collected dora.ship_delta rotation.decide.evaluated rotation.trigger.unknown log_rotated observation.mask.bypassed observation.mask.api_fallback observation.mask.fallback observation.mask.fired observation.mask.stub cognitive_debt.skip quality.baseline.frozen quality.baseline.rebaseline quality_drift snapshot.ok tokens_update module'
 
 _apex_validate_event_line() {
   local line="$1"

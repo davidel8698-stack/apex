@@ -57,7 +57,19 @@
         "dora.ship_delta",
         "rotation.decide.evaluated",
         "rotation.trigger.unknown",
-        "log_rotated"
+        "log_rotated",
+        "observation.mask.bypassed",
+        "observation.mask.api_fallback",
+        "observation.mask.fallback",
+        "observation.mask.fired",
+        "observation.mask.stub",
+        "cognitive_debt.skip",
+        "quality.baseline.frozen",
+        "quality.baseline.rebaseline",
+        "quality_drift",
+        "snapshot.ok",
+        "tokens_update",
+        "module"
       ]
     },
     "source": {
@@ -195,7 +207,12 @@
             "self_heal_loop_close", "self_heal_loop_closed",
             "self_heal", "wave_done", "dora.collected",
             "dora.ship_delta", "rotation.decide.evaluated",
-            "rotation.trigger.unknown", "log_rotated"
+            "rotation.trigger.unknown", "log_rotated",
+            "observation.mask.bypassed", "observation.mask.api_fallback",
+            "observation.mask.fallback", "observation.mask.fired",
+            "observation.mask.stub", "cognitive_debt.skip",
+            "quality.baseline.frozen", "quality.baseline.rebaseline",
+            "quality_drift", "snapshot.ok", "tokens_update", "module"
           ]
         }
       },
