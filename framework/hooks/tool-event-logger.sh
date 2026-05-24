@@ -116,4 +116,35 @@ _emit_apex_event "tool_call" .apex \
   is_error "$IS_ERR" \
   agent_id "$AGENT_ID"
 
+# Campaign B B2.4 (GAP-6 closure): emit a universal tool_input_hash
+# event for EVERY tool call (not only Bash). circuit-breaker.sh's
+# CHECK 4 ring buffer hashes the same canonical string but only fires
+# on the Bash matcher; B2.4 surfaces the same signal across every tool
+# so downstream consumers (round-checker TP-2, critic) can detect
+# repeated identical Reads / Writes / Agent calls via the audit trail
+# rather than relying on the safety-stop heuristic.
+#
+# Canonical-string contract (matches circuit-breaker.sh CHECK 4):
+#   "<tool_name>|<jq -cS tool_input>"  (sorted keys for determinism)
+#
+# Truncation: the first 200 chars of the canonical string are hashed.
+# Long tool_inputs (e.g. multi-MB Read payloads or Agent prompts) would
+# otherwise produce per-call unique hashes that defeat collision
+# detection. The truncation is documented in EXPERIMENT-PROTOCOL.md
+# §13 (universal hashing risk-mitigation).
+TI_CANON=$(printf '%s|%s' "$TN" "$TI_JSON" | head -c 200)
+HASH=""
+if command -v sha1sum >/dev/null 2>&1; then
+  HASH=$(printf '%s' "$TI_CANON" | sha1sum | cut -c1-16)
+elif command -v shasum >/dev/null 2>&1; then
+  HASH=$(printf '%s' "$TI_CANON" | shasum -a 1 | cut -c1-16)
+fi
+if [ -n "$HASH" ]; then
+  _emit_apex_event "tool_input_hash" .apex \
+    tool_name "$TN" \
+    hash_sha1 "$HASH" \
+    truncated_at_chars "200" \
+    agent_id "$AGENT_ID"
+fi
+
 exit 0

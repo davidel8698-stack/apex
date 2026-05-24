@@ -255,11 +255,42 @@ else
 fi
 
 # ----- E. B2.4 universal hashing ------------------------------------------
+# Design note: B2.4 emits `tool_input_hash` from tool-event-logger.sh
+# (PostToolUse matcher `*`) rather than from circuit-breaker.sh
+# (matcher `Bash` only). Same canonical-string contract (CHECK 4 in
+# circuit-breaker.sh) — but universal coverage and zero risk to the
+# breaker's safety semantics. Documented in commit message; consumer
+# code (round-checker TP-2, critic) reads the events from event-log
+# regardless of which hook emitted them.
 
-if grep -qE 'tool_input_hash|hash_(write|edit|read|agent)' "$HOOKS_DIR/circuit-breaker.sh" 2>/dev/null; then
-  ok "E1: circuit-breaker.sh extended to hash Write/Edit/Read/Agent"
+if grep -qE 'tool_input_hash' "$HOOKS_DIR/tool-event-logger.sh" 2>/dev/null; then
+  ok "E1: tool-event-logger.sh emits tool_input_hash on every tool call"
+  # Live demo — emit a Read+identical-Read pair via _emit_apex_event
+  # and assert hash determinism.
+  BOX="$(mk_sandbox)"
+  pushd "$BOX" >/dev/null 2>&1
+  # Simulate two identical Read PostToolUse envelopes through
+  # tool-event-logger.sh by calling its stdin entry directly.
+  ENV='{"tool_name":"Read","tool_input":{"file_path":"/tmp/x.txt"},"tool_response":{},"session_id":"sid-test"}'
+  echo "$ENV" | bash "$HOOKS_DIR/tool-event-logger.sh" >/dev/null 2>&1 || true
+  echo "$ENV" | bash "$HOOKS_DIR/tool-event-logger.sh" >/dev/null 2>&1 || true
+  N=$(grep -c '"type":"tool_input_hash"' .apex/event-log.jsonl 2>/dev/null || echo 0)
+  if [ "$N" -ge 2 ]; then
+    # Determinism: both lines should carry the same hash_sha1.
+    H_UNIQUE=$(grep '"type":"tool_input_hash"' .apex/event-log.jsonl | jq -r '.hash_sha1' 2>/dev/null | sort -u | wc -l | tr -d ' ')
+    if [ "$H_UNIQUE" = "1" ]; then
+      ok "E2: identical Read calls produce identical hash (determinism)"
+    else
+      nope "E2: hash differs across identical Reads — canonicalisation broken"
+    fi
+  else
+    nope "E2: tool_input_hash events not emitted by live demo"
+  fi
+  popd >/dev/null 2>&1
+  rm -rf "$BOX"
 else
   skip "E1: universal hashing pending B2.4"
+  skip "E2: live-demo determinism pending B2.4"
 fi
 
 # ----- F. B2.5 pre-task claims (AC-11) ------------------------------------
