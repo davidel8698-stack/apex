@@ -229,6 +229,42 @@ if [ -n "$AGENT" ]; then
       source_agent_id "$RESOLVED_ID" \
       target_path "$OUT_FILE" \
       entries_count "$TC_COUNT_OBS"
+
+    # Campaign B B2.6 — sub-agent count guard (closes AC-9, GAP-5).
+    # Cross-reference the envelope's claimed tool_calls_count against
+    # the observed tool_call line count in the just-written transcript.
+    # When the delta exceeds the small drift tolerance, emit a P0
+    # `subagent_count_mismatch` event so the orchestrator (round-checker
+    # step 7 / framework-auditor Axis 13) sees the lying sub-agent.
+    #
+    # Drift tolerance (frozen audit-trail-review/EXPERIMENT-PROTOCOL.md
+    # §13): ±2 entries. The tolerance absorbs the transcript-import
+    # race where the final tool_call event from the child might not
+    # yet have flushed to event-log when SubagentStop fires.
+    #
+    # Graceful no-op: claimed=0 AND observed=0 = legitimate noop sub-
+    # agent (e.g. an Explore agent that returned only narrative). The
+    # mismatch fires only when claimed > 0 AND observed << claimed.
+    DRIFT_TOL=2
+    OBS_TC_COUNT=$(grep -c '"type":"tool_call"' "$OUT_FILE" 2>/dev/null | tr -d ' ')
+    [ -z "$OBS_TC_COUNT" ] && OBS_TC_COUNT=0
+    case "$TC_CLAIMED" in ''|*[!0-9]*) TC_CLAIMED=0 ;; esac
+    case "$OBS_TC_COUNT" in ''|*[!0-9]*) OBS_TC_COUNT=0 ;; esac
+    DELTA=$(( TC_CLAIMED - OBS_TC_COUNT ))
+    DELTA_ABS=$DELTA
+    [ "$DELTA_ABS" -lt 0 ] && DELTA_ABS=$(( -DELTA_ABS ))
+    if [ "$TC_CLAIMED" -gt 0 ] && [ "$DELTA_ABS" -gt "$DRIFT_TOL" ]; then
+      _emit_apex_event "subagent_count_mismatch" .apex \
+        agent_name "$AGENT" \
+        agent_id "$RESOLVED_ID" \
+        claimed_count "$TC_CLAIMED" \
+        observed_count "$OBS_TC_COUNT" \
+        delta "$DELTA" \
+        drift_tolerance "$DRIFT_TOL" \
+        severity "P0" \
+        note "lying_subagent_or_transcript_loss"
+      echo "🛑 APEX GUARD (B2.6 count): subagent '${AGENT}' claimed ${TC_CLAIMED} tool calls; observed ${OBS_TC_COUNT} in transcript (delta=${DELTA}, tol=±${DRIFT_TOL}). P0 emitted." >&2
+    fi
   else
     # Graceful path: SubagentStop fired but no matching registry entry
     # (pre-subagent-start.sh was disabled, hook order missed, or
