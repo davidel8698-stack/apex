@@ -172,6 +172,11 @@
         "hooks": [
           { "type": "command", "command": "bash ~/.claude/hooks/tdad-index.sh" }
         ]
+      },
+      {
+        "hooks": [
+          { "type": "command", "command": "bash ~/.claude/hooks/event-log-rotate.sh" }
+        ]
       }
     ],
     "PreCompact": [
