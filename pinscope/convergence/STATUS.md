@@ -3,7 +3,7 @@
 
 > Live dashboard for the PinScope self-healing loop (`PS-R{N}`).
 > **North-Star:** `pinscope/SPEC.md` — version 2.0.0, **FROZEN**.
-> **Loop status:** **CONVERGED** · round 20.
+> **Loop status:** **CONVERGED** · round 21.
 > Generated from `loop.json`. See `LOOP.md` and `CONVERGENCE-REPORT.md`.
 
 ## Convergence metric
@@ -33,6 +33,7 @@
 | PS-R18 | 62 | 69 | 90% |  |
 | PS-R19 | 62 | 69 | 90% |  |
 | PS-R20 | 62 | 69 | 90% |  |
+| PS-R21 | 63 | 69 | 91% |  |
 
 ## Status legend
 
@@ -56,15 +57,15 @@ against the code every round. **Secondary signal — it does NOT affect
 AC convergence.** Candidate ACs are reviewed manually and adopted via a
 user-approved SPEC version bump.
 
-Last scanned: round 20 — **33/52** normative claims AC-covered.
+Last scanned: round 21 — **33/54** normative claims AC-covered.
 
 | Metric | Count |
 |--------|-------|
-| Normative claims | 52 |
+| Normative claims | 54 |
 | AC-covered | 33 |
-| Uncovered | 19 |
-| Candidate ACs (await review) | 19 |
-| Strengthen-AC proposals | 6 |
+| Uncovered | 21 |
+| Candidate ACs (await review) | 21 |
+| Strengthen-AC proposals | 8 |
 
 ## Circuit breaker log
 
@@ -180,6 +181,7 @@ environment. No PinScope code change unblocks them — a capable CI does.
 - **PS-R18** —  62/69 (90%).
 - **PS-R19** —  62/69 (90%).
 - **PS-R20** —  62/69 (90%).
+- **PS-R21** —  63/69 (91%).
 
 ## Loop complete
 

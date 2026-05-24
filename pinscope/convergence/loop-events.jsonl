@@ -59,3 +59,16 @@
 {"at":"2026-05-24T17:45:32.158Z","round":20,"event":"phase:idle","note":null}
 {"at":"2026-05-24T18:34:56.959Z","round":20,"event":"phase:audit","note":null}
 {"at":"2026-05-24T18:35:44.614Z","round":20,"event":"phase:idle","note":null}
+{"at":"2026-05-24T19:25:30.980Z","round":20,"event":"phase:audit","note":null}
+{"at":"2026-05-24T19:47:12.237Z","round":21,"event":"phase:record","note":null}
+{"at":"2026-05-24T19:47:12.490Z","round":21,"event":"phase:breaker","note":null}
+{"at":"2026-05-24T19:48:11.569Z","round":21,"event":"phase:remediate","note":null}
+{"at":"2026-05-24T20:00:13.058Z","round":21,"event":"phase:schedule","note":null}
+{"at":"2026-05-24T20:06:40.691Z","round":21,"event":"phase:wave","note":null}
+{"at":"2026-05-24T20:07:05.109Z","round":21,"event":"spawn:ps-wave-executor","note":"wave 1"}
+{"at":"2026-05-24T20:25:26.239Z","round":21,"event":"spawn:ps-wave-executor","note":"wave 2"}
+{"at":"2026-05-24T20:44:05.254Z","round":21,"event":"spawn:ps-wave-executor","note":"wave 3"}
+{"at":"2026-05-24T21:01:41.735Z","round":21,"event":"spawn:ps-wave-executor","note":"wave 4"}
+{"at":"2026-05-24T21:13:29.148Z","round":21,"event":"phase:verify","note":null}
+{"at":"2026-05-24T21:26:09.471Z","round":21,"event":"phase:close","note":null}
+{"at":"2026-05-24T21:29:08.270Z","round":21,"event":"phase:idle","note":null}

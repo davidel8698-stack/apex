@@ -1,0 +1,45 @@
+{
+  "round": 21,
+  "generated_at": "2026-05-24T21:14:02.765Z",
+  "files": [
+    {
+      "file": "pinscope/src/runtime/PinScope.tsx",
+      "mutants_run": 5,
+      "killed": 5,
+      "survived": []
+    },
+    {
+      "file": "pinscope/src/runtime/components/InfoPanel.tsx",
+      "mutants_run": 5,
+      "killed": 4,
+      "survived": [
+        {
+          "id": "M2",
+          "rule": "false-to-true",
+          "line": 22,
+          "original": "if (typeof localStorage === 'undefined') return false;",
+          "mutated": "if (typeof localStorage === 'undefined') return true;"
+        }
+      ]
+    },
+    {
+      "file": "pinscope/src/runtime/hooks/useHoveredElement.ts",
+      "mutants_run": 2,
+      "killed": 1,
+      "survived": [
+        {
+          "id": "M1",
+          "rule": "or-to-and",
+          "line": 51,
+          "original": "if (!pinned || !pinId) {",
+          "mutated": "if (!pinned && !pinId) {"
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "mutants": 12,
+    "killed": 10,
+    "survived": 2
+  }
+}

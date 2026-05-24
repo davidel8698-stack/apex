@@ -1,0 +1,91 @@
+{
+  "round": 21,
+  "generated_at": "2026-05-24T22:35:00Z",
+  "findings": [],
+  "investigation_findings": [
+    {
+      "id": "F-21-01",
+      "axis": "9 — Edge cases / dormant mechanism (touch tap/long-press + responsive-collapse)",
+      "confidence": "CONFIRMED",
+      "severity": "P2",
+      "current_state": "src/runtime/utils/long-press.ts implements LongPressDetector (tap vs long-press @ LONG_PRESS_MS=500), isCompactViewport(width), and MOBILE_BREAKPOINT=768 — all unit-tested by tests/unit/long-press.test.ts (AC-064 PASS, 3 tests). But src/runtime/PinScope.tsx and every src/runtime/components/*.tsx file have ZERO touchstart/touchend handlers, never construct a LongPressDetector, and never read isCompactViewport. In the shipped <PinScope/>: a touch tap does NOT select, a long-press does NOT lock, and viewports < 768px do NOT collapse the HUD — every behavior named in SPEC §12 and AC-064 is absent end-to-end.",
+      "gap": "SPEC §12 ('mobile/touch (tap=select, long-press=lock, HUD collapsible < 768px)') and AC-064 ('touch: tap selects, long-press (500ms) locks; HUD collapses below 768px') require these to be live in the running HUD. The utility exists but is dead code from the runtime tree's perspective — identical false-PASS pattern to F-20-01 (VoidBadges) and F-20-02 (RuntimePinObserver) closed last round. AC-064 PASSES because the verify is a vitest-tag on long-press.test.ts that constructs LongPressDetector directly; the assembled HUD is never exercised.",
+      "re_read": "grep -rn 'LongPressDetector|isCompactViewport|MOBILE_BREAKPOINT|long-press' src/runtime/ -> sole hits are inside src/runtime/utils/long-press.ts itself; zero importer in src/runtime/. grep -rn 'touchstart|touchend|onTouch' src/runtime/ -> ZERO matches (no touch wiring anywhere in the runtime). grep -rn 'long-press' tests/ -> only tests/unit/long-press.test.ts (which constructs the detector directly, not via <PinScope/>). Confirmed by full read of src/runtime/PinScope.tsx (353 lines): no touch event listener registered, no LongPressDetector import, no responsive-collapse branch."
+    },
+    {
+      "id": "F-21-02",
+      "axis": "9 — Edge cases / dormant mechanism (Shadow-DOM host marking)",
+      "confidence": "CONFIRMED",
+      "severity": "P2",
+      "current_state": "src/runtime/utils/shadow-dom.ts exports markShadowHosts(root) which sweeps the DOM and stamps every Shadow-DOM host with data-pin-shadow, plus isShadowHost(el). tests/unit/runtime/edge-cases.test.ts (AC-060 PASS, 2 tests) calls markShadowHosts(document) directly. But src/runtime/PinScope.tsx never imports markShadowHosts and never calls it — no useEffect that sweeps for Shadow-DOM hosts on mount, no MutationObserver re-sweep on dynamic content. In the shipped <PinScope/>, a host page that mounts a Shadow-DOM element never receives the data-pin-shadow attribute, so InfoPanel cannot report 'limited inspection' as SPEC §12 requires.",
+      "gap": "SPEC §12 ('Shadow DOM (mark data-pin-shadow, limited inspection)') and AC-060 ('Shadow DOM hosts are marked data-pin-shadow and InfoPanel reports limited inspection') require the host-marking to happen end-to-end in the running HUD. The utility exists but is dead code from the runtime's perspective. AC-060 PASSES via direct utility call in the unit test, masking the missing runtime invocation — same false-PASS pattern as F-20-02 closed last round.",
+      "re_read": "grep -rn 'markShadowHosts|SHADOW_ATTR|shadow-dom' src/runtime/ -> sole hits are inside src/runtime/utils/shadow-dom.ts itself; no src/ consumer. grep -rn 'markShadowHosts' tests/ -> only tests/unit/runtime/edge-cases.test.ts (line 48,57) calls it directly. Read src/runtime/PinScope.tsx fully (353 lines): the only useEffect is the queueMicrotask-deferred RuntimePinObserver setup; no shadow-host sweep, no markShadowHosts import."
+    },
+    {
+      "id": "F-21-03",
+      "axis": "10 — Performance / dormant mechanism (heavy-page throttle + skip-small-badge)",
+      "confidence": "CONFIRMED",
+      "severity": "P3",
+      "current_state": "src/runtime/utils/throttle.ts defines isHeavyPage(pinCount) (>500), shouldSkipBadge(w,h) (<16px), HEAVY_PAGE_THRESHOLD=500, HEAVY_PAGE_INTERVAL_MS=33 (~30fps), and a leading+trailing throttle() — all unit-tested under AC-065 (PASS, 3 tests). But the real hover path in src/runtime/hooks/useHoveredElement.ts uses ONLY requestAnimationFrame (~60fps) — it never reads isHeavyPage(documentPinCount) and never switches to the 30fps throttle on heavy pages. src/runtime/components/PinBadges.tsx is the CSS-::before path that renders for ALL pin badges regardless of size; it never reads shouldSkipBadge — so <16×16 badges are not skipped on heavy pages either.",
+      "gap": "SPEC §12 ('many elements (throttle to 30fps > 500 elements, skip badges < 16×16, data-pin-ignore opt-out)') and AC-065 ('with > 500 pinned elements, mousemove handling throttles to 30fps and badges < 16×16px are skipped') require BOTH the throttle-on-heavy-page and the skip-small-badge to be live in the running HUD. The functions exist but are not wired — same false-PASS pattern as F-20-01/02. P3 (not P2) because AC-065 is itself P2-severity, and the real-world effect (60fps hover on a 600-pin page) is a graceful-degradation gap rather than a broken capability; the data-pin-ignore opt-out IS honored by the AST transform.",
+      "re_read": "grep -rn 'isHeavyPage|shouldSkipBadge|HEAVY_PAGE_THRESHOLD|HEAVY_PAGE_INTERVAL_MS' src/ -> sole hits are inside src/runtime/utils/throttle.ts itself; ZERO src/ consumer. grep -rn 'throttle\\(|import.*throttle' src/ -> ZERO matches (the throttle() function is never imported by any other src/ module). Read src/runtime/hooks/useHoveredElement.ts fully (54 lines): only requestAnimationFrame is used; no isHeavyPage gate, no 30fps switch. Read src/runtime/components/PinBadges.tsx — pure CSS-::before, no per-element size check."
+    },
+    {
+      "id": "F-21-04",
+      "axis": "9 — Edge cases / dormant mechanism (cross-origin iframe outline overlay)",
+      "confidence": "SUSPECTED",
+      "severity": "P3",
+      "current_state": "src/runtime/utils/iframe-overlay.ts implements markCrossOriginFrames(root) (sweeps <iframe>s and draws a dashed outline + label overlay for cross-origin frames), isCrossOriginFrame, isIframeLimited — all unit-tested in tests/unit/runtime/iframe-overlay.test.ts. But src/runtime/PinScope.tsx never calls markCrossOriginFrames — there is no useEffect that scans for iframes on mount and no MutationObserver re-sweep on dynamic iframe insertion. In the shipped <PinScope/>, cross-origin iframes are NOT outlined-and-labeled.",
+      "gap": "SPEC §12 ('iframes (same-origin inject, cross-origin outline only)') and AC-061 ('cross-origin iframes render an outline + label only (no injection)') require the overlay to be live in the running HUD. SUSPECTED (not CONFIRMED) and P3 because AC-061 itself is env=browser BLOCKED (cannot be machine-verified without two real origins), the AC's own severity is P3, AND the implementation IS sound — the wiring gap mirrors F-21-01/02 but is masked by the env block rather than by a unit test. Recorded for planner visibility; should be folded into any future R-item that addresses F-21-01 or F-21-02 (a single PinScope.tsx useEffect could sweep all three: shadow hosts + cross-origin iframes + responsive collapse).",
+      "re_read": "grep -rn 'markCrossOriginFrames|isCrossOriginFrame|isIframeLimited|IFRAME_ATTR|iframe-overlay' src/ -> sole hits are inside src/runtime/utils/iframe-overlay.ts itself; no src/ consumer. Read src/runtime/PinScope.tsx fully — no iframe-overlay import, no markCrossOriginFrames call, no useEffect sweeping iframes."
+    }
+  ],
+  "blocked": [
+    { "ac": "AC-023", "severity": "P0", "reason": "verify env 'browser' unavailable (env-capabilities.browser=false) — Playwright ::before content read needs a browser engine; closeable only on a capable CI." },
+    { "ac": "AC-030", "severity": "P1", "reason": "verify env 'browser' unavailable — Playwright InfoPanel hover assertion needs a browser engine." },
+    { "ac": "AC-061", "severity": "P3", "reason": "verify kind 'manual' / env 'browser' — cross-origin iframe needs two real origins + a browser. (See investigation F-21-04: implementation is also unwired in <PinScope/>, but the AC itself is env-only.)" },
+    { "ac": "AC-063", "severity": "P3", "reason": "verify kind 'manual' / env 'browser' — @media print rendering needs a browser print engine." },
+    { "ac": "AC-082", "severity": "P1", "reason": "verify kind 'manual' / env 'browser' — Playwright integration suite, browser binary unavailable." },
+    { "ac": "AC-083", "severity": "P3", "reason": "verify kind 'manual' / env 'browser' — visual-regression screenshots need a browser." }
+  ],
+  "coverage": {
+    "axes_swept": [
+      "1 — Build pipeline (plugin enforce:'pre', transformJSX, excludeTags + data-pin-ignore, filePattern/excludePattern; AC-001..013 all PASS; production rebuild + grep over examples/vite-react/dist returns 0 pinscope tokens)",
+      "2 — Pin-ID stability (stable_key=file:line:column, getOrAssign monotonic + no-reuse, reconcile soft-delete; pin-map.ts re-read clean)",
+      "3 — Production-zero (rebuilt examples/vite-react/dist — index.html and assets/index-9fjr-cn8.js both grep 0 for data-pin|PinScope|pinscope; AC-010 + AC-074 confirmed)",
+      "4 — Runtime isolation (createPortal to document.body under data-pinscope-ui=root; z-index constants; PinScope.tsx 324-352 wrapper unchanged)",
+      "5 — Inspection layer (useHoveredElement rAF + escapeHud; InfoPanel; PinBadges CSS-::before; VoidBadges JS-overlay) — R20's F-20-01 fix (VoidBadges mounted in PinScopeHud:330) verified live in the createPortal tree; pinsVisible gate at line 329-330 confirms Shift+P toggles BOTH layers",
+      "6 — Measurement layer (Rulers, Crosshair enabled-prop wired via R-20-03, GridOverlay 4 modes + cycle order, MeasurementTool); Crosshair.tsx full read shows `enabled` defaults true with R20 doc comment",
+      "7 — Operation protocol (parseCommand all §11 grammar forms + typed OperationParseError; CommandBar onKey wires Cmd+K/'/'/Esc/Tab/Enter/ArrowUp/ArrowDown); R-20-05 added 2 CommandBar Enter tests (snapshot foo + measure e_2 to e_3) — both green",
+      "8 — Data schemas (Operation/Snapshot/History match §9; 32 TRACKED_STYLES; buildOperation request_type='operation'|'diagnostic'); annotation request_type still never emitted but §10-E is non-normative and no AC requires it (R-20-04 Resolution stands)",
+      "9 — Edge cases (shadow-dom, iframe-overlay, long-press, rect-math, throttle utils all present) — DEFICITS FOUND: long-press never wired (F-21-01 CONFIRMED P2), shadow-dom never wired (F-21-02 CONFIRMED P2), iframe-overlay never wired (F-21-04 SUSPECTED P3)",
+      "10 — Performance budgets (npm run size exit 0; AC-070..076 all PASS; html2canvas dynamic import verified) — DEFICIT: heavy-page throttle + skip-small-badge never wired into useHoveredElement/PinBadges (F-21-03 CONFIRMED P3)",
+      "11 — Integration surface (Vite plugin live; package.json exports map .|/vite|/runtime|/next|/webpack; tests/unit/deployment.test.ts now PASSES all 10 cases via subprocess-import — AC-090 R21 fix verified)",
+      "12 — Phase DoD (P1-P5 DoD ACs all PASS or BLOCKED-by-env; build+typecheck+309 unit tests green — +6 from R20's 303)"
+    ],
+    "sections_reviewed": [
+      "§3 System Architecture", "§4 Technical Stack", "§5 File Structure",
+      "§6 Build-Time Module", "§7 Runtime Module", "§8 Component Specs",
+      "§9 Data Schemas", "§10 Behavioral Flows", "§11 Operation Protocol",
+      "§12 Edge Cases", "§13 Performance", "§14 Testing Strategy",
+      "§15 Deployment", "§16 Phase Plan/DoD", "§17 APEX Integration",
+      "§18 Resolved Inconsistencies", "Appendix A (69 ACs)", "Appendix B (loop contract)"
+    ],
+    "notes": [
+      "STEP 1 (re-confirm): ac-results-R21.json reports 62 PASS / 6 UNAVAILABLE / 1 MANUAL / 0 FAIL. There are no machine FAILs to re-confirm. The 1 MANUAL (AC-106) is already CLOSED in loop.json.criteria['AC-106'].manual_attestation (provenance trail intact). Independently re-ran every env-capable verify: npm test -> 30 files / 309 tests pass; npm run build -> exit 0; npm run typecheck -> implied by AC-084 PASS; production rebuild of examples/vite-react -> grep over dist returns 0 (index.html: 0, assets/index-9fjr-cn8.js: 0). All R21 machine PASS verdicts independently reproduced. The 3 R20 carry-forward fixes (AC-104 matrix path, AC-090 spawnSync, AC-106 framework-sync) all hold.",
+      "STEP 4 (regression scan): every AC the loop previously recorded CLOSED still shows PASS (or in AC-106's case, CLOSED-via-attestation). Verdict-for-verdict the ac-results-R21.json verdicts match the closed_round=20 provenance in loop.json. Zero regressions.",
+      "STEP 5 (free investigation): the R20 closure already executed the R-20-01/02/03 HUD-wiring fixes (VoidBadges + RuntimePinObserver + Shift+P/C). R21's sweep confirms those 3 wirings are LIVE in PinScope.tsx. F-21-01..03 are FOUR NEW dormant-mechanism findings of the SAME pattern (component/utility exists, unit-tests directly construct it, AC PASSES on isolation, but the assembled <PinScope/> HUD never invokes it). The pattern is now traceable across rounds: R18-R19 missed all 7 (3 closed in R20 + 4 still open here). The continued false-PASS exposure is the principal anti-pattern this auditor warns of and is a planner-level prompt: future R-items in this class should batch into ONE PinScope.tsx useEffect that mounts long-press touch listeners, sweeps shadow-hosts, sweeps cross-origin iframes, gates throttle on isHeavyPage, all driven by the same lifecycle as R-20-02's RuntimePinObserver.",
+      "AC-070 timing-flake watchlist (R21 closure note): ac-verify reports AC-070 PASS this run (perf.test.tsx line 22-23 — single render measure against 50ms budget). Implementation IS sound: PinScope.tsx:177-191 defers RuntimePinObserver setup via queueMicrotask so the synchronous mount path stays under budget; the perf test warms once then measures the steady-state mount. R20 closure logged one transient FAIL under heavy concurrent load. Not classified a finding: a single sample under jsdom + machine-load variance is not falsifiable evidence of a code defect, and our R21 run passes it. Carried to the watchlist; would warrant a P3 follow-up R-item only if failure rate exceeds ~10% across 10 sampled runs (R21 closure rule). NOT escalated to investigation_findings.",
+      "annotation request_type / §10-E flow (carry from F-20-04, R20 Resolution): grep -rn 'request_type' src/ -> still only 'operation' (operation-builder.ts:52) and 'diagnostic' (:93); 'annotation' literal never emitted. captureScreenshot (screenshot.ts:14) still has no src/runtime/ caller. R20 closed this as Resolution: §10-E is non-normative prose, no Appendix-A AC requires the third request_type or a screenshot/annotation modal. The R20 verdict stands — NOT re-recorded as a finding this round. Noted for blind-spot continuity only.",
+      "§5 file-structure utils not implemented (non-finding): SPEC §5 file-structure prose names src/runtime/utils/color-utils.ts, selector-generator.ts, style-formatter.ts — none exist on disk. §5 is structural prose, no AC reduces it to a falsifiable check, so this is not a gap. Recorded for blind-spot continuity, consistent with R19/R20 narrative coverage (sections_reviewed includes §5 confirmation).",
+      "Next.js withPinScope + PinScopeWebpackPlugin still carry data-pin-loader-deferred comments. NOT a finding (consistent with R20 note): §18 I-1 scopes them P4/P5, AC-092 requires only that they 'are importable and return valid config objects' — AC-092 PASS, deployment.test.ts:56-79 verifies."
+    ]
+  },
+  "summary": {
+    "open": 0,
+    "blocked": 6,
+    "regressions": 0,
+    "confirmed": 3,
+    "suspected": 1
+  }
+}
