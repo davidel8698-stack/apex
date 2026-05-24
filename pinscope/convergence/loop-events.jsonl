@@ -72,3 +72,7 @@
 {"at":"2026-05-24T21:13:29.148Z","round":21,"event":"phase:verify","note":null}
 {"at":"2026-05-24T21:26:09.471Z","round":21,"event":"phase:close","note":null}
 {"at":"2026-05-24T21:29:08.270Z","round":21,"event":"phase:idle","note":null}
+{"at":"2026-05-24T21:33:25.286Z","round":21,"event":"phase:audit","note":null}
+{"at":"2026-05-24T21:49:42.209Z","round":22,"event":"phase:record","note":null}
+{"at":"2026-05-24T21:49:42.346Z","round":22,"event":"phase:breaker","note":null}
+{"at":"2026-05-24T21:50:52.639Z","round":22,"event":"phase:idle","note":null}

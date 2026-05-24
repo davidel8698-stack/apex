@@ -1,0 +1,64 @@
+{
+  "round": 22,
+  "generated_at": "2026-05-25T00:00:00Z",
+  "findings": [],
+  "investigation_findings": [
+    {
+      "id": "F-22-01",
+      "axis": "9 — Edge cases / hollow-interaction (compact-viewport FloatingToggle no-op)",
+      "confidence": "SUSPECTED",
+      "severity": "P3",
+      "current_state": "R-21-01 (PinScope.tsx:433-446) added a compact-viewport branch that collapses the HUD to `<FloatingToggle onShow={() => setHudVisible(true)} />` when `isCompactViewport(viewport.width)` returns true. The accompanying comment (L435) promises 'the user can re-expand by tapping it'. But `hudVisible` defaults to `true` (L162) and the compact-viewport check fires BEFORE the `!hudVisible` check (order is: hidden-first L424, then compact L439), so on a small viewport the user lands on the compact branch with `hudVisible === true`. Tapping the FloatingToggle calls `setHudVisible(true)` — a no-op because `hudVisible` is already true. The compact branch re-renders, the toggle stays, and there is no way for the user to expand the HUD on a sub-768px viewport. The transition reverses correctly only on window-width change (verified by R-21-01 test 3, which resizes back to 1280px); a real mobile user has no `resize` event available.",
+      "gap": "SPEC §12 wording 'HUD collapsible < 768px' is borderline-normative: `collapsible` literally implies the user can toggle the collapse, and the R-21-01 inline comment explicitly promises 'the user can re-expand by tapping it'. The implementation only collapses; the re-expand interaction is hollow. AC-064's verify (the R-21-01 test 3) only exercises the resize-driven round trip (innerWidth=600 collapses, innerWidth=1280 re-expands), so the tap-to-expand promise is not witnessed. P3 (not P2) because AC-064 itself is P2-severity and the SPEC's 'collapsible' wording does not strictly require a user-driven re-expand on a compact viewport — interpretation-dependent. SUSPECTED (not CONFIRMED) because reasonable readers can argue 'collapsible' just means 'collapses automatically below 768px'; recorded for planner visibility per STEP 5's 'do not filter early'.",
+      "re_read": "Read pinscope/src/runtime/PinScope.tsx — L162 `const [hudVisible, setHudVisible] = useState(true);` confirms default true. L424-431 `if (!hudVisible)` branch returns toggle with `onShow={() => setHudVisible(true)}`. L439-446 `if (isCompactViewport(viewport.width))` branch returns toggle with the SAME `onShow={() => setHudVisible(true)}`. L435 inline comment claims 'so the user can re-expand by tapping it'. grep -n 'setHudVisible' src/runtime/PinScope.tsx -> 4 hits (L162 declare, L400 toggle-hud shortcut, L427 hidden-branch toggle, L442 compact-branch toggle). Verify the inert path: on compact (viewport.width < 768), `setHudVisible(true)` cannot change `hudVisible` because it is already `true` (React bails on identical state, the compact branch re-renders the same toggle). Tested at tests/unit/runtime/pinscope.test.tsx:567-615 (R-21-01 test 3) — the test only asserts the resize-driven round trip, never simulates a tap on the compact-mode toggle expecting expand."
+    }
+  ],
+  "blocked": [
+    { "ac": "AC-023", "severity": "P0", "reason": "verify env 'browser' unavailable (env-capabilities.browser=false) — Playwright ::before content read needs a browser engine; closeable only on a capable CI." },
+    { "ac": "AC-030", "severity": "P1", "reason": "verify env 'browser' unavailable — Playwright InfoPanel hover assertion needs a browser engine." },
+    { "ac": "AC-061", "severity": "P3", "reason": "verify kind 'manual' / env 'browser' — cross-origin iframe needs two real origins + a browser. (R-21-04 carry-forward: the helper markCrossOriginFrames is fully tested but not wired into PinScope.tsx; closed as Resolution last round, AC remains env-blocked.)" },
+    { "ac": "AC-063", "severity": "P3", "reason": "verify kind 'manual' / env 'browser' — @media print rendering needs a browser print engine." },
+    { "ac": "AC-082", "severity": "P1", "reason": "verify kind 'manual' / env 'browser' — Playwright integration suite, browser binary unavailable." },
+    { "ac": "AC-083", "severity": "P3", "reason": "verify kind 'manual' / env 'browser' — visual-regression screenshots need a browser." }
+  ],
+  "coverage": {
+    "axes_swept": [
+      "1 — Build pipeline (AC-001..013 all PASS in ac-results-R22.json; production rebuild + grep over examples/vite-react/dist returns 0 pinscope tokens; transformJSX, excludeTags, data-pin-ignore, filePattern/excludePattern all verified by ≥1 vitest test each).",
+      "2 — Pin-ID stability (stable_key=file:line:column, getOrAssign monotonic + no-reuse via AC-005/007/008; pin-map.ts re-read clean; PinMap.reconcile soft-delete unchanged from R21).",
+      "3 — Production-zero (ac-results-R22 reports AC-010 and AC-074 both '0 files match'; build-grep over rebuilt dist confirms zero tokens — PinScope still ships zero bytes to production).",
+      "4 — Runtime isolation (createPortal to document.body under data-pinscope-ui=root; L448-482 of PinScope.tsx unchanged from R21; z-index constants intact).",
+      "5 — Inspection layer (useHoveredElement rAF + escapeHud + R-21-03 heavy-page gate now live; InfoPanel with R-21-02 shadow-limited row at L150,157; PinBadges CSS-::before + VoidBadges JS-overlay both gated on pinsVisible at L453-454).",
+      "6 — Measurement layer (Rulers, Crosshair with `enabled` prop at L466, GridOverlay 4 modes + cycle order, MeasurementTool gated on `measuring`; nothing changed in R21 beyond what was already verified in R20 closure).",
+      "7 — Operation protocol (parseCommand grammar + typed errors; CommandBar Cmd+K/'/'/Esc/Tab/Enter handled in its own onKeyDown at CommandBar.tsx:71-142; pre-R21 wiring untouched).",
+      "8 — Data schemas (Operation/Snapshot/History match §9; AC-052/AC-042/AC-053 PASS; annotation request_type still not emitted but §10-E is non-normative per R20 Resolution).",
+      "9 — Edge cases (R-21-01 long-press + touch wired at PinScope.tsx:272-303; R-21-02 markShadowHosts wired in useEffect L203-220; R-21-03 skip-small-badge sweep L231-257. R-21-04 iframe-overlay remains unwired by Resolution — F-21-04 carry-forward. NEW SUSPECTED FINDING F-22-01: compact-viewport FloatingToggle onClick is inert — promised 're-expand by tapping' not delivered).",
+      "10 — Performance budgets (AC-070..076 all PASS; R-21-03 heavy-page throttle now in useHoveredElement; skip-small-badge sweep idempotent and non-attribute-mutating so the R-21-02 MutationObserver does not infinite-loop on its own attribute writes).",
+      "11 — Integration surface (Vite plugin live; package.json exports map verified by AC-090 (7 tests PASS); deployment.test.ts subprocess-import unchanged).",
+      "12 — Phase DoD (P1-P5 DoD ACs all PASS or BLOCKED-by-env; 316 unit tests green per VERIFY-R21 — harness diff over R21 window shows zero config files touched)."
+    ],
+    "sections_reviewed": [
+      "§3 System Architecture", "§4 Technical Stack", "§5 File Structure",
+      "§6 Build-Time Module", "§7 Runtime Module", "§8 Component Specs",
+      "§9 Data Schemas", "§10 Behavioral Flows", "§11 Operation Protocol",
+      "§12 Edge Cases", "§13 Performance", "§14 Testing Strategy",
+      "§15 Deployment", "§16 Phase Plan/DoD", "§17 APEX Integration",
+      "§18 Resolved Inconsistencies", "Appendix A (69 ACs)", "Appendix B (loop contract)"
+    ],
+    "notes": [
+      "STEP 1 (re-confirm): ac-results-R22.json reports 62 PASS / 6 UNAVAILABLE / 1 MANUAL / 0 FAIL. ZERO machine FAILs to re-confirm. AC-106 MANUAL already CLOSED via loop.json.criteria['AC-106'].manual_attestation (R20 attestation provenance intact, R21 verification carried forward, R22 ac-results still reports MANUAL — loop status records CLOSED). All 62 PASS verdicts independently consistent with VERIFY-R21's clean-room re-run of 316/316 green.",
+      "STEP 4 (regression scan): every AC the loop previously recorded CLOSED still appears PASS in ac-results-R22.json (or MANUAL/CLOSED in AC-106's case). Verdict-for-verdict match against the closed_round=20/21 provenance in loop.json. Zero regressions.",
+      "STEP 5 (free investigation): the three R21 integrations (Shadow-DOM marker, heavy-page throttle, touch listeners + responsive collapse) are all LIVE in PinScope.tsx — grep + read confirms each useEffect mounts and registers cleanups. The iframe-overlay refutation (F-21-04) holds: still no src/ consumer of markCrossOriginFrames; AC-061 remains env=browser BLOCKED. ONE NEW SUSPECTED FINDING (F-22-01) — the R-21-01 compact-viewport branch mounts a FloatingToggle whose onShow handler is functionally inert (setHudVisible(true) when hudVisible is already true) — the inline comment promises a re-expand interaction the code does not deliver. R21 test only verifies the resize-driven transition. P3 because AC-064's 'collapsible' wording is borderline-normative and the SPEC does not strictly require a user-driven re-expand path.",
+      "Other potential dormant-mechanism scan: long-press.ts `Gesture` type — computed by detector.end() and discarded in PinScope.tsx (both tap and long-press route to selectPin(pinId), locking via SelectionManager.select(locked=true)). Per R-21-01 plan this is intentional (the lock semantic is identical for both gestures); NOT a finding. shortcuts table `command`/`escape` ShortcutIds — defined in SHORTCUTS but not bound in PinScope.tsx's useKeyboardShortcuts handlers; consumed instead by CommandBar.tsx (Cmd+K + Escape on input) and useSelectedElement (Escape clear) — pre-existing pattern (predates R21), NOT a new finding. iframe-overlay.ts IFRAME_OVERLAY_ATTR constant — exported but unimported outside the file; carry-forward of F-21-04 (Resolution stands).",
+      "R-21-02 + R-21-03 MutationObserver loop-safety: both useEffects observe {subtree:true, childList:true} (NOT attributes:true) and their sweeps call setAttribute on data-pin-shadow / data-pin-skipbadge — attribute mutations do not re-fire the observers. Both functions are idempotent (setting an already-set attribute is a no-op). Empirically corroborated by VERIFY-R21's 316/316 green test run.",
+      "Pre-R21 mutation survivors investigation (R22 watchlist from VERIFY-R21 Notes §1): InfoPanel.tsx:22 `typeof localStorage === 'undefined'` SSR-guard branch — survives because no test asserts the `false` return in the SSR branch. This IS a test-coverage gap (the SSR branch is reachable only under SSR or node without happy-dom localStorage shim; the production branch returns the localStorage read result). Not a code defect — the guard's semantics are correct; mutating return false → return true would silently break SSR but no test catches it. NOT a CONFIRMED finding because the runtime behavior is correct under all observed envs; an intentional coverage margin. useHoveredElement.ts:51 `if (!pinned || !pinId)` — the OR vs AND mutation survives because the existing test exercises only the both-null case, not the XOR cases (pinned && !pinId or !pinned && pinId). The OR semantics ARE correct (returning early on either-null prevents calling setHovered({ ... pinId: null })), and the XOR cases are unreachable in practice — findPinnedAncestor only returns an HTMLElement carrying data-pin, so pinId is guaranteed non-null when pinned is non-null. Both cases are coverage-margins, not code defects; per VERIFY-R21's instruction NOT to auto-flag, NOT recorded as R22 findings.",
+      "AC-070 timing-flake watchlist: no flake observed in R22's ac-verify run (AC-070 reports `1 AC-070 tests pass`). The R-20-02 queueMicrotask deferral plus R-21-01/02/03 lightweight effects keep mount under 50ms. Carry forward to R23 watchlist only if flake re-emerges."
+    ]
+  },
+  "summary": {
+    "open": 0,
+    "blocked": 6,
+    "regressions": 0,
+    "confirmed": 0,
+    "suspected": 1
+  }
+}
