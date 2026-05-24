@@ -37,6 +37,34 @@ For each task in PLAN_META.json:
   Run verify_commands from JSON (not from parsing XML) [שיפור 21]
   Compare output against done_criteria from JSON
 
+STEP 1 (cont.): INDEPENDENT FILE-LIST CROSS-REFERENCE [Campaign B TP-3]
+
+For each task with a matching *-RESULT.json:
+  1. Read claimed_paths = (sort -u) of RESULT.json.files_modified[].path.
+  2. Independently compute observed_paths via:
+       git -C <repo_root> diff <task_start_sha>..HEAD --name-only \
+         | sort -u
+     (task_start_sha is captured by pre-task-snapshot.sh R16-602S in
+     .apex/phases/<phase>/<task_id>/task_start_sha; fall back to
+     HEAD~1 when absent.)
+  3. Compute set differences:
+     omitted = observed_paths - claimed_paths
+     phantom = claimed_paths - observed_paths
+  4. If omitted is non-empty: emit P0 finding `files_modified_omission`
+     listing each omitted path. Executor silently touched files outside
+     its declared scope.
+  5. If phantom is non-empty: emit P0 finding `phantom_file_claim`
+     listing each phantom path. Executor claimed paths the diff does
+     not corroborate.
+  6. VERIFY.md verdict: FAIL on either non-empty set. (The existing
+     STEP 6 scope-reduction check covers MISSING tasks; this substep
+     covers FILE-level scope-evasion within a task that does have a
+     RESULT.)
+
+Skip path: if RESULT.json.files_modified is absent (e.g. refusal
+RESULT with empty array per executor STEP 0.5 denied-branch), the
+substep is vacuous — both sets are empty by definition.
+
 STEP 2: Verification level audit [שיפור 2]
 D tasks need integration test RESULTS in *-RESULT.json (tests_run, verify_commands_run) | C tasks need behavioral test RESULTS in *-RESULT.json
 
