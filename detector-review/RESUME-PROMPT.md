@@ -1,24 +1,117 @@
-# RESUME PROMPT — Detector-Sensitivity Hardening Campaign
+# RESUME PROMPT — Campaign B (Universal Tool-Call Audit-Trail Layer)
 
 > **For the next Claude Code session.** The user (the framework owner, working from mobile) opens a new session in the APEX project and types: **"read detector-review/RESUME-PROMPT.md and continue end-to-end."** That's the entire user-input requirement. Everything you need is below.
 
 ═══════════════════════════════════════════════════════════════════════
-SETUP — already done, you inherit it
+CURRENT STATUS — 2026-05-24 (read this FIRST)
 ═══════════════════════════════════════════════════════════════════════
 
-The previous session edited `.claude/settings.local.json` to set
-`"defaultMode": "bypassPermissions"` at the project level. You are
-running in bypass mode — **no approval prompts will appear for any
-tool call in this campaign**. Work end-to-end without stopping for
-permission confirmation. The owner explicitly does not want to be
-asked.
+- **Campaign A — CLOSED, PASS-WITH-LIMITATION** as of 2026-05-24.
+  Nine atomic commits past baseline `8ac2a85` (`3a78d9f`..`b80936c`).
+  All 8 CRs + CR-spec applied to live `framework/`. Held-out 8/8
+  reliably killed (decisive generalisation test passed in full).
+  `framework/tests/run-all.sh` 72/72 PASS post-fix. Two §9 thresholds
+  missed → documented as **L-DH-01** (magic-string carve-out subclass)
+  and **L-DH-02** (auditor budget exhaustion) with Phase-7 R-items
+  reserved (`R-DH-P7-01..03`). Negative control surfaced 10 NEW real
+  live-framework defects → separate owner-triage track. **DO NOT
+  re-run Campaign A.** Source-of-truth: `detector-review/FINAL-CERTIFICATION.md`
+  + `framework/docs/DETECTION-STANDARD.md`.
 
-If a sub-agent hits a soft block (a framework hook like prompt-guard
-catches a literal "override-marker" phrase, or a sub-agent
-self-interprets a system-reminder as forbidding Write), that's not a
-permission issue — it's a framework safety mechanism. Apply the known
-workaround (capture the agent's inline content and write to disk
-yourself) and continue.
+- **Campaign B — NOT STARTED.** Plan: `detector-review/CAMPAIGN-B-PLAN.md`
+  (this file's companion). **THIS is the next session's job.**
+
+═══════════════════════════════════════════════════════════════════════
+NON-NEGOTIABLE EXECUTION STANDARD FOR CAMPAIGN B
+═══════════════════════════════════════════════════════════════════════
+
+The owner has explicitly mandated **maximum professional rigor** for
+this campaign: *"the highest quality, most rigorous, most meticulous
+standards possible — no compromises."* Translate that to operational
+discipline:
+
+1. **Pre-registration is sacred.** Every schema, threshold, protocol
+   choice, and metric is FROZEN in writing before the measurement
+   that depends on it. Post-data changes require dated §12 amendment
+   entries with rationale. No exceptions.
+
+2. **Blind 3-agent protocol where the design calls for it.** Injector
+   / Detector / Scorer are SEPARATE `Task()` invocations with no
+   shared context. Critic clean-room reviews are mandatory at Phase
+   B3 (fix design) and Phase B5 (final state). Verdict PASS required
+   to advance.
+
+3. **N ≥ 3 trials on every measurement.** Single-run conclusions are
+   not permitted. Report spread, not just mean. Trial counts may be
+   raised before a study starts, **never lowered** mid-study.
+
+4. **Held-out generalization is the decisive test.** Phase B5 re-uses
+   Campaign A's sealed held-out corpus + working corpus. Variance
+   collapse (stddev ≤ 1 mutant per class across the 3 trials) is the
+   signature metric — set the threshold in B0 BEFORE any data.
+
+5. **Coverage-matrix discipline.** Every GAP-N + every TP-N maps to a
+   fix maps to an acceptance test. Phase B3's `FIX-DESIGN.md` MUST
+   contain this matrix with **zero orphan rows**. Critic verifies.
+
+6. **Atomic commits with one-to-one traceability.** Phase B4: one
+   commit per TP-N (or per coherent group), commit message names the
+   specific TP-ID being closed. Reviewable per-commit; rollback-safe.
+
+7. **Regression gates are hard stops.** After every code-landing
+   phase (B2, B4): run `framework/tests/run-all.sh` from `.lab/` in
+   background. Confirm `failed:0` AND the four prose-sensitive tests
+   green (`test-agent-lint.sh`, `test-command-structure.sh`,
+   `test-docs.sh`, `test-wiring.sh`) AND the new
+   `test-audit-trail-layer.sh` green. Do not advance on regression.
+
+8. **GAP-1 sub-agent transcript aggregation is load-bearing.** This
+   is the structural answer to F-204-013. Its acceptance test must be
+   DEMONSTRATED — invoke a real `Task()`, then read the imported
+   transcript file from `.apex/subagent-transcripts/`. Don't claim it
+   works; show it with file content cited.
+
+9. **Honest limitation handling.** When a threshold is missed: either
+   fix it (loop back to the appropriate phase) OR record an
+   accepted-limitation entry with written rationale + reserved
+   Phase-7 R-item (Campaign A's L-DH-01..03 + R-DH-P7-01..03 pattern).
+   **Never silently waive.** Surfaced limitations are owner-visible.
+
+10. **Re-use over invent.** The data layer is already strong
+    (`framework/hooks/tool-event-logger.sh` PostToolUse universal;
+    `critic.md` STEP 1.6/1.7 is the verification pattern). New files
+    only where existing utilities cannot reach. Per scope discipline
+    in CAMPAIGN-B-PLAN.md §B-11: **3 new files in `framework/`** —
+    schema JSON, rotate hook, layer test. Everything else is additive
+    prose to existing files.
+
+═══════════════════════════════════════════════════════════════════════
+THE STORY (kept for context; closed)
+═══════════════════════════════════════════════════════════════════════
+
+═══════════════════════════════════════════════════════════════════════
+SETUP — verify before starting
+═══════════════════════════════════════════════════════════════════════
+
+1. **Bypass mode** is set at project level (`.claude/settings.local.json`
+   contains `"defaultMode": "bypassPermissions"`). No approval prompts
+   should appear. The owner is on mobile and is not watching for
+   approve dialogs.
+
+2. **Framework install on the container** — run as your FIRST action:
+   ```
+   bash framework/scripts/sync-to-claude.sh
+   ```
+   The phone container starts with an empty `~/.claude/`. `sync-to-claude.sh`
+   installs the Campaign-A-fixed framework agents/hooks/commands to
+   `~/.claude/` so that `Task(framework-auditor, ...)` etc. find the
+   correct (post-Campaign-A) definitions.
+
+3. **If a sub-agent hits a soft block** (a framework hook catches a
+   literal "override-marker" phrase, or a sub-agent self-interprets a
+   system-reminder as forbidding Write), that's a framework safety
+   mechanism — not a permission issue. Apply the known workaround:
+   capture the agent's inline content and write to disk yourself.
 
 ═══════════════════════════════════════════════════════════════════════
 THE STORY — what triggered this campaign and why it matters
@@ -153,86 +246,147 @@ STATE ON DISK — read in this order, in full
 RESUME — run Phase 4 → 7 to completion, no stops
 ═══════════════════════════════════════════════════════════════════════
 
-## PHASE 4 — Fix Design + Critic Review
+## PHASE B0 — Methodology lock-in (pre-registration) ← START HERE
 
-Write `detector-review/FIX-DESIGN.md`. For each CR in `ROOT-CAUSE.md`:
+This phase produces ZERO code changes. It produces ONE frozen document:
+`audit-trail-review/EXPERIMENT-PROTOCOL.md`. **The campaign cannot
+proceed past B0 until that document is frozen.**
 
-- target file (absolute path)
-- EXACT anchor text from the LIVE current source — read each file in
-  `framework/agents/specialist/` and `framework/commands/apex/` to
-  verify anchors haven't drifted from what ROOT-CAUSE.md cites
-- exact replacement / insertion text — character-precise
-- acceptance test (how Phase 6 verifies this CR is closed)
-- Phase-6 effect (which §9 threshold the fix lifts)
+Sub-deliverables, all in the protocol:
 
-Coverage matrix at the top — one row per CR, zero orphan rows.
+**B0.1 Event-log schema v1.** A JSON Schema (frozen) describing every
+event type currently in `.apex/event-log.jsonl`: `state_mutation`,
+`tool_call`, `memory_sample`, plus the new types Campaign B will add
+(`transcript_imported`, `pre_task_claim`, `subagent_count_mismatch`,
+etc.). Each event has required fields, types, version field for
+forward-compat. Schema lives at `framework/schemas/EVENT-LOG-ENTRY.schema.json`
+(implementation in B2; design in B0).
 
-Launch the `critic` sub-agent for clean-room review of FIX-DESIGN.md
-against ROOT-CAUSE.md + BASELINE.md. Verdict: PASS / PASS-WITH-CHANGES
-/ FAIL. Iterate until PASS. Close Gate 4.
+**B0.2 Sub-agent transcript aggregation protocol.** Decide WHERE the
+child's event-log gets imported, WHEN (on `SubagentStop`), with WHAT
+filename pattern, and how concurrent sub-agents are namespaced. The
+CAMPAIGN-B-PLAN.md §B2.1 proposes COPY into
+`.apex/subagent-transcripts/<agent-id>-<round-tag>.jsonl`. Verify the
+proposal against the actual Claude Code project layout
+(`~/.claude/projects/<encoded-cwd>/.apex/event-log.jsonl`) — read the
+current `framework/hooks/subagent-stop.sh` source to ground the
+mechanism. Freeze the exact decision.
 
-## PHASE 5 — Implement
+**B0.3 Audit-trail coverage metric.** Define the precise formula:
+"fraction of an agent's claims that are verifiable against the
+trail." Operationalise — what counts as "a claim"? What counts as
+"verifiable"? Pre-register: post-B5 fixed detector must achieve
+audit-trail coverage ≥ X% on a representative trial. X is chosen now.
 
-Apply the 8 CR edits to:
-- `framework/agents/specialist/framework-auditor.md` (CR-01, 02, 03, 06)
-- `framework/agents/specialist/round-checker.md`     (CR-04, CR-08)
-- `framework/commands/apex/self-heal.md`             (CR-05, CR-07)
-- `apex-spec.md` (CR-spec — **owner approval IS GRANTED** in the
-  Phase-4 input for the axis-count update 12→13 and the one-sentence
-  description specified in ROOT-CAUSE.md CR-spec. Proceed.)
+**B0.4 Variance-collapse threshold.** Campaign A's R201/R202/R203 ran
+3/13, 3/13, 13/13 on the same lab → per-class kill-rate stddev ≈ 6.
+Pre-register: post-B5, per-class stddev ≤ N across 3 trials on the
+working corpus. N is chosen now, before any data. The CAMPAIGN-B-PLAN.md
+§B-8 proposed N=1; verify or revise in B0.
 
-**INSTALL — copy edited sources to live registered locations:**
-```bash
-cp framework/agents/specialist/framework-auditor.md ~/.claude/agents/specialist/framework-auditor.md
-cp framework/agents/specialist/round-checker.md     ~/.claude/agents/specialist/round-checker.md
-cp framework/commands/apex/self-heal.md             ~/.claude/commands/apex/self-heal.md
-```
+**B0.5 Negative-control delta tolerance.** Campaign A R204 negative
+control surfaced 13 live-framework defects. Post-B5 NC must produce
+≤ 13 ± Y findings (Y chosen now). Diff > Y = real new defects
+exposed by the new layer (good) or regression noise (bad). Pre-
+register the disambiguation rule.
 
-Atomic commits — one per CR, message names the CR-ID closed.
+**B0.6 Trial design.** Reaffirm N=3 trials per measured condition.
+Specify how concurrent trials are isolated (separate `.lab/` clones).
+Specify the seed/randomness handling.
 
-Run `framework/tests/run-all.sh` from `.lab/` in background (avoid
-OneDrive timeout). Confirm `failed:0` and that the four prose-
-sensitive tests stay green: `test-agent-lint.sh`,
-`test-command-structure.sh`, `test-docs.sh`, `test-wiring.sh`.
-Close Gate 5.
+**B0.7 Blind protocol roles.** Define Injector / Detector / Scorer /
+Critic responsibilities for each phase. Mirror Campaign A's pattern.
 
-## PHASE 6 — Re-certification (decisive measurement)
+**B0.8 Acceptance criteria.** Crystallize §B-8 of CAMPAIGN-B-PLAN.md
+into numeric, dated, frozen thresholds.
 
-Re-run on the FIXED detector (reading post-install agent definitions):
+**Gate B0:** `audit-trail-review/EXPERIMENT-PROTOCOL.md` exists,
+contains all 8 sub-deliverables, every threshold is a numeric value
+(not "TBD"), and a `## §X. Freeze declaration` block at the end
+states the date and the baseline commit.
 
-- 3 baseline trials on `.lab/apex-detector-lab-baseline`
-- Negative control on `.lab/apex-detector-lab`
-- W-F3 framing pair on `.lab/apex-detector-lab-W-F3`
-- **HELD-OUT CORPUS** — open `HELDOUT-CORPUS.md.sealed` for the
-  first time NOW; clone `.lab/apex-detector-lab-heldout` from the
-  pristine parent; the Injector applies 8 held-out A–E mutants;
-  3 detector trials against it.
+## PHASE B1 — Trust-point register
 
-Score against `EXPERIMENT-PROTOCOL.md` §9:
-- Class A — 3/3 working + 2/2 held-out reliably killed, no regression
-- Class B+C+D — working ≥ 7/8 + held-out ≥ 4/5 reliably killed
-- Class E — ≥ 3/4 surfaced as `SPEC-GAP-CANDIDATE`
-- Class F — 4/4 probes pass
-- Negative control — 0 fabricated findings
-- Regression — full `run-all.sh` `failed:0`
+Formalise the 12 trust points + 5 top-leverage from Phase-B-α into
+`audit-trail-review/TRUST-POINTS.md`. The Phase-B-α exploration
+already produced the raw data (see `CAMPAIGN-B-PLAN.md` §B-2). Phase
+B1 adds the "fix mechanism" column for each TP and detailed
+acceptance tests for the top-5.
 
-Write `detector-review/FINAL-CERTIFICATION.md` with before/after
-kill rates side-by-side. Critic clean-room review of the final state.
-Close Gate 6. If any threshold missed → loop to Phase 4 OR escalate
-as a documented accepted limitation. Never silently waive.
+**Gate B1:** every TP has a fix mechanism; top-5 have detailed
+mechanism + acceptance test.
 
-## PHASE 7 — Institutionalize
+## PHASE B2 — Data layer hardening (close GAP-1..GAP-7)
 
-Keep the mutant corpus + EXPERIMENT-PROTOCOL.md under
-`detector-review/` as a re-runnable detection-sensitivity check.
-Document the new detection standard in `framework/docs/`. Update
-project memory.
+The heaviest phase. **B2.1 — sub-agent transcript aggregation — is
+the load-bearing item; start there.** Then B2.2..B2.6 close the
+remaining gaps. Implementation details in `CAMPAIGN-B-PLAN.md` §B-5.
 
-Final user-facing summary: one screen. Before/after kill rates,
-fixes landed, threshold pass/fail, plus the 13 pre-existing live-
-framework defects R204 surfaced (separate triage track — they are
-real gaps independent of the audit-pipeline fix and worth the
-owner's attention).
+After each B2.N sub-fix lands: run the new
+`framework/tests/test-audit-trail-layer.sh` and confirm the relevant
+case passes. After ALL B2.N lands: full `run-all.sh --json` from
+`.lab/`. Atomic commits.
+
+**Gate B2:** every GAP-N has an implemented + tested fix; full suite
+green; `.apex/subagent-transcripts/` directory works end-to-end
+(demonstrated with a real `Task()` invocation).
+
+## PHASE B3 — Consumer layer fix design + critic review
+
+Author `audit-trail-review/FIX-DESIGN.md` for TP-1..TP-5. Coverage
+matrix at the top — zero orphan rows. Critic clean-room review.
+Iterate until PASS.
+
+**Gate B3:** coverage matrix complete; critic PASS.
+
+## PHASE B4 — Implement consumer-layer edits
+
+Apply TP-1..TP-5 fixes atomically to:
+- `framework/agents/critic.md` (TP-1)
+- `framework/agents/specialist/round-checker.md` (TP-2)
+- `framework/agents/verifier.md` (TP-3)
+- `framework/agents/executor.md` (TP-4)
+- `framework/agents/specialist/framework-auditor.md` (TP-5)
+
+INSTALL: `cp` each edited source to `~/.claude/agents/specialist/`
+and `~/.claude/agents/` respectively. One commit per TP.
+
+Run `run-all.sh` + `test-audit-trail-layer.sh`. Both green.
+
+**Gate B4:** every commit maps to a coverage-matrix row; lint clean;
+suite green.
+
+## PHASE B5 — Re-certification on Campaign A's mutation corpus
+
+Re-run the 3 baseline trials on `.lab/apex-detector-lab-baseline`
+(same 13 working mutants Campaign A used). Also: held-out 8 mutants;
+negative control; W-F3 framing pair.
+
+**Signature measurement: variance collapse.** Per-class kill-rate
+stddev ≤ pre-registered threshold (from B0). The mechanism: the
+upgraded round-checker REJECTS a shallow trial (its imported
+transcript shows no real bypass attempts) → CONTINUE instead of
+CLOSED. Shallow trials no longer close the loop.
+
+Score against §B-8 thresholds. Critic review of final state.
+
+Write `audit-trail-review/FINAL-CERTIFICATION.md` with before/after.
+
+**Gate B5:** all thresholds met; critic PASS; if miss → loop to B3
+OR documented accepted-limitation entry with R-item (mirror
+Campaign A's L-DH-01..03 + R-DH-P7-01..03 pattern).
+
+## PHASE B6 — Institutionalize
+
+Write `framework/docs/AUDIT-TRAIL-STANDARD.md` — the contract for
+every future agent + every future audit. Update project memory.
+Keep `audit-trail-review/` artifacts for re-runnability.
+
+Final one-screen summary to the owner: before/after variance, fixes
+landed, threshold pass/fail, any reserved R-items, any new live-
+framework defects surfaced.
+
+**Gate B6:** owner sign-off.
 
 ═══════════════════════════════════════════════════════════════════════
 WORKING ENVIRONMENT
@@ -272,65 +426,88 @@ If the orchestrator-level circuit-breaker fires mid-campaign, pause
 cleanly, persist state on disk, summarize, stop. Don't push past it.
 
 ═══════════════════════════════════════════════════════════════════════
-AFTER CAMPAIGN A GATE 7 CLOSES — OPEN CAMPAIGN B
+KEY FACTS YOU'RE INHERITING
 ═══════════════════════════════════════════════════════════════════════
 
-Campaign A is the **detector-sensitivity hardening** (this RESUME
-prompt's main subject). Campaign B is a **follow-on, sequenced**
-campaign: **Universal Tool-Call Audit-Trail Layer.** It generalises
-Campaign A's central lesson (round-checker accepted the auditor's
-count as ground truth → F-204-013) to ALL agent claims in the
-framework, not only the self-heal loop.
+Phase-B-α exploration (run in the prior session) produced the raw map.
+You can re-verify but do not need to re-execute:
 
-**Trigger:** when Campaign A Gate 7 closes (Phase 7 done, owner
-sign-off), do NOT stop. Open `detector-review/CAMPAIGN-B-PLAN.md` and
-proceed with Phases B0 → B6 end-to-end. The B campaign plan is fully
-specified there — same shape as Campaign A (pre-registration → data
-layer → consumer layer → critic review → implement → re-certify →
-institutionalize), with concrete coverage matrix mapping 7
-infrastructure gaps + 5 high-leverage trust points to specific edits.
-
-**Key facts already established for Campaign B (from the prior session's
-Phase-B-α exploration):**
-
-- The infrastructure is already strong: `framework/hooks/tool-event-logger.sh`
-  captures every tool call in `.apex/event-log.jsonl` with full
-  `tool_input` + `tool_response` (PostToolUse matcher `*`).
-- `critic.md` STEP 1.6 / 1.7 already cross-references claims against
-  the event-log. That's the PATTERN to generalise.
-- 7 data-layer gaps; GAP-1 (sub-agent transcripts inaccessible to
-  parent) is the critical one and the explanation of why F-204-013
-  happened — R23's auditor ran in a sub-agent, its tool-call trace
-  went into a sibling project, R24's round-checker had no way to read
-  it. Phase B2.1 closes this.
-- 5 top-leverage consumer-layer trust points: critic STEP 2 (TP-1),
+- **Infrastructure is already strong.** `framework/hooks/tool-event-logger.sh`
+  is `PostToolUse` matcher `*` (universal) — every tool call is captured
+  to `.apex/event-log.jsonl` with full `tool_input` + `tool_response` +
+  `is_error`. That's the data layer foundation.
+- **One agent already uses it correctly.** `critic.md` STEP 1.6/1.7
+  reads the event-log, builds a CORPUS of tool inputs+responses, and
+  FAILs the executor with `phantom_data_value` when a cited value
+  isn't in the corpus. **That's the pattern Campaign B generalises.**
+- **7 data-layer gaps; GAP-1 is critical.** Sub-agent transcripts don't
+  aggregate back to the parent project — child's `.apex/event-log.jsonl`
+  lives in `~/.claude/projects/<sub-project>/`, parent never reads it.
+  **This is the root mechanism of F-204-013** (R23's auditor ran as a
+  sub-agent; its trace was inaccessible to R24's round-checker; the "6
+  hits" claim was uncheckable). Phase B2.1 closes GAP-1.
+- **5 high-leverage consumer-layer trust points:** critic STEP 2 (TP-1),
   round-checker full re-probe (TP-2 — upgrades Campaign A's CR-04 from
   sample to full coverage), verifier independent git diff (TP-3),
   executor STEP 0.5 escalation (TP-4), framework-auditor Axis 10
   procedural (TP-5).
-- 3 new files in framework/ (schema JSON, rotate hook, layer test).
-  Everything else additive prose. Rigor lives in the campaign, not in
-  framework bloat.
-- Owner pre-approval is granted IN THIS RESUME PROMPT for the small
-  apex-spec.md addition Campaign B requires (a single paragraph
-  describing the audit-trail standard).
+- **3 new files in `framework/`** — schema JSON, event-log-rotate hook,
+  test-audit-trail-layer.sh. Everything else is additive prose to
+  existing files. **Rigor lives in the campaign, not in framework bloat.**
+- **Owner pre-approval is granted IN THIS PROMPT** for the small
+  `apex-spec.md` addition Campaign B requires (one paragraph describing
+  the audit-trail standard). Proceed in Phase B6 without further
+  confirmation.
 
-**Signature measurement of Campaign B:** variance collapse. Today
-Campaign A's R201/R202/R203 ran 3/13, 3/13, 13/13 on the same lab —
-extreme variance. Post-B5, three trials on the same corpus must show
-per-class kill-rate stddev ≤ 1 mutant. The mechanism: the upgraded
-round-checker REJECTS a shallow trial (the auditor's transcript
-doesn't contain real bypass attempts) and forces CONTINUE — so
-shallow trials no longer close the loop.
+═══════════════════════════════════════════════════════════════════════
+ARTIFACTS YOU CONSULT — and the new directory you'll create
+═══════════════════════════════════════════════════════════════════════
+
+**Already on disk (Campaign A products):**
+- `detector-review/CAMPAIGN-B-PLAN.md` — **the plan to execute.** Sections
+  B-1 through B-12. Authoritative.
+- `detector-review/BASELINE.md` — Campaign A's Phase-2 baseline. The
+  3/13 ↔ 13/13 variance proof. The pattern Campaign B targets.
+- `detector-review/ROOT-CAUSE.md` — Campaign A's 8 CRs (already
+  closed). TP-2 of Campaign B is the upgrade of CR-04.
+- `detector-review/FINAL-CERTIFICATION.md` — Campaign A's §9 outcomes.
+  Read for context on what limits Campaign A left and what Campaign B
+  must NOT regress.
+- `detector-review/manifests/WORKING-CORPUS.md` + `HELDOUT-CORPUS.md.sealed`
+  — Campaign A's mutation corpus. **Campaign B re-uses both.** Held-out
+  was already opened in Campaign A's Phase 6; it stays the held-out
+  set for B5.
+- `framework/docs/DETECTION-STANDARD.md` — Campaign A's institutionalised
+  standard. Campaign B builds on it.
+
+**You create:**
+- `audit-trail-review/EXPERIMENT-PROTOCOL.md` — frozen pre-registration
+  (Phase B0).
+- `audit-trail-review/TRUST-POINTS.md` — TP register (Phase B1).
+- `audit-trail-review/FIX-DESIGN.md` — coverage matrix + per-TP design
+  (Phase B3).
+- `audit-trail-review/FINAL-CERTIFICATION.md` — before/after variance
+  (Phase B5).
+- `audit-trail-review/trials/*` — re-certification trial outputs
+  (Phase B5).
+- `framework/schemas/EVENT-LOG-ENTRY.schema.json` (Phase B2.2 — new).
+- `framework/hooks/event-log-rotate.sh` (Phase B2.3 — new).
+- `framework/tests/test-audit-trail-layer.sh` (Phase B2 — new).
+- `framework/docs/AUDIT-TRAIL-STANDARD.md` (Phase B6 — new).
 
 ═══════════════════════════════════════════════════════════════════════
 BEGIN
 ═══════════════════════════════════════════════════════════════════════
 
-תתחיל. Phase 4 — read the 6 numbered files above, then author
-FIX-DESIGN.md, then critic review, then proceed to 5 → 7 without
-asking. After Campaign A Gate 7 closes, open
-`detector-review/CAMPAIGN-B-PLAN.md` and continue with Phases B0 → B6
-through to Campaign B Gate 6 — also without stopping. The user is on
-mobile and is not watching the keyboard approve prompts — bypass mode
-is on for the project; just work.
+תתחיל **Phase B0** (pre-registration). Read `detector-review/CAMPAIGN-B-PLAN.md`
+in full first, then the 6 inherited artifacts. Then author
+`audit-trail-review/EXPERIMENT-PROTOCOL.md` with the 8 sub-deliverables
+specified in the PHASE B0 section above. **Freeze it before any code
+lands.** When Gate B0 is met, proceed to B1 → B2 → B3 → B4 → B5 → B6
+end-to-end without stopping.
+
+Bypass mode is on at project level (no approval prompts). The owner is
+on mobile and is not watching the keyboard approve. **Quality first;
+speed second; never silence a limitation. If a Gate cannot be honestly
+met — document the L-N limitation + reserve an R-N item, mirror Campaign
+A's pattern.** Just work.
