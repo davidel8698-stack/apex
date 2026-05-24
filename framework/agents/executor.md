@@ -160,28 +160,69 @@ is unverifiable by definition for this step.
   premise was phrased non-absolutely (behavior claim, future
   state, external service), OR the verification primitive
   (`grep`/`glob`) is not applicable to the target. Continue
-  to PRE-EXECUTION PREMISE GUARD with
-  `assumption_unverified=true` queued for RESULT.json. The
-  executor proceeds — but the field surfaces the soft
-  evidence gap to critic / round-checker downstream.
+  to PRE-EXECUTION PREMISE GUARD with the following queued
+  for RESULT.json: [Campaign B TP-4.a — STEP 0.5 escalation]
+  - `assumption_unverified` = `true` (preserved per R16-634S
+    field semantics).
+  - `status` = `"partial"` (NOT `"success"`). This is the
+    escalation: an unverified premise is no longer a silent
+    flag; it caps the task's verdict at PARTIAL via the
+    critic-side STEP 2 prelude (TP-4.b). The executor proceeds
+    (so deliverables still ship) but the task cannot be marked
+    PASS without independent premise verification at critic
+    time.
+  - Append to `issues_found[]`:
+    `{type:"unverifiable_premise_continued",
+      premise:"<introducer>:<target>",
+      verification_attempted:"<grep|glob command>"}`.
+    One entry per unverified premise.
 
-**4. RESULT.json field semantics.** The `assumption_unverified`
-boolean (schema R16-634S, additive, default `false`) signals
-**only the unverifiable branch**:
+  Downstream consumers (critic, round-checker) see one bit
+  AND a structured issue:
+  - `assumption_unverified=true` (the soft flag — for trajectory).
+  - `status=partial` (the hard cap — for verdict).
+  - `issues_found[]` entry (the audit-trail — for closure).
+  Together they close the premise-laundering loophole where a
+  task could quietly proceed on false premises and still be
+  declared `status=success`.
+
+**4. RESULT.json field semantics.** [Campaign B TP-4.a — promoted
+from informational flag to verdict-gate] The `assumption_unverified`
+boolean (schema R16-634S, additive) signals **only the unverifiable
+branch** AND now governs the task's `status` field:
 
 - Confirmed → field = `false` (or omitted; default is `false`).
+  `status` may be `success` or `failure` per the task outcome —
+  the verdict gate does not fire on this branch.
 - Denied → executor refuses pre-execution; field = `false` in the
   refusal RESULT.json (the executor *did* verify; the verification
-  denied — that is a refusal, not an unverifiability).
-- Unverifiable → field = `true`. Downstream consumers (critic,
-  round-checker) see one bit: "this task ran on at least one
-  premise the executor could not cross-check." They decide
-  policy (e.g. critic may downgrade confidence; round-checker
-  may flag for trajectory review).
+  denied — that is a refusal, not an unverifiability). `status` =
+  `failure` (the denied-branch refusal — preserved verbatim from
+  R16-634S).
+- Unverifiable → field = `true` AND `status` = `"partial"` AND an
+  `issues_found[]` entry of type `unverifiable_premise_continued`
+  is appended. Downstream consumers (critic, round-checker) see
+  three signals: the soft flag (`assumption_unverified=true`, for
+  trajectory), the hard cap (`status=partial`, for verdict via
+  critic STEP 2 prelude TP-4.b), and the audit-trail
+  (`issues_found[]` entry, for closure).
 
-A task can satisfy STEP 0.5 with `assumption_unverified=true` and
-still produce a successful RESULT.json — the field is informational,
-not a verdict gate. The verdict gate is the denied-branch refusal.
+A task with `assumption_unverified=true` produces a PARTIAL
+RESULT.json (`status=partial`) — the field is now a verdict gate
+that caps the task at PARTIAL via critic STEP 2 prelude. The
+denied-branch refusal remains the only path to `status=failure`.
+The `success` value is reachable only on the Confirmed branch (or
+on tasks that emit zero premises, where STEP 0.5 PASSes by vacuous
+truth).
+
+**Forward-only invariant** (per B3-critic R1 finding 5.a): the
+status-cap applies to RESULT.json files created at-or-after the
+TP-4 install commit. Historical RESULT.json files where
+`assumption_unverified=true` AND `status=success` are NOT
+retroactively reclassified — cross-phase-audit, dora-collect, and
+verifier STEP 6 SHOULD treat the invariant as forward-only
+(STATE.json `apex_version` ≥ post-B4 install). Documented as
+Phase-7 R-AT-P7-03 if any consumer requires retroactive policy.
 
 **5. False-positive carve-out (over-fire on non-clause statements).**
 The rollback trigger for this step is "premise verifier false-
