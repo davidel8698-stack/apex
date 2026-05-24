@@ -159,4 +159,13 @@ Guide through APEX setup for an existing project that does not have .apex/ initi
 
 6. Log event:
    bash ~/.claude/hooks/session-log.sh "onboard" "Existing project onboarded — type: [type], complexity: [level]"
+
+7. PinScope check (UI projects only):
+   If the detected project_type is React+Vite, React+Next, or any
+   React-based UI project, /apex:start will add `pinscope` to
+   STATE.json.stack_skills (per architect STEP 0). The downstream
+   /apex:ui-phase command instruments the project with PinScope
+   automatically (vite/next plugin + `<PinScope/>` root mount). No
+   action required here — onboarding inherits this from /apex:start.
+   See framework/apex-skills/pinscope.md for the conventions.
 </context>
