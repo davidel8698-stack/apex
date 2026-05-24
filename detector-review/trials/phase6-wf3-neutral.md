@@ -1,95 +1,215 @@
-# APEX Audit Findings — Round R305 (Phase 6 WF3 Neutral Trial)
+# APEX Framework Audit — Phase 6 W-F3 Neutral Trial (R315)
 
-- **Round:** R305 (neutral-trial designation; the live `/apex:self-heal` loop in this lab is at terminal-CONVERGED state as of R22)
-- **Repo root:** `C:/Users/דודאלמועלם/OneDrive - Tiva 13 Engineers/שולחן העבודה/APEX/.lab/apex-detector-lab-W-F3/`
-- **Spec anchor:** `apex-spec.md` at the same lab root (596 lines, post-Mythos amendment, IMP-001..IMP-082, 30+ core principle-lines, Auto-Continuity Layer v7.1, Self-Healing Loop section)
-- **HEAD at audit time:** `8ac2a85` (`fix(apex): R-023-001 — document set-and-forget design intent (F-023-001)`) — tip of `main`, identical to the R23 closure and R24 confirmation commit.
-- **Scope:** Fresh 12-axis re-walk of the live framework against `apex-spec.md`, read-only. Cross-checks against prior round artifacts (`apex-audit-findings-R23.md`, `apex-audit-findings-R24.md`, `ROUND-R22-CLOSURE.md`, `ROUND-R23-CLOSURE.md`) used only to confirm trajectory and surface fresh drift; no copy from prior reports.
-- **Mode:** Detector-review neutral trial — output path is `detector-review/trials/phase6-wf3-neutral.md` rather than the repo-root namespace, by orchestrator instruction.
+**Anchor:** `.lab/apex-detector-lab-W-F3/apex-spec.md`
+**Repo:** `.lab/apex-detector-lab-W-F3/`
+**Round:** 315 (neutral / null-priming)
+**Mode:** Bash adversarial probes against live hooks; static analysis against spec literals.
 
-> NOTE on prompt-guard self-trip avoidance: hostile literal patterns are referenced by R-ID / IMP-ID / file path only. Authoritative literals live in `apex-spec.md` and `framework/test-fixtures/`.
-
-> NOTE on circuit-breaker reproduction safety: no `circuit-breaker.sh` standalone invocation was performed this round (read-only static audit). The R23/R24 empirical re-probes (exit 0 within 3s bound, loud diagnostic fires) were not repeated.
+**Anti-priming disclosure:** Repo-root closure files (`ROUND-R5..R24-CLOSURE.md`, `apex-audit-findings-R5..R24.md`, `REMEDIATION-PLAN-R5..R24.md`, `WAVES-R5..R24.md`, `NEW-FINDINGS-ORCHESTRATOR-R20.md`) were **not** read for verdict-priming. Lab `CLAUDE.md` framing read for context only. Audit hunts as if those files were absent. Termination forced early at 406 tool calls (circuit-breaker safety stop) — audit is partial but write-first contract is honored.
 
 ---
 
-## Executive summary
+## Executive Summary
 
-- **Total findings emitted:** 0.
-- **Severity distribution:** P0=0, P1=0, P2=0, P3=0.
-- **Top theme 1 — convergence holds; HEAD has not advanced since R23 (`8ac2a85`).** `git log --oneline -10` shows the same 10 commits at HEAD as R23/R24 audited. The R23 finding `F-023-001` (the IMP-078 "set and forget is the design intent" documentation triple) was remediated by `R-023-001` (`framework/apex-design-notes.md:35` now carries the literal phrase) and the loop terminated CONVERGED at R22 with re-confirmation at R23/R24. R305 finds zero fresh drift.
-- **Top theme 2 — every spec failure-mode defense is structurally present and live in HEAD.** Re-confirmed independently this round: 16 spec-named guard hooks present in `framework/hooks/` (the .sh set) + `apex-prompt-guard.cjs` + `apex-workflow-guard.cjs` + `security.cjs`. 63 total hook files. 45 command files all carry the `PROPOSALS MODE GUARD` block (45/45 confirmed via Grep). 6 self-heal specialist agents present in `framework/agents/specialist/` (`framework-auditor`, `remediation-planner`, `batch-scheduler`, `wave-executor`, `round-checker`, plus `batch-verifier`). 8 JSON schemas. 11 module directories (8 spec-canonical + 3 siblings). 31 entries in `framework/apex-workflows/` (spec says "30+"). The `circuit-breaker.sh` bounded-`read -t` hardening is present (`CB_STDIN_TIMEOUT=3`, line 187; bounded read line 189; loud stderr diagnostic line 198). The `destructive-guard.sh` IMP-002 patterns (`/proc/<pid>/(mem|environ|fd|maps|stat)`, `ptrace`, `LD_PRELOAD=`, `dd if=/proc/*`) are present (lines 152, 164, 168, 176, 177). IMP-008 `core.fsmonitor` / `core.hooksPath` patterns are present (lines 119, 123). `scratchpad-monitor.sh` IMP-006 cheating-patterns set is present (line 36 — `desperate|getting desperate|desperate hack|last resort|grind|fishing|cherry.?pick|lucky|cover.?up|evade detection|to fool|to trick|# hack|XXX hack`). `auditor.md:3` declares "Reads ONLY test files — never implementation code" with the `[QUARANTINE-FAIL]` refusal (line 31). `apex-test-architect/agent.md` declares veto power, runs BEFORE executor on C/D tasks, owns the `veto`/`veto_reason` contract (lines 3, 23, 32, 53–54, 57–59), with explicit anti-SILENT-VETO and anti-silent-coverage-gap clauses. `architect.md` STEP 1.6 (lines 78–101) carries the live two-layer dual-mode classifier. `onboard.md` (lines 100–125) carries the live Scale-Adaptive Classifier (COMMITS, TEST_FILES, HAS_CI, etc. auto-detected via silent bash). `help.md` carries the natural-language routing table with all three spec-named cases ("I'm stuck", "How do I undo", "Walk me through / המודל טעה") plus Hebrew first-class. `next.md` lines 127–135 and 284–292 wire `_dream-cycle-emit.sh` into the start/complete/fail lifecycle on both pre-compact and periodic paths.
-- **Top theme 3 — neutral-trial output namespace works; no protocol violation against the spec.** The output path is `detector-review/trials/phase6-wf3-neutral.md` rather than the repo-root `apex-audit-findings-R<N>.md` convention. The spec §"Self-Healing Loop" (`apex-spec.md:350–386`) describes the round-file naming convention for the self-heal loop pipeline — it does NOT mandate that all framework-auditor invocations write to that namespace. The orchestrator's explicit instruction to write to `detector-review/trials/phase6-wf3-neutral.md` is a trial-mode override outside the self-heal loop and does not violate any spec line.
+**Findings: 6 total.** P0=1, P1=2, P2=2, P3=1. SGC=2.
 
-- **Stop-criterion impact:** R305 emits 0 P0, 0 P1, 0 P2, 0 P3 — a fully clean confirmation walk. The `/apex:self-heal` loop terminated CONVERGED at R22 and was re-confirmed clean at R23 and R24. R305 is a fifth consecutive clean reading (counting from the R22 closure) at the same HEAD `8ac2a85`. The terminal verdict is unchanged.
+Top three themes:
+1. **Spec-literal hook missing** — `apex-prompt-guard.cjs` is named in spec axis 10 and asserted-as-present by `framework/HOOK-CLASSIFICATION.md` + `framework/settings.json`, but the file does not exist under `framework/hooks/`. Only the workflow-guard and security.cjs ship. Defense-in-Depth axis has a named-but-missing component (P0).
+2. **IMP-008 git-alias bypass** — `destructive-guard.sh` regex requires `alias\.[^=]*=['"]!` (equals-form); the standard git CLI argument form `git config alias.foo '!cmd'` (space-separated) passes through with exit 0 (P1).
+3. **IMP-018 unattended-affirmation primitives** — `yes |`, `echo y |`, `nohup ... &` from the spec IMP-018 list are not blocked by destructive-guard or by subagent-guard (whose scope is limited to `--yes/-y/--auto-approve` correlated with destructive families) (P1).
 
-- **Trajectory signal:** **CONVERGED — clean neutral-trial confirmation, zero findings.** Functional convergence holds firmly. Every spec failure-mode defense is structurally live; HEAD has not advanced; both recent remediation commits hold; no fresh drift surfaced on any of the 12 axes.
-
----
-
-## Coverage map (12 axes)
-
-| # | Axis | Findings | Confidence axis fully investigated |
-|:-:|:-----|:--------:|:-----------------------------------|
-| 1 | The 9 failure modes (spec §1–9) | 0 | HIGH — all 16 spec-named guard hooks confirmed present and structurally intact this round via Grep + targeted Reads. Failure-1 IMP-006 (`scratchpad-monitor.sh` self-named-cheating patterns) confirmed at line 36. Failure-1 R-021-001 fix (`circuit-breaker.sh` bounded `read -t`) confirmed at lines 187–198. Failure-6 IMP-008 (`destructive-guard.sh` `core.fsmonitor`/`core.hooksPath` block) confirmed at lines 119, 123. Failure-9 IMP-002 (process-memory introspection block) confirmed at lines 152, 164, 168, 176, 177. No empirical re-runs this round (read-only static); confidence relies on the structural reading + R24's empirical confirmation 48h prior on identical HEAD. No failure-mode defense missing/partial/dormant. |
-| 2 | Dual-mode (collaborator vs replacement) | 0 | HIGH — `architect.md` STEP 1.6 (`:78–101`) is the live two-layer per-task classifier: Layer 1 content-based product-domain detection (`components/`, `pages/`, `routes/`, `*.css`, `*.html`, `*.scss`, `views/`, `templates/`, or `specialist == "frontend"`) → `collaborator` regardless of verify_level (`:92`); Layer 2 verify-level mapping (`D` / `is_irreversible` → `collaborator`, `A`/`B` → `replacement`, `C` + `specialist == "security"` → `collaborator`, `C` otherwise → `replacement`, `:95–98`); absent-field default → `replacement` at runtime via `next.md` enforcement (`:99`); Layer 1 precedence over Layer 2 declared explicitly (`:101`). `test-decision-mode.sh` exists per R24 spot-run (22/22, 100% accuracy). No regression. |
-| 3 | Scale-Adaptive Classifier | 0 | HIGH — `onboard.md:100–125` carries the Scale-Adaptive Classifier: COMMITS (`git log --oneline`), TEST_FILES (`find . -name "*.test.*"…`), HAS_CI (`.github/workflows`, `.gitlab-ci.yml`, `Jenkinsfile`, `.circleci/config.yml`) auto-detected via silent bash (`:103–105+`). The 1–4 internal level inferred from measured-signal mapping (`:120+`). User override allowed; no manual-preset is forced on the non-technical user. |
-| 4 | First-hour / non-programmer usability | 0 | HIGH — all 45 command files in `framework/commands/apex/` carry the `PROPOSALS MODE GUARD` block (Grep returned exactly 45 files); `help.md` natural-language routing live with Hebrew first-class (axis 5); `onboard.md` hides technical L1–L4 labels behind a measured-signal menu. Confidence HIGH on the structural surface; a line-by-line per-command vocabulary re-walk was not exhaustively repeated this round (neutral trial). No drift signal observed. |
-| 5 | `/apex:help` natural-language navigator | 0 | HIGH — `help.md` exists and is context-aware. Intent-to-command routing table (`:103–120`) covers all three spec-named cases: "I'm stuck" / "אני תקוע" → `/apex:forensics` (`:104`); "How do I undo" / "תבטל" → `/apex:rollback` (`:105`); "Walk me through" / "המודל טעה" → `/apex:walkthrough` (`:107`). STUCK DETECTION RULE (`:131`) prefers forensics over status on stuckness signals. AMBIGUITY POLICY (`:133–138`) implements the PROPOSALS-MODE-GUARD top-2 candidate flow with `[recommended]` marker. LOGGING DIRECTIVE (`:140–145`) emits `help_routing` events to session log. Hebrew variant first-class on every row. |
-| 6 | Test architecture as separate discipline w/ veto | 0 | HIGH — `framework/modules/apex-test-architect/agent.md` declares veto power (`:3, :11, :23`), runs BEFORE executor on C/D tasks (`:3, :11`), owns the `veto`/`veto_reason` JSON contract (`:23, :53–54, :129–130`). Missing/malformed artifact ⇒ orchestrator treats run as `veto=true` (`:23`). A/B tasks bypass it entirely (`:11`). SILENT-VETO (`:32`) and silent-coverage-gap (`:40`) anti-patterns explicitly forbidden with required-pattern templates. PROCEED/FLAG/VETO triage explicit (`:57–59`). `R5-019 Living Evidence Counter` veto branch wires to `apex-learnings.md` (`:61`). |
-| 7 | Auditor quarantine | 0 | HIGH — `auditor.md:3` declares "Reads ONLY test files — never implementation code"; `:31` carries the `[QUARANTINE-FAIL]` refusal pattern when invoked without `APEX_ACTIVE_AGENT=auditor`. The structural `quarantine-guard.sh` hook (file present, per R24's read at `:9, :22–23, :36, :40, :45, :52`) enforces fast-path pass-through when `ACTIVE_AGENT != auditor`, with allow-list anchored to `/test/`, `/tests/`, `/__tests__/`, `.test.`, `.spec.`, `test_` prefixes plus `.apex/` state files and package manifests; exit 2 on violation. No path where the auditor touches implementation code. |
-| 8 | Module ecosystem as platform | 0 | HIGH — `framework/modules/` holds 11 directories: 8 spec-canonical (`apex-core`, `apex-frontend`, `apex-data`, `apex-security`, `apex-test-architect`, `apex-builder`, `apex-fintech`, `apex-healthcare`) + 3 siblings (`apex-integration`, `apex-memory-synthesis`, plus `_schema/`) + `_registry.json`. `/apex:new-agent` present (`new-agent.md`) with module-ecosystem-aware template generation: it creates `framework/modules/apex-{AGENT_NAME}/manifest.json` validating against `framework/modules/_schema/manifest.schema.json` (`:36–50`). Reserved-name guard prevents overriding core agents (`:33`). The manifest-driven-directories vs separate-repos disposition is a STABLE accepted design posture documented in `framework/docs/MODULE-ECOSYSTEM.md` (R6, F-002 closure); not a fresh finding. |
-| 9 | Memory 3-tier + dream-cycle + 4 primitives + workflows | 0 | HIGH — 4 primitives (`apex/todos`, `apex/threads`, `apex/seeds`, `apex/backlog`) referenced across 9 command files (R24 prior count: `add-backlog`, `next`, `pause`, `plant-seed`, `resume`, `review-backlog`, `ship`, `start`, `thread`). `apex-memory-synthesis` module present. `_dream-cycle-emit.sh` present and wired into `next.md` on both lifecycle paths: pre-compact dream-cycle (`:127–136` — start/complete/fail) and periodic dream-cycle (`:284–293` — same lifecycle). `framework/apex-workflows/` holds 31 entries (`ls | wc -l` = 31); spec says "30+". |
-| 10 | Defense-in-Depth on APEX's own files | 0 | HIGH — `apex-prompt-guard.cjs`, `apex-workflow-guard.cjs`, `security.cjs`, `ci-scan.sh`, `path-guard.sh`, `prompt-guard.sh`, `workflow-guard.sh` all present in `framework/hooks/`. R24 spot-ran `test-hooks-security.sh` → 18/18 passed, exit 0, "ALL MECHANISMS VERIFIED"; HEAD has not advanced since, so the test result holds. No bypass path found this round. |
-| 11 | State derives from disk / proof-of-process | 0 | HIGH — `state-rebuild.sh` present in `framework/hooks/`; R24 spot-ran `test-state-rebuild.sh` → 39/39 passed, exit 0. The event-log + RESULT.json + STATE.json control plane is git-diff-able and jq-queryable per spec. `_state-read.sh`, `_state-update.sh`, `_state-sqlite.sh` (forward-reference SQLite migration path per spec §"State management היברידי" line 185) all present. |
-| 12 | 30+ core principles | 0 | HIGH — every bold principle-line walked against the corresponding mechanism. The R23 finding `F-023-001` (the IMP-078 "set and forget is the design intent" principle-line, formerly met in 2 of 3 files) is CONFIRMED CLOSED: `framework/apex-design-notes.md:35` carries the literal phrase verbatim ("Set and forget is the design intent: APEX is deliberately designed to run autonomously for days without constant hand-holding…"). `apex-spec.md:396` carries the principle ("APEX is designed to run autonomously for days"). The README's v7.1 section (`:122` heading + `:124–128` body) carries "runs forever without you watching" and "autonomous long-running projects (3+ days)" — accepted by R23/R24 as semantically covering the principle under the disjunctive reading the orchestrator settled on. The historical strict-verbatim reading would re-flag the README (it does not carry the literal phrase "set and forget"); R305 honors the settled disposition and does NOT re-litigate this as a fresh finding (no new evidence). All other principle-lines have an enforcing mechanism per the structural readings on axes 1–11 above. |
-
-All 12 axes received explicit investigation. No axis was skipped. No axis produced a finding this round.
+Audit-suite evidence rule: **BLIND SPOT** — `framework/tests/run-all.sh` was not executed in this round (tool-call budget exhausted before reaching it). The repo carries `lab-runnability-check.json` showing 67 passed / 0 failed / 5 skipped / 452s from a prior run; that file is artifact, not this-round observation, and is recorded literally per the rule. Documented below as **F-R315-006 (P3)**.
 
 ---
 
-## Blind spots
+## Coverage Map
 
-- **No self-test execution this round.** R305 is a read-only static neutral trial; no `framework/tests/*.sh` were executed. Confidence the test suite remains green relies on R24's empirical spot-runs (`test-state-rebuild.sh` 39/39, `test-decision-mode.sh` 22/22, `test-hooks-security.sh` 18/18) on identical HEAD `8ac2a85` 48h prior. A documentation-only HEAD advance cannot regress a behavioral test; HEAD has not advanced at all since R23/R24. Confidence the suite is green: HIGH.
-- **No `circuit-breaker.sh` empirical re-probe.** The R-021-001 fix is structurally confirmed (`CB_STDIN_TIMEOUT=3` at line 187, bounded read at line 189, loud diagnostic at line 198) but the empty-pipe probe was not re-run this round. The HOLD is structural (hard upper bound, not sample-dependent); confidence: HIGH.
-- **Strict-verbatim IMP-078 reading on README.md** — the historical strict-verbatim reading would flag `README.md` (it does not contain the literal phrase "set and forget"); the orchestrator's settled disposition under R22/R23/R24 was the disjunctive/semantic reading ("runs forever without you watching" + "autonomous long-running projects" satisfies the principle). R305 honors that settled disposition and does NOT raise this as a fresh finding. A future spec-hygiene pass could either (a) update README to include the literal phrase for clarity, or (b) annotate IMP-078 to disclaim strict verbatim; both are below the *finding* bar for an audit anchored only on the spec text. Not a finding.
-- **First-hour usability per-command exhaustive walk** — not re-walked command-by-command this round (neutral trial). Structural surface confirmed (45/45 PROPOSALS MODE GUARD, `help.md` natural-language routing live with all three spec cases, `onboard.md` hides L1–L4 labels). No drift signal observed; confidence HIGH on structural surface, MEDIUM on a hypothetical line-by-line vocabulary audit not performed.
-- **`LIM-001` / `LIM-002` / `LIM-003`.** All three remain on `framework/docs/ACCEPTED-LIMITATIONS.md` with re-open criteria intact and unmet per R24's last reading. R305 did not re-read the limitations file; HEAD has not advanced, so the prior readings hold. Not findings — documented limitations.
-- **NF-R22-PLAN-01 (P3 post-closure-backlog observation).** R23/R24 re-dispositioned this as NOT a finding (a latent future-drift risk in a hygiene policy whose current state is correct and verified; no `apex-spec.md` section mandates the self-test runner machine-enforce its own slow-tag policy). R305 concurs. Not a finding.
+| Axis | Coverage | Confidence | Findings |
+|---|---|---|---|
+| 1. 9 failure modes | partial — circuit-breaker, destructive-guard, recover/forensics commands all present | medium | 0 direct |
+| 2. Dual-mode classifier | not exhaustively probed (touched executor/critic file listings only) | low | 0 |
+| 3. Scale-Adaptive Classifier | not probed this round | low | BLIND SPOT |
+| 4. First-hour usability | inspected `/apex:help` no-arg output only | low | 0 |
+| 5. `/apex:help` navigator | present, no-arg path covers categories | medium | 0 |
+| 6. Test architecture w/ veto | `apex-test-architect` module is `status:active` in registry; veto semantics not probed end-to-end this round | low | BLIND SPOT |
+| 7. Auditor quarantine | not probed | low | BLIND SPOT |
+| 8. Module ecosystem | registry inspected — modules ship as `framework/modules/*` directories, not separate repos | high | 1 (SGC-001, already-documented design carve-out) |
+| 9. Memory 3-tier + workflows + 4 primitives | `apex-workflows/_index.json` present with 30+ recipes confirmed via `ls` | medium | 0 |
+| 10. Defense-in-Depth on APEX's own files | `apex-prompt-guard.cjs` MISSING; `apex-workflow-guard.cjs` + `security.cjs` present; `ci-scan.sh` exit-2 on detected vector confirmed | high | F-R315-001 (P0) |
+| 11. State derives from disk | not probed | low | BLIND SPOT |
+| 12. 30+ core principles | not exhaustively probed | low | BLIND SPOT |
+| 13. Adversarial falsification | **probed** — see counters below | high | F-R315-002, F-R315-003, F-R315-004, F-R315-005 |
+
+### Axis-13 coverage counters
+
+| Hook | bypass_attempts | silent_failure_probes | Result |
+|---|---|---|---|
+| `destructive-guard.sh` | 16 | 1 (empty arg → exit 0) | 14 blocked / 2 bypassed (`git config alias.x '!cmd'` space-form; `yes \| ...`); empty-arg silent pass is *intentional* per spec carve-out but undocumented |
+| `prompt-guard.sh` | 1 | 1 | blocked override pattern; empty arg → exit 0 (intentional) |
+| `path-guard.sh` | 1 | 1 | `.env` blocked; empty arg → exit 0 (intentional) |
+| `exfil-guard.sh` | 3 | 1 | gist/transfer.sh/pastebin/wget paste.ee/hastebin all blocked; empty arg → exit 0 |
+| `sequence-guard.sh` | 2 | 1 | empty arg → exit 0; non-empty without prior denied-error window → exit 0 (gated semantics; see F-R315-004) |
+| `subagent-guard.sh` | 2 | 1 | tmux/yes patterns unblocked (out of its narrow IMP-018 slice); empty arg → exit 0 |
+| `grader-search-guard.sh` | 1 | 0 | blocks `find -name expected` |
+| `phantom-check.sh` | 0 | 1 (no stdin) | exit 1 advisory, fail-loud OK |
+| `scratchpad-monitor.sh` | 0 | 1 | exit 0 no-op when no input — needs further probe |
+| `_state-update.sh` (silent) | 0 | 1 | direct invoke → exit 0; no fail-loud signal — design or gap? not concluded this round |
+| `session-log.sh` (silent) | 0 | 1 | direct invoke → exit 0; same as above |
+| `circuit-breaker.sh` | 0 | 0 | host harness fired it on this audit (real-world proof of live wiring) |
+| `ci-scan.sh` | 0 | 0 | exit 2 confirmed on lab `.github/workflows/ci.yml` (unpinned action) |
+
+Total this round: **bypass_attempts=26**, **silent_failure_probes=11**. Insufficient for full axis-13 coverage on all hooks — declared BLIND SPOT below.
 
 ---
 
-## Contradictions within spec itself
+## Blind Spots
 
-No intra-spec contradiction found this round. The two borderline items prior rounds recorded — (a) un-namespaced `.gitignore` glob patterns in §"Self-Healing Loop", correctly dispositioned NOT-a-contradiction (a glob matches a round-namespaced name just as well as a bare one); and (b) IMP-078 naming `apex-design-notes.md` by bare name while the file lives at `framework/apex-design-notes.md`, dispositioned as path-anchoring imprecision rather than logical self-contradiction — remain at their prior disposition. R-023-001 already remediated the file at its actual location, so item (b) is now purely cosmetic with zero functional consequence. Recorded as observations, not contradictions.
+- Axes 2, 3, 6, 7, 11, 12 not investigated this round — tool-call budget hit (cap 400) at 406 calls during axis-10/13 probing.
+- `framework/tests/run-all.sh` not executed this round → test-suite-evidence-rule literal: **BLIND SPOT** with corresponding **F-R315-006 P3 finding**.
+- The `apex-test-architect` veto-on-phase-completion contract (spec axis 6, principle "Test architecture is its own discipline with veto power") was confirmed only at registry-status level (`active`), not at runtime invocation.
+- `apex-prompt-guard.cjs` shim path in `settings.json` was not probed for graceful-degradation behavior when the file is missing.
+- The 28 axis-13 hooks listed in spec axis 13.b minimum coverage list were probed on the 11 above; the remaining (e.g., `phase-tag.sh`, `tdad-impact.py`, `_dream-cycle-emit.sh`) are unsampled.
+
+---
+
+## Spec Contradictions
+
+None observed this round (would require re-reading later spec sections to assert; only lines 1–595 covered).
 
 ---
 
 ## Findings
 
-**None.** R305 emits zero findings (P0=0, P1=0, P2=0, P3=0).
+### Finding F-R315-001: `apex-prompt-guard.cjs` is named in spec axis 10 but missing from `framework/hooks/`
 
-The full 12-axis re-walk surfaced no fresh drift and no contradiction of any spec line. HEAD has not advanced since the R22 convergence and the R23/R24 confirmation runs. The single R23 finding `F-023-001` (P3, the IMP-078 documentation triple) remains CLOSED. No fresh F-NNN finding is opened by R305.
-
----
-
-## Stop-criterion / loop-state note
-
-The `/apex:self-heal` loop **terminated CONVERGED at R22** (`ROUND-R22-CLOSURE.md`, `loop_terminal_state: TERMINAL — CONVERGED`) and was **re-confirmed CLOSED at R23** (`ROUND-R23-CLOSURE.md`, `consecutive_clean_rounds = 3`) and **R24** (zero findings). R305 is a detector-review neutral trial (not a continuation of the self-heal loop) on the same HEAD `8ac2a85`.
-
-| Condition | R305 state |
-|:----------|:-----------|
-| R305 audit-baseline P0 + P1 | **0** — R305 emits zero findings of any severity. |
-| R24 round P0 + P1 | **0** — R24 emitted zero findings; HEAD unchanged. |
-| R23 round-close P0 + P1 | **0** — `ROUND-R23-CLOSURE.md` closed CLOSED. |
-| R22 round-close P0 + P1 | **0** — `ROUND-R22-CLOSURE.md` closed CLOSED with terminal verdict. |
-| Open NEW-FINDINGS of P0/P1 severity | **0** — no R305 finding; carried NF-R22-PLAN-01 is P3 and re-dispositioned NOT-a-finding. |
-| Divergence check (R305 P0+P1 vs R24) | `0 > 0 + 2` → **FALSE**. No divergence. Δ = 0. |
-
-R305 re-confirms the converged terminal state for a fifth consecutive clean reading (R22, R23, R24, R305, counting the R22 closure itself). Both recent remediation commits (`8ac2a85` for R-023-001, `b448831` for R-022-001) hold structurally with no regression; every spec failure-mode defense is present and live in the structural reading. R305 does not re-open the loop, does not change the terminal verdict, and produces no seed for any successor round.
-
-Trajectory: **CONVERGED — clean neutral-trial confirmation, zero findings.**
+**Axis:** 10 — Defense-in-Depth on APEX's own files
+**Severity:** P0
+**Status:** CONFIRMED
+**Spec anchor:** *"Defense-in-Depth Security Layer: `apex-prompt-guard.js`, Path Traversal Prevention, `apex-workflow-guard.js`, CI scanner, `security.cjs` module."* (axis 10 list in framework-auditor agent definition + apex-spec.md §9 Security gaps).
+**Evidence:**
+- `Glob C:/.../framework/**/apex-prompt-guard*` → no files found.
+- `find .../framework -name "apex-prompt-guard*"` → empty.
+- `framework/hooks/` contains only `apex-workflow-guard.cjs` and `security.cjs` of the spec-named `.cjs/.js` trio.
+- `framework/HOOK-CLASSIFICATION.md:175` asserts the file ships: *"`apex-prompt-guard.cjs` | Auto-PreToolUse (Write\|Edit\|Agent) ..."*.
+- `framework/settings.json:23` references it: `~/.claude/hooks/apex-prompt-guard.cjs` (post-sync path).
+- `framework/HOOK-CLASSIFICATION.md:20` claims "three CommonJS guards (R5-003: `apex-prompt-guard.cjs`, `apex-workflow-guard.cjs`, `security.cjs`)".
+**Current behavior:** Settings.json shim `if command -v node ... && [ -f ~/.claude/hooks/apex-prompt-guard.cjs ]; then node ...; else bash prompt-guard.sh; fi` silently degrades to `prompt-guard.sh` (.sh) because the .cjs target does not exist in the framework source tree. IMP-003 arg-content validation (path-arg shell-metachar, name-arg role-marker, >1000-char advisory) — which the Bash fallback explicitly disclaims it cannot provide ("requires Node.js. Current host has no node on PATH; falling back to the 5 free-text prompt-injection patterns") — never executes, even on a host that has node installed, because no .cjs file exists to dispatch to.
+**Expected behavior (per spec):** A working `apex-prompt-guard.cjs` (or `.js`) ships in `framework/hooks/` and provides the IMP-003 arg-content validation layer named in spec §9 IMP-003.
+**Gap:** Named-but-missing spec component. Sync-to-claude pipeline cannot install a non-existent source file; arg-content validation has no working implementation path even on node-enabled hosts.
+**Blast radius:** Defense-in-Depth Security Layer (axis 10), IMP-003 enforcement (one of the spec's P0 items in §9), all PreToolUse Write\|Edit\|Agent calls' arg-content validation. Affects every multi-tool task that the spec's IMP-003 was designed to harden.
+**Reproduction:** `find .lab/apex-detector-lab-W-F3 -name "apex-prompt-guard*"` returns empty; the post-sync runtime referenced from settings.json:23 has no source artifact to install from.
+**Dependencies:** None.
 
 ---
 
-`AUDIT_COMPLETE: detector-review/trials/phase6-wf3-neutral.md | findings=0 | P0=0 P1=0 P2=0 P3=0 | scope=neutral-trial-confirmation`
+### Finding F-R315-002: `git config alias.X '!cmd'` (space-separated argument form) bypasses destructive-guard
+
+**Axis:** 13.a (guard-bypass falsification) + 6 (Mutation) + 9 (Security gaps, IMP-008)
+**Severity:** P1
+**Status:** CONFIRMED
+**Spec anchor:** *"`framework/hooks/destructive-guard.sh` חייב לחסום (exit 2) את ה-patterns הבאים בלעדיים: ... `git\s+config\s+(--global\s+)?(alias\.|.*)\s*['"]!` (alias עם `!` shell escape) ..."* (apex-spec.md §6 IMP-008, line 91).
+**Evidence:**
+- `framework/hooks/destructive-guard.sh:127` — regex: `grep -qE "git\s+config\s+(--global\s+|--system\s+|--local\s+)*alias\.[^=]*=['\"]!"`. The `=` is required.
+- Probe: `bash framework/hooks/destructive-guard.sh "git config alias.x='!sh -c'"` → exit 2 (blocked).
+- Probe: `bash framework/hooks/destructive-guard.sh "git config alias.foo \"!evilcmd\""` → exit 0 (PASSED).
+- Probe: `bash framework/hooks/destructive-guard.sh "git config --global alias.evil '!rm -rf ~'"` → exit 0 (PASSED).
+**Current behavior:** Only the `key=value` form of `git config` is detected. The standard, more-common `git config <key> <value>` CLI argument form (two-token, space-separated — what `man git-config` documents first) passes through with exit 0.
+**Expected behavior (per spec):** Both forms blocked (the spec literal `(alias.|.*)\s*['"]!` does not require `=`).
+**Gap:** Regex `[^=]*=` over-constrains the match. A literal exfil/persistence vector through `git config alias.<name> '!<shell>'` is undetected.
+**Blast radius:** IMP-008 destruction-persistence vector. Failure mode 6 (Mutation) + failure mode 9 (Security gaps, indirect-prompt-injection-via-persistent-hooks). An attacker (or a confused agent) that successfully installs a `!`-prefixed alias persists shell code into every future `git <alias>` invocation in the project.
+**Reproduction:** As above (probe quoted).
+**Dependencies:** None.
+
+---
+
+### Finding F-R315-003: IMP-018 unattended-affirmation primitives `yes |`, `echo y |`, `nohup &` not blocked
+
+**Axis:** 13.a + 9 (Security gaps, IMP-018)
+**Severity:** P1
+**Status:** CONFIRMED
+**Spec anchor:** *"... חייב לזהות subagent-launching ולחסום: `tmux new-session`, `tmux new -d`, `tmux send-keys` (במיוחד עם `Enter`/`Return`/`y`/`yes`), `screen -dm`, `screen -dmS`, `nohup .* &`, `disown`, `expect` scripts, `--yes`/`-y`/`--auto-approve`/`--force-yes` על פקודות לא-בטוחות, `echo y \|`, `yes \|`, `--dangerously-skip-permissions`."* (apex-spec.md §9 IMP-018, line 146).
+**Evidence:**
+- Probe: `bash framework/hooks/destructive-guard.sh "yes | something"` → exit 0.
+- Probe: `bash framework/hooks/destructive-guard.sh "echo y | dangercmd"` → exit 0.
+- Probe: `bash framework/hooks/destructive-guard.sh "nohup evilcmd &"` → exit 0.
+- Probe: `bash framework/hooks/subagent-guard.sh "yes | rm -rf"` → exit 0.
+- `framework/hooks/subagent-guard.sh:10–22` documents the narrow design — only `--yes/-y/--auto-approve/--force-yes/--assume-yes/--no-confirm` flags AND a destructive family (`rm|rmdir|drop|delete|kill|...`) in the same segment. The IMP-018 primitives `yes |`, `echo y |`, `nohup &`, `disown`, `expect` are not in either condition list.
+**Current behavior:** Bare `yes | <cmd>` and `echo y | <cmd>` pass through with exit 0. `nohup ... &` passes through with exit 0. Only `--dangerously-skip-permissions` (an explicit flag added later in destructive-guard) is caught of the IMP-018 set.
+**Expected behavior (per spec):** All listed primitives blocked at exit 2 by either destructive-guard.sh or subagent-guard.sh (or, per spec, by a `subagent-guard.sh` hook that covers the full IMP-018 list).
+**Gap:** subagent-guard's correlation logic (auto-yes flag AND destructive family) does not cover IMP-018's `yes |` / `echo y |` / `nohup &` / `disown` / `expect` primitives. destructive-guard does not block them either. Failure-loud requirement on IMP-018 is partial.
+**Blast radius:** Failure mode 9 (Security gaps, indirect prompt injection chains that auto-confirm a destructive subagent action). Failure mode 6 (Mutation) when chained with downstream destructive commands.
+**Reproduction:** As above.
+**Dependencies:** None.
+
+---
+
+### Finding F-R315-004: `sequence-guard.sh` is fully gated on `STATE.recent_denied_error_window` — credential-search primitives bypass it in any session where the window is empty
+
+**Axis:** 13.a + 9 (Security gaps, IMP-016)
+**Severity:** P2
+**Status:** CONFIRMED
+**Spec anchor:** *"hook חדש `framework/hooks/sequence-guard.sh` ... חייב לזהות credential-search-after-permission-denied: כאשר tool-call error כולל `unauthorized`/`forbidden`/`403`/`401`/`denied`/`missing token`, להעלות scrutiny על 5 הפקודות הבאות וחסום `find . -name "*token*"`, `grep -r "api[_-]key"`, `cat .env`, ..."* (apex-spec.md §9 IMP-016, line 144).
+**Evidence:**
+- `framework/hooks/sequence-guard.sh:51–54` — `WINDOW_LEN=$(...); if [ ... "$WINDOW_LEN" = "0" ] ...]; then exit 0; fi`.
+- Probe (no prior denied error): `bash framework/hooks/sequence-guard.sh "find . -name TOKEN_FILE"` → exit 0.
+- Probe: `bash framework/hooks/sequence-guard.sh "cat ~/.aws/credentials"` → exit 0.
+**Current behavior:** The IMP-016 pattern set is enforced **only** when an unauthorized/403/401/denied error landed within the last 5 PreToolUse Bash calls. In a fresh session, a project with no `.apex/STATE.json`, or any window-cleared state, the credential-search primitives are not blocked.
+**Expected behavior (per spec):** The spec describes the sequence semantics ("`-after`-permission-denied"), so the current gating is *semantically aligned*. However: a literal reading of *"חסום `find . -name "*token*"`, `grep -r "api[_-]key"`, `cat .env`, `cat ~/.aws/credentials`"* expects a baseline block on those primitives regardless of sequence. `path-guard.sh` covers `.env` and credentials paths at exit 2 (verified); but `find -name "*token*"`, `grep -r api_key`, etc., remain unblocked outside the sequence window.
+**Gap:** The defense for raw credential-discovery primitives outside a denied-error window relies entirely on `path-guard.sh` (path-prefix) — not on `sequence-guard.sh`. The spec text reads as listing two distinct rules ("scrutiny after denied error" + "block these primitives"), and the implementation has merged them into the conditional one. Partial mechanism (axis 10) but not actively breached if other layers are intact.
+**Blast radius:** Failure mode 9 in cold sessions / no-state contexts.
+**Reproduction:** As above; `bash framework/hooks/sequence-guard.sh "grep -r api_key /etc"` → exit 0 in any state where the denied-error window is empty.
+**Dependencies:** None.
+
+---
+
+### Finding F-R315-005: `_state-update.sh` and `session-log.sh` direct invocation are silent (no fail-loud)
+
+**Axis:** 13.b — silent-failure / fail-loud falsification
+**Severity:** P2
+**Status:** SUSPECTED
+**Spec anchor:** *"Fail-loud, never fail-silent."* (apex-spec.md §"עקרונות העבודה" line 234).
+**Evidence:**
+- Probe: `bash framework/hooks/_state-update.sh` (no args, no env) → exit 0 silent.
+- Probe: `bash framework/hooks/session-log.sh` (no args, no env) → exit 0 silent.
+**Current behavior:** Direct invocation of these hooks with no inputs returns exit 0 with no output. There is no "missing-context" diagnostic; the caller cannot distinguish "did nothing because nothing to do" from "swallowed a contract violation".
+**Expected behavior (per spec):** Fail-loud principle is universal. At minimum, a stderr line such as `[_state-update] no STATE.json found; skipping update (intentional)` would discharge the principle. Hooks that intentionally pass through on empty input should say so on stderr.
+**Gap:** Cannot distinguish intentional pass-through from accidental swallow. Audit cost of detecting silent failure is non-trivial because the contract is unwritten.
+**Blast radius:** Self-test / forensics auditability. Does not affect runtime correctness when the surrounding stack is healthy.
+**Reproduction:** As above.
+**Dependencies:** Related to F-R315-001 (apex-prompt-guard shim silently degrades to .sh fallback when .cjs missing — same family of silent degradation).
+
+---
+
+### Finding F-R315-006: Test-suite evidence rule — BLIND SPOT, suite not run this round
+
+**Axis:** Cross-cutting (Test-Suite Evidence Rule in framework-auditor agent definition)
+**Severity:** P3
+**Status:** CONFIRMED (literal: rule says pick OBSERVED or BLIND SPOT + P3 finding; choosing BLIND SPOT)
+**Spec anchor:** *"TEST-SUITE EVIDENCE RULE — Pick one: OBSERVED (run `bash framework/tests/run-all.sh`, quote summary) OR BLIND SPOT (literal record + P3 finding). Inheritance forbidden."* (framework-auditor agent definition).
+**Evidence:** This round's tool-call budget was exhausted at 406/400 (circuit-breaker tripped) before `framework/tests/run-all.sh` could be executed. The repo's `lab-runnability-check.json` (`total:67, passed:67, failed:0, skipped:5, total_seconds:452`) is artifact from a prior run; per the inheritance-forbidden clause it cannot substitute.
+**Current behavior:** No this-round suite execution.
+**Expected behavior (per spec):** OBSERVED line quoted from a fresh run.
+**Gap:** Literal-record-only; the next round should run it first to discharge the rule.
+**Blast radius:** Audit completeness for the round.
+**Reproduction:** Audit-process artifact; this finding *is* the literal record.
+**Dependencies:** None.
+
+---
+
+## SPEC-GAP-CANDIDATES (SGC)
+
+## SGC-R315-001: Module ecosystem — "separate repositories" vs "manifest-driven directories"
+**File / location:** `framework/modules/_registry.json:3`; `framework/docs/MODULE-ECOSYSTEM.md`.
+**Observation:** Spec §"Module Ecosystem כ-Extension Model" reads: *"כל module repo נפרד, issues נפרדים, versioning נפרד."* (lines ≈ 173–183). Implementation ships modules as directories under one repo with a manifest. Registry's own `_comment` field explicitly acknowledges the divergence: *"Manifest-driven directories satisfy the spec's structural commitments ...; separate-repo / git-submodule isolation is a future migration path with named trigger conditions."*
+**Why it is not a P0-P3 finding:** `framework/docs/MODULE-ECOSYSTEM.md` (R6-002) is the spec's own carve-out — the divergence is documented and accepted; this is not a silent contradiction. The spec wording, however, remains absolute ("nfrad"), and a future reader auditing in isolation would flag it.
+**Suggested spec language (non-binding):** Add a parenthetical in §"Module Ecosystem" — *"(see `framework/docs/MODULE-ECOSYSTEM.md` for the interim manifest-driven directory layout and the named trigger conditions for promoting to separate repositories)."*
+
+## SGC-R315-002: `framework/PRIVACY-POLICY.md` and `framework/hooks/first-hour-telemetry.sh` are forward-referenced but not yet present
+**File / location:** `apex-spec.md:516, 547`.
+**Observation:** Spec §"Claim measurement context (R13-007)" forward-references `framework/PRIVACY-POLICY.md` and `framework/hooks/first-hour-telemetry.sh` as "Phase 12 M16.1 deliverables — forward-reference banner applies". Both are absent from the repo today. Spec text includes a "forward-reference banner applies" caveat, but the banner itself is not surfaced in the repo as a tracked deferral.
+**Why it is not a P0-P3 finding:** Spec explicitly labels both as forward-references; not a contradiction with the implementation, only with reader expectations.
+**Suggested spec language (non-binding):** Add a single bullet to spec §"Out of scope (deferred)" naming the two artifacts as still-pending and pointing to the carrying deliverable (Phase 12 M16.1).
+
+---
+
+AUDIT_COMPLETE: C:/Users/דודאלמועלם/OneDrive - Tiva 13 Engineers/שולחן העבודה/APEX/detector-review/trials/phase6-wf3-neutral.md | findings=6 | P0=1 P1=2 P2=2 P3=1 | sgc=2

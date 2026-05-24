@@ -272,10 +272,65 @@ If the orchestrator-level circuit-breaker fires mid-campaign, pause
 cleanly, persist state on disk, summarize, stop. Don't push past it.
 
 ═══════════════════════════════════════════════════════════════════════
+AFTER CAMPAIGN A GATE 7 CLOSES — OPEN CAMPAIGN B
+═══════════════════════════════════════════════════════════════════════
+
+Campaign A is the **detector-sensitivity hardening** (this RESUME
+prompt's main subject). Campaign B is a **follow-on, sequenced**
+campaign: **Universal Tool-Call Audit-Trail Layer.** It generalises
+Campaign A's central lesson (round-checker accepted the auditor's
+count as ground truth → F-204-013) to ALL agent claims in the
+framework, not only the self-heal loop.
+
+**Trigger:** when Campaign A Gate 7 closes (Phase 7 done, owner
+sign-off), do NOT stop. Open `detector-review/CAMPAIGN-B-PLAN.md` and
+proceed with Phases B0 → B6 end-to-end. The B campaign plan is fully
+specified there — same shape as Campaign A (pre-registration → data
+layer → consumer layer → critic review → implement → re-certify →
+institutionalize), with concrete coverage matrix mapping 7
+infrastructure gaps + 5 high-leverage trust points to specific edits.
+
+**Key facts already established for Campaign B (from the prior session's
+Phase-B-α exploration):**
+
+- The infrastructure is already strong: `framework/hooks/tool-event-logger.sh`
+  captures every tool call in `.apex/event-log.jsonl` with full
+  `tool_input` + `tool_response` (PostToolUse matcher `*`).
+- `critic.md` STEP 1.6 / 1.7 already cross-references claims against
+  the event-log. That's the PATTERN to generalise.
+- 7 data-layer gaps; GAP-1 (sub-agent transcripts inaccessible to
+  parent) is the critical one and the explanation of why F-204-013
+  happened — R23's auditor ran in a sub-agent, its tool-call trace
+  went into a sibling project, R24's round-checker had no way to read
+  it. Phase B2.1 closes this.
+- 5 top-leverage consumer-layer trust points: critic STEP 2 (TP-1),
+  round-checker full re-probe (TP-2 — upgrades Campaign A's CR-04 from
+  sample to full coverage), verifier independent git diff (TP-3),
+  executor STEP 0.5 escalation (TP-4), framework-auditor Axis 10
+  procedural (TP-5).
+- 3 new files in framework/ (schema JSON, rotate hook, layer test).
+  Everything else additive prose. Rigor lives in the campaign, not in
+  framework bloat.
+- Owner pre-approval is granted IN THIS RESUME PROMPT for the small
+  apex-spec.md addition Campaign B requires (a single paragraph
+  describing the audit-trail standard).
+
+**Signature measurement of Campaign B:** variance collapse. Today
+Campaign A's R201/R202/R203 ran 3/13, 3/13, 13/13 on the same lab —
+extreme variance. Post-B5, three trials on the same corpus must show
+per-class kill-rate stddev ≤ 1 mutant. The mechanism: the upgraded
+round-checker REJECTS a shallow trial (the auditor's transcript
+doesn't contain real bypass attempts) and forces CONTINUE — so
+shallow trials no longer close the loop.
+
+═══════════════════════════════════════════════════════════════════════
 BEGIN
 ═══════════════════════════════════════════════════════════════════════
 
 תתחיל. Phase 4 — read the 6 numbered files above, then author
 FIX-DESIGN.md, then critic review, then proceed to 5 → 7 without
-asking. The user is on mobile and is not watching the keyboard
-approve prompts — bypass mode is on for the project; just work.
+asking. After Campaign A Gate 7 closes, open
+`detector-review/CAMPAIGN-B-PLAN.md` and continue with Phases B0 → B6
+through to Campaign B Gate 6 — also without stopping. The user is on
+mobile and is not watching the keyboard approve prompts — bypass mode
+is on for the project; just work.
