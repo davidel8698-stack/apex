@@ -438,3 +438,179 @@ describe('R-21-03 — heavy-page degrade', () => {
     expect(styleBlock).not.toBeNull();
   });
 });
+
+// R-21-01 DoD — touch tap/long-press + responsive HUD collapse (< 768px)
+describe('R-21-01 — touch + responsive collapse', () => {
+  /**
+   * Helper — dispatch a TouchEvent with one Touch whose clientX/clientY land
+   * on the given target. happy-dom supports `TouchEvent` + `Touch` natively.
+   * The PinScope touch listener registers on `document`, so events are
+   * dispatched on `document` (not on the target itself) to mirror real
+   * mobile-Safari event delivery.
+   */
+  function dispatchTouch(
+    type: 'touchstart' | 'touchend',
+    target: Element,
+    clientX: number,
+    clientY: number,
+  ): void {
+    const touch = new Touch({
+      identifier: 0,
+      target,
+      clientX,
+      clientY,
+      pageX: clientX,
+      pageY: clientY,
+      screenX: clientX,
+      screenY: clientY,
+    });
+    const event = new TouchEvent(type, {
+      bubbles: true,
+      cancelable: true,
+      touches: type === 'touchend' ? [] : [touch],
+      targetTouches: type === 'touchend' ? [] : [touch],
+      changedTouches: [touch],
+    });
+    document.dispatchEvent(event);
+  }
+
+  it('tap (touchstart→touchend < 500ms) selects a pinned element', async () => {
+    // Seed a pinned host element with a known rect.
+    const pinned = document.createElement('div');
+    pinned.setAttribute('data-pin', 'e_7');
+    pinned.style.cssText =
+      'position:fixed; left:50px; top:50px; width:80px; height:80px;';
+    document.body.appendChild(pinned);
+
+    // Stub elementFromPoint so jsdom/happy-dom returns the pinned element
+    // when the touch coordinates land inside its rect.
+    const originalEFP = document.elementFromPoint.bind(document);
+    document.elementFromPoint = ((x: number, y: number) => {
+      if (x >= 50 && x <= 130 && y >= 50 && y <= 130) return pinned;
+      return null;
+    }) as typeof document.elementFromPoint;
+
+    try {
+      render(<PinScope />);
+
+      // Tap = touchstart then touchend < 500 ms later at the same coords.
+      await act(async () => {
+        dispatchTouch('touchstart', pinned, 70, 70);
+        // ~50 ms dwell — well under LONG_PRESS_MS (500).
+        await new Promise((r) => setTimeout(r, 50));
+        dispatchTouch('touchend', pinned, 70, 70);
+        // Flush any pending state update from the listener.
+        await new Promise((r) => setTimeout(r, 0));
+      });
+
+      // The pinned element carries data-pin-selected, proving the tap routed
+      // through SelectionManager.select(pinId).
+      const sel = document.querySelector('[data-pin-selected]');
+      expect(sel).toBe(pinned);
+    } finally {
+      document.elementFromPoint = originalEFP;
+    }
+  });
+
+  it('long-press (touchend ≥ 500ms after touchstart) locks the selection', async () => {
+    // Seed a pinned host element with a known rect.
+    const pinned = document.createElement('div');
+    pinned.setAttribute('data-pin', 'e_8');
+    pinned.style.cssText =
+      'position:fixed; left:50px; top:50px; width:80px; height:80px;';
+    document.body.appendChild(pinned);
+
+    const originalEFP = document.elementFromPoint.bind(document);
+    document.elementFromPoint = ((x: number, y: number) => {
+      if (x >= 50 && x <= 130 && y >= 50 && y <= 130) return pinned;
+      return null;
+    }) as typeof document.elementFromPoint;
+
+    vi.useFakeTimers();
+    try {
+      render(<PinScope />);
+
+      // Long-press = touchend ≥ LONG_PRESS_MS (500) after touchstart.
+      await act(async () => {
+        dispatchTouch('touchstart', pinned, 70, 70);
+      });
+      await act(async () => {
+        // Advance well past the 500 ms threshold so the gesture is a long-press.
+        vi.advanceTimersByTime(600);
+      });
+      await act(async () => {
+        dispatchTouch('touchend', pinned, 70, 70);
+      });
+
+      // After long-press, the element is selected (locked by SelectionManager.
+      // select, which is the same primitive the tap branch uses — locked=true
+      // is the default).
+      expect(document.querySelector('[data-pin-selected]')).toBe(pinned);
+
+      // Regression guard: a subsequent mouseleave must NOT clear the selection
+      // (locked selection survives mouse-out per §8.1).
+      await act(async () => {
+        pinned.dispatchEvent(
+          new MouseEvent('mouseleave', { bubbles: true }),
+        );
+        // Let any handlers settle.
+        vi.advanceTimersByTime(50);
+      });
+
+      expect(document.querySelector('[data-pin-selected]')).toBe(pinned);
+    } finally {
+      vi.useRealTimers();
+      document.elementFromPoint = originalEFP;
+    }
+  });
+
+  it('compact viewport (innerWidth < 768) collapses HUD; restoring width re-expands it', async () => {
+    // Capture original width so the test restores it.
+    const originalWidth = window.innerWidth;
+    // Start in compact mode BEFORE render so the initial useViewportSize read
+    // is compact (otherwise the first render is the desktop tree).
+    Object.defineProperty(window, 'innerWidth', {
+      configurable: true,
+      writable: true,
+      value: 600,
+    });
+
+    try {
+      render(<PinScope />);
+
+      // Fire resize so any post-mount useViewportSize listener picks up the
+      // compact value (covers either eager-read or listener-only paths).
+      await act(async () => {
+        window.dispatchEvent(new Event('resize'));
+        await new Promise((r) => setTimeout(r, 0));
+      });
+
+      const hud = document.querySelector('[data-pinscope-ui="root"]');
+      expect(hud).not.toBeNull();
+
+      // Visible-HUD subtree is absent in compact mode — no PinBadges layer.
+      expect(hud!.querySelector('[data-pinscope-badges]')).toBeNull();
+      // The FloatingToggle is exposed so the user can re-expand the HUD.
+      expect(hud!.querySelector('[data-pinscope-toggle]')).not.toBeNull();
+
+      // Restore to a desktop width and dispatch resize → HUD re-expands.
+      Object.defineProperty(window, 'innerWidth', {
+        configurable: true,
+        writable: true,
+        value: 1280,
+      });
+      await act(async () => {
+        window.dispatchEvent(new Event('resize'));
+        await new Promise((r) => setTimeout(r, 0));
+      });
+
+      expect(hud!.querySelector('[data-pinscope-badges]')).not.toBeNull();
+    } finally {
+      Object.defineProperty(window, 'innerWidth', {
+        configurable: true,
+        writable: true,
+        value: originalWidth,
+      });
+    }
+  });
+});

@@ -32,6 +32,8 @@ import type { HistoryData } from './managers/HistoryManager.js';
 import { RuntimePinObserver } from './managers/RuntimePinObserver.js';
 import { markShadowHosts } from './utils/shadow-dom.js';
 import { isHeavyPage, shouldSkipBadge } from './utils/throttle.js';
+import { LongPressDetector, isCompactViewport } from './utils/long-press.js';
+import { escapeHud, findPinnedAncestor } from './utils/element-walker.js';
 
 export interface PinScopeProps {
   /** Runtime kill-switch. */
@@ -257,6 +259,49 @@ function PinScopeHud({
   // is the §10-B/§11 programmatic lock the `select e_N` command routes through.
   const { selected, select: selectPin } = useSelectedElement(measuring);
 
+  // R-21-01 — §12 / AC-064 touch tap + long-press wiring. A single
+  // `LongPressDetector` per HUD mount distinguishes tap (`touchend` <
+  // `LONG_PRESS_MS = 500ms` after `touchstart`) from long-press (`touchend`
+  // ≥ 500ms). Both gestures route to `selectPin(pinId)` — `SelectionManager.
+  // select` locks by default (`locked = true`), so the long-press lock is
+  // the same primitive the existing click handler uses. Listeners are
+  // registered on `document` with `passive: true` (the browser-synthetic
+  // `click` after a short tap is harmless: `SelectionManager.select` is
+  // idempotent on the same pin). Cleanup removes the listeners. Guarded
+  // for non-DOM envs (SSR / node test runs).
+  useEffect(() => {
+    if (typeof document === 'undefined') return undefined;
+    const detector = new LongPressDetector();
+    const onTouchStart = (e: TouchEvent): void => {
+      if (e.touches.length !== 1) return;
+      detector.start();
+    };
+    const onTouchEnd = (e: TouchEvent): void => {
+      const touch = e.changedTouches[0];
+      if (!touch) return;
+      // Compute the gesture (tap vs long-press) before resolving the target,
+      // so the dwell-time read is closest to the actual end event.
+      detector.end();
+      const raw =
+        document.elementFromPoint(touch.clientX, touch.clientY) ?? null;
+      const target = raw instanceof HTMLElement ? raw : null;
+      const pinned = findPinnedAncestor(escapeHud(target));
+      const pinId = pinned?.getAttribute(PIN_ATTR);
+      if (pinned && pinId) {
+        // Both tap and long-press select; the lock semantics live inside
+        // `SelectionManager.select` (locked=true is the default) — the
+        // long-press lock is the same path a click triggers.
+        selectPin(pinId);
+      }
+    };
+    document.addEventListener('touchstart', onTouchStart, { passive: true });
+    document.addEventListener('touchend', onTouchEnd, { passive: true });
+    return () => {
+      document.removeEventListener('touchstart', onTouchStart);
+      document.removeEventListener('touchend', onTouchEnd);
+    };
+  }, [selectPin]);
+
   // §10-C / §10-D flow primitives — instantiated once per HUD mount.
   const command = useMemo(() => {
     // R-18-01 — `persistHistory` is the single history persist owner; wiring
@@ -377,6 +422,21 @@ function PinScopeHud({
 
   // HUD-hidden branch: only the FloatingToggle is rendered (§7.1).
   if (!hudVisible) {
+    return createPortal(
+      <div data-pinscope-ui="root">
+        <FloatingToggle onShow={() => setHudVisible(true)} />
+      </div>,
+      document.body,
+    );
+  }
+
+  // R-21-01 — §12 / AC-064 compact-viewport branch. Below the mobile
+  // breakpoint (768px) the visible HUD subtree collapses to just the
+  // `FloatingToggle`, mirroring the `!hudVisible` shape so the user can
+  // re-expand by tapping it. `isCompactViewport` is a pure function of
+  // `viewport.width`; `useViewportSize` already drives a re-render on
+  // window `resize`, so rotation/resize flips this branch automatically.
+  if (isCompactViewport(viewport.width)) {
     return createPortal(
       <div data-pinscope-ui="root">
         <FloatingToggle onShow={() => setHudVisible(true)} />

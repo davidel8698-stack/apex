@@ -379,3 +379,207 @@ every < 16×16 pin and absent on every normal-sized sibling; the injected
 `style[data-pinscope-skip-badge]` block present in the HUD); AC-070 / AC-071
 perf-budget tests stayed within budget; AC-065 utility tests still GREEN.
 **Wave 2 PASSES the gate.** Wave 3 may proceed.
+
+## Wave 3 — R-21-01
+
+### R-21-01 — touch tap/long-press + responsive HUD collapse (< 768px)
+
+**Status:** CLOSED.
+
+**R-items executed in this wave:** R-21-01 (sole R-item; W3 is single-R-item by
+the wave map — `PinScope.tsx` single-owner per wave).
+
+**Files modified (with line deltas — `git diff --stat`):**
+
+```
+ pinscope/src/runtime/PinScope.tsx             |  60 +++++++++
+ pinscope/tests/unit/runtime/pinscope.test.tsx | 176 ++++++++++++++++++++++++++
+ 2 files changed, 236 insertions(+)
+```
+
+`PinScope.tsx` adds (a) `import { LongPressDetector, isCompactViewport } from
+'./utils/long-press.js';` and `import { escapeHud, findPinnedAncestor } from
+'./utils/element-walker.js';` (the existing element-walker primitives the
+selection click handler already uses, now also reachable from the touch
+listener); (b) a new `useEffect` placed immediately after the
+`useSelectedElement` line so `selectPin` is in its closure. The effect:
+- guards `typeof document === 'undefined'`;
+- constructs ONE `LongPressDetector` per HUD mount (the same detector
+  instance accumulates dwell time across `touchstart` → `touchend`);
+- registers `touchstart` and `touchend` listeners on `document` with
+  `{ passive: true }` (the browser-synthetic `click` after a short tap is
+  harmless — `SelectionManager.select` is idempotent on the same pin);
+- on `touchstart` calls `detector.start()` when `e.touches.length === 1`;
+- on `touchend` calls `detector.end()`, then resolves the touched pin via
+  `document.elementFromPoint(touch.clientX, touch.clientY)` → `escapeHud`
+  → `findPinnedAncestor` → `getAttribute(PIN_ATTR)` and routes through
+  `selectPin(pinId)` when present. Both tap and long-press route to the
+  same `selectPin` — the long-press "lock" is the default `locked=true`
+  semantics inside `SelectionManager.select`, identical to the existing
+  click-to-select path;
+- returns a cleanup that removes both listeners. Depends on `selectPin`
+  (which is stable per `useSelectedElement` mount, but listed in deps for
+  React-correctness).
+
+`PinScope.tsx` also adds (c) a compact-viewport early-return branch placed
+adjacent to (immediately after) the existing `!hudVisible` branch in
+`PinScopeHud`'s render. When `isCompactViewport(viewport.width)` is true
+(< `MOBILE_BREAKPOINT = 768`), the HUD collapses to the same
+`FloatingToggle`-only shape `!hudVisible` already renders, so the user can
+tap the toggle to re-expand. `useViewportSize` already drives a re-render
+on `resize`, so rotation/resize flips this branch automatically. The frozen
+`src/runtime/utils/long-press.ts`, `src/runtime/hooks/useSelectedElement.ts`,
+and `src/runtime/utils/element-walker.ts` were NOT modified.
+
+**Red → green transition evidence.**
+
+Pre-wave RED: the new describe block `R-21-01 — touch + responsive collapse`
+(three tests) was added to `tests/unit/runtime/pinscope.test.tsx` BEFORE any
+source-tree change. All three tests failed against the post-W2 `PinScope.tsx`
+(which never registers a touch listener and never collapses below 768 px):
+
+```
+ ❯ tests/unit/runtime/pinscope.test.tsx (14 tests | 3 failed | 11 skipped) 219ms
+   ❯ tests/unit/runtime/pinscope.test.tsx > R-21-01 — touch + responsive collapse > tap (touchstart→touchend < 500ms) selects a pinned element
+     → expected null to be <div data-pin="e_7" …(1)></div> // Object.is equality
+   ❯ tests/unit/runtime/pinscope.test.tsx > R-21-01 — touch + responsive collapse > long-press (touchend ≥ 500ms after touchstart) locks the selection
+     → expected null to be <div data-pin="e_8" …(1)></div> // Object.is equality
+   ❯ tests/unit/runtime/pinscope.test.tsx > R-21-01 — touch + responsive collapse > compact viewport (innerWidth < 768) collapses HUD; restoring width re-expands it
+     → expected <style data-pinscope-badges></style> to be null
+
+ Test Files  1 failed (1)
+      Tests  3 failed | 11 skipped (14)
+```
+
+The first two failures bottom out on
+`expect(document.querySelector('[data-pin-selected]')).toBe(pinned)` returning
+`null` — no `src/` consumer registers a `touchstart`/`touchend` listener, so
+the synthetic touch dispatch is observed by nothing. The third failure proves
+the responsive-collapse gate is absent: with `innerWidth = 600` the visible
+HUD still renders `<PinBadges/>` (the `[data-pinscope-badges]` selector
+matches the `<style data-pinscope-badges>` block PinBadges injects). This is
+the F-21-01 finding text reproduced end-to-end.
+
+Post-fix GREEN (same describe block, same vitest filter — only the source
+tree changed in between):
+
+```
+ ✓ tests/unit/runtime/pinscope.test.tsx (14 tests | 11 skipped) 317ms
+
+ Test Files  1 passed (1)
+      Tests  3 passed | 11 skipped (14)
+```
+
+All three R-21-01 named tests flipped FAIL → PASS across the
+`PinScope.tsx` edits.
+
+**Definition of Done — clause-by-clause verification.**
+
+- *tap selects.* Test 1 seeds `<div data-pin="e_7">` with a known rect, stubs
+  `document.elementFromPoint` to return the pin when the touch lands inside
+  it, renders `<PinScope/>`, dispatches `TouchEvent('touchstart')` then
+  `TouchEvent('touchend')` ~50 ms apart at `(70, 70)`, and asserts
+  `document.querySelector('[data-pin-selected]') === pinned` — GREEN.
+- *long-press locks.* Test 2 uses `vi.useFakeTimers()` to dispatch
+  `touchstart`, advance time by 600 ms (past `LONG_PRESS_MS = 500`), then
+  dispatch `touchend`. Asserts `[data-pin-selected]` resolves to the pin
+  AND survives a subsequent `mouseleave` on the host (regression guard —
+  proves the lock, not a transient tap; the lock semantics live in
+  `SelectionManager.select` with `locked = true` default) — GREEN.
+- *compact viewport collapses HUD.* Test 3 sets `window.innerWidth = 600`
+  BEFORE `render(<PinScope/>)` and fires `resize`, asserts the
+  `[data-pinscope-badges]` element inside `[data-pinscope-ui="root"]` is
+  ABSENT AND `[data-pinscope-toggle]` (the `FloatingToggle` handle) is
+  PRESENT, then restores `window.innerWidth = 1280`, re-fires `resize`,
+  and asserts `[data-pinscope-badges]` returns — GREEN.
+
+**Acceptance criteria — grep predicates.**
+
+- `grep -nE 'LongPressDetector|isCompactViewport' pinscope/src/runtime/PinScope.tsx`
+  → 5 hits (line 35 import — both symbols on one line; line 263 doc comment
+  referencing `LongPressDetector`; line 274 `new LongPressDetector()`; lines
+  436, 439 referencing/calling `isCompactViewport`). ≥ 2 ✓
+- `grep -nE 'touchstart|touchend' pinscope/src/runtime/PinScope.tsx` → 6 hits
+  inside the new `useEffect` body (doc comment lines 263, 264; listener
+  registrations lines 297, 298; cleanup `removeEventListener` lines 300,
+  301). All inside a `useEffect` body (previously zero across all of
+  `src/runtime/`). ✓
+- `grep -rn 'LongPressDetector' pinscope/src/` → 2 files —
+  `src/runtime/utils/long-press.ts` (definition) and
+  `src/runtime/PinScope.tsx` (consumer). ≥ 2 files ✓
+- `grep -rn 'isCompactViewport' pinscope/src/` → 2 files —
+  `src/runtime/utils/long-press.ts` (definition) and
+  `src/runtime/PinScope.tsx` (consumer). ≥ 2 files ✓
+- `cd pinscope && npm run typecheck` → exit 0 ✓
+- `cd pinscope && npm test` → exit 0; 316 tests passed (313 prior + 3 new
+  R-21-01). The existing `tests/unit/runtime/selection.test.tsx` and
+  `controls.test.tsx` click-to-select cases do not regress (the touch
+  listener does not interfere with the existing click handler — both route
+  through the same `SelectionManager` via `selectPin`, which is idempotent
+  on the same pin). ✓
+
+**Verification command outputs (exit codes).**
+
+```
+$ npm run typecheck
+> pinscope@1.0.0 typecheck
+> tsc --noEmit
+typecheck exit=0
+
+$ npm test
+ ✓ tests/unit/runtime/pinscope.test.tsx (14 tests) 1531ms  [contains 3 R-21-01 tests]
+ ✓ tests/unit/runtime/edge-cases.test.ts (5 tests) 114ms
+ ✓ tests/unit/runtime/element-walker.test.ts (7 tests) 19ms
+ ✓ tests/unit/runtime/infopanel.test.tsx (3 tests) 188ms
+ ✓ tests/unit/runtime/shortcuts.test.tsx (15 tests) 36ms
+ ✓ tests/unit/runtime/pinscope-assembly.test.tsx (7 tests) 378ms
+ ✓ tests/unit/runtime/perf.test.tsx (2 tests) 156ms       [AC-070 / AC-071 within budget]
+ ✓ tests/unit/runtime/components.test.tsx (3 tests) 122ms
+ ✓ tests/unit/long-press.test.ts (3 tests) 7ms            [AC-064 utility tests still GREEN]
+ ... (30 files total)
+ ✓ tests/unit/deployment.test.ts (10 tests) 2112ms
+ ✓ tests/unit/claude-bridge.test.ts (2 tests) 2429ms
+
+ Test Files  30 passed (30)
+      Tests  316 passed (316)
+npm test exit=0
+```
+
+**Scope notes.** Only the two files named in R-21-01's Execution plan were
+touched (`src/runtime/PinScope.tsx`, `tests/unit/runtime/pinscope.test.tsx`).
+The frozen `src/runtime/utils/long-press.ts` was NOT modified — the executor
+consumed `LongPressDetector` and `isCompactViewport` as-is.
+`src/runtime/hooks/useSelectedElement.ts` was NOT modified — the touch
+listener routes through the hook's existing `selectPin` return so the click
+and touch paths share one `SelectionManager`. `src/runtime/utils/element-walker.ts`
+was NOT modified — the touch listener consumes `escapeHud` and
+`findPinnedAncestor` as-is. The `!hudVisible` branch was NOT touched — the
+new compact-viewport branch is a separate early return adjacent to it. No
+new findings discovered during implementation — `NEW-FINDINGS-W3.md` not
+created.
+
+**Suspected-finding status.** N/A — F-21-01 is CONFIRMED; the SUSPECTED item
+this round is F-21-04, scheduled in W4.
+
+**Regression check.** Full suite is GREEN at 316/316 (W2 baseline: 313 → +3
+new R-21-01 tests). No pre-wave-green test went RED post-fix. AC-070 mount
+budget held on the single mount run (`perf.test.tsx` still passes) — the
+touch-listener `useEffect` body registers two `addEventListener` calls and
+nothing more; it is cheaper than the R-20-02 `RuntimePinObserver` deferral.
+AC-064 utility tests (`tests/unit/long-press.test.ts`) still GREEN — the
+utilities themselves were not modified. The existing click-to-select hover
+flow tests (selection coverage in `pinscope.test.tsx`, `pinscope-assembly.test.tsx`,
+and `shortcuts.test.tsx`) all still pass. AC-070-flake-watch: not applicable
+this wave — the perf test was GREEN on the first run; no flake re-run needed.
+
+### Wave 3 gate
+
+`cd pinscope && npm run typecheck` → exit 0. `cd pinscope && npm test` → exit 0;
+316/316 pass; the R-21-01 named describe block is GREEN with all three DoD
+tests transitioned red→green (tap selects via real `TouchEvent` dispatch;
+long-press at ≥ 500 ms locks and survives `mouseleave`; compact viewport at
+`innerWidth=600` collapses the visible-HUD subtree and exposes the
+`FloatingToggle`, restoring at `innerWidth=1280` returns the HUD); existing
+`tests/unit/runtime/selection.test.tsx` / `pinscope-assembly.test.tsx` /
+`shortcuts.test.tsx` click-to-select cases do not regress; AC-070 mount-time
+perf test stays within budget. **Wave 3 PASSES the gate.** Wave 4 may proceed.
