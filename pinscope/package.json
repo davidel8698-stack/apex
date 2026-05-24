@@ -1,6 +1,6 @@
 {
   "name": "pinscope",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "Visual debug layer that lets non-technical users communicate UI changes to AI agents with certainty.",
   "license": "MIT",
   "type": "module",
@@ -29,7 +29,10 @@
       "name": "runtime (dev)",
       "path": "dist/runtime/PinScope.js",
       "import": "{ PinScope }",
-      "ignore": ["react", "react-dom"],
+      "ignore": [
+        "react",
+        "react-dom"
+      ],
       "limit": "80 KB"
     }
   ],
