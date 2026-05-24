@@ -107,35 +107,71 @@ HALTED state — `round-checker` itself produces the closure.
 
    Otherwise — round R<N+1> is required.
 
-6. **Audit-credibility spot-check.** Before declaring CLOSED on any
-   `P0+P1==0` round, independently re-verify a small sample of the
-   auditor's compliance claims. Pick exactly **3** items from the
-   audit's coverage map that the auditor marked compliant — prefer (a)
-   any security guard (`destructive-guard`, `exfil-guard`, `owner-guard`,
-   `apex-prompt-guard.cjs`, `apex-workflow-guard.cjs`), and (b) any
-   self-heal-loop file the auditor itself reads (`framework/agents/
-   specialist/framework-auditor.md`, `round-checker.md`,
-   `framework/commands/apex/self-heal.md`). For each pick: re-run the
-   minimal observation that would confirm the claim (one `grep`, one
-   `test -f`, or one hook invocation against a contract-violating
-   payload). If any re-check contradicts the auditor's claim, the round
-   does **not** close; record the discrepancy as a P1 finding under
-   "Audit-credibility regression" in this closure report, set `Status:
-   CONTINUE TO R<N+1>`, and seed the next round on the disputed area.
-   Document each spot-check in a short table inside the closure report
-   under `## Spot-check results` with columns `claim | re-check command
-   | observed | verdict`. The spot-check must be performed on every
-   `P0+P1==0` round — it is the load-bearing defense against the
-   F-204-013 audit-honesty regression (R23 fabricated counts → R24
-   ratified). **Spot-check tool failure rule:** if a spot-check command
-   itself errors (tool unavailable, file-system timeout, jq missing,
-   permission denied on the re-check) so the observation cannot be
-   completed, treat the spot-check as `FAILED` for posture purposes
-   (CR-08 maps the round to `clean-pending-spot-check`, not
-   `stable`/`improving`) — **never** as "skipped" or implicitly
-   "passed." Record the error verbatim under the verdict column and
-   set `Status: CONTINUE TO R<N+1>` with the spot-check tooling issue
-   as a seed.
+6. **Audit-credibility full re-probe.** [Campaign B TP-2 — upgrades
+   Campaign A CR-04 from sampling to full coverage]
+
+   Before declaring CLOSED on any `P0+P1==0` round, independently
+   re-verify EVERY `coverage_map.axis_13.bypass_attempts[]` AND every
+   `coverage_map.axis_10.concrete_bypass_attempts[]` entry the
+   auditor declared. The mechanism leverages Campaign B B2.1's
+   sub-agent transcript aggregation (`.apex/subagent-transcripts/
+   framework-auditor-R<N>-<id>.jsonl`):
+
+   a. **Locate the auditor's transcript.** Find the matching
+      sub-agent transcript file: glob
+      `.apex/subagent-transcripts/framework-auditor-R<N>-*.jsonl`. If
+      MISSING → emit P0 `audit_trail_missing` + Status `CONTINUE TO
+      R<N+1>` (the auditor must have a transcript per AC-1).
+
+   b. **Iterate every bypass_attempt — axis_13 AND axis_10.** For
+      each entry in the UNION of
+      `coverage_map.axis_13.bypass_attempts[]` and
+      `coverage_map.axis_10.concrete_bypass_attempts[]` (TP-5 schema;
+      same `(guard, payload, exit)` shape):
+      - Read the auditor's claimed `(guard, payload, exit)`.
+      - Find the corresponding `tool_call` event in the transcript:
+        match on the canonical `<tool_name>|<tool_input>` substring
+        (the same canonical string the B2.4 tool_input_hash uses).
+      - Extract the actual `tool_response.exit_code` (or `is_error`
+        boolean if exit not surfaced).
+      - Compare. Mismatch → emit P1 `audit_credibility_regression`
+        with `{guard, claimed_exit, observed_exit, finding, axis}`
+        (axis ∈ {10, 13}) and set posture to
+        `audit-credibility-regression` (do NOT use
+        `stable`/`improving`/`clean-pending-spot-check` rungs).
+      - **Empty axis_10 with no entries on a P0+P1==0 candidate
+        round** → emit P1 `axis_10_blind_spot` + posture
+        `clean-pending-spot-check` (per CR-08 rung). The TP-5 +
+        TP-2 pairing requires both data capture (TP-5) and re-probe
+        gate (TP-2 §6.b axis-10 iteration) to be active.
+
+   c. **F-204-013 reconstruction check.** Independent of the
+      coverage_map entries, scan every audit finding for cited grep
+      counts (`evidence: N hits`). For each, re-run the cited grep
+      from the transcript's `tool_call` (or freshly if absent) and
+      compare. Mismatch ≥ 50% on any single finding → emit P0
+      `phantom_grep_count` + Status `CONTINUE TO R<N+1>`. This is
+      the Campaign B structural answer to the R23 "6 hits"
+      fabrication.
+
+   d. **Verdict integration.** Any P0/P1 emitted by 6.a-6.c blocks
+      the round closure regardless of the auditor's P0+P1==0 claim.
+      The "two consecutive clean rounds" stop criterion (step 5)
+      requires both the count gate AND the re-probe gate to hold.
+
+   Document each re-probe in a short table inside the closure
+   report under `## Spot-check results` with columns
+   `axis | claim | re-check via transcript | observed | verdict`.
+
+   **Spot-check tool failure rule** (preserved from CR-04 verbatim):
+   if a re-probe shell command itself errors (tool unavailable,
+   file-system timeout, jq missing, permission denied on the
+   re-check) so the observation cannot be completed, treat as
+   `FAILED` for posture purposes (CR-08 maps the round to
+   `clean-pending-spot-check`, not `stable`/`improving`) — **never**
+   as "skipped" or implicitly "passed." Record the error verbatim
+   under the verdict column and set `Status: CONTINUE TO R<N+1>`
+   with the tooling issue as a seed.
 
 ## OUTPUT FORMAT — `ROUND-R<N>-CLOSURE.md`
 
