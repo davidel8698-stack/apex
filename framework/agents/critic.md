@@ -625,12 +625,62 @@ existing tool-input dispatch (R-611) and premise verifier
 (R-634); STEP 1.7 catches what those do not — a tool call the
 executor *claims to have made* but never actually invoked.
 
+**STEP 2 (prelude): STATUS-FIELD CAP** [Campaign B TP-4.b]
+
+If `RESULT.json.status == "partial"`, the critic verdict is
+**capped at PARTIAL** regardless of done_criteria verification
+counts and regardless of STEP 2 (cont.) verify-command
+re-execution outcomes. Record the cap in the verdict
+justification as:
+`partial_cap_from_status: <issues_found[].type list>`
+
+The cap is independent of STEP 2's classification:
+- Even if ALL criteria are VERIFIED → verdict stays PARTIAL.
+- Even if STEP 2 (cont.) verify-command re-execution PASSes for
+  every entry → verdict stays PARTIAL.
+- The cap ONLY downgrades — a task with `status=failure` or
+  CRITICAL findings is NOT upgraded to PARTIAL; the
+  more-severe verdict wins.
+
+Rationale: TP-4's executor edit promotes `status=partial` to a
+verdict-gate (no longer informational per R16-634S original
+semantics). The critic is the consumer; without this prelude,
+the executor's cap is silent at the critic boundary and AT-4
+assert 4 cannot pass.
+
 **STEP 2: ACCEPTANCE CRITERIA**
 For EACH criterion in done_criteria:
 - verified=true in RESULT.json AND evidence is real → VERIFIED
 - verified=true but evidence is vague/phantom → UNVERIFIED (PHANTOM)
 - verified=false → UNVERIFIED (HONEST)
 - not listed → MISSING (CRITICAL)
+
+**STEP 2 (cont.): VERIFY-COMMAND RE-EXECUTION** [Campaign B TP-1]
+
+For each entry in RESULT.json.verify_commands_run[] (cap N=10 per
+task; D-level done_criteria prioritized over lower-level when capped):
+
+1. Re-execute the literal `.command` in the repo root (read-only —
+   if the command would mutate state, append `2>&1 || true` and
+   capture the actual exit non-mutatively; otherwise run as-is).
+2. Capture actual `(exit_code, stdout, stderr_first_200_chars)`.
+3. Compare against the claimed `(exit, stdout)` byte-for-byte (sha1
+   of stdout when the claim's `stdout` is non-empty, exit-code int
+   comparison otherwise).
+4. **Mismatch** → emit a CRITICAL finding with type
+   `fabricated_verify_command_output` in CRITIC.md. Fields:
+   `claimed_exit`, `actual_exit`, `claimed_stdout_sha1`,
+   `actual_stdout_sha1`, `command`. The fabrication is unforgivable;
+   verdict CRITICAL regardless of any other STEP's outcome.
+5. **Match** → no finding. Continue.
+
+Cost cap rationale: re-running 10 verify_commands costs ~2-5 extra
+seconds per task; the doubled-cost risk in EXPERIMENT-PROTOCOL.md §13
+is bounded by N=10. D-level priority because D-tasks carry the
+irreversible-action risk where fabricated success is most dangerous.
+
+Skip path: if RESULT.json.verify_commands_run is absent or empty,
+STEP 2 (cont.) is vacuously PASS — no entry to re-execute.
 
 **STEP 3: DIFF REVIEW + EDGE CASES**
 Read diff line-by-line against task spec:
