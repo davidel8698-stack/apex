@@ -346,6 +346,61 @@ date and rationale. Empty = protocol ran exactly as pre-registered.
     R106 (inline). The Scorer ignores any file that does not
     correspond to a clean trial run against `.lab/`.
 
+- **2026-05-24 (Phase-6 mid-run — detector-invocation mechanism
+  change, NOT a design change).** The first Phase-6 detector trials
+  (W-F3 NEUTRAL, R304/Negative Control, baseline-1/2/3 partial)
+  produced anomalous outputs: trial reports referred to "12 axes"
+  rather than "13 axes" (or hybrid "12 (+13th adversarial)"), omitted
+  the new `sgc=<n>` summary-line suffix that CR-06 requires, and in
+  one case (W-F3 NEUTRAL) explicitly claimed `apex-prompt-guard.cjs`
+  was present in the W-F3 lab when the W-A1 mutation has deleted that
+  file. Live `ls` on the lab confirmed the file is absent. The
+  `framework-auditor` subagent appears to be reading a session-cached
+  agent definition (the harness's catalog snapshot at session start,
+  taken before Phase-5 install) rather than the post-install file at
+  `~/.claude/agents/specialist/framework-auditor.md` (which `head -5`
+  and `grep -c` confirmed has the full fix: 13 axes, anti-priming,
+  test-suite rule, SGC class, sgc summary suffix).
+  - **Resolution:** §4's documented fallback mechanism is invoked for
+    every Phase-6 detector trial — drive the Detector with the
+    auditor definition file verbatim as its prompt (via the
+    `general-purpose` subagent). This guarantees the fixed definition
+    is the one actually loaded for each trial, removing the cache
+    confound.
+  - **Comparability concern.** §4 also says the fallback "applied
+    identically to the baseline so the comparison stays controlled."
+    Phase-2 trials (R201–R206) used the `framework-auditor` Task
+    subagent under the OLD 12-axis definition; those trials were run
+    in a previous session where the cache reflected the pre-fix
+    file. The Phase-6 trials use the general-purpose subagent with
+    the FIXED definition embedded. The comparison is therefore:
+    - Phase 2 measurement: OLD definition × subagent-cached delivery
+    - Phase 6 measurement: NEW definition × embedded-prompt delivery
+    The mechanism differs, but the relevant variable (definition
+    content) also differs, and the embedded-prompt mechanism is
+    strictly more faithful to the definition text (zero
+    interpretation drift between the file and what the agent sees).
+    A residual confound exists: any behavioural delta could be
+    partially due to the mechanism change, not solely the definition
+    change. This is a documented limitation of this run; a future
+    methodology pass could re-run Phase 2 baseline with the embedded
+    mechanism to fully isolate the variables. For this campaign, the
+    embedded mechanism is the only path to certify the fix actually
+    reaches the agent.
+  - **Trial files discarded** (cache-contaminated): the killed
+    baseline-1/2/3 outputs (truncated when stopped), the W-F3
+    NEUTRAL trial at `detector-review/trials/phase6-wf3-neutral.md`
+    (12-axis report, fabricated file-presence claim), the R304
+    NC trial at `detector-review/trials/phase6-negative-control.md`
+    (hybrid "12 (+13th)" report, missing sgc suffix). The Scorer
+    ignores any Phase-6 file that does not carry the new `sgc=<n>`
+    suffix on its `AUDIT_COMPLETE` line, since that suffix is the
+    Phase-6 fix's machine-verifiable fingerprint.
+  - **Method / corpus / thresholds / scoring rubric:** all unchanged.
+    Trial count (N=3 per condition), corpus composition, blind
+    3-agent protocol, §9 thresholds — unaffected. Only the agent
+    invocation mechanism changed.
+
 ## 13. Freeze declaration
 
 This protocol is frozen as of 2026-05-23 against baseline commit
