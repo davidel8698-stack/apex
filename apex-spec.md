@@ -614,6 +614,54 @@ from `apex-design-notes.md`).
 > Primacy is NOT claimed against closed-source vendor offerings whose
 > internal mechanisms are not publicly auditable.
 
+## §PinScope as bundled default (additive — post-merge)
+
+> **Status:** Additive section landed via Plan APX-PS-CAMPAIGN-001 P8.2.
+> Does NOT bump spec schema version. The v6 schema and its 13 axes
+> (per detector-hardening CR-spec) remain authoritative.
+
+**Scope:** APEX's bundled UI-feedback product. PinScope is a Vite/Next/
+Webpack plugin + React HUD runtime that assigns every JSX element a
+stable `data-pin="e_N"` build-time identifier so non-technical users
+can point at any element and submit structured Operations to AI agents.
+
+**Source of truth:** `pinscope/SPEC.md` v2.0.0 (FROZEN). All PinScope
+changes obey its own AC ledger (69 ACs, currently 62 CLOSED + 7 BLOCKED
+at PS-R19) and its own self-healing loop `/ps-heal` (PS-R{N}).
+
+**Production invariant:** AC-010 + AC-074 — production builds contain
+**zero bytes** of PinScope (data-pin attributes stripped at HTML
+transform; PinScope React runtime tree-shaken; size-limit prod entry = 0).
+
+**Scaffold integration:**
+- `/apex:start` adds `pinscope` to `STATE.json.stack_skills` for UI projects (via architect STEP 0)
+- `/apex:onboard` STEP 7 inherits the same flow
+- `/apex:ui-phase` installs the PinScope plugin + mounts `<PinScope/>` at root
+- `/apex:ui-review` ingests PinScope Snapshot / pending Operations as evidence
+- `apex-frontend` specialist resolves Pin IDs via `.pinmap.json` (never selectors)
+- `architect` UI-section recommends Pin-keyed acceptance criteria
+
+**Distribution:** `npm install pinscope` (published from `pinscope/`
+at versions tracked by `pinscope-npm/v{X}` git tags).
+
+**`/ps-heal` doctrines available for incremental adoption by `/apex:self-heal`:**
+See `framework/docs/PS-HEAL-DOCTRINES.md` for the 5 candidates
+(narrative-auditor, narrative-coverage metric, BLOCKED status,
+auto-rendered STATUS, separated `loop.json` machine state) with
+held-out validation requirements per-doctrine.
+
+**Preservation invariant:** PinScope work prior to this merge is
+preserved via three immortal git tags:
+- `pinscope/PS-R19-converged` (a1b5281) — CONVERGED state
+- `pinscope/branch-tip-R20-staged` (959a4f7) — R20 plan+waves
+- `main/pre-pinscope-merge` (bed7f09) — pre-merge main rollback anchor
+
+**Cross-references:**
+- `pinscope/SPEC.md` — North-Star spec (FROZEN v2.0.0)
+- `framework/apex-skills/pinscope.md` — APEX-side conventions
+- `framework/docs/PS-HEAL-DOCTRINES.md` — inheritance backlog
+- `framework/decisions/2026-05-pinscope-merge.md` — Decision Record
+
 ## במהות
 
 APEX אינו רק כלי שעוזר לכתוב קוד. הוא **מערכת engineering autonomous שמחזיקה את עצמה ישרה** לאורך פרויקט שלם, **בתחום מוצהר וברור**, **לקהל מוצהר וברור** (לא-מתכנתים), **בשני modes מותאמים** (collaborator בהחלטות מוצר, replacement בהחלטות טכניות), **ב-scale שמותאם אוטומטית** ממהלך bug fix של חמש דקות ועד enterprise system של חודשים, דרך 9 שכבות הגנה כנגד 9 כשלים מובחנים, בעלות נמוכה ב-70-90%, **בחוויית שימוש שמשתמש לא-טכני יכול להצליח איתה בסשן ובשעה הראשונה**, **שלא דורשת ממנו לענות על שאלות פתוחות אלא רק לבחור בין הצעות**, **שלא מאלצת אותו לדבאג כשמשהו נשבר**, **שמנהלת אותו דרך menu של workflows מוכנים וקריאה של "מה אתה רוצה לעשות?" ולא דרך dashboard של toggles**, **שמאפשרת לו לשאול שאלות בשפה טבעית במקום לזכור שמות של commands**, **שתותאם את הרמה שלה אוטומטית לרמת הפרויקט**, **עם test architecture שהיא discipline נפרדת עם זכות veto**, **עם roundtable של specialists להחלטות ארכיטקטוניות מורכבות**, **עם module ecosystem שקהילה יכולה להרחיב**, **עם test infrastructure שממופה לפני קוד נכתב**, **עם auditor שלעולם לא נוגע ב-implementation**, **עם domain-specific contracts**, **עם proof-of-process חי**, **עם honest scope statement**, **עם threat model project-specific**, **עם Defense-in-Depth על הקבצים של עצמה**, **עם monetization שלא פוגע באמון (core free forever)**, **ועם framework-to-platform transition** — עם הכרה כנה שהסוכן (Claude) הוא רכיב fallible, **שגם המשתמש האנושי כפוף ל-Automation Bias**, **שגם ה-existence של קובץ אינה הוכחה לתוכן שלו**, **שגם graceful degradation היא סיבה לכישלון**, **שגם marketing קל הופך לאובדן אמון**, **שגם horizontal layer planning שובר write-serial**, **שגם generic security check מפספס threats פרויקט-ספציפיים**, **שגם AI שמודד tests יטה את הקוד לעבור tests סותרים**, **שגם הקבצים שAPEX יוצר בעצמו הופכים לפרומפט מורעל**, **שגם tool סגור יגיע ל-plateau אבל platform פתוחה תתפתח לנצח**, **ושגם הטוב ביותר מבין ה-AI ב-architecture אבל המשתמש מבין הכי טוב ב-product** — ולכן צריך מעקות בטיחות ברמת filesystem, content, schema, scope, ו-prompt injection, חוזים structurally enforced, adversarial verification עם cross-model decoupling וגם cross-AI external review וגם specialist roundtable, cost-awareness, U-shaped context engineering, Phase-Gating, strict mode, vertical slice enforcement, test/implementation quarantine עם veto power, dual-mode operation, scale-adaptive classification, ו-UX שלא רק **לא מציף** את המשתמש אלא גם **לא דורש ממנו ידע שאין לו**, **לא משאיר אותו לדבאג**, **לא מאלץ אותו להבין הגדרות**, **לא דורש ממנו לזכור שמות של commands**, **לא מחליט בשבילו במקומות שהוא המומחה**, **ולא נועל אותו מאחורי paywall כשהוא צריך עזרה**. לא הוראות וכוונות טובות, אלא **mechanism design שמניח טעות גם של ה-AI, גם של האדם, גם של ה-naive verification, גם של ה-environment, גם של ה-marketing, גם של ה-decomposition, גם של ה-generic security, גם של ה-test isolation, גם של ה-state files עצמם, גם של ה-monolithic architecture, וגם של ההנחה ש-AI יכול להחליף את המשתמש בכל דבר — כברירת מחדל** ובונה את כל המערכת סביב היכולת לזהות טעות לפני שהיא הופכת לנזק ולסייע למשתמש בדיוק בדברים שהוא לא יכול, בלי לקחת ממנו בדברים שהוא כן יכול — בעלות שמאפשרת לעבוד ברצינות, בקצב שמשתמש אנושי יכול לעקוב אחריו, בחוויה שלא דורשת ידע טכני, בפלטפורמה לבחירת המשתמש, בתחום שמוצהר במפורש, בליבה חינמית לנצח, **ובתוצאה הנדסית שמתרחבת לטובה לאורך הפרויקט במקום לקרוס תחת המשקל של עצמה** — והכל מוכח דרך פרויקטים פתוחים שכל אחד יכול לבדוק, וניתן להרחבה ע"י כל אחד שמבין דומיין שאנחנו לא הכרנו.

@@ -8,9 +8,13 @@
 ---
 
 ## What This Is
-This is a BUILD project for the APEX framework itself — not an application.
-APEX is a context-engineered pipeline framework for Claude Code, consisting of
-slash commands, agents, hooks, and JSON schemas.
+This is a BUILD project for the APEX framework + the PinScope visual-debug HUD
+that APEX scaffolds into every UI project. APEX is a context-engineered pipeline
+framework for Claude Code, consisting of slash commands, agents, hooks, JSON
+schemas, and PinScope-aware loop agents. PinScope itself (under `pinscope/`) is
+the bundled product that APEX installs by default into every React+Vite/Next
+project it scaffolds — so non-technical users can point at any UI element and
+communicate structured changes to their AI agents with certainty.
 The authoritative specs are APEX-v5.md (base) and APEX-v6.md (delta).
 Merge rule: v6 wins on conflict. "unchanged" = use v5. "updated/redesigned" = use v6.
 
@@ -26,14 +30,21 @@ artifacts in `pinscope/convergence/`). The Build Rules below govern `framework/`
 ```
 ~/.claude/
   commands/apex/     11 slash command .md files
-  agents/            8 core agent .md files
+  commands/ps-heal.md  PinScope self-heal loop command (post-PinScope-merge)
+  agents/            8 core agent .md files + 6 PinScope-loop agents
+                     (spec-auditor, narrative-auditor, ps-{remediation-planner,
+                     scheduler,wave-executor,verifier})
   agents/specialist/ 4 specialist agent .md files
   hooks/             16 shell scripts (incl. memory-watchdog, turn-checkpoint, session-auto-resume — v7.1 Auto-Continuity)
   scripts/           apex-watchdog.ps1, install-watchdog.ps1 (optional Windows external watchdog)
-  apex-skills/       stack-specific skill files
+  apex-skills/       stack-specific skill files (incl. pinscope.md for UI projects)
   apex-learnings.md  learning accumulator
   settings.json      hook configuration
 ```
+
+PinScope itself (`pinscope/`) is NOT installed to `~/.claude/` — it is
+published to npm and consumed via `npm install pinscope` in target projects
+that APEX scaffolds. See `pinscope/README.md` + `framework/apex-skills/pinscope.md`.
 
 ## Project State Files (per target project, not built here)
 ```

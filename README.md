@@ -13,6 +13,8 @@
 
 APEX is a **multi-agent framework and platform for coding agents** (Claude Code, Cursor, Codex, Copilot, Gemini, Windsurf, and others through thin adapters) that turns them from session-by-session code assistants into an **autonomous, stateful, falsifiable, cost-aware, multi-platform, scope-honest, injection-hardened, dual-mode, scale-adaptive, and non-technical-first** engineering system.
 
+Every UI project APEX scaffolds is **PinScope-instrumented by default** — point at any element on the running app, see its numeric properties, and send a structured Operation back to your AI agent. UI-feedback rounds drop from 5–10 to 1–2. See [`pinscope/`](pinscope/) for the bundled product and `framework/apex-skills/pinscope.md` for how APEX uses it.
+
 It is the only framework in its category designed up front for **non-programmers** — not for developers — within a clearly declared scope (TypeScript / Python / Go with git and a test framework), operating as:
 
 - a **collaborator** in product decisions (where the user is the expert), and
