@@ -395,6 +395,25 @@ user-validated instruction into the APEX agent template. The
 `framework-auditor` is distinct from the existing test-only `auditor`
 agent (which retains its filesystem quarantine to test files).
 
+**Universal tool-call audit-trail layer (Campaign B).** Every claim
+by every APEX agent must be verifiable against an independent,
+append-only trail of every tool call the framework made. The data
+substrate is `.apex/event-log.jsonl` (schema-validated v1 per
+`framework/schemas/EVENT-LOG-ENTRY.schema.json`); sub-agent
+attribution is provided via the `agent_id` field synthesized by
+`pre-subagent-start.sh` and denormalized into
+`.apex/subagent-transcripts/<agent_name>-<round_tag>-<sha1_8>.jsonl`
+by `subagent-stop.sh`. Consumer-side enforcement spans five reviewer
+agents (critic STEP 2 prelude + STEP 2 (cont.); round-checker step 6
+full axis-13+axis-10 re-probe; verifier STEP 1 (cont.) independent
+git diff; executor STEP 0.5 status=partial escalation;
+framework-auditor Axis 10 procedural sub-pass). The full contract is
+documented in `framework/docs/AUDIT-TRAIL-STANDARD.md`. The structural
+intent: the F-204-013-class fabrication ("R23 claimed 6 hits for
+IMP-039 fields; live grep returns 0; R24 ratified") is unreachable
+because round-checker re-runs the cited grep against the imported
+sub-agent transcript and emits P0 on mismatch.
+
 ## Auto-Continuity Layer (v7.1)
 
 APEX is designed to run autonomously for days. The Auto-Continuity Layer
