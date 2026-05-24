@@ -298,8 +298,56 @@ fi
 if grep -q 'pre-task-claims' "$HOOKS_DIR/pre-task-snapshot.sh" 2>/dev/null \
    && grep -q 'pre_task_claim' "$HOOKS_DIR/pre-task-snapshot.sh" 2>/dev/null; then
   ok "F1: pre-task-snapshot.sh writes pre-task-claims/ + emits pre_task_claim event"
+  # Live demo: stage a fake PLAN_META.json with a single task, invoke
+  # pre-task-snapshot.sh with the matching id, assert the claim file
+  # lands AND the event-log carries a pre_task_claim entry.
+  BOX="$(mk_sandbox)"
+  pushd "$BOX" >/dev/null 2>&1
+  PHASE="test-phase"
+  TASK="test-task-1"
+  mkdir -p ".apex/phases/${PHASE}"
+  cat > .apex/STATE.json <<JSON
+{ "current_phase": "${PHASE}" }
+JSON
+  cat > ".apex/phases/${PHASE}/PLAN_META.json" <<JSON
+{
+  "phase_id": "${PHASE}",
+  "phase_name": "audit-trail layer test",
+  "tasks": [
+    {
+      "id": "${TASK}",
+      "name": "demo",
+      "files": ["src/foo.sh", "src/bar.sh"],
+      "done_criteria": ["foo wired", "bar tested"]
+    }
+  ]
+}
+JSON
+  # Run the hook with the task id (named-invocation path, no stdin
+  # envelope — bypasses the R8-008 self-filter and the git-stash side
+  # effect since the sandbox has nothing to stash).
+  bash "$HOOKS_DIR/pre-task-snapshot.sh" "$TASK" </dev/null >/dev/null 2>&1 || true
+  if [ -f ".apex/pre-task-claims/${TASK}.json" ]; then
+    EXP_FILES_CT=$(jq -r '(.expected_files | length)' ".apex/pre-task-claims/${TASK}.json" 2>/dev/null)
+    if [ "$EXP_FILES_CT" = "2" ]; then
+      ok "F2: claim file captures expected_files[] from PLAN_META"
+    else
+      nope "F2: expected_files count wrong (want 2, got ${EXP_FILES_CT:-empty})"
+    fi
+  else
+    nope "F2: claim file not created"
+  fi
+  if grep -q '"type":"pre_task_claim"' .apex/event-log.jsonl 2>/dev/null; then
+    ok "F3: pre_task_claim event landed in event-log"
+  else
+    nope "F3: pre_task_claim event NOT in event-log"
+  fi
+  popd >/dev/null 2>&1
+  rm -rf "$BOX"
 else
   skip "F1: pre-task claims pending B2.5"
+  skip "F2: live demo pending B2.5"
+  skip "F3: event-log emit pending B2.5"
 fi
 
 # ----- G. B2.6 sub-agent count guard (AC-9) -------------------------------

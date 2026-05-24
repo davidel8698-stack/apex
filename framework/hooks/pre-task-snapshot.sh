@@ -107,6 +107,67 @@ if [ -n "$REPO_ROOT" ]; then
 fi
 # --- end R16-602S ------------------------------------------------------
 
+# --- Campaign B B2.5: pre-task claims capture (GAP-7 closure) ----------
+# Read the task's expected files[] and done_criteria[] from PLAN_META.json
+# at task entry, freeze them into .apex/pre-task-claims/<task-id>.json,
+# and emit a pre_task_claim event. critic STEP 0/1 can diff expected vs
+# delivered at task close to catch scope-evasion AND scope-creep.
+#
+# Spec anchor: audit-trail-review/EXPERIMENT-PROTOCOL.md §5.3 (event
+# types `pre_task_claim` + `pre_task_claim_diff`) + AC-11 (binding
+# hard-FAIL — every Task() invocation in B5 must correspond to a
+# pre_task_claim entry).
+#
+# Skip path: TASK_ID="unknown" (no -id arg passed) → no claim. The hook
+# is invoked by Claude Code's PreToolUse Bash matcher (no task_id
+# argument) AND by /apex:next via `bash pre-task-snapshot.sh $TASK_ID`
+# (with the id). Only the named invocation triggers a claim.
+if [ "$TASK_ID" != "unknown" ] && [ -n "$REPO_ROOT" ] && command -v jq >/dev/null 2>&1; then
+  PLAN_META=".apex/phases/${CURRENT_PHASE}/PLAN_META.json"
+  if [ -f "$PLAN_META" ]; then
+    CLAIMS_DIR=".apex/pre-task-claims"
+    mkdir -p "$CLAIMS_DIR" 2>/dev/null || true
+    CLAIM_FILE="${CLAIMS_DIR}/${TASK_ID}.json"
+    NOW_ISO=$(date -u +'%Y-%m-%dT%H:%M:%SZ' 2>/dev/null)
+    # Extract the matching task. Atomic via tmp+mv so a partial write
+    # never leaves an unparseable claim file behind.
+    TMP_CLAIM="${CLAIM_FILE}.tmp.$$"
+    if jq --arg id "$TASK_ID" --arg phase "$CURRENT_PHASE" --arg ts "$NOW_ISO" \
+        '
+        (.tasks // []) | map(select(.id == $id)) | .[0] // null
+        | if . == null
+          then {task_id:$id, phase:$phase, expected_files:[], expected_done_criteria:[], recorded_at:$ts, source:"task_not_in_plan_meta"}
+          else {
+            task_id:$id,
+            phase:$phase,
+            expected_files:(.files // []),
+            expected_done_criteria:(.done_criteria // []),
+            verify_commands:(.verify_commands // []),
+            recorded_at:$ts,
+            source:"plan_meta"
+          }
+          end
+        ' "$PLAN_META" > "$TMP_CLAIM" 2>/dev/null; then
+      mv "$TMP_CLAIM" "$CLAIM_FILE" 2>/dev/null
+      # Emit pre_task_claim event with the same data (denormalised for
+      # easy event-log scanning).
+      EFILES=$(jq -c '.expected_files // []' "$CLAIM_FILE" 2>/dev/null)
+      EDONE=$(jq -c '.expected_done_criteria // []' "$CLAIM_FILE" 2>/dev/null)
+      # _emit_apex_event treats every k/v as a string — pass JSON arrays
+      # as their canonical JSON-stringified form so consumers can parse.
+      _emit_apex_event "pre_task_claim" .apex \
+        task_id "$TASK_ID" \
+        phase "$CURRENT_PHASE" \
+        expected_files "${EFILES:-[]}" \
+        expected_done_criteria "${EDONE:-[]}" \
+        recorded_at "$NOW_ISO"
+    else
+      rm -f "$TMP_CLAIM"
+    fi
+  fi
+fi
+# --- end Campaign B B2.5 -----------------------------------------------
+
 # Create a stash object WITHOUT touching the working tree.
 # -u includes untracked files (matching previous --include-untracked semantic).
 STASH_ERR=$(git stash create -u "$STASH_MSG" 2>&1)
