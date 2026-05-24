@@ -76,6 +76,12 @@
         "hooks": [
           { "type": "command", "command": "if command -v node >/dev/null 2>&1 && [ -f ~/.claude/hooks/apex-workflow-guard.cjs ]; then node ~/.claude/hooks/apex-workflow-guard.cjs; else bash ~/.claude/hooks/workflow-guard.sh; fi" }
         ]
+      },
+      {
+        "matcher": "Agent|Task",
+        "hooks": [
+          { "type": "command", "command": "bash ~/.claude/hooks/pre-subagent-start.sh" }
+        ]
       }
     ],
     "PostToolUse": [

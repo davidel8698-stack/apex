@@ -81,6 +81,30 @@ fi
 # under .apex/ by default.
 mkdir -p .apex 2>/dev/null || true
 
+# Campaign B B2.1 (GAP-1 closure): stamp the most-recent in-flight
+# sub-agent's agent_id onto this tool_call event so post-hoc
+# subagent-transcripts/ filtering works. The registry file is written
+# by pre-subagent-start.sh on Task() PreToolUse and updated to
+# `status=stopped` by subagent-stop.sh on SubagentStop.
+#
+# Single-sub-agent-at-a-time best-effort (per EXPERIMENT-PROTOCOL.md
+# §6.1.3 fallback). Concurrent Task() invocations share stamping;
+# documented as Phase-7 R-AT-P7-01.
+#
+# Host attribution: when no sub-agent is in flight, stamp `host-<sid>`
+# so every tool_call has a non-null `agent_id` — necessary for the
+# audit-trail-coverage metric (§7.2) to compute over EVERY event.
+AGENT_ID=""
+if [ -f .apex/in-flight-subagents.jsonl ]; then
+  AGENT_ID=$(awk '/"status":"in_flight"/' .apex/in-flight-subagents.jsonl 2>/dev/null \
+    | tail -1 \
+    | jq -r '.agent_id // empty' 2>/dev/null | tr -d '\r')
+fi
+if [ -z "$AGENT_ID" ]; then
+  SID=$(printf '%s' "$STDIN_BUF" | jq -r '.session_id // ""' 2>/dev/null | tr -d '\r')
+  AGENT_ID="host-${SID:-unknown}"
+fi
+
 # Emit the record via the ad-hoc helper. _emit_apex_event accepts
 # arbitrary <key> <val> pairs after <event_type> <state_dir>; it writes
 # one JSONL line per call to ${state_dir}/event-log.jsonl. STATE.json is
@@ -89,6 +113,7 @@ _emit_apex_event "tool_call" .apex \
   tool_name "$TN" \
   tool_input "$TI_JSON" \
   tool_response "$TR_JSON" \
-  is_error "$IS_ERR"
+  is_error "$IS_ERR" \
+  agent_id "$AGENT_ID"
 
 exit 0

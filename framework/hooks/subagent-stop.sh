@@ -8,10 +8,18 @@ require_jq
 # shellcheck disable=SC1091
 source "$(dirname "$0")/_tokens-update.sh"
 
+# Campaign B B2.1: source the central event-emitter for subagent_stop +
+# transcript_imported boundary events. Sourced (not invoked) per the
+# library convention; idempotent guard protects double-source.
+# shellcheck disable=SC1091
+source "$(dirname "$0")/_state-update.sh"
+
 export APEX_HOOK_SOURCE="${APEX_HOOK_SOURCE:-subagent-stop}"
 
 INPUT=$(cat)
 AGENT=$(echo "$INPUT" | jq -r '.agent_name // empty')
+AGENT_ID_ENV=$(echo "$INPUT" | jq -r '.agent_id // empty' 2>/dev/null | tr -d '\r')
+ROUND_TAG_ENV=$(echo "$INPUT" | jq -r '.round_tag // empty' 2>/dev/null | tr -d '\r')
 
 # R12-001 (F-201): extract usage.* fields from the SubagentStop payload and
 # accumulate into STATE.tokens.* via apex_tokens_update. Every field defaults
@@ -118,6 +126,120 @@ if echo "$EXECUTOR_AGENTS" | grep -qw "$AGENT"; then
   fi
 
   echo "✅ APEX: $AGENT validated ($TOOL_CALLS tool calls, diff non-empty)"
+fi
+
+# ---------------------------------------------------------------------
+# Campaign B B2.1 — GAP-1 closure: emit subagent_stop boundary event and
+# denormalise the matching agent_id's tool_call events into
+# .apex/subagent-transcripts/<agent_name>-<round_tag>-<sha1_8>.jsonl so
+# downstream consumers (round-checker TP-2, critic STEPs 1.6/1.7,
+# verifier TP-3) can cross-reference claims to actual tool calls.
+#
+# Spec anchor: audit-trail-review/EXPERIMENT-PROTOCOL.md §6.1 + §6.2.
+# Closes AC-1 (hard-FAIL per §12.2). Companion to pre-subagent-start.sh.
+# ---------------------------------------------------------------------
+if [ -n "$AGENT" ]; then
+  REG=".apex/in-flight-subagents.jsonl"
+  # Resolve the agent_id for this stop event. Preference order:
+  #   1. envelope's own .agent_id (provided when Claude Code surfaces it)
+  #   2. most-recent in_flight registry entry whose .agent_name matches
+  RESOLVED_ID="$AGENT_ID_ENV"
+  RESOLVED_ROUND="$ROUND_TAG_ENV"
+  if [ -z "$RESOLVED_ID" ] && [ -f "$REG" ]; then
+    REG_LINE=$(awk -v want="$AGENT" '
+      {
+        if (match($0, /"agent_name":"[^"]+"/) > 0) {
+          name = substr($0, RSTART+14, RLENGTH-15)
+          if (name == want && index($0, "\"status\":\"in_flight\"") > 0) last = $0
+        }
+      }
+      END { if (last != "") print last }
+    ' "$REG" 2>/dev/null)
+    if [ -n "$REG_LINE" ]; then
+      RESOLVED_ID=$(echo "$REG_LINE" | jq -r '.agent_id // empty' 2>/dev/null | tr -d '\r')
+      [ -z "$RESOLVED_ROUND" ] && RESOLVED_ROUND=$(echo "$REG_LINE" | jq -r '.round_tag // empty' 2>/dev/null | tr -d '\r')
+    fi
+  fi
+
+  if [ -n "$RESOLVED_ID" ]; then
+    # Best-effort registry close — flip the most-recent in_flight line
+    # for this agent_id to status=stopped. Atomic via tmp+mv.
+    if [ -f "$REG" ]; then
+      TMP_REG="${REG}.tmp.$$"
+      jq -c --arg id "$RESOLVED_ID" '
+        if .agent_id == $id and .status == "in_flight"
+        then .status = "stopped" | .stopped_at = (now | strftime("%Y-%m-%dT%H:%M:%SZ"))
+        else . end' "$REG" > "$TMP_REG" 2>/dev/null \
+          && mv "$TMP_REG" "$REG" \
+          || rm -f "$TMP_REG"
+    fi
+
+    # Filename suffix = last 8 chars of agent_id (the sha1 prefix
+    # synthesised by pre-subagent-start.sh).
+    SUFFIX=$(printf '%s' "$RESOLVED_ID" | awk -F- '{print $NF}')
+    [ -z "$RESOLVED_ROUND" ] && RESOLVED_ROUND="NOROUND-$(date -u +%s 2>/dev/null || echo 0)"
+    RESOLVED_ROUND_SAN=$(printf '%s' "$RESOLVED_ROUND" | tr -c 'A-Za-z0-9._-' '_' | head -c 64)
+    AGENT_SAN=$(printf '%s' "$AGENT" | tr -c 'A-Za-z0-9._-' '_' | head -c 64)
+    OUT_FILE=".apex/subagent-transcripts/${AGENT_SAN}-${RESOLVED_ROUND_SAN}-${SUFFIX}.jsonl"
+
+    mkdir -p .apex/subagent-transcripts 2>/dev/null || true
+
+    # Denormalise: every event-log line with matching .agent_id between
+    # this agent's subagent_start and (this) subagent_stop boundaries.
+    # Implementation: scan event-log.jsonl from the most-recent
+    # subagent_start of this agent_id; emit every event with agent_id ==
+    # RESOLVED_ID, terminate at the next subagent_stop (which is THIS
+    # emission — so the boundary marker also lands in the transcript).
+    #
+    # The transcript file is OVERWRITTEN per stop event so a re-emitted
+    # stop (rare) doesn't double the content.
+    if [ -f .apex/event-log.jsonl ]; then
+      START_LINE=$(grep -n '"type":"subagent_start"' .apex/event-log.jsonl 2>/dev/null \
+        | awk -F: -v id="$RESOLVED_ID" '
+            { rest = substr($0, index($0, ":")+1)
+              if (index(rest, "\"agent_id\":\"" id "\"") > 0) lastline = $1 }
+            END { if (lastline != "") print lastline }')
+      if [ -n "$START_LINE" ]; then
+        TAIL_FROM=$((START_LINE))
+        sed -n "${TAIL_FROM},\$p" .apex/event-log.jsonl 2>/dev/null \
+          | jq -c --arg id "$RESOLVED_ID" 'select(.agent_id == $id)' 2>/dev/null \
+          > "$OUT_FILE" 2>/dev/null || true
+      fi
+    fi
+    # Always create the file (even empty) so the AC-1 acceptance test
+    # has a concrete artifact to assert against. Empty transcript →
+    # caught by the B2.6 count guard if the envelope claimed tool calls.
+    [ ! -f "$OUT_FILE" ] && : > "$OUT_FILE"
+
+    # Emit boundary + transcript_imported events.
+    TC_COUNT_OBS=$(wc -l < "$OUT_FILE" 2>/dev/null | tr -d ' ')
+    [ -z "$TC_COUNT_OBS" ] && TC_COUNT_OBS=0
+    TC_CLAIMED=$(echo "$INPUT" | jq -r '.tool_calls_count // 0' 2>/dev/null | tr -d '\r')
+    [ -z "$TC_CLAIMED" ] && TC_CLAIMED=0
+
+    _emit_apex_event "subagent_stop" .apex \
+      agent_name "$AGENT" \
+      agent_id "$RESOLVED_ID" \
+      round_tag "$RESOLVED_ROUND" \
+      tool_calls_count "$TC_CLAIMED" \
+      observed_tool_call_lines "$TC_COUNT_OBS" \
+      imported_transcript_path "$OUT_FILE"
+
+    _emit_apex_event "transcript_imported" .apex \
+      source_agent_id "$RESOLVED_ID" \
+      target_path "$OUT_FILE" \
+      entries_count "$TC_COUNT_OBS"
+  else
+    # Graceful path: SubagentStop fired but no matching registry entry
+    # (pre-subagent-start.sh was disabled, hook order missed, or
+    # cross-platform shim). Emit a degraded subagent_stop without
+    # agent_id so the operator can spot the gap in dashboards.
+    _emit_apex_event "subagent_stop" .apex \
+      agent_name "$AGENT" \
+      agent_id "" \
+      tool_calls_count "$(echo "$INPUT" | jq -r '.tool_calls_count // 0' 2>/dev/null | tr -d '\r')" \
+      note "no_matching_subagent_start_in_registry"
+  fi
 fi
 
 exit 0
