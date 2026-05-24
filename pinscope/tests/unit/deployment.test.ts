@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { withPinScope } from '../../src/plugin/next.js';
 import { PinScopeWebpackPlugin } from '../../src/plugin/webpack.js';
@@ -27,13 +28,27 @@ describe('package export map (AC-090)', () => {
     ).toBe(true);
   });
 
-  it('dynamically imports each built entry point', async () => {
+  it('dynamically imports each built entry point', () => {
+    // Subprocess-import (R-21 — fixes AC-090 host-env bug). The original
+    // `await import(pathToFileURL(...).href)` runs inside Vitest's Vite-based
+    // loader, which mis-handles percent-encoded non-ASCII chars in the
+    // project path (Vite calls `loadAndTransform(url)` with the percent-
+    // encoded URL, then fails to map back to the on-disk filename). The
+    // import semantics being verified — that each dist/ entry point is a
+    // loadable ESM module — are identical whether the loader is Vite's or
+    // node's; running it in a node subprocess bypasses Vite entirely.
     for (const sp of subpaths) {
       const target = pkg.exports[sp] as string;
-      const mod = (await import(
-        pathToFileURL(path.join(root, target)).href
-      )) as Record<string, unknown>;
-      expect(mod).toBeTypeOf('object');
+      const url = pathToFileURL(path.join(root, target)).href;
+      const code = `import(${JSON.stringify(url)}).then(m => { if (m && typeof m === 'object') process.exit(0); console.error('not-object'); process.exit(1); }).catch(e => { console.error(e.message); process.exit(2); });`;
+      const result = spawnSync('node', ['--input-type=module', '-e', code], {
+        encoding: 'utf-8',
+        timeout: 15000,
+      });
+      expect(
+        result.status,
+        `${sp} → ${result.stderr || result.stdout || 'no output'}`,
+      ).toBe(0);
     }
   });
 });

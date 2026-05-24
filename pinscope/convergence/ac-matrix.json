@@ -69,7 +69,7 @@
     { "id": "AC-101", "phase": "P5", "severity": "P1", "env": "node", "verify": { "kind": "command", "cmd": "bash framework/scripts/sync-to-claude.sh --dry-run | grep -q 'apex-skills/pinscope.md'", "expect_exit": 0 } },
     { "id": "AC-102", "phase": "P5", "severity": "P1", "env": "node", "verify": { "kind": "grep", "pattern": "PINSCOPE INSTRUMENTATION", "paths": ["framework/commands/apex/ui-phase.md"], "min_count": 1 } },
     { "id": "AC-103", "phase": "P5", "severity": "P2", "env": "node", "verify": { "kind": "grep", "pattern": "PINSCOPE EVIDENCE", "paths": ["framework/commands/apex/ui-review.md"], "min_count": 1 } },
-    { "id": "AC-104", "phase": "P5", "severity": "P2", "env": "node", "verify": { "kind": "grep", "pattern": "pinscope", "paths": ["framework/agents/architect.md", "framework/agents/specialist/frontend.md"], "min_count": 2 } },
+    { "id": "AC-104", "phase": "P5", "severity": "P2", "env": "node", "verify": { "kind": "grep", "pattern": "pinscope", "paths": ["framework/agents/architect.md", "framework/modules/apex-frontend/agent.md"], "min_count": 2 } },
     { "id": "AC-105", "phase": "P5", "severity": "P1", "env": "node", "verify": { "kind": "grep", "pattern": "PinScope", "paths": ["apex-spec.md"], "min_count": 1 } },
     { "id": "AC-106", "phase": "P5", "severity": "P2", "env": "apex-install", "verify": { "kind": "manual", "note": "/apex:health-check needs APEX synced to ~/.claude/" } },
     { "id": "AC-107", "phase": "P5", "severity": "P3", "env": "node", "verify": { "kind": "vitest-tag", "tag": "AC-107", "min_tests": 1 } }

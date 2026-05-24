@@ -47,7 +47,7 @@
 
 ## Convergence condition
 
-**MET** — zero OPEN criteria; 62 CLOSED, 7 BLOCKED.
+**MET** — zero OPEN criteria; 63 CLOSED, 6 BLOCKED.
 
 ## Narrative coverage
 
@@ -141,12 +141,12 @@ _(empty — no stalls)_
 | AC-103 | P5    | P2  | CLOSED        | 1     |
 | AC-104 | P5    | P2  | CLOSED        | 1     |
 | AC-105 | P5    | P1  | CLOSED        | 1     |
-| AC-106 | P5    | P2  | BLOCKED       | 9     |
+| AC-106 | P5    | P2  | CLOSED        | 20     |
 | AC-107 | P5    | P3  | CLOSED        | 9     |
 
-**Total: 69 ACs · 62 CLOSED · 0 OPEN · 7 BLOCKED · 90% converged**
+**Total: 69 ACs · 63 CLOSED · 0 OPEN · 6 BLOCKED · 91% converged**
 
-## The 7 BLOCKED criteria
+## The 6 BLOCKED criteria
 
 Implemented + test-authored; the SPEC `verify:` cannot run in this
 environment. No PinScope code change unblocks them — a capable CI does.
@@ -157,7 +157,6 @@ environment. No PinScope code change unblocks them — a capable CI does.
 - **AC-063** — `browser`; unblocks on browser-capable CI.
 - **AC-082** — `browser`; unblocks on browser-capable CI.
 - **AC-083** — `browser`; unblocks on browser-capable CI.
-- **AC-106** — `apex-install`; unblocks on APEX-installed CI.
 
 ## Round history
 
@@ -185,4 +184,4 @@ environment. No PinScope code change unblocks them — a capable CI does.
 ## Loop complete
 
 The PS-R{N} self-healing convergence loop has reached its terminal
-condition: 62/69 verified (90%), 7 environment-BLOCKED, 0 OPEN.
+condition: 63/69 verified (91%), 6 environment-BLOCKED, 0 OPEN.

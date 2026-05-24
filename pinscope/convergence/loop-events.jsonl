@@ -57,3 +57,5 @@
 {"at":"2026-05-24T17:21:52.603Z","round":20,"event":"phase:verify","note":null}
 {"at":"2026-05-24T17:43:05.393Z","round":20,"event":"20","note":"R20 verify=PARTIAL (regressions: AC-090 host-env Vitest+Vite Hebrew-path dynamic-import bug, AC-104 matrix-path-stale post-2026-05-06 git-mv to modules/apex-frontend/agent.md; AC-106 MANUAL_PENDING — pinscope.md skill not synced to ~/.claude/apex-skills/). Per ps-verifier verdict, R-20-01..05 close cleanly; 3 items route to R21."}
 {"at":"2026-05-24T17:45:32.158Z","round":20,"event":"phase:idle","note":null}
+{"at":"2026-05-24T18:34:56.959Z","round":20,"event":"phase:audit","note":null}
+{"at":"2026-05-24T18:35:44.614Z","round":20,"event":"phase:idle","note":null}
