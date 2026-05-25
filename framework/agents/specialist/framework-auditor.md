@@ -294,10 +294,10 @@ to meet the promise in `apex-spec.md`?"
        - **Case-folding deny patterns** (e.g. role-marker case
          sensitivity): probe with uppercase, mixed-case, and unicode-
          variant forms to detect case-folding gaps.
-    c. Capture exit code. Expected: non-zero (guard fires).
+    e. Capture exit code. Expected: non-zero (guard fires).
        Observed: record literally in the `concrete_bypass_attempts`
        entry.
-    d. Bypass successful (exit 0 when guard's contract says block)
+    f. Bypass successful (exit 0 when guard's contract says block)
        → emit P0 finding citing the guard file + the captured
        bypass payload + the captured exit code.
 
