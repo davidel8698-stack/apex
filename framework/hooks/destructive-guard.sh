@@ -13,7 +13,26 @@ if [ -f "$(dirname "$0")/_fix-plan-emit.sh" ]; then
   source "$(dirname "$0")/_fix-plan-emit.sh"
 fi
 
+# Campaign C TP-C2: source the audit-probe-marker helper. FIRST CHECK
+# below allows legitimate framework-auditor procedural axis-10/axis-13
+# probes through (three-factor: marker + agent_id + nonce). Spec anchor:
+# audit-trail-review/FIX-DESIGN-C-R4.md §2 (frozen 2026-05-25).
+# shellcheck source=/dev/null
+if [ -f "$(dirname "$0")/_audit-probe-marker.sh" ]; then
+  source "$(dirname "$0")/_audit-probe-marker.sh"
+fi
+
 COMMAND="${1:-}"
+
+# Campaign C TP-C2 FIRST check — three-factor audit-probe carve-out.
+# If COMMAND begins with `__APEX_AUDIT_PROBE__:<nonce>:<agent_id> ...`
+# AND the (agent_id, nonce) pair matches an in-flight framework-auditor
+# registry entry, allow through. Otherwise fall to existing pattern set.
+if type apex_check_audit_probe >/dev/null 2>&1; then
+  if apex_check_audit_probe "$COMMAND"; then
+    exit 0
+  fi
+fi
 
 # v7: Split chained commands and check each segment
 # Handles: cmd1 && cmd2, cmd1 ; cmd2

@@ -68,6 +68,16 @@ function extractInput() {
 function main() {
   const { freeText, tool_input } = extractInput();
 
+  // Campaign C TP-C2: three-factor audit-probe carve-out (FIRST check).
+  // Spec anchor: audit-trail-review/FIX-DESIGN-C-R4.md §2 (frozen 2026-05-25).
+  // Closes Campaign B SGC-001 sandbox interference + AC-5b heldout 0/5.
+  // Marker grammar: __APEX_AUDIT_PROBE__:<nonce>:<agent_id> <command>
+  // Three-factor verification: marker prefix + exact agent_id lookup in
+  // .apex/in-flight-subagents.jsonl + nonce match in same entry.
+  if (sec.checkAuditProbeMarker && sec.checkAuditProbeMarker(freeText, 'apex-prompt-guard.cjs')) {
+    process.exit(0);
+  }
+
   // R16-611 (F-611, IMP-003): tool_input arg-name dispatch.
   // BEFORE running the legacy prompt-injection pattern set over free text,
   // route each tool_input key by arg name so that path-typed args reject

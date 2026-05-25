@@ -20,7 +20,26 @@ set -u
 # security.cjs for the .cjs side). When node is available, this shim
 # delegates so the canonical regex engine runs both branches identically.
 
+# Campaign C TP-C2: source the audit-probe-marker helper. FIRST check
+# below (before the .cjs delegation) allows legitimate framework-auditor
+# probes through on the no-Node fallback path too.
+# Spec anchor: audit-trail-review/FIX-DESIGN-C-R4.md §2 (closes CR-C-06).
+# shellcheck source=/dev/null
+if [ -f "$(dirname "$0")/_audit-probe-marker.sh" ]; then
+  source "$(dirname "$0")/_audit-probe-marker.sh"
+fi
+
 INPUT="${1:-}"
+
+# Campaign C TP-C2 FIRST check — three-factor audit-probe carve-out.
+# Runs BEFORE the .cjs delegation so the carve-out applies on both paths
+# (Node-present and Node-less hosts). The .cjs has parallel logic via
+# security.cjs auditProbe.check() — three-place contract maintained.
+if type apex_check_audit_probe >/dev/null 2>&1; then
+  if apex_check_audit_probe "$INPUT"; then
+    exit 0
+  fi
+fi
 
 # --- Delegate to the .cjs when node is present ------------------------------
 if command -v node >/dev/null 2>&1; then

@@ -5,6 +5,12 @@
     "r_id": "R5-003",
     "preservation_contract": "Pattern set is byte-equivalent to the regex literals embedded in prompt-guard.sh, workflow-guard.sh, _security-common.sh as of the R5-003 port. Any pattern change here MUST be mirrored in those three .sh files."
   },
+  "audit_probe_marker": {
+    "literal": "__APEX_AUDIT_PROBE__:",
+    "comment": "Campaign C TP-C2 — three-factor audit-probe carve-out. Spec anchor: audit-trail-review/FIX-DESIGN-C-R4.md §2 (frozen 2026-05-25). Grammar: __APEX_AUDIT_PROBE__:<nonce>:<agent_id> <command>. Recognized by apex-prompt-guard.cjs (via security.cjs auditProbe.check) and shell guards (destructive-guard.sh, exfil-guard.sh, sequence-guard.sh, prompt-guard.sh) via _audit-probe-marker.sh helper. Three-factor verification: marker prefix + exact agent_id lookup in .apex/in-flight-subagents.jsonl + nonce match in same entry.",
+    "valid_for_agents": ["framework-auditor"],
+    "added_in": "Campaign C TP-C2"
+  },
   "zero_width_chars": [
     "​",
     "‌",

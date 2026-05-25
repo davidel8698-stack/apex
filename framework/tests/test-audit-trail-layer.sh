@@ -378,6 +378,93 @@ else
   skip "G2: lying-subagent synthetic pending B2.6"
 fi
 
+# ----- H. Campaign C TP-C2 three-factor audit-probe carve-out (AC-C2) -------
+# Spec anchor: audit-trail-review/FIX-DESIGN-C-R4.md §4 (frozen 2026-05-25).
+# Verifies marker + agent_id + nonce three-factor protocol.
+
+if [ -f "$HOOKS_DIR/_audit-probe-marker.sh" ]; then
+  ok "H0: _audit-probe-marker.sh shared helper present"
+
+  BOX="$(mk_sandbox)"
+  pushd "$BOX" >/dev/null 2>&1
+  # shellcheck disable=SC1090
+  source "$HOOKS_DIR/_audit-probe-marker.sh"
+
+  # H-C1: marker + valid agent_id + matching nonce → allow (exit 0)
+  printf '%s\n' '{"agent_id":"subagent-framework-auditor-25-c1abcdef","agent_name":"framework-auditor","status":"in_flight","audit_probe_nonce":"deadbeef00000001","round_tag":"H-C1","started_at":"2026-05-25T15:00:00Z"}' > .apex/in-flight-subagents.jsonl
+  if apex_check_audit_probe "__APEX_AUDIT_PROBE__:deadbeef00000001:subagent-framework-auditor-25-c1abcdef rm -rf /tmp/x" 2>/dev/null; then
+    ok "H-C1: three-factor PASS — marker+agent+nonce all valid → allow"
+  else
+    nope "H-C1: three-factor PASS path failed"
+  fi
+
+  # H-C2: no marker → return 1 (block-fallthrough — caller continues to existing block path)
+  if apex_check_audit_probe "rm -rf /tmp/x" 2>/dev/null; then
+    nope "H-C2: marker-absent INCORRECTLY allowed"
+  else
+    ok "H-C2: marker-absent → return 1 (block-fallthrough preserved)"
+  fi
+
+  # H-C3: marker + wrong agent_name in registry (executor, not framework-auditor) → block
+  printf '%s\n' '{"agent_id":"subagent-executor-25-c3cafebab","agent_name":"executor","status":"in_flight","audit_probe_nonce":"deadbeef00000002","round_tag":"H-C3","started_at":"2026-05-25T15:00:00Z"}' > .apex/in-flight-subagents.jsonl
+  if apex_check_audit_probe "__APEX_AUDIT_PROBE__:deadbeef00000002:subagent-executor-25-c3cafebab rm -rf /tmp/x" 2>/dev/null; then
+    nope "H-C3: non-auditor agent INCORRECTLY allowed via marker (F2 broken)"
+  else
+    ok "H-C3: non-auditor agent → blocked (F2 enforced)"
+  fi
+
+  # H-C4: marker prefix on Write tool's new_string field — helper extracts from full field-list
+  # (Test by direct command-style invocation since the shell helper takes COMMAND as $1.)
+  printf '%s\n' '{"agent_id":"subagent-framework-auditor-25-c4abcdef","agent_name":"framework-auditor","status":"in_flight","audit_probe_nonce":"deadbeef00000004","round_tag":"H-C4","started_at":"2026-05-25T15:00:00Z"}' > .apex/in-flight-subagents.jsonl
+  if apex_check_audit_probe "__APEX_AUDIT_PROBE__:deadbeef00000004:subagent-framework-auditor-25-c4abcdef echo hi" 2>/dev/null; then
+    ok "H-C4: marker on benign payload → allow (parser correctness on multi-token cmd)"
+  else
+    nope "H-C4: parser failed on benign multi-token marker"
+  fi
+
+  # H-C5: registry has framework-auditor STOPPED + a different framework-auditor IN_FLIGHT → use the in-flight one
+  printf '%s\n' '{"agent_id":"subagent-framework-auditor-25-c5oldstop","agent_name":"framework-auditor","status":"stopped","audit_probe_nonce":"deadbeef00000005","round_tag":"H-C5","started_at":"2026-05-25T15:00:00Z","stopped_at":"2026-05-25T15:00:30Z"}' > .apex/in-flight-subagents.jsonl
+  printf '%s\n' '{"agent_id":"subagent-framework-auditor-25-c5newlive","agent_name":"framework-auditor","status":"in_flight","audit_probe_nonce":"deadbeef00000006","round_tag":"H-C5","started_at":"2026-05-25T15:01:00Z"}' >> .apex/in-flight-subagents.jsonl
+  if apex_check_audit_probe "__APEX_AUDIT_PROBE__:deadbeef00000006:subagent-framework-auditor-25-c5newlive rm -rf /tmp/x" 2>/dev/null; then
+    ok "H-C5: multi-entry registry — picks in_flight entry over stopped"
+  else
+    nope "H-C5: multi-entry registry handling broke"
+  fi
+
+  # H-C6: only entry is framework-auditor STOPPED (no in_flight) → block
+  printf '%s\n' '{"agent_id":"subagent-framework-auditor-25-c6stopped","agent_name":"framework-auditor","status":"stopped","audit_probe_nonce":"deadbeef00000007","round_tag":"H-C6","started_at":"2026-05-25T15:00:00Z","stopped_at":"2026-05-25T15:00:30Z"}' > .apex/in-flight-subagents.jsonl
+  if apex_check_audit_probe "__APEX_AUDIT_PROBE__:deadbeef00000007:subagent-framework-auditor-25-c6stopped rm -rf /tmp/x" 2>/dev/null; then
+    nope "H-C6: stopped-only framework-auditor INCORRECTLY allowed"
+  else
+    ok "H-C6: stopped-only framework-auditor → blocked (status=in_flight enforced)"
+  fi
+
+  # H-C7: marker malformed (no second colon) → block (CR-C-R3-03 parser hardening)
+  printf '%s\n' '{"agent_id":"subagent-framework-auditor-25-c7parser","agent_name":"framework-auditor","status":"in_flight","audit_probe_nonce":"deadbeef00000008","round_tag":"H-C7","started_at":"2026-05-25T15:00:00Z"}' > .apex/in-flight-subagents.jsonl
+  if apex_check_audit_probe "__APEX_AUDIT_PROBE__:deadbeef00000008 rm -rf /tmp/x" 2>/dev/null; then
+    nope "H-C7: malformed marker (no second colon) INCORRECTLY allowed — parser regression"
+  else
+    ok "H-C7: malformed marker → blocked (parser correctness CR-C-R3-03)"
+  fi
+
+  # H-C8: audit_probe_allowed event emission verified
+  printf '%s\n' '{"agent_id":"subagent-framework-auditor-25-c8eventtt","agent_name":"framework-auditor","status":"in_flight","audit_probe_nonce":"deadbeef00000009","round_tag":"H-C8","started_at":"2026-05-25T15:00:00Z"}' > .apex/in-flight-subagents.jsonl
+  rm -f .apex/event-log.jsonl
+  apex_check_audit_probe "__APEX_AUDIT_PROBE__:deadbeef00000009:subagent-framework-auditor-25-c8eventtt echo audit-probe-event-test" 2>/dev/null
+  if grep -q '"type":"audit_probe_allowed"' .apex/event-log.jsonl 2>/dev/null \
+     && grep -q '"agent_id":"subagent-framework-auditor-25-c8eventtt"' .apex/event-log.jsonl 2>/dev/null; then
+    ok "H-C8: audit_probe_allowed event emitted with matching agent_id"
+  else
+    nope "H-C8: audit_probe_allowed event missing or mismatched"
+  fi
+
+  popd >/dev/null 2>&1
+  rm -rf "$BOX"
+else
+  skip "H0: _audit-probe-marker.sh not present — Campaign C TP-C2 not installed"
+  skip "H-C1..H-C8: TP-C2 tests skipped (helper missing)"
+fi
+
 # ----- summary ------------------------------------------------------------
 TOTAL=$((LOCAL_PASS + LOCAL_FAIL))
 echo "── $LOCAL_PASS/$TOTAL passed (skipped: $LOCAL_SKIP)"

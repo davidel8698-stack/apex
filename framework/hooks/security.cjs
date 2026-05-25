@@ -259,6 +259,85 @@ function parseHookStdin(stdinText) {
   return null;
 }
 
+// Campaign C TP-C2 — three-factor audit-probe carve-out (node parallel
+// of framework/hooks/_audit-probe-marker.sh).
+// Spec anchor: audit-trail-review/FIX-DESIGN-C-R4.md §2 (frozen 2026-05-25).
+// Closes Campaign B SGC-001 + AC-5b heldout 0/5 + AC-6b coverage collapse.
+//
+// Marker grammar: __APEX_AUDIT_PROBE__:<nonce>:<agent_id> <command>
+// Three factors verified:
+//   F1: marker prefix on freeText (extracted from
+//       content/new_string/prompt/command/description in priority order)
+//   F2: exact agent_id resolves to in-flight registry entry with
+//       agent_name=framework-auditor
+//   F3: nonce equals that entry's audit_probe_nonce
+//
+// On success: emits `audit_probe_allowed` event to .apex/event-log.jsonl
+// with payload_sha1, agent_id, calling_hook. Fail-loud to stderr on
+// event-log write error.
+function checkAuditProbeMarker(freeText, callingHook) {
+  if (typeof freeText !== 'string') return false;
+  const markerPrefix = '__APEX_AUDIT_PROBE__:';
+  if (!freeText.startsWith(markerPrefix)) return false;
+
+  const afterPrefix = freeText.slice(markerPrefix.length);
+  // Marker grammar requires a second colon between nonce and agent_id.
+  // Explicit colon-presence check (parity with shell helper §CR-C-R3-03).
+  const secondColon = afterPrefix.indexOf(':');
+  if (secondColon < 0) return false;
+  const nonce = afterPrefix.slice(0, secondColon);
+  const rest = afterPrefix.slice(secondColon + 1);
+  if (!rest) return false;
+  const firstSpace = rest.indexOf(' ');
+  const agentId = firstSpace < 0 ? rest : rest.slice(0, firstSpace);
+  if (!nonce || !agentId) return false;
+  if (nonce === agentId) return false;  // defensive: degenerate same-string
+
+  const fs = require('fs');
+  const registry = '.apex/in-flight-subagents.jsonl';
+  if (!fs.existsSync(registry)) return false;
+
+  let match = null;
+  try {
+    const lines = fs.readFileSync(registry, 'utf8').trim().split('\n');
+    for (const line of lines) {
+      try {
+        const e = JSON.parse(line);
+        if (e.status === 'in_flight'
+            && e.agent_id === agentId
+            && e.agent_name === 'framework-auditor'
+            && e.audit_probe_nonce === nonce) {
+          match = e;  // last-match wins under append-only iteration
+        }
+      } catch (_e) { /* skip malformed line */ }
+    }
+  } catch (_e) { return false; }
+  if (!match) return false;
+
+  // All three factors satisfied — emit audit_probe_allowed event.
+  const crypto = require('crypto');
+  const payload_sha1 = crypto.createHash('sha1').update(freeText).digest('hex');
+  const evt = {
+    schema_version: '1',
+    ts: new Date().toISOString(),
+    type: 'audit_probe_allowed',
+    source: 'security.cjs',
+    agent_id: agentId,
+    agent_name: 'framework-auditor',
+    payload_sha1,
+    payload_head: freeText.slice(0, 200),
+    calling_hook: callingHook || 'unknown',
+  };
+  try {
+    fs.appendFileSync('.apex/event-log.jsonl', JSON.stringify(evt) + '\n');
+  } catch (e) {
+    // Fail-loud per apex-spec.md §"עקרונות העבודה". Allowance still
+    // proceeds (auditor's probe runs), but the operator sees the lossy state.
+    process.stderr.write(`[security.cjs] audit_probe_allowed event write failed: ${e.message}\n`);
+  }
+  return true;
+}
+
 module.exports = {
   loadPatterns,
   normalize,
@@ -270,4 +349,5 @@ module.exports = {
   emitBlock,
   readStdinSync,
   parseHookStdin,
+  checkAuditProbeMarker,
 };

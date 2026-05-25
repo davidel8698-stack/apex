@@ -137,6 +137,29 @@ PARENT_ID="host-${SESSION_ID:-unknown}"
 # Ensure dirs exist.
 mkdir -p .apex/subagent-transcripts .apex 2>/dev/null || true
 
+# Campaign C TP-C2: per-invocation HMAC-style nonce for framework-auditor.
+# The nonce is 16-hex-char random; written into the registry; the auditor
+# reads its own nonce by agent_id and prepends `__APEX_AUDIT_PROBE__:<nonce>:<agent_id>`
+# to every axis-10/axis-13 procedural Bash invocation. The host's guards
+# verify the three-factor protocol (marker + agent_id exact-match in registry
+# + nonce match). Closes Campaign B's SGC-001 sandbox interference.
+# Spec anchor: audit-trail-review/FIX-DESIGN-C-R4.md §2 + §1 (frozen 2026-05-25).
+AUDIT_PROBE_NONCE=""
+if [ "$AGENT_NAME" = "framework-auditor" ]; then
+  if command -v openssl >/dev/null 2>&1; then
+    AUDIT_PROBE_NONCE=$(openssl rand -hex 8 2>/dev/null)
+  fi
+  if [ -z "$AUDIT_PROBE_NONCE" ] && command -v sha1sum >/dev/null 2>&1; then
+    AUDIT_PROBE_NONCE=$(printf '%s%s%s' "$NOW_ISO" "$RANDOM" "$$" | sha1sum 2>/dev/null | cut -c1-16)
+  fi
+  if [ -z "$AUDIT_PROBE_NONCE" ]; then
+    # Loud-fail per CR-C-R2-05: an auditor without a nonce will have all axis-10/13
+    # probes fail-closed (F2 lookup miss), which is the correct security default.
+    # The auditor's trial will report axis-13 BLIND SPOT — the operator sees the regression.
+    printf '[pre-subagent-start] CRITICAL: failed to generate audit_probe_nonce for framework-auditor agent_id=%s — guards will block all axis-10/13 probes from this auditor.\n' "$AGENT_ID" >&2
+  fi
+fi
+
 # 1) Append to the in-flight registry. The registry is a JSONL file; one
 # line per Task() invocation. tool-event-logger.sh reads the last
 # `status=in_flight` line to stamp tool_call events with this agent_id.
@@ -144,7 +167,8 @@ REG=".apex/in-flight-subagents.jsonl"
 jq -nc \
   --arg id "$AGENT_ID" --arg name "$AGENT_NAME" --arg parent "$PARENT_ID" \
   --arg round "$ROUND_TAG" --arg ts "$NOW_ISO" --arg summary "$SUMMARY" \
-  '{agent_id:$id, agent_name:$name, parent_agent_id:$parent, round_tag:$round, started_at:$ts, status:"in_flight", tool_input_summary:$summary}' \
+  --arg nonce "$AUDIT_PROBE_NONCE" \
+  '{agent_id:$id, agent_name:$name, parent_agent_id:$parent, round_tag:$round, started_at:$ts, status:"in_flight", tool_input_summary:$summary, audit_probe_nonce:$nonce}' \
   >> "$REG" 2>/dev/null || true
 
 # 2) Emit the subagent_start boundary event.

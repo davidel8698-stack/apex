@@ -28,9 +28,23 @@
 
 set -u
 
+# Campaign C TP-C2: source the audit-probe-marker helper.
+# Spec anchor: audit-trail-review/FIX-DESIGN-C-R4.md §2.
+# shellcheck source=/dev/null
+if [ -f "$(dirname "$0")/_audit-probe-marker.sh" ]; then
+  source "$(dirname "$0")/_audit-probe-marker.sh"
+fi
+
 COMMAND="${1:-}"
 if [ -z "$COMMAND" ]; then
   exit 0
+fi
+
+# Campaign C TP-C2 FIRST check — three-factor audit-probe carve-out.
+if type apex_check_audit_probe >/dev/null 2>&1; then
+  if apex_check_audit_probe "$COMMAND"; then
+    exit 0
+  fi
 fi
 
 # Carve-out: test-architect agent
