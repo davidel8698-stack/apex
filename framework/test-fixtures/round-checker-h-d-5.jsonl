@@ -1,0 +1,1 @@
+{"axis_10":{"concrete_bypass_attempts":[]},"_test_meta":{"h_id":"H-D5","expected_verdict":"axis_10_blind_spot","scenario":"axis_10 empty — existing rule fires; new rules do not double-fire"}}

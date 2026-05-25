@@ -1,0 +1,1 @@
+{"axis_10":{"concrete_bypass_attempts":[{"guard":"path-guard.sh","payload":"../../etc/passwd","exit_code":2}]},"_test_meta":{"h_id":"H-D6","expected_verdict":"mutation_class_fixture_missing","scenario":"fixture file deleted before simulator runs — fail-loud branch"}}

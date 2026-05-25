@@ -465,6 +465,169 @@ else
   skip "H-C1..H-C8: TP-C2 tests skipped (helper missing)"
 fi
 
+# ----- H-D Phase-7 R-AT-C-02: mutation-class probe minimum gates ----------
+# Tests round-checker TP-2 §6.b clauses (i)-(vi) — fixture-anchored
+# per-class coverage enforcement that closes AC-5b heldout B+C+D >= 5/5.
+# Design: audit-trail-review/PHASE-7-RITEM-R-AT-C-02-DESIGN-R2.md §2.D
+
+MUTATION_FIXTURE="$REPO_ROOT/framework/test-fixtures/mutation-class-probes.json"
+HD_FIXTURE_DIR="$REPO_ROOT/framework/test-fixtures"
+
+# jq_clean — wrapper that strips CR from jq output (jq 1.8.x on Windows
+# emits CRLF; downstream `grep -Fx` compares fail otherwise).
+jq_clean() { jq "$@" | tr -d '\r'; }
+
+# round_checker_sim — local simulator of round-checker mutation-class
+# enforcement logic. Reads a transcript fixture + the mutation-class
+# fixture; emits the verdict name to stdout. Mirrors clauses (i)-(vi).
+round_checker_sim() {
+  local transcript="$1"
+  local fixture="$MUTATION_FIXTURE"
+
+  # Clause (i): fixture readability gate
+  if [ ! -f "$fixture" ] || ! jq -e . "$fixture" >/dev/null 2>&1; then
+    echo "mutation_class_fixture_missing"
+    return
+  fi
+
+  # Existing rule: axis_10 empty → axis_10_blind_spot (fires before new clauses)
+  local axis_10_count
+  axis_10_count=$(jq_clean -r '.axis_10.concrete_bypass_attempts | length' "$transcript" 2>/dev/null || echo 0)
+  if [ "${axis_10_count:-0}" -eq 0 ]; then
+    echo "axis_10_blind_spot"
+    return
+  fi
+
+  # Clause (vi) normalization helper: lowercase guard names from transcript
+  local guards_in_axis_10
+  guards_in_axis_10=$(jq_clean -r '.axis_10.concrete_bypass_attempts[].guard // empty' "$transcript" 2>/dev/null \
+                     | tr '[:upper:]' '[:lower:]' | sort -u)
+
+  # Clause (ii): per-guard coverage floor — UNION of all 4 mutation classes
+  local g
+  for g in $(jq_clean -r '
+      .regex_word_boundary[].guard_canonical_name,
+      .case_folding[].guard_canonical_name,
+      .silent_failure[].guard_canonical_name,
+      .counter_swallow[].target_canonical_name
+    ' "$fixture" 2>/dev/null | sort -u); do
+    if ! echo "$guards_in_axis_10" | grep -Fxq "$(echo "$g" | tr '[:upper:]' '[:lower:]')"; then
+      echo "axis_10_guard_coverage_gap"
+      return
+    fi
+  done
+
+  # Clause (iii): regex_word_boundary minimum (>=1 boundary variant per guard)
+  for g in $(jq_clean -r '.regex_word_boundary[].guard_canonical_name' "$fixture"); do
+    local payloads payload_classes boundary_variants boundary_variant_ids matched
+    payloads=$(jq_clean -r --arg g "$g" '
+      .axis_10.concrete_bypass_attempts[]
+      | select((.guard // "" | ascii_downcase) == ($g | ascii_downcase))
+      | .payload // empty
+    ' "$transcript" 2>/dev/null)
+    payload_classes=$(jq_clean -r --arg g "$g" '
+      .axis_10.concrete_bypass_attempts[]
+      | select((.guard // "" | ascii_downcase) == ($g | ascii_downcase))
+      | .payload_class // empty
+    ' "$transcript" 2>/dev/null)
+    boundary_variants=$(jq_clean -r --arg g "$g" '
+      .regex_word_boundary[] | select(.guard_canonical_name == $g) | .boundary_variants[]?
+    ' "$fixture" 2>/dev/null)
+    boundary_variant_ids=$(jq_clean -r --arg g "$g" '
+      .regex_word_boundary[] | select(.guard_canonical_name == $g) | .boundary_variant_ids[]?
+    ' "$fixture" 2>/dev/null)
+    matched=0
+    if [ -n "$boundary_variants" ]; then
+      while IFS= read -r bv; do
+        [ -z "$bv" ] && continue
+        if echo "$payloads" | grep -Fxq "$bv"; then matched=1; break; fi
+      done <<< "$boundary_variants"
+    fi
+    if [ "$matched" -eq 0 ] && [ -n "$boundary_variant_ids" ]; then
+      while IFS= read -r bvid; do
+        [ -z "$bvid" ] && continue
+        if echo "$payload_classes" | grep -Fxq "$bvid"; then matched=1; break; fi
+      done <<< "$boundary_variant_ids"
+    fi
+    if [ "$matched" -eq 0 ]; then
+      echo "axis_10_mutation_class_blind_spot"
+      return
+    fi
+  done
+
+  # Clause (iv): case_folding minimum (>=3 distinct case-variant IDs per guard)
+  for g in $(jq_clean -r '.case_folding[].guard_canonical_name' "$fixture"); do
+    local variant_ids count
+    variant_ids=$(jq_clean -r --arg g "$g" '
+      .case_folding[] | select(.guard_canonical_name == $g) | .case_variant_ids[]?
+    ' "$fixture")
+    count=0
+    while IFS= read -r vid; do
+      [ -z "$vid" ] && continue
+      if jq_clean -r --arg g "$g" --arg v "$vid" '
+        .axis_10.concrete_bypass_attempts[]
+        | select((.guard // "" | ascii_downcase) == ($g | ascii_downcase))
+        | select((.payload_class // "") == $v) | "ok"
+      ' "$transcript" 2>/dev/null | grep -q ok; then
+        count=$((count+1))
+      fi
+    done <<< "$variant_ids"
+    if [ "$count" -lt 3 ]; then
+      echo "axis_10_case_folding_blind_spot"
+      return
+    fi
+  done
+
+  # Clause (v): silent_failure stderr-assertion minimum
+  for g in $(jq_clean -r '.silent_failure[].guard_canonical_name' "$fixture"); do
+    local has_stderr_assertion
+    has_stderr_assertion=$(jq_clean -r --arg g "$g" '
+      .axis_10.concrete_bypass_attempts[]
+      | select((.guard // "" | ascii_downcase) == ($g | ascii_downcase))
+      | select((.stderr_nonempty == true) or ((.stderr_contains // "") != ""))
+      | "ok"
+    ' "$transcript" 2>/dev/null | head -1)
+    if [ "$has_stderr_assertion" != "ok" ]; then
+      echo "axis_10_silent_failure_blind_spot"
+      return
+    fi
+  done
+
+  echo "PASS"
+}
+
+run_hd_test() {
+  local h_id="$1" expected="$2" transcript="$3" extra_setup="$4"
+  local saved_fixture="" verdict
+  if [ "$extra_setup" = "remove_fixture" ]; then
+    saved_fixture=$(mktemp)
+    cp "$MUTATION_FIXTURE" "$saved_fixture"
+    rm -f "$MUTATION_FIXTURE"
+  fi
+  verdict=$(round_checker_sim "$transcript")
+  if [ -n "$saved_fixture" ]; then
+    mv "$saved_fixture" "$MUTATION_FIXTURE"
+  fi
+  if [ "$verdict" = "$expected" ]; then
+    ok "$h_id: $expected — verdict matches"
+  else
+    nope "$h_id: expected $expected, got $verdict"
+  fi
+}
+
+if [ -f "$MUTATION_FIXTURE" ]; then
+  ok "H-D0: mutation-class-probes.json fixture present"
+  run_hd_test "H-D1" "axis_10_mutation_class_blind_spot" "$HD_FIXTURE_DIR/round-checker-h-d-1.jsonl" ""
+  run_hd_test "H-D2" "PASS"                              "$HD_FIXTURE_DIR/round-checker-h-d-2.jsonl" ""
+  run_hd_test "H-D3" "axis_10_case_folding_blind_spot"   "$HD_FIXTURE_DIR/round-checker-h-d-3.jsonl" ""
+  run_hd_test "H-D4" "axis_10_silent_failure_blind_spot" "$HD_FIXTURE_DIR/round-checker-h-d-4.jsonl" ""
+  run_hd_test "H-D5" "axis_10_blind_spot"                "$HD_FIXTURE_DIR/round-checker-h-d-5.jsonl" ""
+  run_hd_test "H-D6" "mutation_class_fixture_missing"    "$HD_FIXTURE_DIR/round-checker-h-d-6.jsonl" "remove_fixture"
+  run_hd_test "H-D7" "axis_10_guard_coverage_gap"        "$HD_FIXTURE_DIR/round-checker-h-d-7.jsonl" ""
+else
+  skip "H-D0..H-D7: mutation-class-probes.json fixture missing (R-AT-C-02 not installed)"
+fi
+
 # ----- summary ------------------------------------------------------------
 TOTAL=$((LOCAL_PASS + LOCAL_FAIL))
 echo "── $LOCAL_PASS/$TOTAL passed (skipped: $LOCAL_SKIP)"

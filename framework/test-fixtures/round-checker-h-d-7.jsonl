@@ -1,0 +1,1 @@
+{"axis_10":{"concrete_bypass_attempts":[{"guard":"path-guard.sh","payload":"../../etc/passwd","exit_code":2},{"guard":"path-guard.sh","payload":"..//../etc/passwd","exit_code":2}]},"_test_meta":{"h_id":"H-D7","expected_verdict":"axis_10_guard_coverage_gap","scenario":"only path-guard probed; prompt-guard / silent_failure / counter_swallow guards missing"}}
