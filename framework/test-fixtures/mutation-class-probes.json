@@ -1,0 +1,81 @@
+{
+  "_meta": {
+    "purpose": "Mutation-class boundary-condition probe fixture for framework-auditor axis-10.d. Single source of truth for round-checker TP-2 §6.b clauses (i)-(vi) coverage enforcement. Consumed by framework/agents/specialist/framework-auditor.md (runtime probe construction) and framework/agents/specialist/round-checker.md (closure-gate verification).",
+    "spec_anchor": "apex-spec.md IMP-008 / IMP-014 / IMP-015 / IMP-017 + 'Fail-loud, never fail-silent' principle (line 379). Campaign C CR-C-14. Phase-7 R-AT-C-02 closes AC-5b heldout B+C+D >= 5/5.",
+    "r_id": "R-AT-C-02",
+    "preservation_contract": "Round-checker enforces fixture-UNION as coverage floor. Any new guard added to a regex_word_boundary / case_folding / silent_failure / counter_swallow class becomes a HARD GATE for trial closure. Per-class minimums (regex-deny >=1 canonical + >=1 boundary; case_folding >=3 case variants; silent_failure >=1 stderr-non-empty assertion; counter_swallow >=1 forced-FAIL probe) are unchanged.",
+    "design_doc": "audit-trail-review/PHASE-7-RITEM-R-AT-C-02-DESIGN-R2.md"
+  },
+  "schema_version": "1.0.0",
+  "regex_word_boundary": [
+    {
+      "guard_canonical_name": "path-guard.sh",
+      "contract_imp": "IMP-008 / IMP-014",
+      "canonical_payload": "../../etc/passwd",
+      "boundary_variants": [
+        "..//../etc/passwd",
+        "..%2F../etc/passwd",
+        "....//etc/passwd",
+        "..\\..\\etc\\passwd"
+      ],
+      "expected_exit_canonical": 2,
+      "expected_exit_boundary": 2,
+      "defect_kill_class": "H-B1 (regex anchor weakening)"
+    },
+    {
+      "guard_canonical_name": "prompt-guard.sh",
+      "contract_imp": "IMP-015 / IMP-017",
+      "canonical_payload_id": "PG-INSTR-MARKER-001",
+      "boundary_variant_ids": [
+        "PG-CASE-LOWER",
+        "PG-CASE-TITLE",
+        "PG-CASE-MIXED"
+      ],
+      "payload_construction_protocol": "Auditor constructs literal payloads in-memory at runtime under __APEX_AUDIT_PROBE__ marker carve-out (framework/hooks/security.cjs auditProbe.check). NEVER write resolved literals to disk; the canonical reference for the literal forms is the comment block in framework-auditor.md axis-10.a which cites the workaround in detector-review/RESUME-PROMPT.md.",
+      "expected_exit_canonical": 2,
+      "expected_exit_boundary": 2,
+      "defect_kill_class": "H-B2 (case-folding gap)"
+    }
+  ],
+  "case_folding": [
+    {
+      "guard_canonical_name": "prompt-guard.sh",
+      "contract_imp": "IMP-015",
+      "canonical_payload_id": "PG-ROLE-MARKER-001",
+      "case_variant_ids": [
+        "PG-ROLE-ALLCAPS",
+        "PG-ROLE-TITLECASE",
+        "PG-ROLE-MIXEDCASE"
+      ],
+      "payload_construction_protocol": "Same as regex_word_boundary[].prompt-guard entry. Auditor-in-memory only; no disk-written literals.",
+      "expected_exit_all": 2,
+      "defect_kill_class": "H-B2"
+    }
+  ],
+  "silent_failure": [
+    {
+      "guard_canonical_name": "_state-update.sh",
+      "contract_principle": "Fail-loud, never fail-silent (apex-spec.md line 379)",
+      "probe_description": "malformed jq expression passed as argv",
+      "expected_exit": "non-zero",
+      "expected_stderr_contains_token": "jq",
+      "defect_kill_class": "H-C1"
+    },
+    {
+      "guard_canonical_name": "session-log.sh",
+      "contract_principle": "Fail-loud, never fail-silent",
+      "probe_description": "unwritable target directory (chmod 000) under .apex/",
+      "expected_exit": "non-zero",
+      "expected_stderr_nonempty": true,
+      "defect_kill_class": "H-C2"
+    }
+  ],
+  "counter_swallow": [
+    {
+      "target_canonical_name": "test-runner-counter",
+      "contract": "global FAIL counter MUST increment on test failure (decrement only on intentional retract)",
+      "probe_description": "force one assert_fail; assert counter incremented by exactly 1",
+      "defect_kill_class": "H-D1"
+    }
+  ]
+}
