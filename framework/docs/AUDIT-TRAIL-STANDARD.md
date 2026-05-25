@@ -214,7 +214,104 @@ pending one of two paths — fresh-session 11-trial corpus run
 (R-AT-P7-04 + R-AT-P7-05) or a dated §14 amendment to
 `EXPERIMENT-PROTOCOL.md` §12.2 with owner authorization (R-AT-P7-08).
 
-This document (AUDIT-TRAIL-STANDARD.md) describes what was BUILT
-regardless of the verification gate's status. Future agents
-conforming to the contract here will operate against the new
-data + schema + consumer layer that Campaign B installed.
+This document describes what was BUILT regardless of the
+verification gate's status.
+
+---
+
+## §7. Campaign C extensions (2026-05-25) — Proof-of-Process Maximization
+
+Campaign C added two mechanisms targeting the 3 hard-FAIL ACs left
+open in Campaign B R2.
+
+### §7.1 TP-C1 — Axis-1 mechanical enumeration
+
+Every `framework-auditor` round MUST mechanically enumerate every
+spec-named hook via dynamic extraction at ROUND TIME against the
+lab's `apex-spec.md`:
+
+```bash
+grep -oE 'framework/hooks/[a-zA-Z_-]+\.(sh|cjs|ps1)' \
+  <lab>/apex-spec.md | sort -u
+```
+
+For each extracted hook, the auditor executes `test -f` via a
+separate Bash tool_call (never batch) and records
+`{hook, exit_code, tool_call_event_ts, finding_id, forward_reference}`
+in `coverage_map.axis_1.spec_named_hook_presence[]`.
+
+**Anti-rollup invariant:** every `exit_code != 0` row MUST have a
+dedicated per-hook P0 finding with that hook's filename in `cite[]`.
+A rolled-up "baseline absent" finding does NOT discharge per-hook
+duty. Round-checker REJECTS closure on missing pair.
+
+**Forward-reference classification:** missing hooks with spec
+context containing `forward-reference|phase 12|deliverable|planned`
+prose downgrade to P3 advisory. Avoids false-P0 flood on roadmap
+items.
+
+**Empirical evidence:** 5/5 Campaign C C5 trials emitted the
+canonical 17-row table. W-A1 + W-A2 mutants killed in T1 (baseline)
+and T8 (W-F3) via per-hook P0 — closing AC-4 working class-A
+structurally.
+
+### §7.2 TP-C2 — Three-factor audit-probe carve-out
+
+Host-protected guards (`destructive-guard.sh`, `exfil-guard.sh`,
+`sequence-guard.sh`, `prompt-guard.sh`, `apex-prompt-guard.cjs`)
+source `framework/hooks/_audit-probe-marker.sh` (or its node
+parallel `security.cjs:checkAuditProbeMarker()`) and run a
+three-factor check BEFORE pattern matching.
+
+**Marker grammar:** `__APEX_AUDIT_PROBE__:<nonce>:<agent_id> <command>`
+
+**Three factors:**
+1. **F1:** marker prefix match.
+2. **F2:** parsed `agent_id` resolves to an in-flight registry
+   entry with `agent_name=framework-auditor`.
+3. **F3:** parsed `nonce` equals that entry's `audit_probe_nonce`
+   (generated per-invocation by `pre-subagent-start.sh` for
+   framework-auditor agents only).
+
+All three must hold; otherwise the guard's existing pattern-matching
+path runs (fail-closed default). Every allowance emits an
+`audit_probe_allowed` event with `payload_sha1`, `agent_id`,
+`calling_hook`. Round-checker verifies the event chain end-to-end.
+
+**Empirical evidence:** Campaign C layer-test cohort H-C1..H-C8 in
+`framework/tests/test-audit-trail-layer.sh` — 8/8 PASS. C5-T7 NC
+trial executed 24 procedural probes via the carve-out.
+
+### §7.3 audit_probe_allowed event schema
+
+```json
+{
+  "schema_version": "1",
+  "ts": "<ISO 8601 UTC>",
+  "type": "audit_probe_allowed",
+  "source": "audit-probe-marker | security.cjs",
+  "agent_id": "subagent-framework-auditor-<round>-<sha8>",
+  "agent_name": "framework-auditor",
+  "payload_sha1": "<sha1 of full command>",
+  "payload_head": "<first 200 chars>",
+  "calling_hook": "<guard filename>"
+}
+```
+
+### §7.4 Campaign C status as of this document
+
+Campaign C closed 2026-05-25 as **HALTED-AT-B5-R3 — STRUCTURAL
+IMPROVEMENT DEMONSTRATED** (per `audit-trail-review/FINAL-CERTIFICATION-C.md`;
+C5-critic R1 PASS-WITH-CHANGES on 2 minor citation defects).
+
+- AC-4 working class-A: improved (W-A1 + W-A2 killed via per-hook P0).
+- AC-4 heldout: deferred to R-AT-C-01 (corpus-spec alignment).
+- AC-5b: requires R-AT-C-02 (axis-13.d worked-examples).
+- AC-6a NC fabricated=0: PASS.
+- AC-6b NC count: pristine genuinely clean — R-AT-C-04 (§14 amendment or probe-set extension).
+- AC-C1 (new): PASS (5/5 trials).
+- AC-C2 (new): PASS (40/40 layer tests + live demo).
+
+Future agents conforming to this standard operate against the
+upgraded data + schema + consumer + carve-out layers from both
+Campaign B and Campaign C.
