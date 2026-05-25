@@ -1,0 +1,51 @@
+{
+  "round": 24,
+  "generated_at": "2026-05-25T00:00:00Z",
+  "spec_version": "2.0.0",
+  "spec_hash": "sha256:82a942188fd264f9a8cbfa058ed1e6aa7c7ff22342110a3b13e706d691348810",
+  "auditor_note": "R24 didn't run a full narrative re-scan. This is a delta-only update reflecting R-24-01's closure of NF-23-01: NC-12-06 (§12 cross-origin iframe outline-only) was uncovered_unsatisfied in R23 (no code) and is now uncovered_satisfied in R24 (code restored + wired into PinScopeHud via useEffect). AC-061 status unchanged (manual+BLOCKED). All other 57+3 narrative claims unchanged from narrative-scan-R23.json.",
+  "coverage": {
+    "total_claims": 61,
+    "covered": 37,
+    "uncovered": 24,
+    "uncovered_satisfied": 24,
+    "uncovered_unsatisfied": 0,
+    "candidate_acs": 3,
+    "strengthen_proposals": 1
+  },
+  "claims_summary": {
+    "carried_from_R23": 61,
+    "minted_R24": 0,
+    "total": 61,
+    "covered": 37,
+    "uncovered": 24,
+    "uncovered_satisfied": 24,
+    "uncovered_unsatisfied": 0
+  },
+  "delta_R23_to_R24": [
+    {
+      "claim_id": "NC-12-06",
+      "section": "§12",
+      "claim": "iframes (same-origin inject, cross-origin outline only)",
+      "before": { "code_satisfied": "false", "uncovered_unsatisfied": true },
+      "after": { "code_satisfied": "true", "uncovered_unsatisfied": false },
+      "change_reason": "R-24-01 restored markCrossOriginFrames + wired into PinScopeHud useEffect with MutationObserver lifecycle (commit d8f4ea1). NF-23-01 closed by code addition (user-approved Option B from SPEC-BUMP-PROPOSAL-R23.md)."
+    }
+  ],
+  "blocking_findings": [],
+  "candidate_acs": [
+    "AC-NEW-23 — Selection update < 16ms (NC-13-03, P1)",
+    "AC-NEW-24 — Grid mode switch < 32ms (NC-13-04, P3)"
+  ],
+  "strengthen_proposals": [
+    "SP-23-01 — AC-073 dual size-limit (closed in R-23-01; retained for traceability)"
+  ],
+  "validation": {
+    "invariants_checked": [
+      "covered + uncovered == total_claims (37 + 24 = 61) ✓",
+      "uncovered_satisfied + uncovered_unsatisfied == uncovered (24 + 0 = 24) ✓",
+      "blocking_findings.length == uncovered_unsatisfied (0 == 0) ✓",
+      "spec_hash matches updated SPEC.md hash"
+    ]
+  }
+}

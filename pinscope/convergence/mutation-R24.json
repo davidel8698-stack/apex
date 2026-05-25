@@ -1,0 +1,23 @@
+{
+  "round": 24,
+  "generated_at": "2026-05-25T17:16:52.260Z",
+  "files": [
+    {
+      "file": "pinscope/src/runtime/PinScope.tsx",
+      "mutants_run": 5,
+      "killed": 5,
+      "survived": []
+    },
+    {
+      "file": "pinscope/src/runtime/utils/iframe-overlay.ts",
+      "mutants_run": 1,
+      "killed": 1,
+      "survived": []
+    }
+  ],
+  "summary": {
+    "mutants": 6,
+    "killed": 6,
+    "survived": 0
+  }
+}
