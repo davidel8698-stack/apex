@@ -42,7 +42,7 @@ APEX is engineered around nine distinct failure modes that kill AI coding projec
 | 8 | **Systemic blindness** — fixes 1 caller, breaks 12 | TDAD + Aider-style repo map, cross-phase audit, differential semantic testing |
 | 9 | **Security gaps** — Veracode: 45% fail | Security-specialist, negative authorization tests, ML entropy secret scanning, `THREAT_MODEL.md`, defense-in-depth security layer |
 
-See [apex-spec.md](apex-spec.md) for the full specification.
+See [apex-spec.md](apex-spec.md) for the full specification — now extended (2026-05-25) with **27 research-validated doctrinal requirements (IMP-DR-001..027)** derived from a 15-agent parallel research swarm covering competitive landscape, Anthropic Cookbook, Karpathy CLAUDE.md, Manus context engineering, and Microsoft MDASH. The companion document [apex-strategy.md](apex-strategy.md) carries the time-stamped competitive intelligence snapshot.
 
 ### Claim 6 — "The First Framework That Improves DORA"
 
