@@ -231,16 +231,35 @@ to meet the promise in `apex-spec.md`?"
     b. **Read your nonce and agent_id** (Campaign C TP-C2 protocol).
        `pre-subagent-start.sh` wrote a per-invocation `audit_probe_nonce`
        into `.apex/in-flight-subagents.jsonl` keyed on your `agent_id`.
-       The orchestrator passes your `agent_id` to you in `AUDIT_CONTEXT`.
-       Read your nonce:
+
+       Discover your registry entry by matching your trial's unique
+       lab path (which appears verbatim in `tool_input_summary`):
        ```bash
-       APEX_AUDIT_NONCE=$(jq -r --arg id "$YOUR_AGENT_ID" \
+       MY_LAB="<the lab_path string from AUDIT_CONTEXT>"
+       MY_REGISTRY_ENTRY=$(jq -c \
+         --arg lab "$MY_LAB" \
+         'select(.agent_name=="framework-auditor"
+                 and .status=="in_flight"
+                 and (.tool_input_summary // "" | contains($lab)))' \
+         .apex/in-flight-subagents.jsonl | tail -n 1)
+       MY_AGENT_ID=$(printf '%s' "$MY_REGISTRY_ENTRY" | jq -r '.agent_id')
+       MY_NONCE=$(printf '%s' "$MY_REGISTRY_ENTRY" | jq -r '.audit_probe_nonce')
+       ```
+       Each parallel auditor probes a DIFFERENT lab — the lab path is
+       the unique disambiguator across concurrent trials.
+
+       Fallback: if AUDIT_CONTEXT explicitly provides your agent_id,
+       use it directly:
+       ```bash
+       MY_NONCE=$(jq -r --arg id "$YOUR_AGENT_ID" \
          'select(.agent_id==$id and .status=="in_flight") | .audit_probe_nonce' \
          .apex/in-flight-subagents.jsonl | tail -n 1)
        ```
-       (If `AUDIT_CONTEXT` omits your agent_id, the orchestrator is using
-       a degraded launch path; FAIL the trial honestly rather than guess
-       your nonce.)
+
+       If neither path yields a valid (agent_id, nonce) pair: FAIL the
+       trial honestly with `audit_trail_v=2; subagent_transcript_ok=n;
+       gap1_closed=n; sgc=0; nonce_discovery=FAILED` and report the
+       degraded launch path.
 
     c. **Construct probe with self-identifying marker.** Every Bash
        tool_call invoking a host-protected guard MUST prefix the

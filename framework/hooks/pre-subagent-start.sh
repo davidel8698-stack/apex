@@ -117,7 +117,7 @@ ROUND_TAG=$(printf '%s' "$ROUND_TAG" | tr -c 'A-Za-z0-9._-' '_' | head -c 64)
 # (per §6.1.1). The role-marker scrub avoids re-injecting the canonical
 # override-marker phrase into the audit trail — apex-prompt-guard.cjs
 # would reject the line otherwise.
-SUMMARY=$(printf '%s' "$PROMPT_RAW" | head -c 200 \
+SUMMARY=$(printf '%s' "$PROMPT_RAW" | head -c 400 \
   | sed -E 's/\\<\\<(SYSTEM|USER|ASSISTANT|HUMAN|TOOL):?\\>\\>//gi' \
   | tr '\n' ' ' | tr -d '\r')
 
