@@ -145,6 +145,80 @@ HALTED state — `round-checker` itself produces the closure.
         TP-2 pairing requires both data capture (TP-5) and re-probe
         gate (TP-2 §6.b axis-10 iteration) to be active.
 
+      - **Mutation-class probe minimum (R-AT-C-02 / CR-C-14).**
+        Anchored to `framework/test-fixtures/mutation-class-probes.json`.
+
+        **(i) Fixture readability gate.** If the fixture file is
+        missing or fails `jq -e .` validation → emit P1
+        `mutation_class_fixture_missing` + posture
+        `clean-pending-spot-check` + Status `CONTINUE TO R<N+1>`.
+        Fail-loud principle (apex-spec.md line 379); no fallback
+        to pre-R-AT-C-02 behavior.
+
+        **(ii) Per-guard coverage floor.** For each entry in the
+        UNION of `fixture.regex_word_boundary[]`,
+        `fixture.case_folding[]`, `fixture.silent_failure[]`,
+        `fixture.counter_swallow[]`, the auditor's
+        `axis_10.concrete_bypass_attempts[]` MUST contain >= 1
+        entry whose normalized guard name (lowercased, extension
+        preserved) string-equals the fixture entry's
+        `guard_canonical_name` (or `target_canonical_name` for
+        counter_swallow). Missing entry → emit P1
+        `axis_10_guard_coverage_gap` citing the missing guard +
+        `{fixture_class, fixture_entry_id}` + posture
+        `clean-pending-spot-check` + Status `CONTINUE TO R<N+1>`.
+        EXCEPTION: if `axis_10` is explicitly marked `BLIND SPOT`
+        with rationale for the ENTIRE axis, the per-guard coverage
+        floor is waived (existing CR-08 rung).
+
+        **(iii) Per-guard boundary-variant minimum (regex-deny
+        class).** For each guard in
+        `fixture.regex_word_boundary[]`, after (ii) confirms >= 1
+        entry exists in axis_10, verify that the entry set for
+        that guard contains either:
+         - >= 1 entry whose `payload` string-equals an element
+           of the fixture's `boundary_variants[]` array (exact
+           equality after both sides are JSON-decode-normalized
+           if quote-escaped), OR
+         - >= 1 entry whose `payload_class` field string-equals
+           an element of the fixture's `boundary_variant_ids[]`
+           (for ID-keyed payloads where literals can't be on
+           disk).
+        Failure of both clauses → emit P1
+        `axis_10_mutation_class_blind_spot` citing the guard +
+        `{fixture_class: regex_word_boundary, missing:
+        boundary_variant}` + posture `clean-pending-spot-check`
+        + Status `CONTINUE TO R<N+1>`.
+
+        **(iv) Per-guard case-variant minimum (case_folding
+        class).** Same shape as (iii) but checks >= 3 distinct
+        case variants per
+        `fixture.case_folding[].case_variant_ids[]` (or literal
+        case-variant payloads if non-ID-keyed). Failure → P1
+        `axis_10_case_folding_blind_spot`.
+
+        **(v) Per-guard stderr-assertion minimum (silent_failure
+        class).** For each guard in `fixture.silent_failure[]`,
+        the axis_10 entry MUST have either `stderr_nonempty: true`
+        or `stderr_contains: "<token>"` matching
+        `fixture.silent_failure[<g>].expected_stderr_contains_token`
+        (case-sensitive substring match). Failure → P1
+        `axis_10_silent_failure_blind_spot`.
+
+        **(vi) Guard-name normalization contract.** "Normalized"
+        means: take the auditor's
+        `axis_10.concrete_bypass_attempts[i].guard` field; apply
+        `tolower()`; trim leading/trailing whitespace; preserve
+        `.sh` / `.cjs` / `.ps1` extension. Round-checker compares
+        against `fixture.{class}[].guard_canonical_name` after
+        the same normalization. NO substring matching; NO regex
+        matching; NO fuzzy matching. Strict equality only.
+
+        These gates collectively make the fixture's enumeration
+        the coverage floor. A trial that probes only one guard
+        cannot pass; a trial that misses boundary variants cannot
+        pass; a fixture file that disappears cannot pass.
+
    c. **F-204-013 reconstruction check.** Independent of the
       coverage_map entries, scan every audit finding for cited grep
       counts (`evidence: N hits`). For each, re-run the cited grep
