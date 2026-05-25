@@ -85,4 +85,38 @@ this session; orchestrator-as-wave-executor pattern).
 
 **Note on R-23-07 threshold adjustment:** During W2 gate run, the new AC-071 test exhibited a different flake: happy-dom's rAF + React render path takes ~10ms in steady state even without any regression. The naive absolute `< 8 ms` assertion (SPEC's production budget) failed under happy-dom even without code regression. **The test was refined** to a relative-regression check: assert `perFrame < max(warmBaseline × 3, 24ms)`. This catches gross regressions (a 100ms busy-loop injection still exceeds 3× warm) while tolerating happy-dom's absolute slowness. Production-accurate 8ms verification will require browser env (Playwright AC-082-class) — flagged for R24 BACKLOG.
 
-**Round-window contribution:** Wave 2 commit pending. Files touched: `scripts/check-bundle-size.mjs` (new), `package.json`, `tests/unit/deployment.test.ts`, `tests/unit/runtime/perf.test.tsx` (R-23-07 threshold refinement), `WAVE-R23-RESULT.md`.
+**Round-window contribution:** Wave 2 files landed in commit `f60ad62` (mixed with user's parallel audit-trail Campaign C work — index collision during concurrent staging). The 5 pinscope/ W2 files (`scripts/check-bundle-size.mjs`, `package.json`, `tests/unit/deployment.test.ts`, `tests/unit/runtime/perf.test.tsx`, `WAVE-R23-RESULT.md`) appear in that commit's `--stat`. The commit message describes only the user's audit-trail work; this `WAVE-R23-RESULT.md` block is the authoritative provenance for the W2 contents.
+
+## Wave 3 — R-23-06
+
+### R-23-06 — Dormant iframe-overlay cleanup (P2 CONFIRMED-PARTIAL-SCOPE CLOSED)
+
+**Files deleted:**
+- `pinscope/src/runtime/utils/iframe-overlay.ts` (no runtime consumer; sole test was the deleted file below)
+- `pinscope/tests/unit/runtime/iframe-overlay.test.ts` (8 tests; covered only the deleted source)
+
+**Files created:**
+- `pinscope/convergence/SPEC-BUMP-PROPOSAL-R23.md` — formal proposal for the NF-23-01 disposition. Recommends **Option A** (SPEC bump v2.0.0 → v2.1.0 removing the §12 cross-origin-outline clause + AC-061). Awaits user approval; the loop does NOT auto-edit SPEC.md.
+
+**Files NOT deleted (scope correction from narrative-auditor):**
+- `pinscope/src/runtime/utils/rect-math.ts` — AC-062 imports `elementRect` (vitest-tag). Deletion would cause CLOSED → FAIL regression.
+- `pinscope/src/runtime/utils/screenshot.ts` — AC-076 imports `captureScreenshot` (vitest-tag). Deletion would cause CLOSED → FAIL regression.
+
+These two remain as documented utilities (tested, exported, but not currently runtime-consumed by `PinScope.tsx`). Their status is "tested utility for potential future feature work", not "dormant code misleading the metric".
+
+**Verification:**
+- `grep -rn "iframe-overlay\|markCrossOriginFrames\|isIframeLimited\|IFRAME_OVERLAY_ATTR" pinscope/src pinscope/tests` → 0 hits ✓
+- `npm run typecheck` → exit 0 ✓ (no orphan imports)
+- `npm test` → **311/311 PASS** ✓ (was 319; -8 from deleted iframe-overlay.test.ts; net change matches; full green no flakes)
+- `src/index.ts` unmodified — iframe-overlay was never re-exported in the public API.
+- `pinscope/convergence/SPEC-BUMP-PROPOSAL-R23.md` exists, 130+ lines, recommends Option A.
+
+**NF-23-01 status:** Remains `uncovered_unsatisfied` in `narrative-scan-R23.json` until user accepts/rejects the SPEC bump. The loop's `loop_status` reflects this honestly; closure of NF-23-01 is gated on user decision.
+
+### Wave 3 gate verdict
+
+- `npm run typecheck` → exit 0 ✓
+- `npm test` → **full green 311/311** ✓ (no AC-070 flake this run)
+- Wave 3 is the last R23 wave; proceeds to STEP 6 verify.
+
+**Round-window contribution:** Wave 3 commit pending. Files touched: `iframe-overlay.ts` (deleted), `iframe-overlay.test.ts` (deleted), `convergence/SPEC-BUMP-PROPOSAL-R23.md` (new), `convergence/WAVE-R23-RESULT.md` (this update).
