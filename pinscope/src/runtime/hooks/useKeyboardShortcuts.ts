@@ -2,8 +2,12 @@
 
 import { useEffect, useRef } from 'react';
 
+// R-23-05 — `'command'` (Cmd+K) and `'escape'` were removed from the
+// dispatcher table because they are owned by `CommandBar.tsx` and
+// `useSelectedElement.ts` directly (Cmd+K focuses CommandBar; Escape
+// blurs CommandBar / clears selection). They are SPEC §8.11 user-facing
+// shortcuts but are NOT serviced by this dispatcher.
 export type ShortcutId =
-  | 'command'
   | 'grid-cycle'
   | 'grid-0'
   | 'grid-1'
@@ -14,8 +18,7 @@ export type ShortcutId =
   | 'toggle-pins'
   | 'measure'
   | 'snapshot'
-  | 'crosshair'
-  | 'escape';
+  | 'crosshair';
 
 interface ShortcutDef {
   key: string;
@@ -24,7 +27,6 @@ interface ShortcutDef {
 }
 
 export const SHORTCUTS: Record<ShortcutId, ShortcutDef> = {
-  command: { key: 'k', meta: true },
   'grid-cycle': { key: 'g', shift: true },
   'grid-0': { key: '0', shift: true },
   'grid-1': { key: '1', shift: true },
@@ -36,7 +38,6 @@ export const SHORTCUTS: Record<ShortcutId, ShortcutDef> = {
   measure: { key: 'm', shift: true },
   snapshot: { key: 's', shift: true },
   crosshair: { key: 'c', shift: true },
-  escape: { key: 'escape' },
 };
 
 export interface KeyLike {

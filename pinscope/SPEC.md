@@ -258,7 +258,13 @@ the nearest `[data-pin]` ancestor. Returns `{ element, pinId, rect } | null`.
   extracts 32 computed-style properties + rect + hierarchy, writes
   `.pinscope/snapshots/s_*.json`.
 - **8.11 Keyboard shortcuts** — full table per v1.0 (`Cmd+K`, `Shift+G/0-4/H/
-  P/M/S/C`, `Esc`, `Alt+Hover`).
+  P/M/S/C`, `Esc`, `Alt+Hover`). *Implementation note (R-23-05):* `Cmd+K`
+  (focus CommandBar) and `Esc` (blur CommandBar / clear selection) are
+  owned by `CommandBar.tsx` and `useSelectedElement.ts` respectively, not
+  by the central `useKeyboardShortcuts` dispatcher. The dispatcher table
+  serves the remaining 11 ids (`grid-cycle`, `grid-0..4`, `toggle-hud`,
+  `toggle-pins`, `measure`, `snapshot`, `crosshair`). User-facing behavior
+  is identical; the split is internal architecture only.
 
 ---
 

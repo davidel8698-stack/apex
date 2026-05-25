@@ -160,6 +160,13 @@ function PinScopeHud({
   const hovered = useHoveredElement();
   const viewport = useViewportSize();
   const [hudVisible, setHudVisible] = useState(true);
+  // R-23-08 — In compact viewport (<768px), the HUD defaults to collapsed
+  // (FloatingToggle only). When the user taps the toggle, this flag flips
+  // to true and the full HUD renders — even in compact mode. Resizing
+  // back to desktop width also resets behavior (the compact branch no
+  // longer matches, so this flag is moot). Default `false` — collapsed by
+  // default in compact.
+  const [compactExpanded, setCompactExpanded] = useState(false);
   const [gridMode, setGridMode] = useState<GridMode>(defaultGridMode);
   const [measuring, setMeasuring] = useState(false);
   // R-20-03 — §8.11 Shift+P (`toggle-pins`) and Shift+C (`crosshair`) flip
@@ -436,10 +443,15 @@ function PinScopeHud({
   // re-expand by tapping it. `isCompactViewport` is a pure function of
   // `viewport.width`; `useViewportSize` already drives a re-render on
   // window `resize`, so rotation/resize flips this branch automatically.
-  if (isCompactViewport(viewport.width)) {
+  // R-23-08 — `compactExpanded` (default `false`) lets the user override
+  // the compact collapse: tapping `FloatingToggle.onShow` flips it to
+  // `true` and the full HUD renders even in compact mode. Without this,
+  // the pre-R23 code rendered a FloatingToggle whose onShow was inert
+  // (`setHudVisible(true)` while `hudVisible` was already `true`).
+  if (isCompactViewport(viewport.width) && !compactExpanded) {
     return createPortal(
       <div data-pinscope-ui="root">
-        <FloatingToggle onShow={() => setHudVisible(true)} />
+        <FloatingToggle onShow={() => setCompactExpanded(true)} />
       </div>,
       document.body,
     );

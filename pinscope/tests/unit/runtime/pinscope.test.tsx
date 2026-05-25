@@ -613,4 +613,53 @@ describe('R-21-01 — touch + responsive collapse', () => {
       });
     }
   });
+
+  it('compact viewport: tapping FloatingToggle expands the full HUD (R-23-08, F-22-01)', async () => {
+    // R-23-08 — fixes F-22-01. Pre-R23, the compact-viewport branch
+    // rendered a FloatingToggle whose `onShow={() => setHudVisible(true)}`
+    // callback was inert (`hudVisible` already defaulted to `true`). The
+    // inline comment promised "tap to re-expand" but the code did not
+    // deliver. Post-R23, `compactExpanded` tracks the override: tap →
+    // `setCompactExpanded(true)` → compact branch fails → full HUD
+    // renders. This test exercises the round-trip.
+    const originalWidth = window.innerWidth;
+    Object.defineProperty(window, 'innerWidth', {
+      configurable: true,
+      writable: true,
+      value: 600,
+    });
+
+    try {
+      render(<PinScope />);
+      await act(async () => {
+        window.dispatchEvent(new Event('resize'));
+        await new Promise((r) => setTimeout(r, 0));
+      });
+
+      const hud = document.querySelector('[data-pinscope-ui="root"]');
+      expect(hud).not.toBeNull();
+
+      // Pre-tap: compact branch — only FloatingToggle, no PinBadges.
+      expect(hud!.querySelector('[data-pinscope-badges]')).toBeNull();
+      const toggle = hud!.querySelector(
+        '[data-pinscope-toggle]',
+      ) as HTMLButtonElement | null;
+      expect(toggle).not.toBeNull();
+
+      // Tap the FloatingToggle.
+      await act(async () => {
+        toggle!.click();
+      });
+
+      // Post-tap (still compact viewport): full HUD renders.
+      // `[data-pinscope-badges]` exists (PinBadges mounted).
+      expect(hud!.querySelector('[data-pinscope-badges]')).not.toBeNull();
+    } finally {
+      Object.defineProperty(window, 'innerWidth', {
+        configurable: true,
+        writable: true,
+        value: originalWidth,
+      });
+    }
+  });
 });
