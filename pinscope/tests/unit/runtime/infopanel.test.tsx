@@ -58,6 +58,42 @@ describe('InfoPanel collapsible persistence (AC-032)', () => {
   });
 });
 
+describe('InfoPanel collapsible SSR-guard (AC-032, R-24-02)', () => {
+  it('treats missing localStorage as not-collapsed (no throw)', () => {
+    // R-24-02 — kills the InfoPanel.tsx:22 mutation survivor
+    // (`typeof localStorage === 'undefined' ? false : true`). Pre-R24, no
+    // test exercised the SSR branch, so a mutation flipping the SSR
+    // default from `false` to `true` would survive (silently breaking
+    // every section's initial state in any SSR/test env without
+    // localStorage). This test stubs localStorage temporarily to
+    // undefined and re-renders InfoPanel — every section must mount in
+    // the expanded (not-collapsed) state, matching the SSR contract.
+    const originalLS = globalThis.localStorage;
+    try {
+      Object.defineProperty(globalThis, 'localStorage', {
+        configurable: true,
+        get: () => undefined,
+      });
+      const el = document.createElement('button');
+      document.body.appendChild(el);
+      const { container } = render(<InfoPanel hovered={hoveredOf(el)} />);
+      // Every section must be expanded (collapsed=false) when localStorage
+      // is unavailable — the SSR-friendly default.
+      const sections = container.querySelectorAll('[data-section]');
+      expect(sections.length).toBeGreaterThan(0);
+      for (const sec of Array.from(sections)) {
+        expect(sec.getAttribute('data-collapsed')).toBe('false');
+      }
+    } finally {
+      Object.defineProperty(globalThis, 'localStorage', {
+        configurable: true,
+        value: originalLS,
+        writable: true,
+      });
+    }
+  });
+});
+
 describe('InfoPanel color rendering (AC-033)', () => {
   it('renders a swatch for color values and a dash for empty ones', () => {
     const el = document.createElement('button');

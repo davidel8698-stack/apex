@@ -8,18 +8,33 @@ afterEach(() => {
 });
 
 describe('runtime performance', () => {
-  it('mounts <PinScope/> in under 50 ms (AC-070)', () => {
-    // §13 budgets the per-mount cost. Warm the render path once (one-time
-    // module-eval + JIT cost a real browser pays at page load, not per
-    // mount) so the measurement reflects the steady-state mount.
+  it('mounts <PinScope/> in under 50 ms (AC-070, R-24-03 median-of-3)', () => {
+    // §13 budgets the per-mount cost.
+    //
+    // R-24-03 — median-of-3 measurement. Pre-R24, this test took a
+    // SINGLE sample; under concurrent test-suite load (30 files
+    // parallel), a single warm-cold timing jitter occasionally pushed
+    // the sample over 50ms even though steady-state was well under.
+    // The median-of-3 approach: take 3 samples, sort, assert on the
+    // middle. A real regression that pushes the median over 50ms is a
+    // real concern; a single-sample spike is correctly filtered as
+    // noise. The warm step still pays the one-time JIT cost.
     const warm = render(<PinScope />);
     warm.unmount();
     cleanup();
     document.body.innerHTML = '';
 
-    const start = performance.now();
-    render(<PinScope />);
-    expect(performance.now() - start).toBeLessThan(50);
+    const samples: number[] = [];
+    for (let i = 0; i < 3; i++) {
+      const start = performance.now();
+      render(<PinScope />);
+      samples.push(performance.now() - start);
+      cleanup();
+      document.body.innerHTML = '';
+    }
+    samples.sort((a, b) => a - b);
+    const median = samples[1];
+    expect(median).toBeLessThan(50);
   });
 
   it('keeps hover per-frame work bounded by warm baseline (AC-071, R-23-07)', async () => {
