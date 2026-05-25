@@ -31,6 +31,7 @@ import { HistoryManager, MemoryHistoryStore } from './managers/HistoryManager.js
 import type { HistoryData } from './managers/HistoryManager.js';
 import { RuntimePinObserver } from './managers/RuntimePinObserver.js';
 import { markShadowHosts } from './utils/shadow-dom.js';
+import { markCrossOriginFrames } from './utils/iframe-overlay.js';
 import { isHeavyPage, shouldSkipBadge } from './utils/throttle.js';
 import { LongPressDetector, isCompactViewport } from './utils/long-press.js';
 import { escapeHud, findPinnedAncestor } from './utils/element-walker.js';
@@ -219,6 +220,30 @@ function PinScopeHud({
     const observer = new MutationObserver(() => {
       // Re-sweep on any DOM mutation under body — new shadow hosts get marked.
       markShadowHosts(document);
+    });
+    observer.observe(document.body, { subtree: true, childList: true });
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
+  // R-24-01 — §12 / AC-061 cross-origin iframe outline. Restored from
+  // a2f0585^ (R-23-06 had deleted the helper as "dormant" before R23's
+  // narrative-auditor flagged §12 as uncovered_unsatisfied). The helper
+  // sweeps `<iframe>` elements, stamps `data-pin-iframe` on cross-origin
+  // ones, and draws an outline + label overlay (no injection — the SPEC
+  // explicitly forbids accessing cross-origin contentDocument). Mirrors
+  // the markShadowHosts wiring above (initial sweep + observer re-sweep
+  // on DOM mutations). Closes the NF-23-01 narrative blocking finding.
+  useEffect(() => {
+    if (typeof document === 'undefined') return undefined;
+    if (typeof MutationObserver === 'undefined') {
+      markCrossOriginFrames(document);
+      return undefined;
+    }
+    markCrossOriginFrames(document);
+    const observer = new MutationObserver(() => {
+      markCrossOriginFrames(document);
     });
     observer.observe(document.body, { subtree: true, childList: true });
     return () => {
