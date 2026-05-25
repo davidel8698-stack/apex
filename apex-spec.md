@@ -130,6 +130,8 @@ APEX הוא **multi-agent framework ופלטפורמה לסוכני קוד** (Cl
 
 - **[P0]** APEX state-handoff חייב לאמץ את ה-canonical 5-section template של Anthropic. שני נתיבים אפשריים: (a) restructure `STATE.json` עם 5 sections קבועים (Task Overview / Current State / Important Discoveries / Next Steps / Context to Preserve); או (b) השאיר `STATE.json` structural + הוסף sibling `STATE_NARRATIVE.md` שמכיל את ה-template (less invasive). `turn-checkpoint.sh` ו-`session-auto-resume.sh` חייבים לקרוא ולכתוב ב-shape החדש. שמירה על backward-compat: `RESUME-PROMPT.md` קורא both shapes during transition. *(Master §9 P0-5; sources: Anthropic Cookbook canonical compaction template; Anthropic compact_20260112 default + SDK client-side compaction; Manus L3 file system as ultimate context; IMP-DR-005)*
 
+  **Implementation status (2026-05-25):** ADOPTED via **Option (c) Hybrid Additive** — empirical investigation found 118 active files referencing STATE.json (35 hooks + 45 commands + 26 tests + 12 other), making full restructure (option a) high-risk. Option (c) preserves all existing STATE.json fields untouched (zero blast radius on 118 readers) and ADDS a new top-level `handoff` field with the 5 sub-sections, populated by new hook `framework/hooks/handoff-sync.sh` that derives the narrative from existing state. `/apex:resume` may optionally read `.handoff` for richer resumability (purely additive; old behavior retained as fallback). 3-places contract enforced: hook file + sync-to-claude.sh delivery + HOOK-CLASSIFICATION.md entry. Wave-executor R-items should decompose into: (1) schema addition, (2) handoff-sync.sh creation, (3) resume.md optional update.
+
 ### 4. Drift (סטייה מהתוכנית)
 **מה זה:** הוחלט X. הסוכן עושה Y. גם — drift סגנוני.
 **איך APEX מטפל:** `SPEC_VERSION` hash + `SPEC_DELTA.json`. **Spec-to-verification ledger ב-Layer 0**. **Iterative decomposition עם `originating_requirement_id`**. **`/apex:build` ו-`/apex:refine` כ-pipelines נפרדים**. **Phase-Gating doctrine**. **`/apex:discuss-phase` עם gray-area classifier**. **Scope-reduction detector**. **`/apex:ui-phase` עם 6-pillar Design Contract + Domain-specific contract templates**.
@@ -240,11 +242,17 @@ APEX הוא **multi-agent framework ופלטפורמה לסוכני קוד** (Cl
 
 - **[P1]** `framework/schemas/PLAN_META.schema.json` חייב opt-in `critic.provider` field עם `cross_provider_on_severity` ו-`cross_provider_model`. כש-`severity=critical` — route ל-non-matching provider. `apex-spec.md` חייב לתעד את ה-trade-off (cost, API-key management). *(Master §10 P1-5; source: Microsoft MDASH "a second separate SOTA model as an independent counterpoint" — same-provider critic has correlated failure modes; IMP-DR-015)*
 
+  **Implementation status (2026-05-25):** BLOCKED-external-dependency (Doctrine 3 env-unavailable analog) — pending three external preconditions: (1) API-key provisioning policy (env vars vs `~/.claude/` vs CI-injected); (2) cost approval for secondary provider calls; (3) selection of secondary provider(s) (OpenAI/Cohere/Gemini). Schema field `critic.provider` may be added now as opt-in (default null/disabled), with full activation deferred until preconditions satisfied. Wave-executor scope for R25: add schema field only; defer routing implementation.
+
 - **[P1]** APEX חייב לזהות capability-amplification candidate (most-under-used capability ב-current runs) ולעטוף אותה כ-dedicated sub-agent invokable מתוך `executor.md` mid-task. candidates: snapshot/rollback verification (currently a hook); test-architect's regression-test scaffolding; memory-synthesis mid-phase compaction. למדוד lift. *(Master §10 P1-6; source: depthfirst lifted CyberGym 41 → 48% by spawning dedicated instrumentation sub-agent; IMP-DR-016)*
+
+  **Implementation status (2026-05-25):** NEEDS-DECISION — wave-executor cannot execute this without human judgment on (a) which of the 3 named candidates to amplify first (snapshot/rollback OR test-architect regression-scaffolding OR memory-synthesis mid-phase compaction), (b) measurement criteria for "most-under-used" in current runs, (c) success metric for the "lift" measurement. R-item for R25 should be marked `Requires human decision: YES` with explicit question enumeration; do not enter any wave until owner provides the candidate selection. Acceptable interim: instrumentation-only R-item that tracks capability usage per session (no amplification work) — this provides data to inform future owner decision.
 
 - **[P1]** APEX חייב `/apex:health-check` mode חדש שמבצע tool/agent description optimization pass: לוקח כל agent prompt + description field, קורא recent transcripts מ-`~/.claude/projects/.../`, ומציע refinements (description tightening, examples, anti-pattern callouts). מדווח via `framework-auditor.md`-style findings. *(Master §10 P1-9; source: Anthropic multi-agent "tool-testing agent rewrote tool descriptions and cut future task time by 40%"; IMP-DR-019)*
 
 - **[P2]** APEX חייב לבנות "APEX eval" קטן — 20 representative tasks across `/apex:fast`, `/apex:build`, `/apex:full`. הרץ before/after כל P0/P1 change. track: success rate, total tokens, total time, critic agreement, regression rate. methodology: LLM-as-judge עם 0.0-1.0 score; ~20 representative queries להתחלה (Anthropic recommended methodology). *(Master §11 P2-6; source: Anthropic measured 90.2% lift, 40% description-rewrite gain, 90% parallel-tool speedup — APEX has no comparable numbers; CyberGym critique: vendor benchmark claim must publish harness + model + cost + exclusions; IMP-DR-025)*
+
+  **Implementation status (2026-05-25):** PARTIAL — high-quality scaffold + 9 samples (3 per difficulty band from each of R20/R21/R22 closed items, professionally structured for easy conclusion-derivation). Backlog tracks the remaining 11 samples needed to reach 20. Deliverables: `framework/eval/APEX-ON-APEX/README.md` (full methodology + scoring rubric + run protocol), `template.task.md` (schema for new tasks), 9 sample files (`samples/R{20,21,22}-{001-easy,002-medium,003-hard}.md`), `run-eval.sh` (skeleton runner), `BACKLOG.md` (tracks remaining 11). Quality bar: each sample self-contained and grep-runnable; carries original task description + original outcome + expected APEX behavior (success criteria) + how-to-verify. Wave-executor R-items should decompose into: (1) scaffold + methodology doc, (2) 9 sample files, (3) skeleton runner + backlog tracking.
 
 - **[P2]** **Multi-Agent Ceremony Position** — APEX position על מתי להשתמש ב-sub-agent ceremony, מקודד ב-spec כדי שmaintainers עתידיים לא יסטו:
 
@@ -257,6 +265,8 @@ APEX הוא **multi-agent framework ופלטפורמה לסוכני קוד** (Cl
   | Quick fixes / typos / single-line changes | **No** — Anthropic's "ask Claude directly" + Karpathy's "use judgment" |
 
   APEX's encoded position: (1) default multi-agent ceremony only for `/apex:build` and `/apex:full` — explicitly value-of-task gate; (2) `DECISIONS.md` is the single source of truth that every agent reads first — Cognition fix for shared-context-via-files; (3) `/apex:fast` and `/apex:quick` skip multi-agent ceremony by design — Anthropic explicitly endorses this; (4) wave-executor for parallel independent tasks within a phase. *(Master §12 reconciliation; sources: Anthropic 90.2% lift + 15× token warning; Cognition "Don't Build Multi-Agents"; Manus Wide Research; Microsoft MDASH; user feedback in feedback_plan_design.md; IMP-DR-027)*
+
+  **Implementation status (2026-05-25):** ALREADY-SATISFIED — the position table above IS the implementation; the spec embodies the requirement. No code change required. Wave-executor R25 R-item for IMP-DR-027 should be marked `WONTFIX: already-satisfied-by-spec` with justification "the requirement is to encode the multi-agent ceremony position in apex-spec.md; the position is encoded in lines 251-267 of this spec (this section). No additional code or doc deliverable produces value."
 
 ### 8. Systemic blindness (עיוורון מערכתי)
 **מה זה:** מתקן רכיב אחד ושובר 12 callers בשקט.
@@ -491,6 +501,8 @@ APEX הוא **multi-agent framework ופלטפורמה לסוכני קוד** (Cl
 ### APEX → Anthropic glossary (IMP-DR-023)
 
 - **[P2]** `apex-spec.md` חייב לכלול glossary section שמצליב vocabulary של APEX ל-Anthropic canonical (Anthropic Building Effective Agents קוראת את ה-canonical patterns): Wave → parallelization (sectioning); Round (self-heal) → evaluator-optimizer; Architect→Executor→Critic → orchestrator-workers + evaluator-optimizer; Phase → orchestrated workflow. עוזר ב-onboarding ו-future-proofs את discoverability של ה-framework. *(Master §11 P2-4; sources: Anthropic Building Effective Agents; IMP-DR-023)*
+
+  **Implementation status (2026-05-25):** ADOPTED — glossary lives inline at end of `apex-spec.md` as `## Appendix: APEX ↔ Anthropic Vocabulary Glossary` (added in same triage commit as these annotations). ~20 lines total. Single source of truth — every spec reader sees it automatically. No separate file to maintain in sync. Wave-executor R-item for R25 should be marked `WONTFIX: already-satisfied-by-spec` referencing the appendix.
 
 ## Expected overrefusal categories *(IMP-077, R16-641S)*
 
@@ -859,6 +871,27 @@ preserved via three immortal git tags:
 - `framework/apex-skills/pinscope.md` — APEX-side conventions
 - `framework/docs/PS-HEAL-DOCTRINES.md` — inheritance backlog
 - `framework/decisions/2026-05-pinscope-merge.md` — Decision Record
+
+## Appendix: APEX ↔ Anthropic Vocabulary Glossary
+
+*(Added 2026-05-25 per IMP-DR-023. Helps onboarding by mapping APEX's bespoke vocabulary to Anthropic's canonical patterns from "Building Effective Agents".)*
+
+| APEX term | Anthropic canonical term | Notes |
+|-----------|--------------------------|-------|
+| **Wave** (in self-heal: a parallel batch of 5-8 R-items) | **Parallelization (sectioning)** | Anthropic: "running independent subtasks in parallel" |
+| **Round** (a full self-heal cycle: audit→plan→schedule→execute→check) | **Evaluator-optimizer loop** | Anthropic: "one LLM call generates a response, another evaluates" |
+| **Phase** (a multi-task work unit in a project) | **Orchestrated workflow** | Anthropic: "step-by-step orchestrated agent task" |
+| **Architect → Executor → Critic** pipeline | **Orchestrator-workers + evaluator-optimizer** | Anthropic decomposes orchestration from verification |
+| **Critic** (verdict-only review agent) | **Evaluator** | Anthropic: "LLM-as-judge" pattern |
+| **Auditor** (filesystem-quarantined test reviewer) | (no Anthropic analog) | APEX-original — auditor cannot read implementation code |
+| **Wave 0** (test infrastructure mapping before code) | (no Anthropic analog) | APEX-original — Nyquist Validation Layer |
+| **PinScope** (visual debug HUD) | (no Anthropic analog) | APEX-original — bundled product for UI feedback |
+| **Spec anchor** (verbatim spec quote in remediation R-item) | **Grounded citation** | Anthropic: "ground claims in source material" |
+| **Hub-and-spoke orchestration** | **Orchestrator-workers** | Anthropic primary pattern for agent decomposition |
+| **Dual-mode (collaborator/replacement)** | (no Anthropic analog) | APEX-original — splits decisions by user expertise domain |
+| **Scale-Adaptive Classifier** | (no Anthropic analog) | APEX-original — auto-tunes ceremony to project scale |
+
+**Reading guide:** APEX's bespoke vocabulary is intentional — it names APEX-specific mechanisms (Wave 0, dual-mode, scale-adaptive) that don't have Anthropic-canonical equivalents. The 5 mappings above let readers familiar with Anthropic's "Building Effective Agents" find their bearings; the 7 "no analog" entries are where APEX adds new vocabulary because the underlying mechanism is APEX-original.
 
 ## במהות
 
