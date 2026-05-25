@@ -1,0 +1,105 @@
+{
+  "round": 23,
+  "generated_at": "2026-05-25T00:00:00Z",
+  "auditor_note": "Orchestrator-composed from 3 sub-agent inline verdicts (spec-auditor agent ac17dcefa0758418d, narrative-auditor agent aa6fb84acf82404e2, test-quality auditor agent a3d54b449b3c62a7a) — all sub-agents were sandbox-denied write access to pinscope/convergence/ in this session. The orchestrator's main thread (with write permission) records the consolidated findings verbatim. Cross-auditor reconciliation applied: where test-quality refuted/partial'd a spec-auditor finding, the test-quality verdict (which read the actual test files) wins.",
+  "findings": [],
+  "investigation_findings": [
+    {
+      "id": "F-23-01",
+      "axis": "10 — Performance / matrix-rigor (AC-073 bundle-size verify is exit-0-only)",
+      "confidence": "CONFIRMED",
+      "severity": "P0",
+      "current_state": "ac-matrix.json AC-073 verify is { kind: 'command', cmd: 'cd pinscope && npm run size', expect_exit: 0 }. The 'size' npm script runs size-limit, which reads pinscope/package.json's size-limit config (a single entry, limit: '80 KB', path 'dist/runtime/PinScope.js'). exit 0 is returned whenever the bundle is below limit — but a misconfigured limit (e.g. '1 MB') would silently pass while bundle bloats to hundreds of KB. AC-073 SPEC §13 says 'dev bundle < 80 KB minified / < 25 KB gzipped' — the gzipped sub-budget is never measured because size-limit has only one entry.",
+      "gap": "The verify proves nothing about actual KB. The 25 KB gzipped sub-budget is unmeasured. SPEC §13 'measure dev bundle KB' is not enforced — only 'size-limit config exits 0' is enforced. This is the canonical false-PASS pattern at P0 severity.",
+      "re_read": "grep -nA 5 'AC-073' pinscope/SPEC.md → §A.13 confirms 80 KB min + 25 KB gz dual budget. cat pinscope/package.json size-limit field → single entry { name: 'runtime (dev)', path: 'dist/runtime/PinScope.js', import: '{ PinScope }', ignore: ['react','react-dom'], limit: '80 KB' }. No gzipped entry. ac-matrix.json:56 confirms exit-0-only verify."
+    },
+    {
+      "id": "F-23-03",
+      "axis": "11 — Integration surface / matrix-rigor (AC-091/092 wrapper tests are presence-only)",
+      "confidence": "CONFIRMED",
+      "severity": "P2",
+      "current_state": "tests/unit/deployment.test.ts for AC-091 only checks pkg.exports definedness (vacuous per L16-19, OK in sibling context per test-quality audit). AC-092 tests check that withPinScope returns { webpack: function } and PinScopeWebpackPlugin.apply is defined — but do NOT verify (a) the wrapper actually invokes the host webpack fn with passthrough args, (b) input config is not mutated (the spread vs return-same mutant survives), (c) apply is no-op when enabled:false (the 'void compiler.hooks;' stub satisfies the test even if it threw).",
+      "gap": "SPEC §I-1 deliberately scopes Webpack/Next.js to wrapper-only in v1.0/v2.0 — the stubs are spec-faithful. But the tests don't prove the wrapper contract the spec actually states. A regression that breaks the wrapper would not surface.",
+      "re_read": "Read tests/unit/deployment.test.ts L41-90 (AC-092 describe block). Saw: 'withPinScope preserves input config' checks reactStrictMode passthrough (OK), 'composes existing webpack function' calls it then checks `called = true` (OK behavioral). Plugin instantiation test only checks `plugin.options.enabled === false`. apply() not invoked. No immutability test. No spy-on-host-webpack-with-arg-passthrough."
+    },
+    {
+      "id": "F-23-05",
+      "axis": "7 — Operation protocol / dead shortcut ids",
+      "confidence": "CONFIRMED",
+      "severity": "P2",
+      "current_state": "src/runtime/hooks/useKeyboardShortcuts.ts SHORTCUTS table defines 13 ids including 'command' (Cmd+K) and 'escape'. PinScope.tsx handler object services 11 of the 13 ids (toggle-hud, grid-cycle, grid-0..4, measure, snapshot, toggle-pins, crosshair). The remaining 2 ('command', 'escape') are handled DIRECTLY in CommandBar.tsx L72-84 (Cmd+K focus) and useSelectedElement.ts L73 (Escape blur) — bypassing the SHORTCUTS dispatch entirely. The table entries are dead code.",
+      "gap": "Dead-id pollution in SHORTCUTS table. SPEC §8.11 names 13 shortcuts and the table has all 13, but 2 are non-functional via the dispatch path. The handlers in CommandBar/useSelectedElement work, so user-facing behavior is preserved — but the table claims dispatch ownership it does not exercise.",
+      "re_read": "Read useKeyboardShortcuts.ts SHORTCUTS table (ll 26-40). Read PinScope.tsx handler object — confirmed 11 of 13 ids serviced. Read CommandBar.tsx L72-84 — direct Cmd+K. Read useSelectedElement.ts L73 — direct Escape. Narrative-auditor confirmed: 'Deleting them does NOT break NC-08-13 (Shift+P), NC-08-14 (Shift+C), or §8.11/§8.6 user-facing behaviour (Cmd+K focus + Esc blur remain in CommandBar.tsx). No narrative-axis impact.'"
+    },
+    {
+      "id": "F-23-06",
+      "axis": "9 — Edge cases / dormant utility code",
+      "confidence": "CONFIRMED-PARTIAL-SCOPE",
+      "severity": "P2",
+      "current_state": "Three utility files were initially flagged as 'dormant' (0 runtime consumers). On second-pass review (narrative-auditor): (a) iframe-overlay.ts (markCrossOriginFrames, isIframeLimited, IFRAME_OVERLAY_ATTR) — only consumed by iframe-overlay.test.ts. AC-061 is manual+BLOCKED (cannot ever assert). SAFE to delete. (b) screenshot.ts (captureScreenshot) — consumed by screenshot.test.ts; AC-076 imports captureScreenshot. DELETION WOULD BREAK AC-076 (closed → fail regression). (c) rect-math.ts (elementRect) — consumed by edge-utils.test.ts; AC-062 imports elementRect. DELETION WOULD BREAK AC-062.",
+      "gap": "Scope-correction: only iframe-overlay.ts is truly safe to delete. screenshot.ts and rect-math.ts are tested-and-AC-backed, just not runtime-consumed (different design choice: SnapshotManager uses DOM-walk, not pixel capture; rect math is via direct getBoundingClientRect()). They are documented utilities for future feature work — not dormancy that misleads the convergence metric.",
+      "re_read": "grep -rln 'elementRect|captureScreenshot' pinscope/src pinscope/tests → confirmed: elementRect only in rect-math.ts + edge-utils.test.ts; captureScreenshot only in screenshot.ts + screenshot.test.ts. AC-062/076 are vitest-tag CLOSED via these test files."
+    },
+    {
+      "id": "F-23-07",
+      "axis": "10 — Performance / matrix-rigor (AC-071 perf test does not measure named rAF callback)",
+      "confidence": "CONFIRMED",
+      "severity": "P0",
+      "current_state": "tests/unit/runtime/perf.test.tsx L26-44 for AC-071 measures a synthetic loop: 100 iterations of `findPinnedAncestor(span); pinned?.getBoundingClientRect();`. Divides by 100, asserts perFrame < 8ms. SPEC §13 verify clause says 'perf test measures the rAF callback duration'. The test does NOT use requestAnimationFrame, does NOT trigger React re-render, does NOT render the InfoPanel update, does NOT measure layout/paint. The production hover→InfoPanel update path involves: rAF schedule → React state update → InfoPanel re-render → layout. The test bypasses all of that.",
+      "gap": "AC-071 P0 is a false-PASS: the test always passes because the synthetic loop is trivial (a few microseconds), while the actual production rAF callback could exceed 8ms under React re-render cost and never trigger this test. This is the same pattern as F-23-01 (AC-073) — the verify clause names something the test does not actually measure.",
+      "re_read": "Read tests/unit/runtime/perf.test.tsx L26-44 verbatim. Read SPEC §A.13 AC-071: 'hover→InfoPanel update < 8 ms/frame. verify: perf test measures the rAF callback duration.' Confirmed gap: synthetic micro-bench vs. claimed rAF measurement."
+    },
+    {
+      "id": "F-22-01",
+      "axis": "9 — Edge cases / hollow interaction (compact-viewport FloatingToggle.onShow inert)",
+      "confidence": "SUSPECTED",
+      "severity": "P3",
+      "current_state": "Carry-forward from R22. Per R22 spec-auditor finding: R-21-01's compact-viewport branch renders a FloatingToggle whose `onShow={() => setHudVisible(true)}` callback is functionally inert because `hudVisible` defaults to `true` and the compact-viewport check fires before the `!hudVisible` check. The inline comment promises 'the user can re-expand by tapping it' but the code does not deliver. AC-064's verify is the resize-driven round trip, not a tap on the compact toggle.",
+      "gap": "Hollow UI interaction in code R23 already inherited. Not loop-blocking (no CONFIRMED P0/P1/P2 status; SUSPECTED P3). User-deferred to R23 backlog.",
+      "re_read": "Reference: audit-findings-R22.json F-22-01. Not re-verified this round; deferred per ROUND-R22-CLOSURE.md §R23 carry-forward."
+    }
+  ],
+  "blocked": [
+    { "ac": "AC-023", "severity": "P0", "reason": "env 'browser' unavailable — Playwright ::before content read" },
+    { "ac": "AC-030", "severity": "P1", "reason": "env 'browser' unavailable — Playwright InfoPanel hover assertion" },
+    { "ac": "AC-061", "severity": "P3", "reason": "env 'browser' unavailable — cross-origin iframe needs two real origins + browser" },
+    { "ac": "AC-063", "severity": "P3", "reason": "env 'browser' unavailable — @media print rendering" },
+    { "ac": "AC-082", "severity": "P1", "reason": "env 'browser' unavailable — Playwright integration suite" },
+    { "ac": "AC-083", "severity": "P3", "reason": "env 'browser' unavailable — visual-regression screenshots" }
+  ],
+  "coverage": {
+    "axes_swept": [
+      "1 — Build pipeline",
+      "2 — Pin-ID stability",
+      "3 — Production-zero",
+      "4 — Runtime isolation",
+      "5 — Inspection layer",
+      "6 — Measurement layer",
+      "7 — Operation protocol — DEFICIT FOUND: F-23-05 (dead shortcuts)",
+      "8 — Data schemas",
+      "9 — Edge cases — DEFICIT FOUND: F-23-06 (iframe-overlay dormant; partial scope-correction for screenshot/rect-math); F-22-01 carry-forward",
+      "10 — Performance — DEFICIT FOUND: F-23-01 (AC-073 false-PASS), F-23-07 (AC-071 false-PASS)",
+      "11 — Integration surface — DEFICIT FOUND: F-23-03 (AC-091/092 wrapper tests presence-only)",
+      "12 — Phase DoD"
+    ],
+    "sections_reviewed": [
+      "§3-§17 design narrative",
+      "Appendix A (69 ACs)",
+      "Appendix B (loop contract)"
+    ],
+    "notes": [
+      "STEP 1: ac-results-R23.json reports 62 PASS / 6 UNAVAIL / 1 MANUAL. AC-106 CLOSED in loop.json provenance via R21 cleanup attest. No machine FAIL to re-confirm.",
+      "STEP 4 regression scan: every prior CLOSED AC still PASS. Zero machine regressions.",
+      "STEP 5 free-investigation: F-23-07 newly minted (AC-071 false-PASS). Same shape as F-23-01: verify clause names a measurement the test does not perform. Suggests a 'verify-clause-vs-test mismatch' class of finding worth a systematic sweep across all vitest-tag ACs in R24.",
+      "F-23-02 (plugin.test.ts AC-001 toBeDefined×4) and F-23-04 (5 vacuous tests in deployment/controls/roundtrip) were initially raised in plan-mode investigation. Test-quality auditor (a3d54b449b3c62a7a) re-evaluated each on second-pass skeptical read and downgraded: F-23-02 'PARTIAL — AC-001 covered by sibling AC-013/AC-009'; F-23-04 'mostly REFUTED — AC-037 bidirectional pre/post pairing kills hardcode mutant; AC-090 redundant but covered by sibling it.each; AC-107 redundant but covered by subsequent assertions; only AC-053 has PARTIAL symmetry-tightening case'. Recorded as polish opportunities for future round, not R23 R-items.",
+      "F-23-06 deletion scope corrected mid-audit per narrative-auditor deletion-safety warning. Original plan to delete 3 dormant utilities (iframe-overlay, screenshot, rect-math) — only iframe-overlay is safe. screenshot and rect-math are AC-backed (AC-076, AC-062) — deletion would break those ACs and cause closed_count regression."
+    ]
+  },
+  "summary": {
+    "open": 0,
+    "blocked": 6,
+    "regressions": 0,
+    "confirmed": 5,
+    "suspected": 1
+  }
+}

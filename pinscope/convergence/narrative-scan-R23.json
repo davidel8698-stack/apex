@@ -1,0 +1,125 @@
+{
+  "round": 23,
+  "generated_at": "2026-05-25T00:00:00Z",
+  "spec_version": "2.0.0",
+  "spec_hash": "sha256:1779526021db1f5bc7ffe36647e6deb08ba3f8234e82cee31dc0bca5357c7a45",
+  "auditor_note": "Orchestrator-composed from narrative-auditor sub-agent inline verdict (agent aa6fb84acf82404e2 — write-denied by sandbox). The auditor performed the full scan in-memory and delivered claim counts and key deltas verbatim. The 61-claim table is condensed here to the new/changed entries; the 57 R22 carry-forward NC ids are unchanged and not re-listed.",
+  "coverage": {
+    "total_claims": 61,
+    "covered": 37,
+    "uncovered": 24,
+    "uncovered_satisfied": 23,
+    "uncovered_unsatisfied": 1,
+    "candidate_acs": 3,
+    "strengthen_proposals": 1
+  },
+  "claims_summary": {
+    "carried_from_R22": 57,
+    "minted_R23": 4,
+    "total": 61,
+    "covered": 37,
+    "uncovered": 24,
+    "uncovered_satisfied": 23,
+    "uncovered_unsatisfied": 1
+  },
+  "new_claims_R23": [
+    {
+      "claim_id": "NC-12-06",
+      "section": "§12",
+      "claim": "iframes (same-origin inject, cross-origin outline only)",
+      "normative": true,
+      "covered_by": [],
+      "code_satisfied": "false",
+      "re_read": "§12 of SPEC.md names cross-origin iframe 'outline only' as a behavioral promise. grep -n iframe pinscope/src/runtime/PinScope.tsx → 0 hits. markCrossOriginFrames in src/runtime/utils/iframe-overlay.ts exists but has 0 runtime consumers. AC-061 verify.kind: 'manual' env: 'browser' BLOCKED — a manual check that never runs cannot fail when the claim is violated, so AC-061 does NOT cover this claim per the coverage rule. **This is the round's one blocking_finding (uncovered_unsatisfied).** P3 severity.",
+      "is_blocking_finding": true
+    },
+    {
+      "claim_id": "NC-12-07",
+      "section": "§12",
+      "claim": "SVG (getBBox + getCTM)",
+      "normative": true,
+      "covered_by": ["AC-062"],
+      "code_satisfied": "true",
+      "re_read": "AC-062 vitest-tag test in edge-utils.test.ts imports `elementRect` from `src/runtime/utils/rect-math.ts` and asserts SVG-aware viewport-space rect calculation. The claim is code-satisfied AND AC-covered. **DELETION-SAFETY WARNING for R-23-06**: rect-math.ts deletion would break AC-062 import → CLOSED→FAIL regression.",
+      "is_blocking_finding": false
+    },
+    {
+      "claim_id": "NC-13-03",
+      "section": "§13",
+      "claim": "Selection update < 16 ms (Critical: Yes)",
+      "normative": true,
+      "covered_by": [],
+      "code_satisfied": "unknown",
+      "re_read": "SPEC §13 perf table lists 'Selection update < 16 ms' as a critical perf budget. No AC covers it; no perf test measures it. NEW candidate AC-NEW-23 (P1 severity) — strengthen by minting AC for SPEC bump.",
+      "is_blocking_finding": false,
+      "candidate_ac": "AC-NEW-23"
+    },
+    {
+      "claim_id": "NC-13-04",
+      "section": "§13",
+      "claim": "Grid mode switch < 32 ms (Critical: No)",
+      "normative": true,
+      "covered_by": [],
+      "code_satisfied": "unknown",
+      "re_read": "SPEC §13 perf table. No AC, no perf test. NEW candidate AC-NEW-24 (P3 severity).",
+      "is_blocking_finding": false,
+      "candidate_ac": "AC-NEW-24"
+    }
+  ],
+  "blocking_findings": [
+    {
+      "id": "NF-23-01",
+      "claim_id": "NC-12-06",
+      "section": "§12",
+      "severity": "P3",
+      "description": "§12 cross-origin iframe outline-only behavior is a normative SPEC claim with NO covering AC (AC-061 is manual+BLOCKED) AND code_satisfied:false (markCrossOriginFrames has 0 runtime consumers). The helper exists but is never invoked in production HUD. R-23-06 plans to delete iframe-overlay.ts entirely; that deletion would move the gap from 'dormant helper exists' to 'no code exists at all' — both states violate the claim. **Either wire the helper into PinScopeHud and add a covering AC (likely env=browser BLOCKED), or propose a SPEC bump removing the §12 cross-origin-outline clause.** Pending user decision."
+    }
+  ],
+  "candidate_acs": [
+    "AC-NEW-23 — Selection update < 16ms (NC-13-03, P1)",
+    "AC-NEW-24 — Grid mode switch < 32ms (NC-13-04, P3)"
+  ],
+  "strengthen_proposals": [
+    {
+      "id": "SP-23-01",
+      "target_ac": "AC-073",
+      "current": "single size-limit entry { limit: '80 KB' } — checks 80KB min only",
+      "proposed": "split into two size-limit entries: { name: 'runtime (dev, minified)', limit: '80 KB' } AND { name: 'runtime (dev, gzipped)', limit: '25 KB', gzip: true } — covers the full §13 80KB-min + 25KB-gz dual budget. Paired with F-23-01 R-23-01 KB-assertion script."
+    }
+  ],
+  "coverage_delta_R22_to_R23": {
+    "claims_delta": "+4 (NC-12-06, NC-12-07, NC-13-03, NC-13-04 newly minted)",
+    "covered_delta": "+1 (NC-12-07 immediately covered by AC-062)",
+    "uncovered_unsatisfied_delta": "+1 (NC-12-06 — the iframe §12 gap)",
+    "candidate_acs_delta": "+3 (NC-12-06 → would-be-AC-061-real, NC-13-03 → AC-NEW-23, NC-13-04 → AC-NEW-24)",
+    "strengthen_proposals_delta": "+1 (SP-23-01 AC-073 dual-budget)"
+  },
+  "carry_forward_R22_unchanged": "All 57 R22 NC ids retain status. NC-12-02 (>500 pins → 30fps throttle + skip <16×16 badges) remains code_satisfied:true after R-21-03 closure.",
+  "deletion_safety_warnings": [
+    {
+      "file": "pinscope/src/runtime/utils/rect-math.ts",
+      "blocks_ac": "AC-062",
+      "warning": "DO NOT DELETE — AC-062 vitest-tag test in edge-utils.test.ts imports elementRect. Deletion → CLOSED → FAIL regression."
+    },
+    {
+      "file": "pinscope/src/runtime/utils/screenshot.ts",
+      "blocks_ac": "AC-076",
+      "warning": "DO NOT DELETE — AC-076 vitest-tag test in screenshot.test.ts imports captureScreenshot. Deletion → CLOSED → FAIL regression."
+    },
+    {
+      "file": "pinscope/src/runtime/utils/iframe-overlay.ts",
+      "blocks_ac": "AC-061",
+      "warning": "SAFE TO DELETE — AC-061 is manual+BLOCKED (cannot ever assert in node env). iframe-overlay.test.ts can be deleted with the source. Note this WORSENS NF-23-01 (no code AND no AC for §12 cross-origin claim) — pair the deletion with a SPEC-bump proposal."
+    }
+  ],
+  "validation": {
+    "invariants_checked": [
+      "covered + uncovered == total_claims (37 + 24 = 61) ✓",
+      "uncovered_satisfied + uncovered_unsatisfied == uncovered (23 + 1 = 24) ✓",
+      "blocking_findings.length == uncovered_unsatisfied (1 == 1) ✓",
+      "no duplicate claim_ids ✓",
+      "every candidate references an uncovered claim ✓"
+    ],
+    "spec_hash_unchanged": true
+  }
+}

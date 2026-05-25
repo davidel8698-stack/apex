@@ -1,0 +1,38 @@
+{
+  "round": 23,
+  "generated_at": "2026-05-25T13:19:12.481Z",
+  "files": [
+    {
+      "file": "pinscope/src/runtime/PinScope.tsx",
+      "mutants_run": 5,
+      "killed": 5,
+      "survived": []
+    },
+    {
+      "file": "pinscope/src/runtime/hooks/useKeyboardShortcuts.ts",
+      "mutants_run": 5,
+      "killed": 3,
+      "survived": [
+        {
+          "id": "M2",
+          "rule": "true-to-false",
+          "line": 31,
+          "original": "'grid-0': { key: '0', shift: true },",
+          "mutated": "'grid-0': { key: '0', shift: false },"
+        },
+        {
+          "id": "M5",
+          "rule": "true-to-false",
+          "line": 34,
+          "original": "'grid-3': { key: '3', shift: true },",
+          "mutated": "'grid-3': { key: '3', shift: false },"
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "mutants": 10,
+    "killed": 8,
+    "survived": 2
+  }
+}

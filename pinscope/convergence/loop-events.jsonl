@@ -76,3 +76,14 @@
 {"at":"2026-05-24T21:49:42.209Z","round":22,"event":"phase:record","note":null}
 {"at":"2026-05-24T21:49:42.346Z","round":22,"event":"phase:breaker","note":null}
 {"at":"2026-05-24T21:50:52.639Z","round":22,"event":"phase:idle","note":null}
+{"at":"2026-05-25T11:21:51.694Z","round":22,"event":"phase:audit","note":null}
+{"at":"2026-05-25T12:07:29.045Z","round":23,"event":"phase:record","note":null}
+{"at":"2026-05-25T12:07:29.227Z","round":23,"event":"phase:breaker","note":null}
+{"at":"2026-05-25T12:12:14.286Z","round":23,"event":"phase:remediate","note":null}
+{"at":"2026-05-25T12:20:03.601Z","round":23,"event":"phase:schedule","note":null}
+{"at":"2026-05-25T12:20:03.703Z","round":23,"event":"phase:wave","note":null}
+{"at":"2026-05-25T12:20:03.974Z","round":23,"event":"spawn:wave-executor","note":"wave 1"}
+{"at":"2026-05-25T12:41:16.639Z","round":23,"event":"spawn:wave-executor","note":"wave 2"}
+{"at":"2026-05-25T13:17:43.666Z","round":23,"event":"phase:verify","note":null}
+{"at":"2026-05-25T13:26:53.245Z","round":23,"event":"phase:close","note":null}
+{"at":"2026-05-25T13:29:27.342Z","round":23,"event":"phase:idle","note":null}
