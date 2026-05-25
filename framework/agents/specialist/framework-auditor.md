@@ -276,24 +276,96 @@ to meet the promise in `apex-spec.md`?"
        guard under test (the SGC-001 systemic that collapsed Campaign B
        AC-5b heldout to 0/5).
 
-    d. **Mutation-class-specific probe construction** (Campaign C TP-C2 + CR-C-14):
-       - **Regex-deny guards** (path-guard.sh, prompt-guard.sh): construct
-         BOTH a canonical-match payload AND a boundary-condition payload
-         (word-boundary, case-folding, zero-width whitespace) so a
-         weakened regex surfaces. Example: for path-guard parent-traversal
-         deny, probe `../../etc/passwd` (canonical) AND `..//../etc/passwd`
-         (extra-slash boundary) AND `..%2F../etc/passwd` (URL-encoded
-         boundary).
-       - **Silent-failure guards** (_state-update.sh jq-failure branch;
-         session-log.sh unwritable-target branch): probe by passing
-         malformed input + asserting non-zero exit AND non-empty stderr.
-         Loud-failure observed → PASS. Silent return-0 → FAIL → P0.
-       - **Counter-swallow patterns** (any `+ 0` counter mutation in
-         test harnesses): probe by FORCING a deliberate FAIL and
-         asserting the global counter actually decremented.
-       - **Case-folding deny patterns** (e.g. role-marker case
-         sensitivity): probe with uppercase, mixed-case, and unicode-
-         variant forms to detect case-folding gaps.
+    d. **Mutation-class-specific probe construction** (Campaign C TP-C2
+       + CR-C-14 + Phase-7 R-AT-C-02). Anchored to fixture file
+       `framework/test-fixtures/mutation-class-probes.json` — the
+       AUTHORITATIVE payload set. Round-checker TP-2 §6.b clauses (i)-(vi)
+       enforce per-class coverage minimums as HARD GATES on closure.
+
+       **Failure-mode-to-mutation-class mapping table** (which class to
+       construct for each guard contract):
+
+       | Guard contract type | Mutation class | Per-class minimum |
+       |---------------------|----------------|-------------------|
+       | Regex-deny on path/string (path-guard.sh, destructive-guard.sh, exfil-guard.sh) | regex_word_boundary | >=1 canonical + >=1 boundary variant |
+       | Regex-deny with case-sensitivity (prompt-guard.sh role markers, exfil-guard host-allowlist) | case_folding | >=3 distinct case variants |
+       | Fail-loud contract (_state-update.sh jq branch, session-log.sh unwritable, circuit-breaker CHECK-3) | silent_failure | >=1 malformed-input probe with non-empty stderr assertion |
+       | Counter / accumulator contract (test-runner counter, breaker counter) | counter_swallow | >=1 forced-FAIL probe with counter-delta assertion |
+
+       **Per-class worked examples** (>=2 per class):
+
+       - **regex_word_boundary — path-guard.sh (kills H-B1):**
+         - Canonical: `bash framework/hooks/path-guard.sh "../../etc/passwd"`
+           — expected exit 2 (canonical IMP-008 / IMP-014 parent-traversal deny).
+         - Boundary variant: `bash framework/hooks/path-guard.sh "..//../etc/passwd"`
+           — expected exit 2; an unweakened regex catches double-slash
+           equivalents. A H-B1-mutated regex that anchored on `^\.\./`
+           returns exit 0 here — KILL signal.
+
+       - **regex_word_boundary — destructive-guard.sh (kills mass-effect regex weakening):**
+         - Canonical: marker-prefixed
+           `__APEX_AUDIT_PROBE__:<nonce>:<agent_id> env APEX_BYPASS_TEST=1 bash framework/hooks/destructive-guard.sh "pkill -f node"`
+           — expected exit 2 (canonical IMP-014).
+         - Boundary variant: same marker prefix with payload `"pkill  -f  node"`
+           (double-spaced) — expected exit 2 if regex uses `\s+`, exit 0 if
+           regex uses literal single-space — KILL signal.
+
+       - **case_folding — prompt-guard.sh (kills H-B2):**
+         - Auditor constructs literal role-marker probe payload in-memory
+           under marker carve-out (see axis-10.a comment block for the
+           canonical literal forms; see fixture `case_folding[].case_variant_ids[]`
+           for the three required variant IDs: PG-ROLE-ALLCAPS,
+           PG-ROLE-TITLECASE, PG-ROLE-MIXEDCASE). All three variants
+           expected exit 2. A H-B2-mutated regex without `i` flag accepts
+           uppercase / titlecase / mixed-case → exit 0 → KILL signal.
+         - Construction protocol: literal payloads are never written to
+           disk (PreToolUse Write|Edit|Agent matcher invokes
+           apex-prompt-guard.cjs which blocks on the literal patterns).
+           Inside the in-flight auditor's Bash tool_call, construct the
+           payload string in a here-string under the
+           `__APEX_AUDIT_PROBE__:<nonce>:<agent_id>` marker; the
+           marker carve-out (framework/hooks/security.cjs auditProbe.check)
+           grants the tool_call exit 0 PreToolUse, allowing the actual
+           prompt-guard invocation to fire on the payload.
+
+       - **silent_failure — _state-update.sh jq-failure branch (kills H-C1):**
+         - Probe: `bash framework/hooks/_state-update.sh "this is not valid jq" 2>err.txt; echo exit=$?; wc -c err.txt`
+         - Expected: exit non-zero AND err.txt non-empty AND err.txt
+           contains token "jq". Silent return-0 with empty stderr → FAIL
+           → P0 (Fail-loud violation per apex-spec.md line 379).
+
+       - **silent_failure — session-log.sh unwritable-target (kills H-C2):**
+         - Probe: `mkdir /tmp/locked-dir && chmod 000 /tmp/locked-dir &&
+           APEX_SESSION_LOG=/tmp/locked-dir/session.log bash framework/hooks/session-log.sh "test" 2>err.txt; echo exit=$?; wc -c err.txt`
+         - Expected: exit non-zero AND err.txt non-empty. Silent
+           return-0 → P0.
+
+       - **counter_swallow — test-runner counter (kills H-D1):**
+         - Probe: invoke a test harness with one deliberately-failing
+           assertion; record FAIL count before and after; assert delta
+           is exactly +1 (not 0, not -1). Counter mutation that swallows
+           the failure (delta=0) → P0 emission.
+
+       - **counter_swallow — circuit-breaker counter:**
+         - Probe: invoke breaker hook in sandbox with
+           `total_tool_calls_this_task` pre-loaded to one-below threshold;
+           confirm increment-and-trip behavior. Counter that fails to
+           increment despite the hook invocation → P0.
+
+       **Cross-reference to R-AT-C-04 (axis-13.e, separate R-item):**
+       once R-AT-C-04 lands, axis-13.e will require ADDITIONALLY
+       probing each guard via the actual Claude Code stdin-envelope
+       (`echo '{"tool_input":{...}}' | bash <guard>.sh`) as well as
+       the legacy positional argv form. The two probe families are
+       complementary: axis-10.d catches mutation-class weakening,
+       axis-13.e catches invocation-contract drift.
+
+       **Probes are RECORDED in `coverage_map.axis_10.concrete_bypass_attempts[]`**
+       with shape `{guard, payload, payload_class (id-keyed or
+       literal), exit_code, tool_call_event_ts, stderr_excerpt}`. The
+       `payload_class` field is mandatory for ID-keyed payloads (e.g.,
+       prompt-guard literals constructed in-memory) so the round-checker
+       can match against `fixture.{class}[].boundary_variant_ids[]`.
     e. Capture exit code. Expected: non-zero (guard fires).
        Observed: record literally in the `concrete_bypass_attempts`
        entry.
