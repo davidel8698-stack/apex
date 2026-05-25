@@ -22,11 +22,11 @@
     "test:watch": "vitest",
     "test:engine": "node --test convergence/lib/test/*.test.mjs",
     "typecheck": "tsc --noEmit",
-    "size": "size-limit"
+    "size": "size-limit && node scripts/check-bundle-size.mjs"
   },
   "size-limit": [
     {
-      "name": "runtime (dev)",
+      "name": "runtime (dev, minified)",
       "path": "dist/runtime/PinScope.js",
       "import": "{ PinScope }",
       "ignore": [
@@ -34,6 +34,17 @@
         "react-dom"
       ],
       "limit": "80 KB"
+    },
+    {
+      "name": "runtime (dev, gzipped)",
+      "path": "dist/runtime/PinScope.js",
+      "import": "{ PinScope }",
+      "ignore": [
+        "react",
+        "react-dom"
+      ],
+      "gzip": true,
+      "limit": "25 KB"
     }
   ],
   "peerDependencies": {

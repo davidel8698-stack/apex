@@ -72,9 +72,86 @@ describe('Next.js + Webpack integration (AC-092)', () => {
     expect(called).toBe(true);
   });
 
+  it('withPinScope passes (config, context) args through to the host webpack (R-23-03)', () => {
+    // R-23-03 — strengthen AC-092: the prior "composes" test only checked
+    // `called = true`. SPEC §I-1 wrapper contract requires args
+    // passthrough. Confirms a regression that drops args would surface.
+    const seen: Array<{ config: unknown; context: unknown }> = [];
+    const hostWebpack = (config: unknown, context: unknown): unknown => {
+      seen.push({ config, context });
+      return config;
+    };
+    const wrapped = withPinScope({ webpack: hostWebpack });
+    const inputConfig = { mode: 'development' };
+    const inputCtx = { isServer: false };
+    (wrapped.webpack as (c: unknown, ctx: unknown) => unknown)(
+      inputConfig,
+      inputCtx,
+    );
+    expect(seen).toHaveLength(1);
+    expect(seen[0]?.config).toBe(inputConfig);
+    expect(seen[0]?.context).toBe(inputCtx);
+  });
+
+  it('withPinScope does not mutate the input config (R-23-03)', () => {
+    // R-23-03 — strengthen AC-092: the SPEC wrapper contract requires
+    // input immutability. Tests the spread-vs-return-same mutant: a
+    // refactor returning `nextConfig` directly (instead of `{...nextConfig,
+    // webpack: ...}`) would mutate; this test would fail. Frozen input
+    // proves the wrapper does not attempt mutation.
+    const input = Object.freeze({ reactStrictMode: true, customKey: 42 });
+    const wrapped = withPinScope(input);
+    // Wrapped must be a NEW object, not the same reference.
+    expect(wrapped).not.toBe(input);
+    // Original input must be unchanged.
+    expect(input).toEqual({ reactStrictMode: true, customKey: 42 });
+    // Wrapped must include the input keys plus webpack.
+    expect(wrapped['reactStrictMode']).toBe(true);
+    expect(wrapped['customKey']).toBe(42);
+    expect(typeof wrapped.webpack).toBe('function');
+  });
+
   it('PinScopeWebpackPlugin exposes a working apply method', () => {
     const plugin = new PinScopeWebpackPlugin();
     expect(typeof plugin.apply).toBe('function');
     expect(() => plugin.apply({ hooks: {} })).not.toThrow();
+  });
+
+  it('PinScopeWebpackPlugin.apply is a no-op when enabled:false (R-23-03)', () => {
+    // R-23-03 — strengthen AC-092: SPEC says "no-op when production".
+    // Prior test only checked apply didn't throw on `{ hooks: {} }`.
+    // A regression that READ compiler.hooks even when disabled would not
+    // surface. This Proxy raises on ANY hook access; apply must not touch
+    // it when enabled:false.
+    const plugin = new PinScopeWebpackPlugin({ enabled: false });
+    const hooksProxy = new Proxy(
+      {},
+      {
+        get(): unknown {
+          throw new Error('hooks accessed despite enabled:false');
+        },
+      },
+    );
+    expect(() => plugin.apply({ hooks: hooksProxy })).not.toThrow();
+  });
+
+  it('reads the pinscope runtime named export (AC-091, R-23-03)', async () => {
+    // R-23-03 — strengthen AC-091: the prior "declares every documented
+    // subpath" test (in package-export-map describe) only checks
+    // pkg.exports definedness. This asserts the runtime named export
+    // contract: `pinscope/vite`'s plugin function exists, returns a Vite
+    // plugin object with the documented name/enforce.
+    const url = pathToFileURL(
+      path.join(root, pkg.exports['./vite'] as string),
+    ).href;
+    const code = `import(${JSON.stringify(url)}).then(m => { const p = m.pinscope(); if (p && p.name === 'vite-plugin-pinscope' && p.enforce === 'pre') process.exit(0); console.error('bad plugin shape: ' + JSON.stringify({name: p && p.name, enforce: p && p.enforce})); process.exit(1); }).catch(e => { console.error(e.message); process.exit(2); });`;
+    const result = spawnSync('node', ['--input-type=module', '-e', code], {
+      encoding: 'utf-8',
+      timeout: 15000,
+    });
+    expect(
+      result.status,
+      `subprocess → ${result.stderr || result.stdout || 'no output'}`,
+    ).toBe(0);
   });
 });
