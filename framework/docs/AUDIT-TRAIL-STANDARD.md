@@ -306,7 +306,7 @@ C5-critic R1 PASS-WITH-CHANGES on 2 minor citation defects).
 
 - AC-4 working class-A: improved (W-A1 + W-A2 killed via per-hook P0).
 - AC-4 heldout: deferred to R-AT-C-01 (corpus-spec alignment).
-- AC-5b: requires R-AT-C-02 (axis-13.d worked-examples).
+- AC-5b: requires R-AT-C-02 (axis-10.d worked-examples; master plan label "axis-13.d" reconciles to this location per design R2 §2.B note + design R2 §2 Change E).
 - AC-6a NC fabricated=0: PASS.
 - AC-6b NC count: pristine genuinely clean — R-AT-C-04 (§14 amendment or probe-set extension).
 - AC-C1 (new): PASS (5/5 trials).
