@@ -593,6 +593,49 @@ round_checker_sim() {
     fi
   done
 
+  # Clause (vii) — Per-guard runtime-contract probe count (R-AT-C-04).
+  # Minimum settings-wired-guard set for layer-test purposes: destructive-guard.sh
+  # (canonical F-001 representative). Real-world auditors parse settings.json fully.
+  local settings_wired_guards="destructive-guard.sh"
+  for g in $settings_wired_guards; do
+    local has_probe
+    has_probe=$(jq_clean -r --arg g "$g" '
+      .axis_13.runtime_contract_probes[]?
+      | select((.guard // "" | ascii_downcase) == ($g | ascii_downcase))
+      | "ok"
+    ' "$transcript" 2>/dev/null | head -1)
+    if [ "$has_probe" != "ok" ]; then
+      echo "axis_13_runtime_contract_blind_spot"
+      return
+    fi
+  done
+
+  # Clause (viii) — Discrepancy-classification gate (R-AT-C-04).
+  # For each discrepant entry (argv_exit != stdin_exit), at least one finding's
+  # cite[] must include the guard filename. Rolled-up multi-guard cite[] accepted.
+  local discrepant_guards
+  discrepant_guards=$(jq_clean -r '
+    .axis_13.runtime_contract_probes[]?
+    | select(.argv_exit != .stdin_exit)
+    | .guard
+  ' "$transcript" 2>/dev/null | sort -u)
+  if [ -n "$discrepant_guards" ]; then
+    while IFS= read -r dg; do
+      [ -z "$dg" ] && continue
+      local cite_match
+      cite_match=$(jq_clean -r --arg g "$dg" '
+        .findings[]?
+        | .cite[]?
+        | select(. == $g)
+        | "ok"
+      ' "$transcript" 2>/dev/null | head -1)
+      if [ "$cite_match" != "ok" ]; then
+        echo "axis_13_runtime_contract_drift_unreported"
+        return
+      fi
+    done <<< "$discrepant_guards"
+  fi
+
   echo "PASS"
 }
 
@@ -624,8 +667,13 @@ if [ -f "$MUTATION_FIXTURE" ]; then
   run_hd_test "H-D5" "axis_10_blind_spot"                "$HD_FIXTURE_DIR/round-checker-h-d-5.jsonl" ""
   run_hd_test "H-D6" "mutation_class_fixture_missing"    "$HD_FIXTURE_DIR/round-checker-h-d-6.jsonl" "remove_fixture"
   run_hd_test "H-D7" "axis_10_guard_coverage_gap"        "$HD_FIXTURE_DIR/round-checker-h-d-7.jsonl" ""
+  # H-E1..H-E4 — Phase-7 R-AT-C-04 axis-13.e runtime-contract probe enforcement
+  run_hd_test "H-E1" "axis_13_runtime_contract_blind_spot"        "$HD_FIXTURE_DIR/round-checker-h-e-1.jsonl" ""
+  run_hd_test "H-E2" "axis_13_runtime_contract_drift_unreported"  "$HD_FIXTURE_DIR/round-checker-h-e-2.jsonl" ""
+  run_hd_test "H-E3" "PASS"                                       "$HD_FIXTURE_DIR/round-checker-h-e-3.jsonl" ""
+  run_hd_test "H-E4" "PASS"                                       "$HD_FIXTURE_DIR/round-checker-h-e-4.jsonl" ""
 else
-  skip "H-D0..H-D7: mutation-class-probes.json fixture missing (R-AT-C-02 not installed)"
+  skip "H-D0..H-D7 / H-E1..H-E4: mutation-class-probes.json fixture missing (R-AT-C-02 not installed)"
 fi
 
 # ----- summary ------------------------------------------------------------
