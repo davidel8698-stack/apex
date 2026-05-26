@@ -40,9 +40,10 @@ artifacts.
 
 `circuit-breaker.sh` increments `STATE.circuit_breaker.total_tool_calls_this_task`
 on every Bash PostToolUse. The counter caps at
-`max_tool_calls_per_task` (default 80, often bumped to 400). A
-self-heal round legitimately spans 5 sub-agents × multiple waves —
-far more total Bash invocations than fit in a single per-task budget.
+`max_tool_calls_per_task` (default 80, bumped to 800 by self-heal
+per Phase-7 R-DH-P7-02 — was 400 in Campaign A). A self-heal
+round legitimately spans 5 sub-agents × multiple waves — far more
+total Bash invocations than fit in a single per-task budget.
 
 **Each step transition (A→B, B→C, C→D, D→E, E→next-round) AND each
 wave boundary inside Step D is a fresh "task" from the breaker's
@@ -82,8 +83,11 @@ breaker's `git diff HEAD` snapshot). Without resetting, the no-change
 breaker would also trip falsely.
 
 **This does NOT raise the per-unit cap or weaken the breaker.** Each
-unit (step or wave) still gets its own 400-call budget. The breaker
-still fires if a single unit genuinely runs away.
+unit (step or wave) still gets its own 800-call budget (was 400
+before Phase-7 R-DH-P7-02; raised to give the auditor headroom for
+the expanded axis-13 sub-passes 13.c source-literal scan + 13.e
+runtime-contract probe). The breaker still fires if a single unit
+genuinely runs away.
 
 ## POST-TASK FILE VERIFICATION
 
@@ -159,6 +163,43 @@ If `--resume` was NOT passed, run this initialization before Step A.
    e. Persist via the standard atomic state-update pattern (use
       `bash framework/hooks/_state-update.sh` or the equivalent jq
       pipeline used by `/apex:next` and other commands).
+
+   f. **Phase-7 R-DH-P7-02 budget contract.** Before Step A
+      invocation, ensure
+      `STATE.circuit_breaker.max_tool_calls_per_task >= 800`
+      AND `STATE.circuit_breaker.cap_original >= 800`. If either
+      is lower, raise both:
+
+      ```
+      source framework/hooks/_state-update.sh
+      APEX_HOOK_SOURCE=self-heal _state_update '
+        if (.circuit_breaker.cap_original // 0) < 800
+        then .circuit_breaker.cap_original = 800
+             | .circuit_breaker.max_tool_calls_per_task = 800
+        elif (.circuit_breaker.max_tool_calls_per_task // 0) < 800
+        then .circuit_breaker.max_tool_calls_per_task = 800
+        else . end
+      '
+      ```
+
+      Rationale: closes L-DH-02 (Working-corpus Class D/E
+      reachability) per `detector-review/FINAL-CERTIFICATION.md`
+      §3 — Phase-6 trials hit the breaker at 400-410 calls before
+      reaching axes 4/6/7/11/12. The 800-call budget gives the
+      auditor headroom for the expanded axis-13 sub-passes (13.c
+      source-literal scan, 13.d mutation-class probes at axis-10,
+      13.e runtime-invocation-contract probe). The compound
+      predicate (cap_original AND max) handles healthy CHECK-2
+      extensions that raised max above the pre-R-DH-P7-02 cap_original
+      floor.
+
+      **Falsifiable deferral note (per critic R1 NB-3):** if a
+      live self-heal round after R-DH-P7-02 still records axes
+      4/6/7/11/12 as BLIND SPOT at 800-call budget, the IMP-DR-011
+      stage-typed-budget deferral is invalidated and the work
+      should be re-opened as R-DH-P7-02b (full
+      `PLAN_META.schema.json` + `circuit-breaker.sh` stage-scoped
+      refactor).
 
 3. If `--resume` WAS passed: read `STATE.self_heal` directly. If
    `status != "running"` → announce "no active self-heal loop to
@@ -265,8 +306,8 @@ While `STATE.self_heal.status == "running"`:
     `Wave status: DONE` (resume case).
 
     **Run RESET_BREAKER** before each wave invocation. Each wave gets
-    a fresh per-task budget of 400 tool calls. The breaker still
-    fires if a single wave genuinely runs away.
+    a fresh per-task budget of 800 tool calls (post-R-DH-P7-02). The
+    breaker still fires if a single wave genuinely runs away.
 
     ```
     WAVE_CONTEXT = {

@@ -147,7 +147,10 @@ Per owner directive: before deciding whether AC-6b needs threshold-lower or prob
 2. For each spec-named guard hook, the auditor MUST identify literal-string allowlists in source code and probe each with a CLOSE-BUT-NOT-IDENTICAL payload
 3. Re-run Working trials to verify W-B 3/3 reliable-kill
 
-### R-DH-P7-02 — Closes L-DH-02 (D/E class budget exhaustion)
+### R-DH-P7-02 — Closes L-DH-02 (D/E class budget exhaustion) — CLOSED 2026-05-26
+
+**CLOSURE:** self-heal.md First-Run Initialization step (f) added with explicit budget-bump (`max_tool_calls_per_task >= 800` AND `cap_original >= 800`, compound predicate handles healthy CHECK-2 extension edge case). 3 descriptive `400` references swapped to `800`. Stage-typed budget per IMP-DR-011 deferred as out-of-scope (separate Phase-12 deliverable; reversible by falsifiable criterion: if live self-heal round records axes 4/6/7/11/12 BLIND SPOT at 800-call budget, re-open as R-DH-P7-02b). Design: `PHASE-7-RITEM-R-DH-P7-02-DESIGN.md`; critic R1 PASS-WITH-CHANGES: `PHASE-7-RITEM-R-DH-P7-02-CRITIC-R1.md`.
+
 **Root cause analysis:** Self-heal Step A circuit-breaker fires at ~400 tool calls; deep axis-13 sub-pass for Class D/E reaches >400 before completion.
 
 **Design approach:**
