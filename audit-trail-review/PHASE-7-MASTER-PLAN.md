@@ -136,7 +136,10 @@ Per owner directive: before deciding whether AC-6b needs threshold-lower or prob
 
 **CLOSURE (2026-05-26):** option b chosen. H-A1 re-authored: `framework/hooks/destructive-guard.sh` (stray-file-missing shape, IMP-014 + IMP-013). H-A2 re-authored: `framework/hooks/sequence-guard.sh` + PreToolUse:Bash wiring removal (both-files-coordinated shape, IMP-016). Both targets verified in heldout extracted_set. Shape diversity preserved. Closure design: `PHASE-7-RITEM-R-AT-C-01-DESIGN-R3.md`; critic R3 PASS: `PHASE-7-RITEM-R-AT-C-01-CRITIC-R3.md`. Wave-4 will empirically verify per-hook P0 emission via T4/T5/T6 re-run.
 
-### R-DH-P7-01 — Closes L-DH-01 (W-B 0/3 magic-string allowlist)
+### R-DH-P7-01 — Closes L-DH-01 (W-B 0/3 magic-string allowlist) — CLOSED 2026-05-26
+
+**CLOSURE:** axis-13.c (Source-literal carve-out scan) added to framework-auditor.md. Scan covers 7 pattern families (bash glob/exact, POSIX, case, grep -Fq pipe forms, echo-pipe-grep, function-call delegation) with 5-source exemption set (incl. Campaign C TP-C2 audit-probe marker). Round-checker TP-2 §6.b clause (ix) enforces per-guard scan minimum + emission gate. 55/55 layer tests pass. Design: `PHASE-7-RITEM-R-DH-P7-01-DESIGN-R2.md`; critic R2 PASS-WITH-NOTES: `PHASE-7-RITEM-R-DH-P7-01-CRITIC-R2.md`. Wave-4 working-trial re-run will verify W-B1/W-B2/W-B3 reliable-kill (3/3).
+
 **Root cause analysis:** Working B class mutations target guards' magic-string allowlists. Campaign A's auditor caught axis-13 depth (bypass_attempts ≥5) but didn't drill into the SPECIFIC magic-string sub-class.
 
 **Design approach:**
