@@ -219,6 +219,40 @@ HALTED state — `round-checker` itself produces the closure.
         cannot pass; a trial that misses boundary variants cannot
         pass; a fixture file that disappears cannot pass.
 
+      - **Runtime-invocation-contract probe minimum (R-AT-C-04 /
+        AC-6b).** Anchored to framework-auditor.md axis-13.e.
+
+        **(vii) Per-guard runtime-contract probe count.** For each
+        guard in axis-1 extracted_set that is wired in
+        `framework/settings.json` PreToolUse|PostToolUse with no
+        positional argv, the auditor's
+        `axis_13.runtime_contract_probes[]` MUST contain >= 1
+        entry for that guard. Missing entry → emit P1
+        `axis_13_runtime_contract_blind_spot` citing the guard +
+        posture `clean-pending-spot-check` + Status `CONTINUE TO
+        R<N+1>`.
+
+        **(viii) Discrepancy-classification gate.** For each
+        entry in `axis_13.runtime_contract_probes[]` where
+        `argv_exit != stdin_exit`, the auditor MUST have emitted
+        at LEAST ONE finding (any severity) whose `cite[]`
+        includes the guard filename. A SINGLE rolled-up P0
+        finding whose `cite[]` includes multiple discrepant
+        guards satisfies this clause for every guard cited
+        (matches the F-001 P0 rolled-up shape from the Wave-0
+        independent probe). Missing finding for ANY discrepant
+        guard → emit P0
+        `axis_13_runtime_contract_drift_unreported` citing the
+        missing guard + the captured exit codes + Status
+        `CONTINUE TO R<N+1>`. (Discrepancies are objective; the
+        auditor cannot silently observe and not emit.)
+
+        These gates close the AC-6b methodology floor: a trial
+        that did not probe runtime-invocation contracts at all
+        (axis-13.e empty) is structurally incomplete; a trial
+        that probed and observed discrepancies but didn't emit
+        is dishonest. Rolled-up findings are explicitly accepted.
+
    c. **F-204-013 reconstruction check.** Independent of the
       coverage_map entries, scan every audit finding for cited grep
       counts (`evidence: N hits`). For each, re-run the cited grep
