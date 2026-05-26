@@ -242,6 +242,57 @@ refresh." The refresh cycle below is the process; the script
 - `framework/test-fixtures/security-patterns.json` — direct diff.
 - Audit round R{N+quarterly} — "pattern refresh cadence" check.
 
+## Subagent cache invalidation — fresh-session requirement (R-DH-P7-03)
+
+> Topic-shift note: this section addresses runtime caching of subagent
+> definitions (a host-side concern), separate from the .js/.cjs spec
+> naming reconciliation above. Both topics belong here because both
+> govern the runtime-vs-source contract for security-critical artifacts.
+
+**The Claude Code harness caches subagent definitions at session
+start.** When a subagent's `~/.claude/agents/<name>.md` file changes
+mid-session (e.g., after a `/apex:self-heal` round that strengthens
+`framework-auditor.md` and syncs the install copy), the running
+session continues to use the OLD definition until session restart.
+
+This was the confound documented in `detector-review/FINAL-CERTIFICATION.md`
+§3 L-DH-03: Phase 6 trials had to use `general-purpose` with the
+strengthened definition embedded as prompt body (rather than
+`framework-auditor` directly) because the session's cached
+definition was stale.
+
+**Operating requirement.** Production self-heal invocations
+(`/apex:self-heal`) should run in a FRESH Claude Code session
+after any framework-auditor / round-checker / specialist-agent
+file change. This includes:
+
+- Any commit that touches `framework/agents/**/*.md`
+- Any commit that touches `framework/modules/apex-*/agent.md`
+  (synthesized into `~/.claude/agents/specialist/<name>.md` by
+  `sync-to-claude.sh`)
+
+**Verification.** `framework/tests/test-subagent-cache.sh` enforces
+the source-vs-install contract on every CI run via two axes:
+(1) `diff -q` byte-equality on every emitted destination per
+`sync-to-claude.sh`'s delivery declarations (`copy_tree
+framework/agents/` + `copy_modules_specialists` flatten);
+(2) mtime sanity (`[ src -nt dst ]` MUST be FALSE; catches the
+post-sync edit pattern where source was updated after the last
+sync). Pre-flight SKIP when `~/.claude/agents/` is absent.
+
+The test does NOT verify session-cache invalidation (host-side
+behavior); it verifies that the on-disk install state matches the
+source. A drift FAIL signals "fresh-session required after the
+next sync" — the operator must restart Claude Code or use the
+mitigation pattern below.
+
+**Mitigation pattern for in-flight detection rounds.** If a session
+must continue with a strengthened agent definition mid-round, use
+the `general-purpose` subagent with the strengthened definition
+embedded as the prompt body (matches the Campaign A Phase-6
+mitigation; documented in `detector-review/EXPERIMENT-PROTOCOL.md`
+§12 amendment 2026-05-24).
+
 ## See also
 
 - `framework/security-policy.md` — mechanism→implementation map (one row per
@@ -250,3 +301,4 @@ refresh." The refresh cycle below is the process; the script
   (R5-003)" section.
 - `apex-spec.md` Failure 9 — original spec roster.
 - `framework/scripts/adversarial-pattern-refresh.sh` — quarterly cycle entry point (R16-633).
+- `framework/tests/test-subagent-cache.sh` — subagent cache staleness probe (R-DH-P7-03).

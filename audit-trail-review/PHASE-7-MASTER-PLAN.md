@@ -158,7 +158,10 @@ Per owner directive: before deciding whether AC-6b needs threshold-lower or prob
 2. Add stage-typed budget per `apex-spec.md` IMP-DR-011 (scan/edit/test/critic stages)
 3. Verify Working D + E classes now reach completion in trials
 
-### R-DH-P7-03 — Closes L-DH-03 (subagent-cache methodology)
+### R-DH-P7-03 — Closes L-DH-03 (subagent-cache methodology) — CLOSED 2026-05-26
+
+**CLOSURE:** `framework/tests/test-subagent-cache.sh` added — parses sync-to-claude.sh delivery, iterates all framework/agents/ + modules-flattened specialists, asserts byte-equality + mtime sanity per file. 26/26 PASS (auto-detected and synced 4 pre-existing drifted files as side-effect). `framework/docs/SECURITY-RUNTIME.md` appended with §"Subagent cache invalidation" fresh-session requirement. Design: `PHASE-7-RITEM-R-DH-P7-03-DESIGN-R2.md`; critic R2 PASS: `PHASE-7-RITEM-R-DH-P7-03-CRITIC-R2.md`.
+
 **Design approach:**
 1. Add `framework/tests/test-subagent-cache.sh` with synthetic cache-poisoning probe
 2. Document in `framework/docs/SECURITY-RUNTIME.md` the fresh-session requirement for subagent cache invalidation
