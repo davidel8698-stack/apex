@@ -253,6 +253,31 @@ HALTED state — `round-checker` itself produces the closure.
         that probed and observed discrepancies but didn't emit
         is dishonest. Rolled-up findings are explicitly accepted.
 
+      - **Source-literal carve-out scan minimum (R-DH-P7-01 /
+        L-DH-01).** Anchored to framework-auditor.md axis-13.c.
+
+        **(ix) Per-guard scan-entry minimum.** For each guard in
+        axis-1 extracted_set's regex-deny subset, the auditor's
+        `axis_13.source_literal_carveouts[]` MUST contain >= 1
+        entry for that guard (the entry MAY have empty
+        `probe_payloads[]` — that's the "clean scan" outcome).
+        Missing entry → emit P1
+        `axis_13_source_literal_scan_blind_spot` citing the guard
+        + posture `clean-pending-spot-check` + Status `CONTINUE
+        TO R<N+1>`.
+
+        **Per-entry emission gate.** For each entry where
+        `exempt_via == "undocumented"` AND any
+        `probe_exits[i] == 0` (exit-0 bypass observed), the
+        auditor MUST have emitted at least one finding (any
+        severity) whose `cite[]` includes the guard filename.
+        Missing emission → emit P0
+        `axis_13_source_literal_bypass_unreported` citing the
+        guard + the literal + the captured exit codes + Status
+        `CONTINUE TO R<N+1>`. (Documented carve-outs are
+        exempt; only undocumented exploitable bypasses trigger
+        the emission gate.)
+
    c. **F-204-013 reconstruction check.** Independent of the
       coverage_map entries, scan every audit finding for cited grep
       counts (`evidence: N hits`). For each, re-run the cited grep
