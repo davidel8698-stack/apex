@@ -252,8 +252,8 @@ The user's original instruction — *"how do you know the AI did what it said?"*
 
 1. **R-AT-P7-04** — Fresh-session live demonstration of GAP-1 (closes L-AT-CacheCarryover-01).
 2. **R-AT-P7-05** — Full 11-trial × 5-lab Phase-B5 corpus measurement (closes L-AT-FullCorpus-01).
-3. **R-AT-P7-06a** — Owner triage of `test-circuit-breaker-recovery.sh` 3-FAIL (pre-existing).
-4. **R-AT-P7-06b** — Owner triage of `test-fix-plan-emit.sh` 3-FAIL (pre-existing).
+3. **R-AT-P7-06a** — Owner triage of `test-circuit-breaker-recovery.sh` 3-FAIL (pre-existing). **CLOSED 2026-05-26 (R-AT-P7-06):** root cause = v7-vs-v8 IMP-V8-CB2 contract drift; fixtures updated to force unhealthy-fire branch via STALE_DELTA > 50. 12/12 PASS.
+4. **R-AT-P7-06b** — Owner triage of `test-fix-plan-emit.sh` 3-FAIL (pre-existing). **CLOSED 2026-05-26 (R-AT-P7-06):** same root cause + same fix in 5g block. 37/37 PASS.
 5. **R-AT-P7-07** — Spec amendment §14 documenting Campaign B closure + the v1 schema enum widen lesson (12 event types absent from initial freeze; added in 8d7bfaf — minor revision per §5.5).
 6. **R-AT-P7-08** — `framework/docs/AUDIT-TRAIL-STANDARD.md` authoring (Phase B6) — this is institutionalization, technically part of B6 rather than a deferred item.
 
