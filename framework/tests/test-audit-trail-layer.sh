@@ -636,6 +636,46 @@ round_checker_sim() {
     done <<< "$discrepant_guards"
   fi
 
+  # Clause (ix) — Source-literal carve-out scan (R-DH-P7-01).
+  # Layer-test minimum regex-deny subset: destructive-guard.sh + path-guard.sh
+  # (production axis-13.c requires full extracted_set; this is the narrowed
+  # minimum for layer-test scope per critic R2 NB-1).
+  local regex_deny_guards="destructive-guard.sh path-guard.sh"
+  for g in $regex_deny_guards; do
+    local has_scan_entry
+    has_scan_entry=$(jq_clean -r --arg g "$g" '
+      .axis_13.source_literal_carveouts[]?
+      | select((.guard // "" | ascii_downcase) == ($g | ascii_downcase))
+      | "ok"
+    ' "$transcript" 2>/dev/null | head -1)
+    if [ "$has_scan_entry" != "ok" ]; then
+      echo "axis_13_source_literal_scan_blind_spot"
+      return
+    fi
+  done
+  # Per-entry emission gate: undocumented carveouts with exit-0 bypass
+  # MUST have a cite[] finding for the guard.
+  local unreported_guards
+  unreported_guards=$(jq_clean -r '
+    .axis_13.source_literal_carveouts[]?
+    | select((.exempt_via // "") == "undocumented")
+    | select(any(.probe_exits[]?; . == 0))
+    | .guard
+  ' "$transcript" 2>/dev/null | sort -u)
+  if [ -n "$unreported_guards" ]; then
+    while IFS= read -r ug; do
+      [ -z "$ug" ] && continue
+      local cite_match
+      cite_match=$(jq_clean -r --arg g "$ug" '
+        .findings[]? | .cite[]? | select(. == $g) | "ok"
+      ' "$transcript" 2>/dev/null | head -1)
+      if [ "$cite_match" != "ok" ]; then
+        echo "axis_13_source_literal_bypass_unreported"
+        return
+      fi
+    done <<< "$unreported_guards"
+  fi
+
   echo "PASS"
 }
 
@@ -672,6 +712,10 @@ if [ -f "$MUTATION_FIXTURE" ]; then
   run_hd_test "H-E2" "axis_13_runtime_contract_drift_unreported"  "$HD_FIXTURE_DIR/round-checker-h-e-2.jsonl" ""
   run_hd_test "H-E3" "PASS"                                       "$HD_FIXTURE_DIR/round-checker-h-e-3.jsonl" ""
   run_hd_test "H-E4" "PASS"                                       "$HD_FIXTURE_DIR/round-checker-h-e-4.jsonl" ""
+  # H-F1..H-F3 — Phase-7 R-DH-P7-01 axis-13.c source-literal carve-out enforcement
+  run_hd_test "H-F1" "axis_13_source_literal_scan_blind_spot"     "$HD_FIXTURE_DIR/round-checker-h-f-1.jsonl" ""
+  run_hd_test "H-F2" "axis_13_source_literal_bypass_unreported"   "$HD_FIXTURE_DIR/round-checker-h-f-2.jsonl" ""
+  run_hd_test "H-F3" "PASS"                                       "$HD_FIXTURE_DIR/round-checker-h-f-3.jsonl" ""
 else
   skip "H-D0..H-D7 / H-E1..H-E4: mutation-class-probes.json fixture missing (R-AT-C-02 not installed)"
 fi
