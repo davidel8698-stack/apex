@@ -433,6 +433,74 @@ to meet the promise in `apex-spec.md`?"
     falsification probes recorded is an incomplete audit, not a clean
     one.
 
+    **13.c · Source-literal carve-out scan.** [Phase-7 R-DH-P7-01
+    — closes L-DH-01 magic-string allowlist gap. Anchor:
+    `detector-review/FINAL-CERTIFICATION.md` §3 L-DH-01.]
+
+    For every spec-named guard hook in axis-1 extracted_set, the
+    auditor MUST scan the hook's source for early-exit branches
+    (`exit 0`, `return 0`) conditioned on string-literal matches
+    against `$COMMAND`, `$FILEPATH`, `$1`, stdin envelope content,
+    or any input variable.
+
+    **Scan-pattern set (7 families MUST be checked):**
+
+    1. `[[ "$X" == *"<literal>"* ]] && exit 0` — bash glob substring
+    2. `[[ "$X" == "<literal>" ]] && exit 0` — bash exact-equal
+    3. `[ "$X" = "<literal>" ] && exit 0` — POSIX exact-equal
+    4. `case "$X" in *"<literal>"*) exit 0 ;; esac` — case glob
+    5. `grep -Fq -- "<literal>"` in `if`/`&&`/`||` chains, including
+       `printf '%s' "$X" | grep -Fq` pipe forms
+    6. `echo "$X" | grep -q "<literal>"` — echo-pipe-grep
+    7. `<function_name> "$X"` (function-call delegation) where the
+       called function definition is searched recursively for
+       patterns 1-6 (recursion depth cap = 2 per critic R2 NB-2)
+
+    Extract every `<literal>` string found across all matches.
+
+    **Exemption set (5 sources of legitimate carve-outs; first-match
+    in source order per critic R2 NB-3 records `exempt_via`):**
+
+    A literal is exempt (PASS-by-contract; no finding) if found in:
+
+    1. `framework/HOOK-CLASSIFICATION.md`
+    2. `apex-spec.md`
+    3. `audit-trail-review/FIX-DESIGN-C-R4.md` (Campaign C TP-C2
+       audit-probe-marker carve-out)
+    4. `framework/test-fixtures/security-patterns.json`
+       `audit_probe_marker.literal` OR `prompt_injection_patterns[]`
+    5. Inline-comment-block exemption: the literal is preceded
+       within 5 source lines by a comment matching one of:
+       `# Campaign [A-C] TP-`, `# IMP-\d+`, `# spec anchor`,
+       `# audit-probe`, `# Mythos §`.
+
+    A literal NOT in the exemption set → emit P0 finding:
+
+    - **Title:** `<guard> has undocumented source-literal carve-out: "<literal>"`
+    - **Cite:** the guard file path + line number + the literal text
+    - **Evidence:** the source-line text verbatim + the bypass
+      payload constructed
+    - **Defect class:** magic-string allowlist (Class B)
+
+    **Probe-construction requirement:** for each undocumented
+    extracted literal, construct >= 1 close-but-not-identical
+    payload (e.g., for literal `--apex-maintenance-token=ok`, probe
+    `--apex-maintenance-token=okx` AND `--Apex-Maintenance-Token=ok`
+    AND `--apex-maintenance-token=ok ` — three boundary variants),
+    invoke the guard against each, and record exit codes. Exit-0
+    bypass confirms the carve-out is exploitable.
+
+    **Recording shape:**
+    `coverage_map.axis_13.source_literal_carveouts[]` with
+    `(guard, literal, line, exempt_via, probe_payloads[],
+    probe_exits[])` where `exempt_via` is the source name from the
+    exemption set OR `"undocumented"`.
+
+    **Minimum scan set:** every guard in axis-1 extracted_set whose
+    contract is regex-deny or pattern-deny. A coverage_map row with
+    `axis_13.source_literal_carveouts.length == 0` for the
+    extracted_set is an incomplete audit.
+
     **13.e · Runtime-invocation-contract probe.** [Phase-7 R-AT-C-04
     — closes AC-6b methodology gap empirically demonstrated by
     `audit-trail-review/AC-6B-INDEPENDENT-PROBE-FINDINGS.md` F-001
