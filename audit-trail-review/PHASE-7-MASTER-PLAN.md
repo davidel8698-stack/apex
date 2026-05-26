@@ -123,12 +123,14 @@ Per owner directive: before deciding whether AC-6b needs threshold-lower or prob
 4. Layer test: H-D1..H-D5 in test-audit-trail-layer.sh
 
 ### R-AT-C-01 — Closes AC-4 heldout (corpus realignment)
-**Root cause analysis (from C5-T4):** H-A1 deletes `memory-watchdog.sh`; H-A2 deletes `session-auto-resume.sh`. Heldout lab pinned at baseline `8ac2a85` (pre-v7.1) — older spec doesn't reference these hooks.
+**Root cause analysis (from C5-T4):** H-A1 deletes `memory-watchdog.sh`; H-A2 deletes `session-auto-resume.sh`. Heldout lab pinned at baseline `8ac2a85` (pre-v7.1) — older spec doesn't reference these hooks **with the `framework/hooks/` prefix** that the auditor's extraction grep requires (the hooks ARE in the spec but only as bare backticked basenames inside the Auto-Continuity Layer table).
 
 **Design approach:**
 1. Re-author H-A1, H-A2 to target hooks PRESENT in the lab's older `apex-spec.md` (grep at lab-pinned baseline to identify the spec-named hook set)
 2. New mutations should retain the "spec-named hook deleted" defect class — just point at hooks the lab's spec actually names
 3. Re-run heldout trials (T4/T5/T6) to verify per-hook P0 emission for the new mutations
+
+**CLOSURE (2026-05-26):** option b chosen. H-A1 re-authored: `framework/hooks/destructive-guard.sh` (stray-file-missing shape, IMP-014 + IMP-013). H-A2 re-authored: `framework/hooks/sequence-guard.sh` + PreToolUse:Bash wiring removal (both-files-coordinated shape, IMP-016). Both targets verified in heldout extracted_set. Shape diversity preserved. Closure design: `PHASE-7-RITEM-R-AT-C-01-DESIGN-R3.md`; critic R3 PASS: `PHASE-7-RITEM-R-AT-C-01-CRITIC-R3.md`. Wave-4 will empirically verify per-hook P0 emission via T4/T5/T6 re-run.
 
 ### R-DH-P7-01 — Closes L-DH-01 (W-B 0/3 magic-string allowlist)
 **Root cause analysis:** Working B class mutations target guards' magic-string allowlists. Campaign A's auditor caught axis-13 depth (bypass_attempts ≥5) but didn't drill into the SPECIFIC magic-string sub-class.

@@ -82,6 +82,8 @@
 
 **Phase-7 R-AT-C-01:** align heldout corpus mutations with lab pinned-spec roster. Either (a) bump heldout lab to v7.1 spec OR (b) re-author H-A1/H-A2 to target hooks present in `8ac2a85`. Owner decision required.
 
+**Phase-7 R-AT-C-01 CLOSURE (2026-05-26 — option b chosen):** H-A1 re-authored to delete `framework/hooks/destructive-guard.sh` (stray-file-missing shape, IMP-014 + IMP-013 anchors); H-A2 re-authored to delete `framework/hooks/sequence-guard.sh` + remove its PreToolUse:Bash wiring (both-files-coordinated shape, IMP-016 anchor). Both targets verified present in heldout extracted_set (17 hooks via canonical grep). Shape diversity preserved. Closure design: `PHASE-7-RITEM-R-AT-C-01-DESIGN-R3.md`; critic R3 PASS: `PHASE-7-RITEM-R-AT-C-01-CRITIC-R3.md`.
+
 ### L-AT-C-02 — AC-5b requires auditor's axis-13.d mutation-class probe construction (not full closure)
 
 **Affected ACs:** AC-5b heldout B+C+D.
