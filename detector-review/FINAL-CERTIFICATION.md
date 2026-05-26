@@ -291,7 +291,7 @@ The user's original instruction — *"focus on the process of detecting failures
 
 ## 7. Open items handed to Phase 7
 
-1. **Phase-7 R-item 1 — Axis 13.c source-literal carve-out scan** (closes L-DH-01).
+1. **Phase-7 R-item 1 — Axis 13.c source-literal carve-out scan** (closes L-DH-01). **CLOSED 2026-05-26 (R-DH-P7-01):** axis-13.c added to framework-auditor.md mandating 7-pattern-family source scan (incl. `case` form that catches W-B3) + 5-source exemption set (incl. Campaign C TP-C2 audit-probe marker to prevent self-finding false-positives). Round-checker clause (ix) enforces per-guard scan-entry minimum + emission gate. 55/55 layer tests pass. Design: `audit-trail-review/PHASE-7-RITEM-R-DH-P7-01-DESIGN-R2.md`; critic R2 PASS-WITH-NOTES: `audit-trail-review/PHASE-7-RITEM-R-DH-P7-01-CRITIC-R2.md`.
 2. **Phase-7 R-item 2 — Raise self-heal Step A tool budget to 800** (closes L-DH-02 for Class D/E reachability).
 3. **Phase-7 R-item 3 — `test-subagent-cache.sh` + fresh-session documentation** (closes L-DH-03 methodology confound).
 4. **Phase-7 R-item 4 — Owner triage of the 10 NEW live-framework defects** surfaced in §4. None are detector-pipeline issues; they are real framework gaps now visible because the fix's depth is higher.
