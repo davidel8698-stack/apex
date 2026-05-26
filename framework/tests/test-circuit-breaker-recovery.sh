@@ -94,7 +94,14 @@ assert_pass "menu has Recommended commands header" "grep -q '^## Recommended com
 
 rm -rf "$SANDBOX_A"
 
-# --- Case B: tool-call cap trip ---
+# --- Case B: tool-call cap trip (v8 IMP-V8-CB2 contract) ---
+# Phase-7 R-AT-P7-06: under v8 the cap-trip path requires BOTH the cap
+# reached AND a failed health probe (stagnant / recurring-error / result-
+# fishing) to fire exit 2. A cap reached on a healthy trajectory now
+# extends the cap and exits 0. To exercise the fire branch this fixture
+# sets STALE_DELTA = TOTAL - TC_AT_CHANGE = 60 - 0 = 60 > 50 (probe 1
+# stagnant detection trips). cap_original is set so the extension math
+# stays sane if the test ever observes a healthy path.
 SANDBOX_B="$(run_sandbox)"
 mkdir -p "$SANDBOX_B/.apex"
 cat > "$SANDBOX_B/.apex/STATE.json" <<'EOF'
@@ -103,8 +110,10 @@ cat > "$SANDBOX_B/.apex/STATE.json" <<'EOF'
     "consecutive_no_change_actions": 0,
     "max_allowed": 3,
     "last_file_hash": "",
-    "max_tool_calls_per_task": 2,
-    "total_tool_calls_this_task": 2,
+    "max_tool_calls_per_task": 60,
+    "total_tool_calls_this_task": 60,
+    "tool_calls_at_last_change": 0,
+    "cap_original": 60,
     "triggered": false
   }
 }
@@ -113,13 +122,13 @@ EOF
 ( cd "$SANDBOX_B" && bash "$HOOK" >/dev/null 2>&1 )
 EXIT_B=$?
 
-assert_pass "tool-call cap exits 2"             "[ $EXIT_B -eq 2 ]"
-assert_pass "tool-cap menu was written"         "[ -f '$SANDBOX_B/.apex/RECOVERY_MENU.md' ]"
-assert_pass "tool-cap menu has three options"   "grep -c '/apex:' '$SANDBOX_B/.apex/RECOVERY_MENU.md' | awk '{ exit (\$1 < 3) }'"
+assert_pass "tool-call cap exits 2 (unhealthy trajectory)"  "[ $EXIT_B -eq 2 ]"
+assert_pass "tool-cap menu was written"                     "[ -f '$SANDBOX_B/.apex/RECOVERY_MENU.md' ]"
+assert_pass "tool-cap menu has three options"               "grep -c '/apex:' '$SANDBOX_B/.apex/RECOVERY_MENU.md' | awk '{ exit (\$1 < 3) }'"
 
 rm -rf "$SANDBOX_B"
 
-# --- Case C: stderr names the menu file path ---
+# --- Case C: stderr names the menu file path (v8 unhealthy cap-trip) ---
 SANDBOX_C="$(run_sandbox)"
 mkdir -p "$SANDBOX_C/.apex"
 cat > "$SANDBOX_C/.apex/STATE.json" <<'EOF'
@@ -128,8 +137,10 @@ cat > "$SANDBOX_C/.apex/STATE.json" <<'EOF'
     "consecutive_no_change_actions": 0,
     "max_allowed": 3,
     "last_file_hash": "",
-    "max_tool_calls_per_task": 1,
-    "total_tool_calls_this_task": 1,
+    "max_tool_calls_per_task": 60,
+    "total_tool_calls_this_task": 60,
+    "tool_calls_at_last_change": 0,
+    "cap_original": 60,
     "triggered": false
   }
 }

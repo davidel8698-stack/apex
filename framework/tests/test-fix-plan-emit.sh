@@ -168,7 +168,10 @@ assert_pass "post-write exits 2 on hardcoded secret" "[ $EXIT_PW -eq 2 ]"
 assert_pass "post-write wrote FIX_PLAN.md" "[ -f '$SANDBOX_PW/.apex/FIX_PLAN.md' ]"
 rm -rf "$SANDBOX_PW"
 
-# 5g. circuit-breaker — alias path test
+# 5g. circuit-breaker — alias path test (v8 IMP-V8-CB2 unhealthy fire branch)
+# Phase-7 R-AT-P7-06: under v8 the cap-trip path requires BOTH the cap
+# reached AND a failed health probe to fire exit 2. Set STALE_DELTA =
+# TOTAL - TC_AT_CHANGE = 60 - 0 = 60 > 50 (probe 1 stagnant detection).
 if command -v jq >/dev/null 2>&1; then
   SANDBOX_CB=$(run_sandbox)
   mkdir -p "$SANDBOX_CB/.apex"
@@ -178,8 +181,10 @@ if command -v jq >/dev/null 2>&1; then
     "consecutive_no_change_actions": 0,
     "max_allowed": 3,
     "last_file_hash": "",
-    "max_tool_calls_per_task": 1,
-    "total_tool_calls_this_task": 1,
+    "max_tool_calls_per_task": 60,
+    "total_tool_calls_this_task": 60,
+    "tool_calls_at_last_change": 0,
+    "cap_original": 60,
     "triggered": false
   }
 }

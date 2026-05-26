@@ -167,7 +167,10 @@ Per owner directive: before deciding whether AC-6b needs threshold-lower or prob
 2. Document in `framework/docs/SECURITY-RUNTIME.md` the fresh-session requirement for subagent cache invalidation
 3. Layer test verifies cache invalidation discipline
 
-### R-AT-P7-06 — Closes pre-existing test failures
+### R-AT-P7-06 — Closes pre-existing test failures — CLOSED 2026-05-26
+
+**CLOSURE:** root cause was v7-vs-v8 IMP-V8-CB2 contract drift (test fixtures asserted v7 cap-trip-fires-exit-2 behavior; v8 hook implements health-probe with healthy → cap extension exit 0). Both tests updated with STATE.json fixtures that force the unhealthy-fire branch via probe 1 stagnant detection (STALE_DELTA = TOTAL - TC_AT_CHANGE = 60 - 0 = 60 > 50). 12/12 PASS + 37/37 PASS. Wave-0 probe (F-004/F-005) pre-diagnosed the root cause; single-iteration R-item (no separate G2 critic). Design: `PHASE-7-RITEM-R-AT-P7-06-DESIGN.md`.
+
 **Root cause analysis required:**
 - `test-circuit-breaker-recovery.sh`: 3 FAILed assertions — need to read the test + the hook to find root cause
 - `test-fix-plan-emit.sh`: 3 FAILed assertions — same
