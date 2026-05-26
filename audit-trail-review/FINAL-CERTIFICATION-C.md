@@ -16,7 +16,7 @@ Trial outputs at `audit-trail-review/trials-c5-final/`. Each trial = independent
 
 | Trial | Lab | Spec-extracted hooks | Missing P0 | Findings (P0/P1/P2/P3) | SGC | Probes (axis-10 + 13.c/d/e) | Key kills |
 |-------|-----|----------------------|-----------:|------------------------:|----:|----------------------------:|-----------|
-| C5-T1 | baseline | 18 | 3 (W-A1, W-A2, apex-workflows/) | 10/3/1/1 | 2 | 9 + 2/6/7 | W-A 3/3 ✓ |
+| C5-T1 | baseline | 13† | 3 (W-A1, W-A2, apex-workflows/) | 10/3/1/1 | 2 | 9 + 2/6/7 | W-A 3/3 ✓ |
 | C5-T2 | baseline | 18 | 2 (W-A1, W-A2) | 3/2/2/1 | 4 | 14 + 1/3/2 | W-A 2/2 ✓ + 2 new findings |
 | C5-T3 | baseline | 18 | 2 (W-A1, W-A2) | 3/2/3/1 | 4 | 18 + 0/0/3 | W-A 2/2 ✓ + F-010 session-log |
 | C5-T4 | heldout | 17 | 2 (H-A1, H-A2) | 4/3/1/1 | 1 | 14 + 1/1/1 | H-A1+H-A2 ✓ |
@@ -28,7 +28,9 @@ Trial outputs at `audit-trail-review/trials-c5-final/`. Each trial = independent
 | C5-T10 | H-F2 | 22 | 0 (H-F2 lab is clean variant) | 0/0/0/2 | 1 | 27 + 0/0/0 | H-F2 lab differential noted |
 | C5-T11 | grep static | n/a | n/a | 0 findings (PASS) | 0 | n/a | CR-05 patterns at L354–355, L370–371 ✓ |
 
-**Aggregate findings: ~78 P0/P1/P2/P3 + 15 SGC across 10 framework-auditor trials.**
+† T1's reported enumeration count (13) is narrower than T2/T3 (18) on the same lab — T1 emitted its axis-1 table over a narrower scope (hook-files plus structural artifacts like `apex-workflows/`). AC-C1 set-equality predicate is still satisfied because every spec-extracted absent file received a per-hook P0 in T1 (no silent drop). Acknowledged in C5-CRITIC R2 NIT-1.
+
+**Aggregate findings: ~78 P0/P1/P2/P3 + 15 SGC across 10 framework-auditor trials. Live markered probes summed across Wave-4 ≈ 142 (independently re-counted by C5-CRITIC R2).**
 
 **Key empirical signals:**
 
@@ -60,7 +62,7 @@ Trial outputs at `audit-trail-review/trials-c5-final/`. Each trial = independent
 | AC-4 | Working A ≥ 3/3 AND heldout A ≥ 2/2 reliable-kill | **FAIL** (heldout 0/2) | PARTIAL-working | **Working 3/3 ✓ (T1,T2,T3) + Heldout 3/3 ✓ (T4,T5,T6)** | **PASS** |
 | AC-5a | Working B+C+D ≥ 2/8 | PASS | PASS | PASS (T1 F-003+F-004+F-010 W-B/C-like across baseline trials) | **PASS** |
 | AC-5b-R3 | Heldout B+C+D ≥ 5/5 reliable-kill | **FAIL** (0/5) | FAIL | **PASS** (T4=4/5, T5=4/5, T6=5/5; per-mutation ≥2/3 trial reliability across H-B1/H-B2/H-C1/H-D1 + bonus telemetry-exfil) | **PASS** |
-| AC-5c | Aspirational ≥ 7/8 | INFORMATIONAL | INFORMATIONAL | EXCEEDS — T6 alone surfaced 8 distinct heldout mutation classes (H-A1..H-A8) | **EXCEEDS-INFORMATIONAL** |
+| AC-5c | Aspirational ≥ 7/8 | INFORMATIONAL | INFORMATIONAL | EXCEEDS — T6 retry alone surfaced 8 distinct heldout mutation classes (H-A1 destructive-guard, H-A2 sequence-guard, H-B1 path-guard regex, H-B2 prompt-guard case-fold, H-C1 comprehension-gate pipefail, H-C2 turn-checkpoint silent-fail, H-D1 test-tokens counter, plus telemetry-exfil bonus class). | **EXCEEDS-INFORMATIONAL** |
 | AC-6a | NC fabricated = 0 | PASS | PASS | PASS (T7=0 fabricated) | **PASS** |
 | AC-6b-R3 | NC count in [10, 35] | **FAIL** (0) | **FAIL** (0) | **PASS** (T7=10 via Phase-7 axis-13.e methodology) | **PASS** |
 | AC-7a | Test suite (pristine framework) | PASS | PASS | PASS — pristine framework: 55/55 audit-trail-layer + 26/26 subagent-cache + 12/12 circuit-breaker-recovery + 37/37 fix-plan-emit (all post-R-AT-P7-06 fixed). Baseline-lab tests show 2 FAILs (test-hook-classification + test-hooks-cjs) reflecting W-A1/W-A2 mutation effects on the lab — correct detector behavior. | **PASS** |
@@ -125,7 +127,7 @@ Down from 3 hard-FAILs (B R2) → 2 hard-FAILs + 1 PARTIAL (C R3) → **0 hard-F
 | TP | Mechanism verified | Live-trial verified (Wave-4) | Status |
 |----|---------------------|------------------------------|--------|
 | TP-C1 axis-1 mechanical enumeration | Layer tests (test-agent-lint integration) | **10/10 trials emit canonical spec_named_hook_presence[] table** | **VERIFIED** |
-| TP-C2 marker + nonce three-factor | Layer tests 55/55 PASS (40 baseline + 8 H-D + 4 H-E + 3 H-F) | **100+ markered probes across Wave-4 trials; full audit_probes_allowed chain** | **VERIFIED-LIVE** |
+| TP-C2 marker + nonce three-factor | Layer tests 55/55 PASS (40 baseline + 8 H-D + 4 H-E + 3 H-F) | **~142 markered probes across Wave-4 trials (C5-CRITIC R2 independently re-counted)** | **VERIFIED-LIVE** |
 | TP-C3 NC depth (axis-13.e) | Phase-7 R-AT-C-04 closure | **T7 NC: 10 findings via runtime-invocation-contract probes** | **VERIFIED-LIVE** |
 | TP-C4 layer test extension | 55/55 PASS post-Phase-7 (incl. H-D + H-E + H-F sets) | n/a (test layer) | **VERIFIED** |
 
