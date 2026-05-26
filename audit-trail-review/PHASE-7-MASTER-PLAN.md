@@ -58,7 +58,11 @@ Per `feedback_qa_standards` memory: every Phase-7 work item MUST satisfy the 6-s
 
 ---
 
-## §3. R-AT-C-04 — The AC-6b empirical probe (DO FIRST)
+## §3 CLOSURE NOTE — R-AT-C-04 closed via methodology extension (2026-05-26)
+
+**Wave-0 outcome:** independent probe surfaced 11 findings (1 P0, 4 P1, 4 P2, 2 P3) on pristine framework via crafted stdin-envelope probes — empirically validates the methodology gap. Per §3 N≥1 routing, applied methodology to framework-auditor.md as new axis-13.e (Runtime-invocation-contract probe). Round-checker TP-2 §6.b clauses (vii)+(viii) enforce per-guard probe minimum + discrepancy-emission gate. 52/52 layer tests pass. Closure design: `PHASE-7-RITEM-R-AT-C-04-DESIGN-R2.md`; critic R2 PASS: `PHASE-7-RITEM-R-AT-C-04-CRITIC-R2.md`. Wave-4 T7 NC re-run will empirically verify ≥10-finding methodology floor. Framework defects surfaced by Wave-0 probe (notably F-001 8-guard stdin-envelope bypass) reserved for future owner-triage R-AT-P7-07 candidate.
+
+## §3. R-AT-C-04 — The AC-6b empirical probe (DO FIRST) [historical — see closure note above]
 
 ### Why this is P0
 

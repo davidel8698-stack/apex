@@ -308,7 +308,7 @@ C5-critic R1 PASS-WITH-CHANGES on 2 minor citation defects).
 - AC-4 heldout: deferred to R-AT-C-01 (corpus-spec alignment).
 - AC-5b: requires R-AT-C-02 (axis-10.d worked-examples; master plan label "axis-13.d" reconciles to this location per design R2 §2.B note + design R2 §2 Change E).
 - AC-6a NC fabricated=0: PASS.
-- AC-6b NC count: pristine genuinely clean — R-AT-C-04 (§14 amendment or probe-set extension).
+- AC-6b NC count: closed via R-AT-C-04 — axis-13.e runtime-invocation-contract probe added to framework-auditor.md; round-checker.md TP-2 §6.b clauses (vii)+(viii) enforce per-guard probe minimum + discrepancy-emission gate; Wave-0 independent probe empirically surfaced 11 findings (1 P0, 4 P1, 4 P2, 2 P3) on the pristine framework via the methodology this R-item institutionalizes.
 - AC-C1 (new): PASS (5/5 trials).
 - AC-C2 (new): PASS (40/40 layer tests + live demo).
 

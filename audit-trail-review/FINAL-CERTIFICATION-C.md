@@ -114,6 +114,8 @@
 
 **Phase-7 R-AT-C-04:** owner decision: (a) §14 amendment with rationale OR (b) extend NC probe set with mandatory axis-4 walkthrough + axis-12 enumeration to raise baseline-noise floor.
 
+**Phase-7 R-AT-C-04 CLOSURE (2026-05-26 — option b chosen, methodology extension via axis-13.e):** new axis-13.e (Runtime-invocation-contract probe) added to framework-auditor.md mandating BOTH argv and stdin-envelope invocation probes per spec-named guard. Round-checker TP-2 §6.b clauses (vii)+(viii) enforce per-guard probe minimum + discrepancy emission gate. Wave-0 independent probe empirically surfaced 11 findings (1 P0 = 8-guard stdin-envelope bypass, 4 P1, 4 P2, 2 P3) on the pristine framework — proves the methodology surfaces real defects prior auditors missed. 52/52 layer tests pass (40 baseline + 8 R-AT-C-02 H-D + 4 R-AT-C-04 H-E). Wave-4 T7 NC re-run will empirically verify the upgraded auditor lands ≥10 findings (AC-6b in_band PASS). Owner-triage note: the 11 Wave-0 findings — particularly F-001 P0 (8-guard runtime bypass) — remain UNFIXED in the framework as defects; R-AT-C-04 closes the auditor METHODOLOGY gap, not the framework defects themselves (the latter are reserved for a future owner-triage R-item, R-AT-P7-07 candidate). Closure design: `PHASE-7-RITEM-R-AT-C-04-DESIGN-R2.md`; critic R2 PASS: `PHASE-7-RITEM-R-AT-C-04-CRITIC-R2.md`.
+
 ---
 
 ## §4. Per-TP closure status
