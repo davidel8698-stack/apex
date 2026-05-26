@@ -433,12 +433,94 @@ to meet the promise in `apex-spec.md`?"
     falsification probes recorded is an incomplete audit, not a clean
     one.
 
-    Both sub-passes are **procedural, not analytical**. Every covered
-    hook must appear in the coverage map's axis-13 row with counts
-    `bypass_attempts=<n>` and `silent_failure_probes=<m>` and a payload
-    summary per attempt. A row with both counts at 0 is an incomplete
-    audit. A row with non-zero counts and zero anomalies recorded is a
-    valid clean-audit signal — the depth floor has been met.
+    **13.e · Runtime-invocation-contract probe.** [Phase-7 R-AT-C-04
+    — closes AC-6b methodology gap empirically demonstrated by
+    `audit-trail-review/AC-6B-INDEPENDENT-PROBE-FINDINGS.md` F-001
+    P0. Axis-13.c is reserved for Wave-2 R-DH-P7-01 source-literal
+    carve-out; axis-13.d is intentionally skipped to preserve the
+    historical master-plan-vs-implementation reconciliation made by
+    R-AT-C-02 (the master plan referred to mutation-class probes as
+    "axis-13.d" but R-AT-C-02 reconciled this to axis-10.d where the
+    existing axis-10 procedural block lives); skipping "d" here
+    prevents future re-collision.]
+
+    Every spec-named guard hook in the extracted_set (axis-1) MUST
+    be probed via TWO invocation contracts and the exit codes
+    compared:
+
+    1. **Legacy positional-argv contract** — the test suite's form:
+       `bash framework/hooks/<guard>.sh "<payload>" ; echo $?`
+    2. **Claude Code stdin-envelope contract** — the actual runtime
+       form per `framework/settings.json` PreToolUse and PostToolUse
+       matchers (`bash ~/.claude/hooks/<guard>.sh` with no positional
+       args; `tool_input` JSON piped on stdin):
+       `echo '{"tool_input":{"command":"<payload>"}}' | bash framework/hooks/<guard>.sh ; echo $?`
+       (For PostToolUse Write|Edit hooks, use
+       `{"tool_input":{"file_path":"..."}}` shape; for Bash matcher
+       hooks, use `{"tool_input":{"command":"..."}}`.)
+
+    **Discrepancy contract:** if the two invocations yield DIFFERENT
+    exit codes, this is a guard-contract-drift finding regardless of
+    which form returns the contract-required exit code. The auditor
+    MUST emit P0 with:
+
+    - **Title:** `<guard>.sh contract drifts between argv and
+      stdin-envelope invocations`
+    - **Cite:** the spec IMP anchor that names the guard + the
+      `framework/settings.json` line that wires it
+    - **Evidence:** the two captured exit codes verbatim + the
+      payload used
+    - **Defect class:** the guard parses only argv (e.g.
+      `COMMAND="${1:-}"`) but its production wiring passes nothing
+      positionally; the bypass class is "runtime contract mismatch
+      — guard inactive on actual installation path"
+
+    A SINGLE rolled-up P0 finding whose `cite[]` lists multiple
+    discrepant guards satisfies the discrepancy contract for every
+    guard cited (matches the F-001 rolled-up shape from the Wave-0
+    probe).
+
+    **Recording shape:** the captured `(guard, payload, argv_exit,
+    stdin_exit, tool_call_event_ts)` tuple goes into
+    `coverage_map.axis_13.runtime_contract_probes[]`. Round-checker
+    TP-2 §6.b clauses (vii)+(viii) (per R-AT-C-04) iterate this
+    array.
+
+    **Minimum probe set:** every guard in axis-1 extracted_set that
+    is wired in `framework/settings.json` PreToolUse|PostToolUse
+    with no positional args. The auditor identifies the minimum set
+    by parsing settings.json matchers and cross-referencing against
+    extracted_set. A coverage_map row with
+    `axis_13.runtime_contract_probes.length == 0` for the
+    settings-wired subset is an incomplete audit (BLIND SPOT at
+    most; not "clean").
+
+    **Construction protocol for prompt-guard probes:** the
+    echo-pipe-to-Bash invocation pattern is the primary probe
+    contract — Bash's quote-stripping on the host destructive-guard
+    read-only-commands branch (apex-prompt-guard.cjs only fires on
+    Write|Edit|Agent matchers) neutralizes the inner literal
+    payload on the auditor's own Bash tool_call. The
+    `__APEX_AUDIT_PROBE__:` marker carve-out (axis-10.c three-factor
+    protocol) is REQUIRED ONLY if the auditor uses the Write tool
+    to materialize a multi-line payload to disk first. For the
+    standard axis-13.e echo-pipe probe, the marker is unnecessary.
+
+    **Cross-reference to axis-10.d (R-AT-C-02):** axis-10.d catches
+    mutation-class weakening (regex word-boundary, case-folding,
+    silent-failure, counter-swallow); axis-13.e catches
+    invocation-contract drift (argv vs stdin-envelope). The two
+    probe families are complementary and BOTH must be present in a
+    PASS-eligible round (per round-checker TP-2 §6.b).
+
+    Both sub-passes 13.a + 13.b are **procedural, not analytical**.
+    Every covered hook must appear in the coverage map's axis-13
+    row with counts `bypass_attempts=<n>` and
+    `silent_failure_probes=<m>` and a payload summary per attempt.
+    A row with both counts at 0 is an incomplete audit. A row with
+    non-zero counts and zero anomalies recorded is a valid
+    clean-audit signal — the depth floor has been met. Sub-pass
+    13.e adds the runtime-contract-probe gate on top of these.
 
 ## REPORT FORMAT — MANDATORY, NOT A SUGGESTION
 
