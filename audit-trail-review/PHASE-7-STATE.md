@@ -1,7 +1,20 @@
 # Phase 7 — Handoff State
 
 **Generated:** 2026-05-26 (end of long session).
-**Status:** **8/8 R-items closed PASS.** Wave 4 (empirical re-run) + Wave 5 (trilogy closure) pending.
+**Status:** **8/8 R-items closed PASS + R-AT-C-03 §4.1 VERIFIED.** Wave 4 §4.2 (corpus re-run) + §4.3/§4.4 (critics) + Wave 5 (trilogy closure) pending.
+
+## §0. R-AT-C-03 §4.1 verification (2026-05-26, fresh-session 2nd-leg)
+
+**VERDICT: PASS.** Truncation patch in `framework/hooks/pre-subagent-start.sh:120` (`head -c 400`) empirically confirmed working in production fresh-session conditions.
+
+Probe protocol: spawned a `general-purpose` subagent with a ~500-char prompt carrying position markers (MARKER-ALPHA pos0, MARKER-BETA pos~310, MARKER-GAMMA pos~430, MARKER-DELTA pos~490). After completion, read the appended record in `.apex/in-flight-subagents.jsonl` and measured `tool_input_summary`:
+
+- `jq -r '.tool_input_summary | length'` = **400 chars** (was 200 pre-patch).
+- MARKER-BETA (pos ~310) PRESENT in summary.
+- MARKER-GAMMA (pos ~430) ABSENT — truncation occurs at exactly 400.
+- MARKER-DELTA (pos ~490) ABSENT.
+
+R-AT-C-03 closes. Patch behaviour confirmed equal to design intent in master plan §4 Wave 4 §4.1.
 
 ---
 
