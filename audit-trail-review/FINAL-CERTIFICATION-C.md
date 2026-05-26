@@ -6,7 +6,7 @@
 > **Predecessor:** Campaign B closed 2026-05-25 as HALTED-AT-B5-R2 with 3 §12.2 hard-FAIL ACs missed empirically. Campaign C targeted closure of AC-4 (heldout Class-A), AC-5b (heldout B+C+D), AC-6b (NC count band).
 >
 > **Outcome (R4 — Wave-4 empirical re-validation, post-Phase-7 closure):**
-> **GATE B5 R4 — PENDING C5-CRITIC R2 + B5-CRITIC R3 REVIEW.** All 8 Phase-7 R-items closed with G5 PASS. R-AT-C-03 §4.1 fresh-session truncation patch empirically verified. 11-trial C5 corpus re-run completed with all Phase-7 fixes installed. All 3 previously-hard-FAIL ACs (AC-4, AC-5b, AC-6b) now meet thresholds empirically. **Verdict awaits adversarial critic certification.**
+> **GATE B5 R4 — PASS.** All 8 Phase-7 R-items closed with G5 PASS. R-AT-C-03 §4.1 fresh-session truncation patch empirically verified. 11-trial C5 corpus re-run completed with all Phase-7 fixes installed. All 3 previously-hard-FAIL ACs (AC-4, AC-5b, AC-6b) now meet thresholds empirically. C5-CRITIC R2 returned PASS (0 BLOCKING, 3 NITs addressed; HIGH confidence; `audit-trail-review/PHASE-7-C5-CRITIC-R2.md`). B5-CRITIC R3 returned PASS (0 BLOCKING, 2 advisory NITs; HIGH confidence; `audit-trail-review/PHASE-7-B5-CRITIC-R3.md`). **Trilogy closure achieved; tag `gate-b5-trilogy-passed` issued 2026-05-26.**
 
 ---
 
@@ -133,9 +133,9 @@ Down from 3 hard-FAILs (B R2) → 2 hard-FAILs + 1 PARTIAL (C R3) → **0 hard-F
 
 ---
 
-## §5. Gate B5 R4 verdict (PENDING C5-CRITIC R2 + B5-CRITIC R3)
+## §5. Gate B5 R4 verdict — PASS (2026-05-26)
 
-**Empirical signals:**
+**Empirical signals (all VERIFIED by C5-CRITIC R2 + B5-CRITIC R3):**
 
 ✅ AC-4 PASS — Working 3/3 + Heldout 3/3 reliable-kill (was hard-FAIL in B R2)
 ✅ AC-5b-R3 PASS — Heldout B+C+D ≥2/3 trial reliability per mutation class (was hard-FAIL)
@@ -148,20 +148,19 @@ Down from 3 hard-FAILs (B R2) → 2 hard-FAILs + 1 PARTIAL (C R3) → **0 hard-F
 
 ✅ All 8 Phase-7 R-items closed with G5 critic R2 PASS (R-AT-C-01, R-AT-C-02, R-AT-C-04 closure, R-DH-P7-01, R-DH-P7-02, R-DH-P7-03, R-AT-P7-06; plus R-AT-C-04 Wave-0 probe; plus R-AT-C-03 §4.1 fresh-session verification this session).
 
-**Verdict pending:** C5-CRITIC R2 adversarial review of this updated FINAL-CERTIFICATION-C.md against the 11 trial artifacts at `audit-trail-review/trials-c5-final/`. R2 critic must verify each empirical claim in §1-§4 against trial files; verify AC matrix all-PASS empirically; identify any reproducibility concerns; return PASS / PASS-WITH-CHANGES / FAIL.
-
-**If C5-CRITIC R2 returns PASS:** Gate B5 closes as **PASS** at R4; Campaign C trilogy closure proceeds to B5-CRITIC R3 (trilogy review across Campaigns A+B+C).
-
-**If C5-CRITIC R2 returns PASS-WITH-CHANGES:** apply specific corrections in R4-rewrite; re-invoke R3-critic.
-
-**If C5-CRITIC R2 returns FAIL:** identify the structural defect; reset to additional Wave-4 trials or methodology adjustment.
+**Critic certifications:**
+- **C5-CRITIC R2:** PASS (0 BLOCKING, 3 NITs fixed). Independently re-ran 4 layer-test suites (55/55 + 26/26 + 12/12 + 37/37 all live-verified). Cross-verified each AC claim against trial files. Report: `audit-trail-review/PHASE-7-C5-CRITIC-R2.md`.
+- **B5-CRITIC R3:** PASS (0 BLOCKING, 2 advisory NITs). Verified L-item closures across 3 campaigns, cross-campaign consistency, owner-directive compliance, Wave-5 readiness. Report: `audit-trail-review/PHASE-7-B5-CRITIC-R3.md`.
 
 ---
 
-## §6. Next steps
+## §6. Trilogy closure record (Wave-5, 2026-05-26)
 
-1. **C5-CRITIC R2 invocation** — clean-room adversarial subagent against this report + 11 trial artifacts (pending).
-2. **B5-CRITIC R3 invocation** — clean-room adversarial subagent against trilogy closure narrative spanning Campaigns A+B+C (pending; sequential after C5-CRITIC R2 PASS).
-3. **Wave-5 trilogy closure** (post both critics PASS): verdict flips to PASS on all 3 FINAL-CERTIFICATION files; AUDIT-TRAIL-STANDARD update; 4 memory files updated; `git tag gate-b5-trilogy-passed` on main.
+1. ✅ C5-CRITIC R2 PASS → Gate B5 closes as PASS at R4.
+2. ✅ B5-CRITIC R3 PASS → Trilogy closure approved.
+3. ✅ Wave-5 verdict flips applied to all 3 FINAL-CERTIFICATION files (Campaign A: PASS-WITH-LIMITATION → PASS; Campaign B: HALTED-AT-B5-R2 → PASS; Campaign C: PENDING → PASS).
+4. ✅ AUDIT-TRAIL-STANDARD.md updated with final closed-mechanisms state.
+5. ✅ Memory files updated (4 files: project_detector_campaign, project_campaign_b, project_campaign_c, project_phase_7).
+6. ✅ `git tag gate-b5-trilogy-passed` on main.
 
-Pending invocations.
+**Trilogy outcome: ALL THREE CAMPAIGNS CLOSED PASS.**

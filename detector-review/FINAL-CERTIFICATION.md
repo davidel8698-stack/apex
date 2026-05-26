@@ -1,10 +1,12 @@
 # FINAL CERTIFICATION — Detector-Hardening Phase 6 Re-measurement
 
+> **Final state (Wave-5 trilogy closure, 2026-05-26):** Campaign A closes as **PASS**. All 3 reserved L-items (L-DH-01/02/03) closed via Phase-7 R-items (R-DH-P7-01/02/03) with G5 critic PASS verdicts. B5-CRITIC R3 verified L-item closure coverage across the trilogy; tag `gate-b5-trilogy-passed` issued. Historical PASS-WITH-LIMITATION verdict (Phase 6 closure) preserved verbatim below for audit integrity; §7 Phase-7 R-item closure record is the canonical resolution.
+
 > Phase 6 of the detector-sensitivity campaign. **Input:** `EXPERIMENT-PROTOCOL.md` §9 (frozen thresholds), `BASELINE.md` (Phase-2 pre-fix kill rates), 12 Phase-6 trial files under `detector-review/trials/phase6-*.md`. **Output:** the campaign's final verdict — DOES THE FIX RAISE THE DETECTION FLOOR PAST THE PRE-REGISTERED THRESHOLDS?
 >
 > Baseline commit (lab + corpus design): `8ac2a85`. Fix commit head: `edffdde` (Phase 6 bookmark) + later commits. Trials executed via the embedded-prompt mechanism (`EXPERIMENT-PROTOCOL.md` §12 amendment 2026-05-24): `general-purpose` subagent with the fixed `framework-auditor.md` content as prompt body.
 >
-> **Headline result:** held-out **8/8** reliably killed; working-corpus Class A 3/3, Class C 2/3, Class B/D/E 0; W-F1/W-F2/H-F1 PASS; W-F3 framing-effect delta narrowed 13→2; NC 0 fabricated findings + 2 NEW live-framework defects discovered. **Mixed verdict:** the fix lifts every held-out threshold (the load-bearing generalization test) but misses the working-corpus B+C+D ≥7/8 bar on the specific magic-string-allowlist mutation class. Recorded as **PASS-WITH-LIMITATION** per `EXPERIMENT-PROTOCOL.md` §9 ("documented accepted limitation with written rationale").
+> **Headline result (Phase 6, historical):** held-out **8/8** reliably killed; working-corpus Class A 3/3, Class C 2/3, Class B/D/E 0; W-F1/W-F2/H-F1 PASS; W-F3 framing-effect delta narrowed 13→2; NC 0 fabricated findings + 2 NEW live-framework defects discovered. **Mixed verdict:** the fix lifts every held-out threshold (the load-bearing generalization test) but misses the working-corpus B+C+D ≥7/8 bar on the specific magic-string-allowlist mutation class. Recorded as **PASS-WITH-LIMITATION** per `EXPERIMENT-PROTOCOL.md` §9 ("documented accepted limitation with written rationale"). **→ Final state (Wave-5): PASS — all 3 limitations closed via Phase-7 R-items per §7.**
 
 ---
 
@@ -276,7 +278,7 @@ For traceability per `FIX-DESIGN.md` §"Coverage matrix":
 
 Per `EXPERIMENT-PROTOCOL.md` §9 escalation path: documented accepted limitations with written rationale (L-DH-01, L-DH-02, L-DH-03 above). Pre-registered methodology has been honored throughout; deviations are recorded in §12 and per-mutant log; nothing was silently waived.
 
-**Gate 6 closes as PASS-WITH-LIMITATION.** Independent critic review delivered PASS-WITH-CHANGES with 4 minimum changes; all 4 closed in this final revision (Finding 1 §12 Class-E denominator amendment, Finding 2 §9 Class-F empirical-vs-static qualifier in §2 footnote ², Finding 3 §1.5 sgc-fingerprint verification table, Finding 4 CR-04 empirical exercise per CR-04 row above). Critic loop closed.
+**Gate 6 closes as PASS-WITH-LIMITATION (Phase 6 historical) → PASS (Wave-5 final, 2026-05-26).** Independent critic review delivered PASS-WITH-CHANGES with 4 minimum changes; all 4 closed in the Phase-6 final revision (Finding 1 §12 Class-E denominator amendment, Finding 2 §9 Class-F empirical-vs-static qualifier in §2 footnote ², Finding 3 §1.5 sgc-fingerprint verification table, Finding 4 CR-04 empirical exercise per CR-04 row above). Phase-6 critic loop closed. **Wave-5 trilogy closure (2026-05-26):** all 3 reserved L-items (L-DH-01/02/03) closed via Phase-7 R-items per §7; B5-CRITIC R3 (PHASE-7-B5-CRITIC-R3.md) verified L-item closure coverage; verdict flips to **PASS**.
 
 The detector-hardening campaign has empirically demonstrated:
 1. **The fix is real** — 8/8 reliable kill on the held-out (generalization) corpus, 0/8 → 5/5 on B+C+D held-out.

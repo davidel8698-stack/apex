@@ -298,20 +298,83 @@ trial executed 24 procedural probes via the carve-out.
 }
 ```
 
-### §7.4 Campaign C status as of this document
+### §7.4 Campaign C status as of this document — TRILOGY CLOSED PASS (2026-05-26)
 
-Campaign C closed 2026-05-25 as **HALTED-AT-B5-R3 — STRUCTURAL
-IMPROVEMENT DEMONSTRATED** (per `audit-trail-review/FINAL-CERTIFICATION-C.md`;
-C5-critic R1 PASS-WITH-CHANGES on 2 minor citation defects).
+Campaign C closed 2026-05-26 as **PASS** (Wave-5 trilogy closure;
+tag `gate-b5-trilogy-passed`). Historical journey: R1–R3 progressed
+HALTED-AT-B5-R3 → Phase-7 R-item closure (8 R-items, all G5 critic
+PASS) → Wave-4 11-trial empirical re-run → C5-CRITIC R2 PASS →
+B5-CRITIC R3 PASS → Wave-5 verdict flips on all 3 FINAL-CERTIFICATION
+files (Campaign A: PASS-WITH-LIMITATION → PASS; Campaign B:
+HALTED-AT-B5-R2 → PASS; Campaign C: HALTED-AT-B5-R3 → PASS).
 
-- AC-4 working class-A: improved (W-A1 + W-A2 killed via per-hook P0).
-- AC-4 heldout: deferred to R-AT-C-01 (corpus-spec alignment).
-- AC-5b: requires R-AT-C-02 (axis-10.d worked-examples; master plan label "axis-13.d" reconciles to this location per design R2 §2.B note + design R2 §2 Change E).
-- AC-6a NC fabricated=0: PASS.
-- AC-6b NC count: closed via R-AT-C-04 — axis-13.e runtime-invocation-contract probe added to framework-auditor.md; round-checker.md TP-2 §6.b clauses (vii)+(viii) enforce per-guard probe minimum + discrepancy-emission gate; Wave-0 independent probe empirically surfaced 11 findings (1 P0, 4 P1, 4 P2, 2 P3) on the pristine framework via the methodology this R-item institutionalizes.
-- AC-C1 (new): PASS (5/5 trials).
-- AC-C2 (new): PASS (40/40 layer tests + live demo).
+**Closed mechanisms (final state):**
+
+- **axis-13.c (R-DH-P7-01)** — Source-literal carve-out scan added to
+  framework-auditor.md. 7-pattern-family scan + 5-source exemption set
+  (incl. Campaign C TP-C2 audit-probe marker for legitimate auditor
+  bypass). Round-checker TP-2 §6.b clause (ix) enforces per-guard
+  scan-entry minimum + emission gate.
+
+- **axis-13.d / axis-10.d (R-AT-C-02)** — Mutation-class boundary
+  probes with WORKED EXAMPLES per class (regex word-boundary,
+  case-folding, silent-failure, counter-swallow). `framework/test-fixtures/mutation-class-probes.json`
+  reference payloads. Round-checker enforces ≥1 boundary-condition
+  probe per regex-deny guard.
+
+- **axis-13.e (R-AT-C-04)** — Runtime-invocation-contract probe
+  systematically tests both argv and stdin-envelope invocation forms
+  per spec-named guard. Round-checker TP-2 §6.b clauses (vii)+(viii)
+  enforce per-guard probe minimum + discrepancy emission gate.
+
+- **Test layer (R-AT-C-02 + R-AT-C-04 + R-DH-P7-01)** — 55/55 audit-trail-layer
+  tests PASS (40 baseline + 8 H-D + 4 H-E + 3 H-F).
+
+- **Subagent-cache discipline (R-DH-P7-03)** — `test-subagent-cache.sh`
+  enforces byte-equality + mtime sanity between framework source agents
+  and ~/.claude/agents installation. 26/26 PASS. `framework/docs/SECURITY-RUNTIME.md`
+  documents fresh-session requirement.
+
+- **Self-heal budget (R-DH-P7-02)** — Step A `max_tool_calls_per_task`
+  raised 400 → 800. Falsifiable deferral note for stage-typed budget
+  (IMP-DR-011) if 800 still insufficient.
+
+- **Pre-existing test failures (R-AT-P7-06)** — `test-circuit-breaker-recovery.sh`
+  12/12 PASS + `test-fix-plan-emit.sh` 37/37 PASS via v7→v8 IMP-V8-CB2
+  contract drift fix.
+
+- **Truncation patch (R-AT-C-03)** — `pre-subagent-start.sh:120`
+  `head -c 400` for `tool_input_summary` (was 200). Fresh-session
+  empirically verified 2026-05-26.
+
+- **R-AT-C-01 corpus realignment** — H-A1/H-A2 re-authored to target
+  spec-named hooks present in heldout lab (destructive-guard.sh +
+  sequence-guard.sh). Wave-4 trials confirm 3/3 per-hook P0 kill.
+
+**Owner-triage reservation:** the F-001 family of stdin-envelope bypass
+vulnerabilities (10 hooks confirmed in T7 NC: destructive-guard,
+exfil-guard, path-guard, quarantine-guard, sequence-guard, subagent-guard,
+grader-search-guard, post-write, ast-kb-check, schema-drift — all read
+via `${1:-}` while settings.json registers them with no positional argv)
+represent REAL framework defects surfaced by the new axis-13.e methodology
+but NOT YET FIXED. Reserved as R-AT-P7-07 candidate for future
+owner-triage. The closure of R-AT-C-04 institutionalizes the methodology
+gap — the framework defects themselves remain for separate triage.
+
+**ACs (final, Wave-4 empirical):**
+
+- AC-1: PASS · AC-2: PASS · AC-3a/b/c/d: PASS
+- AC-4: PASS (Working 3/3 + Heldout 3/3 reliable-kill via mechanical enumeration)
+- AC-5a: PASS · AC-5b-R3: PASS (5/5 heldout per-mutation ≥2/3 reliability)
+- AC-5c: EXCEEDS-INFORMATIONAL
+- AC-6a: PASS (fabricated=0) · AC-6b-R3: PASS (T7=10 at floor)
+- AC-7a/b/c: PASS (all 4 layer tests live-verified)
+- AC-8a: PASS · AC-8b: PASS (C5-CRITIC R2 + B5-CRITIC R3)
+- AC-9: PASS · AC-10a/b/c/d: PASS · AC-11: PASS · AC-12: PASS-BY-DESIGN
+- AC-C1: PASS (set-equality 11/11 trials) · AC-C2: PASS-LIVE (~142 markered probes)
+
+**Hard-FAIL count: 0.**
 
 Future agents conforming to this standard operate against the
-upgraded data + schema + consumer + carve-out layers from both
-Campaign B and Campaign C.
+upgraded data + schema + consumer + carve-out + runtime-invocation
+layers from Campaigns B + C + Phase-7.
