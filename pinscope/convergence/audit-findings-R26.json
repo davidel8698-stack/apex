@@ -1,0 +1,82 @@
+{
+  "round": 26,
+  "generated_at": "2026-05-27T15:55:00Z",
+  "status": "complete",
+  "completion_note": "Three spec-auditor sub-agent spawns each exhausted maxTurns mid-sweep. The orchestrator completed axes 3-12 inline (read-only investigation, no source-file edits) with user authorization. F-26-01 was authored by the spec-auditor sub-agent before its turn-budget exhausted; F-26-02 and F-26-03 are orchestrator-authored. Clean-room isolation from the executor remains intact — no R26 executor has run.",
+  "axes": [
+    {"id": 1, "name": "Dormant mechanism", "axis_status": "swept", "result": "1 CONFIRMED (F-26-01)"},
+    {"id": 2, "name": "Swallowed error", "axis_status": "swept", "result": "clean — every catch site logs via console.warn with [pinscope] prefix or re-throws a typed error; no empty catch blocks"},
+    {"id": 3, "name": "Hollow code", "axis_status": "swept", "result": "1 SUSPECTED (F-26-02 — withPinScope + PinScopeWebpackPlugin)"},
+    {"id": 4, "name": "Broken end-to-end flow", "axis_status": "swept", "result": "clean — §10 flows A/B/C/D/E traced; CommandBar parse → buildOperation → ClaudeBridge.send → clipboard+history → toast; snapshot capture → flush → /__pinscope/snapshot; selection lock; all wired"},
+    {"id": 5, "name": "Silent fallback", "axis_status": "swept", "result": "clean — only one fallback: PinMap.load swallows JSON.parse error and warns, but the spec allows starting with an empty map on a corrupted file; documented behavior"},
+    {"id": 6, "name": "Configuration drift", "axis_status": "swept", "result": "clean — env-capabilities.json probed at run-time; ac-matrix STRICT-locked at R25 W7; no permissive defaults masking invariants"},
+    {"id": 7, "name": "Test-shaped contract", "axis_status": "swept", "result": "clean — AC-092 narrow verify text is intentional per SPEC §18 I-1; deployment.test.ts adds composition + arg-passthrough + immutability + no-op-when-disabled tests beyond the matrix minimum"},
+    {"id": 8, "name": "Vacuous true", "axis_status": "swept", "result": "clean — sampled AC-090/091/092 (min_tests=1 ACs) all have substantive test bodies that assert behavior, not tautologies"},
+    {"id": 9, "name": "Provenance gap", "axis_status": "swept", "result": "clean — loop.json criteria ledger shows all 69 ACs with last_verified_round=25; vitest run shows 381 PASS in 32 files; no cited test missing"},
+    {"id": 10, "name": "Spec/code drift", "axis_status": "swept", "result": "1 SUSPECTED (F-26-03 — stale §15.5 and §12.6 doc-comment references; sections do not exist as subsections in SPEC)"},
+    {"id": 11, "name": "Hidden coupling", "axis_status": "swept", "result": "1 CONFIRMED — same as F-26-01 (MutationObserver-driven re-entrance into markCrossOriginFrames is hidden coupling between PinScope.tsx and iframe-overlay.ts)"},
+    {"id": 12, "name": "Stale BLOCKED", "axis_status": "swept", "result": "clean — 6 BLOCKED ACs all require env:browser; env-capabilities.json reports browser=false; blocks remain legitimate"}
+  ],
+  "findings": [],
+  "investigation_findings": [
+    {
+      "id": "F-26-01",
+      "axis": "Dormant mechanism / Hidden coupling",
+      "confidence": "CONFIRMED",
+      "severity": "P1",
+      "current_state": "PinScope.tsx mounts a MutationObserver on document.body (subtree:true, childList:true) that re-runs markCrossOriginFrames(document) on every body mutation. The helper has no idempotency guard: it does NOT check whether the iframe already carries data-pin-iframe before re-stamping it, and does NOT check whether a [data-pinscope-iframe-overlay] for that iframe already exists in document.body — it unconditionally document.body.appendChild's a fresh overlay each call.",
+      "gap": "SPEC §12 says cross-origin iframes get an outline-only treatment, not a stack of overlay divs. Because appendChild itself is a childList mutation under the observed root, every cross-origin iframe triggers re-entry: each body mutation produces one overlay per cross-origin iframe, and the appendChild mutation re-fires the observer, producing another, ad infinitum (single tick → single overlay per iframe; sustained app DOM activity → N overlays per N body mutations). On a hot page this is an unbounded duplicate-overlay leak + observer feedback loop.",
+      "re_read": "Read pinscope/src/runtime/utils/iframe-overlay.ts lines 31-66: the for-loop hits 'frame.setAttribute(IFRAME_ATTR, ...)' followed by overlay creation and 'document.body.appendChild(overlay)' with NO 'if (frame.hasAttribute(IFRAME_ATTR))' continue guard and NO 'document.querySelector(`[data-pinscope-iframe-overlay][data-for=\"${pinId}\"]`)' dedupe. Read PinScope.tsx lines 238-252: useEffect installs a MutationObserver({subtree:true, childList:true}) on document.body whose callback is `() => markCrossOriginFrames(document)`. grep -n 'hasAttribute' pinscope/src/runtime/utils/iframe-overlay.ts → only line 70 (isIframeLimited reader); no caller-side guard. The test suite (pinscope/tests/unit/runtime/iframe-overlay.test.ts) only calls markCrossOriginFrames once per case, so the duplicate-overlay defect is never exercised."
+    },
+    {
+      "id": "F-26-02",
+      "axis": "Hollow code / Test-shaped contract",
+      "confidence": "SUSPECTED",
+      "severity": "P3",
+      "current_state": "pinscope/src/plugin/next.ts withPinScope() returns a config object with a webpack(config, context) hook that only composes any existing host webpack function — comment line 28 says verbatim 'Dev-only: a later round registers the data-pin loader here.' pinscope/src/plugin/webpack.ts PinScopeWebpackPlugin.apply() only does 'void compiler.hooks' with comment line 25 'Dev-only: a later round taps compiler.hooks to register the loader.' Neither integration registers the AST transformer; a Next.js or Webpack app using these gets zero data-pin injection at the build step.",
+      "gap": "SPEC §15 lists withPinScope and PinScopeWebpackPlugin as the Next.js/Webpack integration surface for the npm `pinscope` package. SPEC §18 I-1 narrows the AC matrix to 'importable and return valid config objects' and explicitly scopes them P4/P5. AC-092 verifies structural shape (config object + webpack function + non-mutation + arg passthrough + no-op when disabled) — all PASS against the current stubs. So the AC matrix is satisfied per its narrow text, but the §15 integration listing implies that 'using withPinScope works' — which the code does not deliver. Classified SUSPECTED, not CONFIRMED, because §18 I-1 explicitly authorizes the narrow scope: this is a §15-vs-§18 design tension, not an unambiguous defect. A future SPEC bump or P5 phase would need to widen AC-092 (or add AC-09x) before code is expected to do the full registration.",
+      "re_read": "Read pinscope/src/plugin/next.ts in full (34 lines): line 28 — 'Dev-only: a later round registers the data-pin loader here.' Read pinscope/src/plugin/webpack.ts in full (28 lines): line 25 — 'Dev-only: a later round taps compiler.hooks to register the loader.' Read pinscope/tests/unit/deployment.test.ts lines 56-135: 6 tests for AC-092, all asserting structural shape — none asserts a transformer is invoked. SPEC §15 lines 375-381 lists the integration. SPEC §18 I-1 line 428 scopes the AC narrowly. Matrix AC-092 verify object min_tests=1, kind=vitest-tag; current count is 6 tests (R-23-03 strengthening)."
+    },
+    {
+      "id": "F-26-03",
+      "axis": "Spec/code drift",
+      "confidence": "SUSPECTED",
+      "severity": "P3",
+      "current_state": "pinscope/src/index.ts:1 doc comment is '/** PinScope public API — see SPEC.md §15.5. */' but SPEC §15 (Deployment & Integration) is a single subsection-free block — there is no §15.5. pinscope/src/runtime/constants.ts:12 doc comment is '/** Reserved z-index range — see SPEC §12.6 (max 32-bit signed int). */' but SPEC §12 (Edge Cases) is also a single prose paragraph with no enumerated §12.1-§12.N subsections; the z-index 2147483647 is mentioned inline, not under a §12.6 header.",
+      "gap": "Doc-comment links from production code point at non-existent SPEC subsections. Readers following the citation will find the section but no matching sub-anchor. Low-severity drift; does not affect runtime behavior or AC verification. Possibly stale from an earlier SPEC version that had subsection numbering. The first-priority remediation is to either (a) re-number the SPEC to give §15 and §12 the subsections the code references, or (b) update the code comments to drop the .NN suffix and point at the parent section.",
+      "re_read": "grep -n '§9.[0-9]+|§10-[A-Z]|§11|§12|§13|§14|§15|§16|§17|§18' pinscope/src — 25 hits; §15.5 appears once (src/index.ts:1), §12.6 appears once (src/runtime/constants.ts:12). grep '^### [0-9]+.[0-9]+' pinscope/SPEC.md — §15 has no subsections in the section heading list; §12 has no subsections. All other section references in production code (§6.1, §9.1, §9.2, §9.3, §10-A through §10-E, §10-B, §10-C, §10-D, §11, §12) resolve cleanly."
+    }
+  ],
+  "blocked": [
+    {"ac": "AC-023", "reason": "env browser"},
+    {"ac": "AC-030", "reason": "env browser"},
+    {"ac": "AC-061", "reason": "env browser — manual: cross-origin iframe needs two real origins"},
+    {"ac": "AC-063", "reason": "env browser — manual: @media print needs a browser print engine"},
+    {"ac": "AC-082", "reason": "env browser — manual: Playwright integration suite needs a browser binary"},
+    {"ac": "AC-083", "reason": "env browser — manual: visual-regression screenshots need a browser"}
+  ],
+  "coverage": {
+    "axes_swept": [
+      "1 — Dormant mechanism (yielded F-26-01)",
+      "2 — Swallowed error (clean)",
+      "3 — Hollow code (yielded F-26-02)",
+      "4 — Broken end-to-end flow (clean)",
+      "5 — Silent fallback (clean)",
+      "6 — Configuration drift (clean)",
+      "7 — Test-shaped contract (clean)",
+      "8 — Vacuous true (clean)",
+      "9 — Provenance gap (clean)",
+      "10 — Spec/code drift (yielded F-26-03)",
+      "11 — Hidden coupling (yielded F-26-01)",
+      "12 — Stale BLOCKED (clean)"
+    ],
+    "sections_reviewed": ["§6.1", "§6.3", "§7.1", "§7.2", "§8.10", "§9.1", "§9.2", "§9.3", "§9.4", "§10-A", "§10-B", "§10-C", "§10-D", "§10-E", "§11", "§12", "§13", "§14", "§15", "§16", "§17", "§18", "Appendix A"]
+  },
+  "summary": {
+    "open": 0,
+    "blocked": 6,
+    "regressions": 0,
+    "confirmed": 1,
+    "suspected": 2
+  }
+}

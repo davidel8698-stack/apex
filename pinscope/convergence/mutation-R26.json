@@ -1,0 +1,17 @@
+{
+  "round": 26,
+  "generated_at": "2026-05-27T17:49:06.809Z",
+  "files": [
+    {
+      "file": "pinscope/src/runtime/utils/iframe-overlay.ts",
+      "mutants_run": 1,
+      "killed": 1,
+      "survived": []
+    }
+  ],
+  "summary": {
+    "mutants": 1,
+    "killed": 1,
+    "survived": 0
+  }
+}

@@ -1,0 +1,75 @@
+{
+  "round": 26,
+  "generated_at": "2026-05-27T16:30:00Z",
+  "spec_version": "2.0.0",
+  "spec_hash": "sha256:82a942188fd264f9a8cbfa058ed1e6aa7c7ff22342110a3b13e706d691348810",
+  "status": "complete",
+  "auditor_note": "Three narrative-auditor sub-agent spawns each exhausted maxTurns on shell-quoting overhead in this session. The orchestrator completed the scan inline with explicit user authorization (2026-05-27). All work is read-only against the SPEC and the prior R23/R24 scans; the orchestrator has not run any R26 executor. This R26 scan is a delta against R24: NC-12-06 flips uncovered_satisfied -> uncovered_unsatisfied because F-26-01 in audit-findings-R26.json proves the cross-origin-iframe code does NOT actually deliver the 'outline only' claim — markCrossOriginFrames is non-idempotent and the MutationObserver loop produces unbounded duplicate overlays per body mutation. The R24 marker was over-optimistic (verified wiring existed, not correctness).",
+  "coverage": {
+    "total_claims": 61,
+    "covered": 37,
+    "uncovered": 24,
+    "uncovered_satisfied": 24,
+    "uncovered_unsatisfied": 0,
+    "candidate_acs": 3,
+    "strengthen_proposals": 1
+  },
+  "claims_summary": {
+    "carried_from_R24": 61,
+    "minted_R26": 0,
+    "total": 61,
+    "covered": 37,
+    "uncovered": 24,
+    "uncovered_satisfied": 24,
+    "uncovered_unsatisfied": 0,
+    "scan_timing_note": "Counts reflect post-Wave-1 state. NC-12-06 flipped uncovered_satisfied -> uncovered_unsatisfied at scan time (pre-wave); R-26-01 (commit 9b56da68) added the idempotency guard + regression test, restoring code_satisfied=true. Updated post-VERIFY-R26 PASS to match the R24 narrative-scan pattern (snapshot reflects post-fix when fix lands in the same round)."
+  },
+  "delta_R24_to_R26": [
+    {
+      "claim_id": "NC-12-06",
+      "section": "§12",
+      "claim": "iframes (same-origin inject, cross-origin outline only)",
+      "before": {"code_satisfied": "true", "uncovered_unsatisfied": false},
+      "after": {"code_satisfied": "false", "uncovered_unsatisfied": true},
+      "change_reason": "F-26-01 (CONFIRMED P1) in audit-findings-R26.json proves the code does NOT satisfy 'outline only' — markCrossOriginFrames has no idempotency guard and the MutationObserver({subtree:true,childList:true}) on document.body re-runs it on every body mutation, producing unbounded duplicate overlay divs per cross-origin iframe per tick. 'Outline only' means exactly one outline; the current behavior is N outlines for N mutations. R24 marked this uncovered_satisfied based on wiring existence, not correctness — this R26 sweep is the correction.",
+      "is_blocking_finding": true,
+      "remediation_target": "F-26-01 — add idempotency guard (skip frames already carrying data-pin-iframe + dedupe overlay by pinId before appendChild). Add a regression test that calls markCrossOriginFrames twice with the same DOM and asserts exactly one overlay exists per cross-origin iframe."
+    }
+  ],
+  "blocking_findings": [],
+  "blocking_findings_closed_this_round": [
+    {
+      "claim_id": "NC-12-06",
+      "section": "§12",
+      "claim": "iframes (same-origin inject, cross-origin outline only)",
+      "severity": "P1",
+      "audit_finding": "F-26-01",
+      "remediation": "Closed by R-26-01 (commit 9b56da68) — markCrossOriginFrames now reconciles existing [data-pinscope-iframe-overlay] nodes before re-stamping; new iframe-overlay.test.ts case asserts overlay count stays at 1 after double-invocation. Mutation gate killed (mutation-R26.json: 1/1)."
+    }
+  ],
+  "candidate_acs": [
+    "AC-NEW-23 — Selection update < 16ms (NC-13-03, P1) — carried from R23",
+    "AC-NEW-24 — Grid mode switch < 32ms (NC-13-04, P3) — carried from R23",
+    "AC-NEW-26 — markCrossOriginFrames idempotent under repeated invocation (NC-12-06 hardening, P1) — surfaces from R26's F-26-01. Verify: vitest-tag NC-12-06 / new AC tag; min_tests 2 (single-call + repeated-call dedupe). This codifies the contract whose absence allowed the R24 false-PASS to ship."
+  ],
+  "strengthen_proposals": [
+    "SP-23-01 — AC-073 dual size-limit (closed in R-23-01; retained for traceability)",
+    "SP-26-01 — iframe-overlay.test.ts: add a 'called twice' case asserting overlay count stays at 1 per cross-origin iframe; without it the unit suite cannot catch the F-26-01 family of regressions."
+  ],
+  "spec_design_tensions": [
+    {
+      "id": "ST-26-01",
+      "tension": "SPEC §15 vs §18 I-1 — withPinScope / PinScopeWebpackPlugin",
+      "summary": "§15 lists these as Next.js / Webpack integration entry points; §18 I-1 narrows the ACs to 'importable and return valid config objects.' Code currently returns config but never registers the AST transformer. The §15 narrative claim is currently uncovered_satisfied per the §18 narrowing — it is technically met. But a casual reader of §15 might infer end-to-end functionality. This is a SPEC design tension, not a defect; resolution requires either a SPEC bump (widen §18 I-1 / mint AC-09x) or a code change (register the loader) — both are out of scope for an auto-remediating loop and must be triaged by the human owner.",
+      "source_finding": "F-26-02 (SUSPECTED P3)"
+    }
+  ],
+  "validation": {
+    "invariants_checked": [
+      "covered + uncovered == total_claims (37 + 24 = 61) OK",
+      "uncovered_satisfied + uncovered_unsatisfied == uncovered (24 + 0 = 24) OK [post-wave]",
+      "blocking_findings.length == uncovered_unsatisfied (0 == 0) OK [post-wave]",
+      "spec_hash matches current SPEC.md hash"
+    ]
+  }
+}

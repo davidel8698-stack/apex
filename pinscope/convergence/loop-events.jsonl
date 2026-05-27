@@ -91,3 +91,12 @@
 {"at":"2026-05-25T17:16:52.101Z","round":23,"event":"phase:verify","note":null}
 {"at":"2026-05-25T17:22:05.075Z","round":24,"event":"phase:close","note":null}
 {"at":"2026-05-25T17:23:50.544Z","round":24,"event":"phase:idle","note":null}
+{"at":"2026-05-27T15:23:01.786Z","round":25,"event":"phase:audit","note":null}
+{"at":"2026-05-27T16:11:05.462Z","round":25,"event":"spec_auditor_failure","note":"R26 spec-auditor 3 spawns exhausted maxTurns; round halted with 1 CONFIRMED finding F-26-01 (markCrossOriginFrames+MutationObserver duplicate-overlay leak); 10/12 axes deferred; phase=audit"}
+{"at":"2026-05-27T17:30:45.730Z","round":26,"event":"phase:remediate","note":null}
+{"at":"2026-05-27T17:33:17.012Z","round":26,"event":"phase:schedule","note":null}
+{"at":"2026-05-27T17:35:49.785Z","round":26,"event":"phase:wave","note":null}
+{"at":"2026-05-27T17:36:14.940Z","round":26,"event":"spawn:ps-wave-executor","note":"wave 1 (R-26-01 + R-26-02) snapshot=788a61120d4136f6973ed70b56ad410a2c731da6"}
+{"at":"2026-05-27T17:48:42.090Z","round":26,"event":"phase:verify","note":null}
+{"at":"2026-05-27T17:59:44.031Z","round":26,"event":"phase:close","note":null}
+{"at":"2026-05-27T18:04:43.852Z","round":26,"event":"phase:idle","note":null}
