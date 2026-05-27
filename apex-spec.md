@@ -300,6 +300,18 @@ APEX הוא **multi-agent framework ופלטפורמה לסוכני קוד** (Cl
 
 - **[P2]** APEX חייב לפרסם `SECURITY.md` (או section ב-apex-spec.md) המתעד threat model מפורש: (a) Malicious file contents being read into agent context (memory poisoning); (b) Untrusted git remotes; (c) Untrusted MCP servers; (d) Untrusted hooks; (e) Prompt-injection via tool outputs. עבור כל איום — שם את ההגנה המתאימה (`destructive-guard` / `plan-mode` / `10Q-gate` / `context-monitor` / וכו'). זה גם documents APEX's lead על AI-system safety vs. Microsoft MDASH / Big Sleep / Anthropic Research / Team Atlanta — אלה לא פרסמו guardrails ל-agent's own reasoning loop. *(Master §11 P2-2; the moat the competitive landscape doesn't surface because the disclosed competition isn't even trying; IMP-DR-021)*
 
+### Hook input-extraction contract (P0 — structural)
+
+**[P0]** כל PreToolUse / PostToolUse hook ב-`framework/hooks/` שנרשם ב-`framework/settings.json` ללא positional argv (כפי ש-Claude Code מפעיל בייצור) **חייב** להוציא את ה-tool envelope ב-priority הקנוני: argv → stdin/jq → empty. ה-helper `framework/hooks/_hook-input.sh` הוא ה-SSoT הקנוני; private extractors ב-hooks ספציפיים מותרים רק לתאימות לאחור עד שהם מוסבים ל-helper. *(F-001 family closure; Phase 8 R-P8-A + R-P8-C; axis-13.e anchor: framework/agents/specialist/framework-auditor.md; round-checker.md TP-2 §6.b clauses (vii)+(viii)+(x); SGC-001 spec gap closed)*
+
+**Fallback priority — rationale.** argv-first preserves backward-compat עם 27 callsites בקובצי הבדיקה (`test-fix-plan-emit.sh` + `test-hooks-security.sh` + `test-hooks-blocking.sh` — סוקרים 9 hooks distinct argv-style). stdin-second מכסה את production wiring (Claude Code שולח JSON envelope ב-stdin). empty-third הוא fail-safe-to-0: ללא input → אין שיפוט.
+
+**Discrepancy ban.** Hook ש-קורא רק `${1:-}` ומתעלם מ-stdin הוא **לא תואם** (defect class F-001) — `block()` שלו הוא dead code בייצור כי settings.json לא מעביר argv. כל hook כזה ייתפס ע"י (a) round-checker TP-2 §6.b clause (x) ב-audit time, וגם (b) `framework/scripts/lint-hook-input.sh` ב-commit time.
+
+**Behavior-not-implementation.** ה-contract הזה מחייב התנהגות תצפיתית (`argv_exit == stdin_exit` for matched payload); ה-helper `_hook-input.sh` מומלץ כ-canonical implementation אבל אינו mandatory — hooks ב-`.cjs` שקוראים stdin native, או hooks בעתיד עם input-extraction shape ייחודית, פטורים מהשימוש ב-helper אך לא פטורים מה-contract.
+
+**Affected hooks (Phase 8 in-scope):** 10 hooks ב-F-001 family (destructive-guard, exfil-guard, path-guard, quarantine-guard, sequence-guard, subagent-guard, grader-search-guard, post-write, ast-kb-check, schema-drift) + 5 hooks עם implementations פרטיים שמוסבים (owner-guard, ci-scan, test-deletion-guard, pre-task-snapshot, workflow-guard) = 15 hooks total. *(IMP-V8-P8-001)*
+
 ---
 
 ## היכולות הנדרשות
