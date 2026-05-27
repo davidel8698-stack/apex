@@ -896,8 +896,23 @@ if [ -f "$HOOKS_DIR/_hook-input.sh" ]; then
   else
     nope "H-G25: parity broken (argv=$HG25_ARGV_EXIT, stdin=$HG25_STDIN_EXIT)"
   fi
+
+  # H-G26..H-G30: Wave 3 (R-P8-C11..C15) per-hook helper-sourcing verification.
+  # Verifies each grandfathered hook now sources _hook-input.sh in place of
+  # the private argv+stdin extractor it previously carried.
+  for HG_PAIR in "H-G26:owner-guard.sh" "H-G27:ci-scan.sh" \
+                 "H-G28:test-deletion-guard.sh" "H-G29:pre-task-snapshot.sh" \
+                 "H-G30:workflow-guard.sh"; do
+    HG_ID="${HG_PAIR%%:*}"
+    HG_HOOK="${HG_PAIR#*:}"
+    if grep -q "source.*_hook-input.sh" "$HOOKS_DIR/$HG_HOOK" 2>/dev/null; then
+      ok "$HG_ID: $HG_HOOK sources _hook-input.sh"
+    else
+      nope "$HG_ID: $HG_HOOK missing _hook-input.sh source"
+    fi
+  done
 else
-  skip "H-G0..H-G25: _hook-input.sh helper not installed (R-P8-A not landed)"
+  skip "H-G0..H-G30: _hook-input.sh helper not installed (R-P8-A not landed)"
 fi
 
 # ----- summary ------------------------------------------------------------

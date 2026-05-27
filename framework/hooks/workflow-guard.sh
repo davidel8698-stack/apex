@@ -51,12 +51,13 @@ if [ -n "$_sec_block_orig" ] && command -v emit_fix_plan >/dev/null 2>&1; then
   }
 fi
 
-FILE="${1:-}"
-
-# Hook context fallback: if no $1, try stdin (Claude Code PreToolUse passes JSON)
-if [ -z "$FILE" ] && [ ! -t 0 ]; then
-  FILE=$(cat 2>/dev/null | jq -r '.tool_input.file_path // empty' 2>/dev/null)
+# Phase 8 R-P8-C15: consolidate to shared input-extraction helper.
+# Replaces the private argv+stdin extractor that previously lived here.
+# shellcheck source=/dev/null
+if [ -f "$(dirname "$0")/_hook-input.sh" ]; then
+  source "$(dirname "$0")/_hook-input.sh"
 fi
+FILE=$(apex_hook_input_filepath "$@" 2>/dev/null || printf '%s' "${1:-}")
 
 # --- Delegate to the .cjs when node is present ------------------------------
 if command -v node >/dev/null 2>&1; then

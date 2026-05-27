@@ -34,26 +34,35 @@ export APEX_HOOK_SOURCE="pre-task-snapshot"
 # (read-only or stash-management — cannot mutate working tree, snapshot
 # would be noise). Direct CLI invocation (no envelope on stdin) falls
 # through to the snapshot path, preserving the standalone contract.
-if [ ! -t 0 ]; then
-  STDIN_ENV_BUF=$(cat 2>/dev/null || true)
-  if [ -n "$STDIN_ENV_BUF" ] && command -v jq >/dev/null 2>&1; then
-    USER_CMD=$(echo "$STDIN_ENV_BUF" | jq -r '.tool_input.command // empty' 2>/dev/null || true)
-    if [ -n "$USER_CMD" ]; then
-      # Strip leading whitespace; capture the first two tokens.
-      CMD_TRIM="${USER_CMD#"${USER_CMD%%[![:space:]]*}"}"
-      FIRST_TOK="${CMD_TRIM%% *}"
-      REST_AFTER_FIRST="${CMD_TRIM#"$FIRST_TOK"}"
-      REST_TRIM="${REST_AFTER_FIRST#"${REST_AFTER_FIRST%%[![:space:]]*}"}"
-      SECOND_TOK="${REST_TRIM%% *}"
-      if [ "$FIRST_TOK" = "git" ]; then
-        case "$SECOND_TOK" in
-          status|log|show|diff|stash)
-            # Skip snapshot — read-only or stash-management subcommand.
-            exit 0
-            ;;
-        esac
-      fi
-    fi
+#
+# Phase 8 R-P8-C14: consolidate stdin extraction to shared helper.
+# Critical: argv here is TASK_ID (read at L66 below), NOT the user
+# command. The helper is invoked with NO args so it falls through to
+# the stdin path regardless of TASK_ID presence. Self-filter logic
+# below is unchanged.
+# shellcheck source=/dev/null
+if [ -f "$(dirname "$0")/_hook-input.sh" ]; then
+  source "$(dirname "$0")/_hook-input.sh"
+fi
+
+USER_CMD=""
+if command -v apex_hook_input_command >/dev/null 2>&1; then
+  USER_CMD=$(apex_hook_input_command 2>/dev/null || true)
+fi
+if [ -n "$USER_CMD" ]; then
+  # Strip leading whitespace; capture the first two tokens.
+  CMD_TRIM="${USER_CMD#"${USER_CMD%%[![:space:]]*}"}"
+  FIRST_TOK="${CMD_TRIM%% *}"
+  REST_AFTER_FIRST="${CMD_TRIM#"$FIRST_TOK"}"
+  REST_TRIM="${REST_AFTER_FIRST#"${REST_AFTER_FIRST%%[![:space:]]*}"}"
+  SECOND_TOK="${REST_TRIM%% *}"
+  if [ "$FIRST_TOK" = "git" ]; then
+    case "$SECOND_TOK" in
+      status|log|show|diff|stash)
+        # Skip snapshot — read-only or stash-management subcommand.
+        exit 0
+        ;;
+    esac
   fi
 fi
 # --- end R8-008 self-filter --------------------------------------------

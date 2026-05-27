@@ -36,10 +36,18 @@ if [ "${APEX_ACTIVE_AGENT:-}" = "test-architect" ]; then
   exit 0
 fi
 
-# Parse Claude Code hook stdin envelope if present
+# Parse Claude Code hook stdin envelope if present.
+# Phase 8 R-P8-C13: consolidate stdin extraction to shared helper.
+# Multi-field hook (needs .tool_name + .tool_input) — uses raw extractor
+# per the helper-API contract documented in _hook-input.sh header.
+# shellcheck source=/dev/null
+if [ -f "$(dirname "$0")/_hook-input.sh" ]; then
+  source "$(dirname "$0")/_hook-input.sh"
+fi
+
 PAYLOAD=""
-if [ ! -t 0 ]; then
-  PAYLOAD=$(cat 2>/dev/null || true)
+if command -v apex_hook_input_raw >/dev/null 2>&1; then
+  PAYLOAD=$(apex_hook_input_raw 2>/dev/null || true)
 fi
 
 [ -z "$PAYLOAD" ] && exit 0

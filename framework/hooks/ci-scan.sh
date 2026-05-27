@@ -119,25 +119,35 @@ fi
 #
 # Note: under shape (2), if $1 is a *file* path (e.g., a touched
 # workflow), we treat its parent dir as the scan target.
+#
+# Phase 8 R-P8-C12: consolidate stdin extraction to shared helper.
+# 3-shape routing preserved by invoking the helper ONLY inside the
+# no-argv branch — so argv-style test invocations (S-11..S-14) bypass
+# the self-filter exactly as before. Narrowing note: the pre-migration
+# code read stdin whenever stdin was piped, even with argv present
+# (rare unreachable corner case under Claude Code runtime); the new
+# code prefers argv when both are present. Tests do not exercise this
+# corner; production never produces it.
+# shellcheck source=/dev/null
+if [ -f "$(dirname "$0")/_hook-input.sh" ]; then
+  source "$(dirname "$0")/_hook-input.sh"
+fi
+
 WORKFLOWS_DIR=""
-if [ -p /dev/stdin ] || [ ! -t 0 ]; then
-  # stdin is piped — try to parse Claude Code hook payload.
-  STDIN_BUF=$(cat 2>/dev/null || true)
-  if [ -n "$STDIN_BUF" ] && command -v jq >/dev/null 2>&1; then
-    HOOK_PATH=$(echo "$STDIN_BUF" | jq -r '.tool_input.file_path // .tool_input.path // empty' 2>/dev/null)
-    if [ -n "$HOOK_PATH" ]; then
-      # Auto-PostToolUse path: enforce self-filter. Only scan workflow files.
-      case "$HOOK_PATH" in
-        .github/workflows/*|*/.github/workflows/*)
-          # Scan the parent directory of the touched file.
-          WORKFLOWS_DIR="$(dirname "$HOOK_PATH")"
-          ;;
-        *)
-          # Path is outside .github/workflows/ — fast exit, do not scan.
-          exit 0
-          ;;
-      esac
-    fi
+if [ -z "${1:-}" ]; then
+  HOOK_PATH=""
+  if command -v apex_hook_input_filepath >/dev/null 2>&1; then
+    HOOK_PATH=$(apex_hook_input_filepath 2>/dev/null || true)
+  fi
+  if [ -n "$HOOK_PATH" ]; then
+    case "$HOOK_PATH" in
+      .github/workflows/*|*/.github/workflows/*)
+        WORKFLOWS_DIR="$(dirname "$HOOK_PATH")"
+        ;;
+      *)
+        exit 0
+        ;;
+    esac
   fi
 fi
 

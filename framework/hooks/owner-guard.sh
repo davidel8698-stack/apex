@@ -61,15 +61,14 @@ fi
 # invocation passes the target path as $1 in legacy hook form; the
 # stdin JSON form (post-R-006 migration) carries it under
 # .tool_input.file_path. Accept either.
-FILEPATH="${1:-}"
-if [ -z "$FILEPATH" ] && [ ! -t 0 ]; then
-  if command -v jq >/dev/null 2>&1; then
-    PAYLOAD=$(cat 2>/dev/null || true)
-    if [ -n "$PAYLOAD" ]; then
-      FILEPATH=$(printf '%s' "$PAYLOAD" | jq -r '.tool_input.file_path // .tool_input.path // empty' 2>/dev/null || true)
-    fi
-  fi
+#
+# Phase 8 R-P8-C11: consolidate to shared input-extraction helper.
+# Replaces the private argv+stdin extractor that previously lived here.
+# shellcheck source=/dev/null
+if [ -f "$(dirname "$0")/_hook-input.sh" ]; then
+  source "$(dirname "$0")/_hook-input.sh"
 fi
+FILEPATH=$(apex_hook_input_filepath "$@" 2>/dev/null || printf '%s' "${1:-}")
 
 # Without a target path we cannot judge — pass through.
 if [ -z "$FILEPATH" ]; then
