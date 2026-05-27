@@ -220,9 +220,50 @@ that turns the new test RED."
 - **Mutation gate:** none (pure refactor; no production logic touched).
 - **Matrix bump:** none.
 
-## W6 — R-25-17..20 — Content-validation scripts
+## W6 — R-25-17..20 — Content-validation scripts (AC-100/102/103/104/105)
 
-(Pending — to be filled on close.)
+**Status:** ✅ closed
+**Files added (5 new scripts under `pinscope/scripts/`):**
+- `validate-apex-skill.mjs` — R-25-17 (AC-100)
+- `simulate-apex-ui-phase.mjs` — R-25-18 (AC-102)
+- `simulate-apex-ui-review.mjs` — R-25-19 (AC-103)
+- `validate-architect-mentions.mjs` — R-25-20a (AC-104)
+- `validate-apex-spec-pinscope.mjs` — R-25-20b (AC-105)
+
+**Live-doc results:** all 5 scripts exit 0 against the current `framework/` + `apex-spec.md` content.
+**Mutation gates:** all 5 scripts exit 1 against deliberately-corrupted scratch copies (verified via a one-shot Node harness; see commit message for the mutation matrix).
+
+### R-25-17 — AC-100 apex-skill content validator
+
+- **Original recipe:** `grep` for 5 section headers (`Conventions`, `Anti-Patterns`, `Common Patterns`, `Testing`, `Common Gotchas`).
+- **Strengthened recipe:** parses markdown, asserts all 5 required `## ` headers present AND each section has ≥3 content lines (excluding blank lines, code-fence markers, and nested sub-headers). Catches the "header-only stub" case the grep recipe missed.
+- **Mutation gate:** stub the `## Common Patterns` section body → script FAILS with `missing required section(s)` or `lack ≥3 content lines`.
+- **Calibration note:** initially used "≥3 sentence-units (sentences/bullets/code-blocks)" rule; that mis-classified the actual `Common Patterns` section (single code block with 4 comment lines) as thin. Settled on a "≥3 content lines" rule that catches stubs while accepting the actual documentation style (mixed prose + bullets + code).
+
+### R-25-18 — AC-102 ui-phase scaffolding validator
+
+- **Original recipe:** `grep` for the string `PINSCOPE INSTRUMENTATION`.
+- **Strengthened recipe:** locates the `## PINSCOPE INSTRUMENTATION` section header, asserts the section body contains: (1) a `pinscope/vite` or `pinscope/next` plugin import; (2) a `<PinScope />` runtime mount; (3) the dev-only / stripped-from-production contract.
+- **Mutation gate:** replace `<PinScope />` mentions in the section with `<XXX/>` → script FAILS with `lacks: names the runtime mount`.
+
+### R-25-19 — AC-103 ui-review evidence validator
+
+- **Original recipe:** `grep` for the string `PINSCOPE EVIDENCE`.
+- **Strengthened recipe:** locates the `## PINSCOPE EVIDENCE` section, asserts the body references: (1) the Snapshot artifact or `.pinscope/snapshots/`; (2) pending Operations; (3) what review value each artifact carries (rect / computed state).
+- **Mutation gate:** redact `Snapshot` + `Operations` mentions → script FAILS with `lacks: references Snapshot artifact ...; references pending Operations to ingest`.
+
+### R-25-20a — AC-104 architect + apex-frontend skill-context validator
+
+- **Original recipe:** `grep` for `pinscope` in both files.
+- **Strengthened recipe:** asserts BOTH files reference the pinscope skill as a stack-skill / skill-selection context (via explicit `apex-skills/pinscope` path, or `pinscope` qualified by `skill`/`stack_skills`/`stack-skills` within the same line).
+- **Mutation gate:** weaken architect.md by replacing `stack_skills` → `STACK` and `apex-skills/pinscope` → `REDACTED` → script FAILS with `mention pinscope but not as a stack-skill / apex-skill path`.
+- **Script enhancement:** accepts argv overrides for path testing (default to canonical APEX-repo paths).
+
+### R-25-20b — AC-105 apex-spec.md PinScope section validator
+
+- **Original recipe:** `grep` for `PinScope` in `apex-spec.md`.
+- **Strengthened recipe:** asserts apex-spec.md has a dedicated `## …PinScope…` section header AND the section body covers: (1) PinScope scope (bundled / visual-debug / UI-feedback); (2) source-of-truth (`pinscope/SPEC.md`); (3) dev-only invariant (stripped / tree-shaken / zero bytes / never ships to production).
+- **Mutation gate:** redact the `## §PinScope as bundled default` header line → script FAILS with `no \`## …PinScope…\` section header found`.
 
 ## W7 — R-25-21..26 — Matrix bump (USER-GATED)
 
