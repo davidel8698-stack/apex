@@ -199,9 +199,26 @@ that turns the new test RED."
 - **Mutation gate:** mutate the observer's mutation handler to assign only the root insertion node (skip the descendant walk) → test FAILS (parent and child stay null). Mutate the id-counter to reuse the last id → set size collapses to 1, test FAILS.
 - **Matrix-bump target (W7):** `min_tests: 1 → 2`.
 
-## W5 — R-25-15..16 — Category C polish
+## W5 — R-25-15..16 — Category C polish (AC-053 fold + AC-001 dedup)
 
-(Pending — to be filled on close.)
+**Status:** ✅ closed
+**Files touched:**
+- `pinscope/tests/unit/plugin.test.ts` (R-25-16 only — restructured 3 describes under 1 parent, AC-009 block moved up; 12 tests, no count delta)
+
+**Test results:** plugin.test.ts 12/12 pass; full suite 380/380 green; tsc clean.
+
+### R-25-15 — AC-053 fold — SUPERSEDED by W3
+
+- **Original master-plan strengthen target:** combine 3 entry-shape asserts (raw_input, parsed, result) into the first AC-053 it() block.
+- **W3 supersession:** the W3 R-25-10 work already created 2 explicit AC-053 tagged tests in controls.test.tsx with the complete entry-shape assertion bundle (raw_input + parsed: null + result: 'applied' + history.list() recall). Folding pre-W3 asserts is no longer relevant — the canonical AC-053 entry-shape assertion now lives in the W3-added tests.
+- **No source edit in W5.** Documented as covered-by-prior-wave.
+
+### R-25-16 — AC-001 dedup — done
+
+- **Refactor:** wrapped the three plugin-API describes (`plugin shape (AC-001)`, `transform gating (AC-013)`, `transformIndexHtml (AC-009)`) under one parent `describe('pinscope() plugin API (AC-001, AC-009, AC-013)')`. Moved the AC-009 block from its prior end-of-file position up to sit adjacent to AC-013 inside the parent. Snapshot + history route describes stay outside the parent (different concerns — Vite dev-server routing, not plugin-API surface).
+- **Net effect:** zero behavioral change; all 12 plugin.test.ts tests still pass identically. The parent describe adds `AC-001` to the ancestor chain of every nested test, which propagates the AC-001 tag through AC-013 + AC-009 sub-tests. This is purely organizational.
+- **Mutation gate:** none (pure refactor; no production logic touched).
+- **Matrix bump:** none.
 
 ## W6 — R-25-17..20 — Content-validation scripts
 
