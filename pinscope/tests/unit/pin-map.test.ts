@@ -103,3 +103,53 @@ describe('PinMap', () => {
     expect(m.getOrAssign('a', 'div')).toBe('e_1');
   });
 });
+
+/**
+ * R-25-06 — AC-007 strengthen: monotonic ID assignment invariants.
+ *
+ * The two pre-existing AC-007 tests above prove the happy-path counter and
+ * the no-collision invariant across 100 keys. R25 explicitly covers the
+ * three invariants the SPEC §6.1 stable-id-generator promises:
+ *   (1) same input key reuses the same ID,
+ *   (2) a new key gets the next sequential ID,
+ *   (3) deletion is a soft delete — an ID is NEVER reused.
+ *
+ * The third case is the load-bearing one: it kills any implementation that
+ * frees a deleted slot on reconcile().
+ */
+describe('PinMap monotonicity invariants (AC-007)', () => {
+  it('AC-007 — same key reuses the same ID across getOrAssign calls', () => {
+    const m = new PinMap(tmpPath());
+    const first = m.getOrAssign('repeat-key', 'div');
+    expect(m.getOrAssign('repeat-key', 'span')).toBe(first);
+    expect(m.getOrAssign('repeat-key', 'div')).toBe(first);
+  });
+
+  it('AC-007 — new key gets the next sequential ID (no gaps)', () => {
+    const m = new PinMap(tmpPath());
+    expect(m.getOrAssign('a', 'div')).toBe('e_1');
+    expect(m.getOrAssign('b', 'div')).toBe('e_2');
+    expect(m.getOrAssign('c', 'div')).toBe('e_3');
+    expect(m.getOrAssign('d', 'div')).toBe('e_4');
+  });
+
+  it('AC-007 — deletion is soft; an ID is NEVER reused after reconcile', () => {
+    const m = new PinMap(tmpPath());
+    const aId = m.getOrAssign('a', 'div'); // e_1
+    const bId = m.getOrAssign('b', 'div'); // e_2
+    expect(aId).toBe('e_1');
+    expect(bId).toBe('e_2');
+
+    // Reconcile with only 'b' alive — 'a' is soft-deleted.
+    m.reconcile(['b']);
+    expect(m.snapshot().entries['a']?.deleted).toBe(true);
+
+    // A brand-new key MUST get e_3, NOT e_1 (the freed slot).
+    const cId = m.getOrAssign('c', 'div');
+    expect(cId).toBe('e_3');
+    expect(cId).not.toBe(aId);
+
+    // And another brand-new key gets e_4.
+    expect(m.getOrAssign('d', 'div')).toBe('e_4');
+  });
+});

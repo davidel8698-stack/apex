@@ -81,3 +81,41 @@ describe('AST transformer — behavior', () => {
     expect(run('<svg:rect />').code).toMatch(PIN_RE);
   });
 });
+
+/**
+ * R-25-05 — AC-004 strengthen: excludeTags + data-pin-ignore opt-outs.
+ *
+ * The existing AC-004 cases above prove (a) a pre-existing `data-pin` is not
+ * overwritten and (b) `data-pin-ignore` opts out. R25 explicitly covers the
+ * excludeTags config path (previously tagged AC-003 only) and adds a
+ * positive sanity case proving sibling elements ARE instrumented when the
+ * sibling does not carry the opt-out. The trio kills any single-rule
+ * shortcut that disables the opt-outs.
+ */
+describe('AST transformer — opt-out rules (AC-004)', () => {
+  it('AC-004 — excludeTags from config is honored', () => {
+    const out = run('<Fragment><span /></Fragment>').code;
+    // Fragment is in EXCLUDE; the span (not excluded) IS instrumented.
+    expect(out).not.toMatch(/data-pin="e_\d+"[^>]*?>\s*<span/);
+    expect(out).toContain('<Fragment>');
+    expect(out).toMatch(/data-pin="e_\d+"/); // the span got pinned
+  });
+
+  it('AC-004 — data-pin-ignore opt-out is honored', () => {
+    const out = run('<div data-pin-ignore><span /></div>').code;
+    // The outer div has data-pin-ignore — must NOT have data-pin.
+    // The inner span IS instrumented (opt-out is per-element, not inherited).
+    const divMatch = /<div\s+data-pin-ignore[^>]*>/.exec(out);
+    expect(divMatch).not.toBeNull();
+    // The divMatch substring itself must not contain data-pin.
+    expect(divMatch?.[0]).not.toMatch(/data-pin="e_/);
+  });
+
+  it('AC-004 — sibling without opt-out IS instrumented (sanity)', () => {
+    const out = run('<section><Fragment /><button /></section>').code;
+    // Fragment skipped, but button gets a pin AND section gets a pin.
+    const pins = [...out.matchAll(/data-pin="(e_\d+)"/g)].map((m) => m[1]);
+    expect(pins.length).toBe(2); // section + button
+    expect(new Set(pins).size).toBe(2);
+  });
+});

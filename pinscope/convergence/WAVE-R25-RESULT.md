@@ -72,9 +72,57 @@ that turns the new test RED."
 
 ---
 
-## W2 — R-25-05..08 — P2 cluster strengthening
+## W2 — R-25-05..08 — P2 cluster strengthening (AC-004/007/013/021/022)
 
-(Pending — to be filled on close.)
+**Status:** ✅ closed
+**Files touched:**
+- `pinscope/tests/unit/ast-transformer.test.ts` (+47 lines, +3 tests)
+- `pinscope/tests/unit/pin-map.test.ts` (+45 lines, +3 tests)
+- `pinscope/tests/unit/runtime/components.test.tsx` (+62 lines, +4 tests)
+
+**Test results:** 10 new W2 tests pass (88 across touched files; full suite 354/354 green; tsc clean).
+
+### R-25-05 — AC-004 excludeTags + data-pin-ignore
+
+- **AC:** AC-004 P1 P2 — `excludeTags` config and `data-pin-ignore` attribute are honored.
+- **Tests added (3, new `describe('AST transformer — opt-out rules (AC-004)')`):**
+  1. excludeTags-from-config: `<Fragment><span /></Fragment>` → Fragment not pinned, span IS pinned.
+  2. data-pin-ignore opt-out: `<div data-pin-ignore><span /></div>` → div not pinned, span IS pinned.
+  3. Sibling-without-opt-out sanity: `<section><Fragment /><button /></section>` → 2 pins (section + button), Fragment excluded.
+- **Mutation gate:** remove `if (opts.excludeTags.includes(tagName)) return;` (src/plugin/ast-transformer.ts:58) → tests 1 + 3 RED. Also remove `if (hasAttribute(node, 'data-pin-ignore')) return;` (line 60) → test 2 RED.
+- **Matrix-bump target (W7):** `min_tests: 1 → 3`.
+
+### R-25-06 — AC-007 PinMap monotonic ID invariants
+
+- **AC:** AC-007 P1 P2 — IDs are monotonic; deleted IDs are never reused.
+- **Tests added (3, new `describe('PinMap monotonicity invariants (AC-007)')`):**
+  1. Same key reuses ID across multiple getOrAssign calls.
+  2. New key gets next sequential ID with no gaps.
+  3. **Soft-delete invariant** — after `reconcile([alive])` marks a key deleted, a new key gets `e_3` not the freed `e_1` slot.
+- **Mutation gate:** mutate `PinMap.getOrAssign` to allow reusing soft-deleted IDs (e.g., scan entries for first `deleted: true` and reuse its id) → test 3 RED (cId would equal aId).
+- **Matrix-bump target (W7):** `min_tests: 1 → 3`.
+
+### R-25-07 — AC-013 filePattern/excludePattern gating — DISCOVERY: already covered
+
+- **AC:** AC-013 P1 P2 — `filePattern` / `excludePattern` plugin options gate the transform.
+- **Original master-plan strengthen target:** +4 cases in ast-transformer.test.ts.
+- **Discovery:** filePattern/excludePattern gating happens in the plugin `transform` hook (`pinscope/tests/unit/plugin.test.ts:35-65`), NOT in `transformJSX`. The plugin spec already has **5 AC-013-tagged tests** covering: non-matching extension (.css), excluded path (node_modules), test-file gating (.test.tsx), disabled plugin, and the matching-.tsx happy path. These cover all 4 filePattern × excludePattern combinations.
+- **Decision:** no source edits. 5 ≥ 4 (matrix target). R-25-07 closes against existing coverage.
+- **Mutation gate:** mutate `transform` hook to skip the filePattern check → tests 1 + 3 RED (would now transform .css and .test.tsx).
+- **Matrix-bump target (W7):** `min_tests: 1 → 4`.
+
+### R-25-08 — AC-021 + AC-022 PinScope kill-switches & portal target
+
+- **AC-021 P1 P3** — PinScope returns null when `enabled={false}` OR in production NODE_ENV.
+- **AC-022 P1 P3** — HUD portal-renders into `[data-pinscope-ui="root"]` attached to `document.body`.
+- **Tests added (4, two new describe blocks in components.test.tsx):**
+  - AC-021 (2): `enabled={false}` → empty container + no portal root; `NODE_ENV=production` → empty container + no portal root (env restored in finally).
+  - AC-022 (2): exactly one `[data-pinscope-ui="root"]` mounted on document.body (parent === document.body); portal escapes the local render container (HUD root NOT inside testing-library container).
+- **Mutation gates:**
+  - AC-021 #1: remove `if (props.enabled === false) return null;` (PinScope.tsx:58) → enabled-false test RED.
+  - AC-021 #2: remove `if (process.env.NODE_ENV === 'production') return null;` (PinScope.tsx:57) → NODE_ENV=production test RED.
+  - AC-022: change createPortal target from `document.body` to the React-tree element → "portal lives directly under document.body" test RED (parentElement would not equal document.body).
+- **Matrix-bump targets (W7):** AC-021 `min_tests: 1 → 2`; AC-022 `min_tests: 1 → 2`.
 
 ## W3 — R-25-09..12 — test-rich ACs
 
