@@ -29,6 +29,17 @@ export function isCrossOriginFrame(frame: HTMLIFrameElement): boolean {
  * frames marked.
  */
 export function markCrossOriginFrames(root: ParentNode = document): number {
+  // R-26-01 reconciliation pass — purge any overlays from a prior invocation
+  // so repeated calls remain idempotent (one overlay per cross-origin frame).
+  const overlayHost =
+    (root as Node & { ownerDocument?: Document | null }).ownerDocument ??
+    document;
+  for (const stale of Array.from(
+    overlayHost.querySelectorAll('[data-pinscope-iframe-overlay]'),
+  )) {
+    stale.remove();
+  }
+
   let count = 0;
   for (const frame of Array.from(root.querySelectorAll('iframe'))) {
     if (!isCrossOriginFrame(frame)) continue;

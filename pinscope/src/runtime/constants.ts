@@ -9,7 +9,7 @@ export const PIN_ATTR = 'data-pin';
 /** Attribute marking the currently selected pinned element. */
 export const SELECTED_ATTR = 'data-pin-selected';
 
-/** Reserved z-index range — see SPEC §12.6 (max 32-bit signed int). */
+/** Reserved z-index range — see SPEC §12 (max 32-bit signed int). */
 export const Z_BADGE = 2147483645;
 export const Z_HOVER = 2147483646;
 export const Z_SELECTED = 2147483647;

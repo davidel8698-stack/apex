@@ -1,4 +1,4 @@
-/** PinScope public API — see SPEC.md §15.5. */
+/** PinScope public API — see SPEC.md §15. */
 
 export { pinscope } from './plugin/index.js';
 export type { PinScopeOptions } from './plugin/index.js';

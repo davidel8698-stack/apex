@@ -121,4 +121,21 @@ describe('Cross-origin iframe overlay (AC-061)', () => {
     document.body.appendChild(plain);
     expect(isIframeLimited(plain)).toBe(false);
   });
+
+  it('AC-061 / NC-12-06 — idempotent under repeated invocation (R-26-01)', () => {
+    const frame = document.createElement('iframe');
+    makeCrossOrigin(frame, 'throw');
+    frame.setAttribute('data-pin', 'e_idem');
+    document.body.appendChild(frame);
+
+    markCrossOriginFrames(document);
+    markCrossOriginFrames(document);
+
+    const overlays = document.querySelectorAll(
+      '[data-pinscope-iframe-overlay]',
+    );
+    expect(overlays.length).toBe(1);
+    expect(frame.hasAttribute('data-pin-iframe')).toBe(true);
+    expect(overlays[0]?.textContent).toContain('e_idem');
+  });
 });
