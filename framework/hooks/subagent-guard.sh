@@ -28,7 +28,14 @@ set -u
 #   0 — clean (no destructive+yes correlation).
 #   2 — blocked (correlation matched).
 
-COMMAND="${1:-}"
+# Phase 8 R-P8-C4: canonical input extraction via shared helper.
+# Closes F-006 (stdin-envelope bypass — auditor axis-13.e discovery).
+# shellcheck source=/dev/null
+if [ -f "$(dirname "$0")/_hook-input.sh" ]; then
+  source "$(dirname "$0")/_hook-input.sh"
+fi
+
+COMMAND=$(apex_hook_input_command "$@" 2>/dev/null || printf '%s' "${1:-}")
 
 if [ -z "$COMMAND" ]; then
   exit 0

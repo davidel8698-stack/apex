@@ -22,7 +22,14 @@ if [ -f "$(dirname "$0")/_audit-probe-marker.sh" ]; then
   source "$(dirname "$0")/_audit-probe-marker.sh"
 fi
 
-COMMAND="${1:-}"
+# Phase 8 R-P8-C1: canonical input extraction via shared helper.
+# Closes F-001 (stdin-envelope bypass — auditor axis-13.e discovery).
+# shellcheck source=/dev/null
+if [ -f "$(dirname "$0")/_hook-input.sh" ]; then
+  source "$(dirname "$0")/_hook-input.sh"
+fi
+
+COMMAND=$(apex_hook_input_command "$@" 2>/dev/null || printf '%s' "${1:-}")
 
 # Campaign C TP-C2 FIRST check — three-factor audit-probe carve-out.
 # If COMMAND begins with `__APEX_AUDIT_PROBE__:<nonce>:<agent_id> ...`

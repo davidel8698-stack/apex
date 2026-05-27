@@ -803,8 +803,50 @@ if [ -f "$HOOKS_DIR/_hook-input.sh" ]; then
   else
     nope "H-G9: filepath extraction failed (got '$HG9_OUT')"
   fi
+
+  # H-G10..H-G14: Wave 1 (R-P8-C1..C5) per-hook helper-sourcing verification.
+  # Verifies each broken Bash-matcher hook now sources _hook-input.sh.
+  # Functional verification of argv_exit == stdin_exit parity is performed
+  # at the end-to-end test layer (see test-fix-plan-emit.sh).
+  for HG_PAIR in "H-G10:destructive-guard.sh" "H-G11:exfil-guard.sh" "H-G12:sequence-guard.sh" "H-G13:subagent-guard.sh" "H-G14:grader-search-guard.sh"; do
+    HG_ID="${HG_PAIR%%:*}"
+    HG_HOOK="${HG_PAIR#*:}"
+    if grep -q "source.*_hook-input.sh" "$HOOKS_DIR/$HG_HOOK" 2>/dev/null; then
+      ok "$HG_ID: $HG_HOOK sources _hook-input.sh"
+    else
+      nope "$HG_ID: $HG_HOOK missing _hook-input.sh source"
+    fi
+  done
+
+  # H-G15: destructive-guard.sh argv+stdin parity probe (Wave 1 functional gate).
+  # Confirms F-001 closure: argv_exit == stdin_exit for matched deny pattern.
+  HG15_ARGV_EXIT=$( bash "$HOOKS_DIR/destructive-guard.sh" "rm -rf /" </dev/null >/dev/null 2>&1; echo $? )
+  HG15_STDIN_EXIT=$( echo '{"tool_input":{"command":"rm -rf /"}}' | bash "$HOOKS_DIR/destructive-guard.sh" >/dev/null 2>&1; echo $? )
+  if [ "$HG15_ARGV_EXIT" = "2" ] && [ "$HG15_STDIN_EXIT" = "2" ]; then
+    ok "H-G15: destructive-guard.sh argv+stdin parity (both exit 2 on 'rm -rf /')"
+  else
+    nope "H-G15: parity broken (argv=$HG15_ARGV_EXIT, stdin=$HG15_STDIN_EXIT)"
+  fi
+
+  # H-G16: subagent-guard.sh argv+stdin parity probe.
+  HG16_ARGV_EXIT=$( bash "$HOOKS_DIR/subagent-guard.sh" "rm -rf / --yes" </dev/null >/dev/null 2>&1; echo $? )
+  HG16_STDIN_EXIT=$( echo '{"tool_input":{"command":"rm -rf / --yes"}}' | bash "$HOOKS_DIR/subagent-guard.sh" >/dev/null 2>&1; echo $? )
+  if [ "$HG16_ARGV_EXIT" = "2" ] && [ "$HG16_STDIN_EXIT" = "2" ]; then
+    ok "H-G16: subagent-guard.sh argv+stdin parity (both exit 2 on 'rm -rf / --yes')"
+  else
+    nope "H-G16: parity broken (argv=$HG16_ARGV_EXIT, stdin=$HG16_STDIN_EXIT)"
+  fi
+
+  # H-G17: grader-search-guard.sh argv+stdin parity probe.
+  HG17_ARGV_EXIT=$( bash "$HOOKS_DIR/grader-search-guard.sh" "find tests -name expected" </dev/null >/dev/null 2>&1; echo $? )
+  HG17_STDIN_EXIT=$( echo '{"tool_input":{"command":"find tests -name expected"}}' | bash "$HOOKS_DIR/grader-search-guard.sh" >/dev/null 2>&1; echo $? )
+  if [ "$HG17_ARGV_EXIT" = "2" ] && [ "$HG17_STDIN_EXIT" = "2" ]; then
+    ok "H-G17: grader-search-guard.sh argv+stdin parity (both exit 2 on grader search)"
+  else
+    nope "H-G17: parity broken (argv=$HG17_ARGV_EXIT, stdin=$HG17_STDIN_EXIT)"
+  fi
 else
-  skip "H-G0..H-G9: _hook-input.sh helper not installed (R-P8-A not landed)"
+  skip "H-G0..H-G17: _hook-input.sh helper not installed (R-P8-A not landed)"
 fi
 
 # ----- summary ------------------------------------------------------------
