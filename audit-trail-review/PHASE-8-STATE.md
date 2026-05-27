@@ -1,12 +1,12 @@
 # Phase 8 — F-001 Family Closure: Progress State
 
-**Generated:** 2026-05-27 (end of session 1).
-**Status:** Wave 0 + Wave 1 closed PASS (7/19 R-items complete). Wave 2-4 + verification pending.
+**Generated:** 2026-05-27 (end of session 2).
+**Status:** Wave 0 + Wave 1 + Wave 2 + Wave 3 closed PASS (**17/19 R-items complete**). Wave 4 (R-P8-D + R-P8-E) + verification gate pending.
 **Master plan:** `~/.claude/plans/calm-cuddling-corbato.md`.
 
 ---
 
-## §1. Closed R-items (7/19)
+## §1. Closed R-items (17/19)
 
 | Wave | R-item | Closes | Commit | Critic verdict |
 |------|--------|--------|--------|----------------|
@@ -17,20 +17,59 @@
 | 1 | R-P8-C3 | `sequence-guard.sh` → helper | `626b35fe` | (combined) |
 | 1 | R-P8-C4 | `subagent-guard.sh` → helper | `626b35fe` | (combined) |
 | 1 | R-P8-C5 | `grader-search-guard.sh` → helper | `626b35fe` | (combined) |
+| 2 | R-P8-C6 | `path-guard.sh` → helper (F-003) | `918366c9` | Wave 2 combined G5 PASS (0/3-NIT/HIGH) |
+| 2 | R-P8-C7 | `quarantine-guard.sh` → helper raw+multi-shape (F-004) | `918366c9` | (combined) |
+| 2 | R-P8-C8 | `post-write.sh` → helper (F-008) | `918366c9` | (combined) |
+| 2 | R-P8-C9 | `ast-kb-check.sh` → helper (F-009) | `918366c9` | (combined) |
+| 2 | R-P8-C10 | `schema-drift.sh` → helper (F-010) | `918366c9` | (combined) |
+| 3 | R-P8-C11 | `owner-guard.sh` → helper (SSoT consolidation) | `23f3f021` | Wave 3 combined G5 PASS (0/3-NIT/HIGH) |
+| 3 | R-P8-C12 | `ci-scan.sh` → helper-inside-no-argv (3-shape routing preserved) | `23f3f021` | (combined) |
+| 3 | R-P8-C13 | `test-deletion-guard.sh` → helper raw (multi-field) | `23f3f021` | (combined) |
+| 3 | R-P8-C14 | `pre-task-snapshot.sh` → helper-with-no-args (TASK_ID independent) | `23f3f021` | (combined) |
+| 3 | R-P8-C15 | `workflow-guard.sh` → helper (canonical) | `23f3f021` | (combined) |
 
-**Test suites (current state after Wave 1):**
-- `test-audit-trail-layer.sh`: **73/73 PASS** (55 baseline + 8 H-D + 4 H-E + 3 H-F + 18 H-G = 88? actually 55 baseline + 18 new H-G = 73 total — see layer test output)
+**Test suites (current state after Wave 3):**
+- `test-audit-trail-layer.sh`: **86/86 PASS** (81 baseline after W2 + 5 new H-G26..H-G30 sources-helper rows)
 - `test-fix-plan-emit.sh`: 37/37 PASS
-- `test-hooks-security.sh`: 18/18 PASS
-- `test-hooks-blocking.sh`: 12/13 PASS (1 pre-existing skip — not a regression)
+- `test-owner-guard.sh`: 18/18 PASS (regression baseline confirmed identical)
+- `test-hooks-security.sh`: argv-style probes 8/8 inline (S-4/5/6/7/8/8b/9/10 covering path-guard + workflow-guard)
+- `test-hooks-blocking.sh`: argv 4/4 inline (A-3a + R-020a/b/c)
 
-**F-001 closure empirical evidence:** `echo '{"tool_input":{"command":"rm -rf /"}}' | bash framework/hooks/destructive-guard.sh` now exits 2 + block message. Pre-Phase-8 it exited 0. The methodology gap is closed for 5 of 15 affected hooks.
+**F-001 closure empirical evidence:** all 10 originally-broken hooks now exit 2 on stdin envelope deny payload (was 0 pre-Phase-8). Wave 1 + Wave 2 covered the 10 broken hooks; Wave 3 consolidated the 5 grandfathered hooks (owner/ci-scan/test-deletion/pre-task-snapshot/workflow) into the same SSoT helper. **15 of 15 affected hooks now share the canonical input extractor.**
 
 ---
 
-## §2. Pending R-items (12/19)
+## §2. Pending R-items (2/19) — Wave 4 + verification
 
-### Wave 2 — R-P8-C6..C10 (5 R-items, parallel within wave)
+### Wave 4 — R-P8-D + R-P8-E (parallel)
+
+- **R-P8-D** (methodology evolution): round-checker clause (x) + framework-auditor axis-13.e `helper_sourced` field + 3 H-G fixtures (round-checker-h-g-{1,2,3}.jsonl) for layer test rows H-G31..H-G33.
+- **R-P8-E** (CI lint enforcement): `framework/scripts/lint-hook-input.sh` + `framework/docs/SECURITY-RUNTIME.md` pre-commit hook installation doc + 1 H-G smoke test (H-G34) against `framework/test-fixtures/lint-broken-hook.sh`.
+
+Both R-items are parallel-safe (independent files). Each needs full G0→G5 gates per the binding standard. See master plan `~/.claude/plans/calm-cuddling-corbato.md` § "R-P8-D" and § "R-P8-E" for exact line-references and acceptance criteria.
+
+### Verification gate (10 checks per master plan §7)
+
+After Wave 4 lands, the closure protocol is:
+1. `bash framework/tests/run-all.sh` — 0 failures across full suite; +9 H-G PASSes vs current.
+2. Manual F-001 reproduction probe across 10 originally-broken hooks AND 5 grandfathered hooks — argv+stdin parity assertions.
+3. `bash framework/tests/test-audit-trail-layer.sh` standalone — target ~95/95 PASS (86 current + R-P8-D 3 + R-P8-E 1 + any helper-row touches).
+4. `bash framework/scripts/lint-hook-input.sh` against live `framework/hooks/` → exit 0 (all hooks compliant).
+5. `bash framework/scripts/lint-hook-input.sh` against synthetic broken-hook fixture → exit 1 (lint correctly detects regression).
+6. Round-checker dry-run against synthetic transcript with all 15 hooks helper-sourced → CLOSED verdict.
+7. Round-checker dry-run against synthetic transcript with 1 hook missing helper-source → P0 + CONTINUE-TO-NEXT-ROUND verdict.
+8. Spec discovery: `Grep "input-extraction" apex-spec.md` returns the new section.
+9. NO bash hook in `framework/hooks/` (excluding `_*.sh`) contains `${1:-}` without `source.*_hook-input.sh` — manual sweep + CI lint enforces going forward.
+10. C5-CRITIC-equivalent clean-room adversarial pass over the Phase 8 closure narrative (new file `audit-trail-review/PHASE-8-CRITIC-FINAL.md`).
+
+On 10/10 PASS:
+- Atomic commit + `git tag phase-8-stdin-envelope-passed -a` on main.
+- Update memory files (project_phase_8.md + MEMORY.md index).
+- Update `framework/docs/AUDIT-TRAIL-STANDARD.md` §7.5 with closure record.
+
+---
+
+## §2-historical (archived). Wave 2 — R-P8-C6..C10 closed
 
 Broken Write/Edit + PostToolUse hooks. Each reads `${1:-}` for `FILEPATH`/`INPUT`/`FILE` rather than `COMMAND`. Migration uses `apex_hook_input_filepath` (instead of `apex_hook_input_command` used in Wave 1).
 
@@ -134,7 +173,7 @@ Alternative: set `APEX_ACTIVE_AGENT=test-architect` before the commit (hook bypa
 
 Suggested opening for next session:
 
-> Read `audit-trail-review/PHASE-8-STATE.md`. Phase 8 has 7/19 R-items closed PASS (Wave 0 + Wave 1). Continue from Wave 2: R-P8-C6..C10 (5 broken Write/Edit + PostToolUse hooks). The migration pattern is established in §3 of state file. Per-hook G0→G5 gates. Watch out for the commit-message safety note in §4 when committing. Target: complete Wave 2 + Wave 3 in next session if budget allows; Wave 4 + verification in a subsequent session.
+> Read `audit-trail-review/PHASE-8-STATE.md`. Phase 8 has **17/19 R-items closed PASS** (Wave 0 + Wave 1 + Wave 2 + Wave 3, all C-items closed). Continue from **Wave 4 (R-P8-D + R-P8-E)** — the methodology evolution + CI lint enforcement R-items. They are parallel-safe (independent files). Each follows the binding G0→G5 standard. After Wave 4 lands, run the 10-check verification gate per §2 (verification gate), then commit + tag `phase-8-stdin-envelope-passed`. The migration pattern is established in §3; the commit-message safety note in §4 still applies.
 
 ---
 
