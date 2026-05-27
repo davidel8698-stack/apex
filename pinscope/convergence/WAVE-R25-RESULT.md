@@ -171,9 +171,33 @@ that turns the new test RED."
 - **No source edits.** R-23-03 added 4 AC-001-tagged tests; AC-091 covers the same plugin-shape territory.
 - **Matrix-bump target (W7):** `min_tests: 1 → 4` (alignment, not strengthening).
 
-## W4 — R-25-13..14 — Category B integration
+## W4 — R-25-13..14 — Category B integration (AC-024/025)
 
-(Pending — to be filled on close.)
+**Status:** ✅ closed
+**Files touched:**
+- `pinscope/tests/unit/runtime/pinscope.test.tsx` (+~85 lines, +3 tests)
+
+**Test results:** 3 new W4 tests pass (18 in file; full suite 380/380 green; tsc clean).
+
+### R-25-13 — AC-024 VoidBadges integration
+
+- **AC:** AC-024 P1 P3 — VoidBadges mounts overlay `[data-void-badge]` for void elements with `data-pin`.
+- **Existing coverage:** `overlays.test.tsx:199` (1 isolation case, AC-024 tagged). `pinscope.test.tsx:34` R-20-01 (1 integration case, NOT AC-024 tagged).
+- **Tests added (2, both AC-024 tagged):**
+  1. Three different VOID_TAGS (img + input + hr) all get `[data-void-badge]` overlays with exact count=3 + set-equality on pin ids — kills any tag-filter narrowing (e.g., dropping INPUT or HR from VOID_TAGS).
+  2. Colocated void (img) + non-void (div) sanity — the img gets an overlay, the div does NOT — kills any "all [data-pin] elements get overlays" mutation that drops the VOID_TAGS filter.
+- **Mutation gate:** mutate `VOID_TAGS` in `VoidBadges.tsx:8` to `new Set(['IMG'])` only → test 1 FAILS (count 1 ≠ 3). Mutate `collect()` to skip the `VOID_TAGS.has(el.tagName)` check → test 2 FAILS (div gets an overlay).
+- **DISCOVERY (deferred to FIX wave / future R-item NF-25-01):** `VoidBadges` uses `useEffect(..., [])` and does NOT re-collect on observer events. RuntimePinObserver assigns `e_r{N}` to post-mount void elements correctly, but the overlay never appears for them. The initial attempt at an integration test for the post-mount path failed (real implementation gap). This is a PRODUCTION fix, out of R25 test-rigor scope.
+- **Matrix-bump target (W7):** `min_tests: 1 → 2`.
+
+### R-25-14 — AC-025 RuntimePinObserver integration (nested subtree)
+
+- **AC:** AC-025 P1 P3 — RuntimePinObserver assigns `e_r{N}` to runtime-added elements.
+- **Existing coverage:** `edge-cases.test.ts:12-41` (3 isolation cases, AC-025 tagged). `pinscope.test.tsx:53` R-20-02 (1 integration case, single-element, NOT AC-025 tagged).
+- **Tests added (1, AC-025 tagged):**
+  - Nested subtree (`section > div > button`) inserted AFTER `<PinScope/>` mount: all 3 levels receive distinct `e_r{N}` pins (size of Set=3). Kills any tree-walk-only-shallow mutation in the observer's mutation handler, and any "reuse last id" mutation that would collide ids within one batch.
+- **Mutation gate:** mutate the observer's mutation handler to assign only the root insertion node (skip the descendant walk) → test FAILS (parent and child stay null). Mutate the id-counter to reuse the last id → set size collapses to 1, test FAILS.
+- **Matrix-bump target (W7):** `min_tests: 1 → 2`.
 
 ## W5 — R-25-15..16 — Category C polish
 

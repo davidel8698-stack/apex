@@ -49,6 +49,124 @@ describe('R-20-01 — VoidBadges mount', () => {
   });
 });
 
+/**
+ * R-25-13 — AC-024 integration coverage: multi-tag overlay correctness
+ * through the live `<PinScope/>` mount.
+ *
+ * The isolation test in `overlays.test.tsx:199` proves `<VoidBadges/>` in
+ * isolation; the existing R-20-01 above proves a single-img pre-mount
+ * case. This integration case strengthens the AC by covering MULTIPLE
+ * VOID_TAGS (img + input + hr) in the same mount AND asserting the badge
+ * count matches the pinned-void-element count — kills any tag-filter
+ * narrowing mutation in `VOID_TAGS` (e.g. only `IMG` survives).
+ *
+ * DEFERRED to FIX-wave (NEW FINDING NF-25-01 candidate): post-mount void
+ * element discovery — `VoidBadges` uses `useEffect(..., [])` and does not
+ * re-collect on observer events. RuntimePinObserver assigns `e_r{N}` to
+ * post-mount void elements correctly, but the overlay never appears for
+ * them. Not addressed in R25 (production fix, not a test-rigor sweep).
+ */
+describe('R-25-13 / AC-024 — VoidBadges integration with <PinScope/> for multiple void tags', () => {
+  it('AC-024 — three different void-tag elements with data-pin each get one [data-void-badge] overlay', () => {
+    // Three different void tags from VOID_TAGS — kills mutants that narrow
+    // the set (e.g., remove INPUT or HR) by failing the count assertion.
+    const img = document.createElement('img');
+    img.setAttribute('data-pin', 'e_v1');
+    const input = document.createElement('input');
+    input.setAttribute('data-pin', 'e_v2');
+    const hr = document.createElement('hr');
+    hr.setAttribute('data-pin', 'e_v3');
+    document.body.append(img, input, hr);
+
+    render(<PinScope />);
+    const hud = document.querySelector('[data-pinscope-ui="root"]');
+    expect(hud).not.toBeNull();
+
+    // One overlay node per pinned void element — exact count, not "≥1".
+    const badges = hud?.querySelectorAll('[data-void-badge]') ?? [];
+    expect(badges.length).toBe(3);
+
+    // Each pin id appears exactly once in the overlay set — kills any
+    // de-duplication or key-collision mutation.
+    const badgeIds = new Set(
+      Array.from(badges).map((b) => b.getAttribute('data-void-badge')),
+    );
+    expect(badgeIds).toEqual(new Set(['e_v1', 'e_v2', 'e_v3']));
+
+    // None of the badge ids match a non-void tag — the set-equality assert
+    // above already proves no extras, and the count=3 assert already kills
+    // any "treat all [data-pin] as void" mutation in VoidBadges.collect.
+  });
+
+  it('AC-024 — a non-void tag (<div data-pin>) does NOT receive an overlay even when colocated with void tags (sanity)', () => {
+    const img = document.createElement('img');
+    img.setAttribute('data-pin', 'e_v9');
+    const div = document.createElement('div');
+    div.setAttribute('data-pin', 'e_keep');
+    document.body.append(img, div);
+
+    render(<PinScope />);
+    const hud = document.querySelector('[data-pinscope-ui="root"]');
+    expect(hud).not.toBeNull();
+
+    // The void <img> gets a badge.
+    expect(hud?.querySelector('[data-void-badge="e_v9"]')).not.toBeNull();
+    // The non-void <div> does NOT get a badge — kills any mutation that
+    // drops the VOID_TAGS filter in `VoidBadges.collect`.
+    expect(hud?.querySelector('[data-void-badge="e_keep"]')).toBeNull();
+  });
+});
+
+/**
+ * R-25-14 — AC-025 integration coverage: nested subtree assignment through
+ * the live `<PinScope/>` mount + RuntimePinObserver pipeline.
+ *
+ * The isolation test in `edge-cases.test.ts:12-41` proves the observer in
+ * isolation; the existing R-20-02 below proves a single-element post-mount
+ * case. This new integration case covers a NESTED subtree: the observer
+ * must walk into the inserted subtree and assign e_r{N} ids to multiple
+ * levels, not just the root insertion node. Catches any walk-only-shallow
+ * regression in the observer's mutation handler.
+ */
+describe('R-25-14 / AC-025 — RuntimePinObserver assigns nested-subtree e_r ids', () => {
+  it('AC-025 — a nested subtree inserted after mount has e_r{N} assigned to every level', async () => {
+    const { unmount } = render(<PinScope />);
+
+    // Let the observer become live.
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    // Build a 3-level subtree completely off-DOM, then insert the root.
+    const grandparent = document.createElement('section');
+    const parent = document.createElement('div');
+    const child = document.createElement('button');
+    parent.appendChild(child);
+    grandparent.appendChild(parent);
+    document.body.appendChild(grandparent);
+
+    // Allow the MutationObserver to deliver + the observer to walk.
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    expect(grandparent.getAttribute('data-pin')).toMatch(/^e_r\d+$/);
+    expect(parent.getAttribute('data-pin')).toMatch(/^e_r\d+$/);
+    expect(child.getAttribute('data-pin')).toMatch(/^e_r\d+$/);
+
+    // The three assigned ids are distinct — no aliasing within a single
+    // mutation batch (kills any "reuse last id" mutation in the observer).
+    const ids = new Set([
+      grandparent.getAttribute('data-pin'),
+      parent.getAttribute('data-pin'),
+      child.getAttribute('data-pin'),
+    ]);
+    expect(ids.size).toBe(3);
+
+    unmount();
+  });
+});
+
 // R-20-02 DoD — RuntimePinObserver lifecycle
 describe('R-20-02 — RuntimePinObserver lifecycle', () => {
   it('assigns e_r{N} runtime ids to elements added after mount, and disconnects on unmount', async () => {
