@@ -16,8 +16,11 @@ function run(jsx: string, map: PinMap = freshMap()) {
   });
 }
 
-describe('AST transformer — fixture cases', () => {
+describe('AST transformer — fixture cases (AC-080)', () => {
   it('provides at least 50 input/output pairs (AC-080)', () => {
+    // SPEC §A.13 AC-080 promises a minimum-50 fixture corpus. The actual
+    // current corpus is 56 cases — the W7 matrix bump locks `min_tests`
+    // at the current floor so any drop below the actual count surfaces.
     expect(transformerCases.length).toBeGreaterThanOrEqual(50);
   });
 

@@ -4,74 +4,795 @@
   "generated_from_hash": "sha256:82a942188fd264f9a8cbfa058ed1e6aa7c7ff22342110a3b13e706d691348810",
   "note": "Static verification matrix. verify.kind: vitest-tag | grep | build-grep | command | manual. env: node | browser | apex-install. vitest commands run in pinscope/; grep paths are repo-root-relative.",
   "criteria": [
-    { "id": "AC-001", "phase": "P1", "severity": "P0", "env": "node", "verify": { "kind": "vitest-tag", "tag": "AC-001", "min_tests": 1 } },
-    { "id": "AC-002", "phase": "P1", "severity": "P0", "env": "node", "verify": { "kind": "vitest-tag", "tag": "AC-002", "min_tests": 1 } },
-    { "id": "AC-003", "phase": "P1", "severity": "P2", "env": "node", "verify": { "kind": "vitest-tag", "tag": "AC-003", "min_tests": 1 } },
-    { "id": "AC-004", "phase": "P1", "severity": "P1", "env": "node", "verify": { "kind": "vitest-tag", "tag": "AC-004", "min_tests": 1 } },
-    { "id": "AC-005", "phase": "P1", "severity": "P0", "env": "node", "verify": { "kind": "vitest-tag", "tag": "AC-005", "min_tests": 1 } },
-    { "id": "AC-006", "phase": "P1", "severity": "P1", "env": "node", "verify": { "kind": "vitest-tag", "tag": "AC-006", "min_tests": 1 } },
-    { "id": "AC-007", "phase": "P1", "severity": "P1", "env": "node", "verify": { "kind": "vitest-tag", "tag": "AC-007", "min_tests": 1 } },
-    { "id": "AC-008", "phase": "P1", "severity": "P2", "env": "node", "verify": { "kind": "vitest-tag", "tag": "AC-008", "min_tests": 1 } },
-    { "id": "AC-009", "phase": "P1", "severity": "P0", "env": "node", "verify": { "kind": "vitest-tag", "tag": "AC-009", "min_tests": 1 } },
-    { "id": "AC-010", "phase": "P1", "severity": "P0", "env": "node", "verify": { "kind": "build-grep", "build_cmd": "cd examples/vite-react && npx vite build", "build_cwd": "pinscope", "grep": { "pattern": "data-pin|PinScope|pinscope", "path": "pinscope/examples/vite-react/dist", "expect_count": 0 } } },
-    { "id": "AC-011", "phase": "P1", "severity": "P2", "env": "node", "verify": { "kind": "vitest-tag", "tag": "AC-011", "min_tests": 1 } },
-    { "id": "AC-012", "phase": "P1", "severity": "P2", "env": "node", "verify": { "kind": "vitest-tag", "tag": "AC-012", "min_tests": 1 } },
-    { "id": "AC-013", "phase": "P1", "severity": "P1", "env": "node", "verify": { "kind": "vitest-tag", "tag": "AC-013", "min_tests": 1 } },
-    { "id": "AC-020", "phase": "P1", "severity": "P0", "env": "node", "verify": { "kind": "vitest-tag", "tag": "AC-020", "min_tests": 1 } },
-    { "id": "AC-021", "phase": "P1", "severity": "P1", "env": "node", "verify": { "kind": "vitest-tag", "tag": "AC-021", "min_tests": 1 } },
-    { "id": "AC-022", "phase": "P1", "severity": "P1", "env": "node", "verify": { "kind": "vitest-tag", "tag": "AC-022", "min_tests": 1 } },
-    { "id": "AC-023", "phase": "P1", "severity": "P0", "env": "browser", "verify": { "kind": "vitest-tag", "tag": "AC-023", "min_tests": 1 } },
-    { "id": "AC-024", "phase": "P4", "severity": "P2", "env": "node", "verify": { "kind": "vitest-tag", "tag": "AC-024", "min_tests": 1 } },
-    { "id": "AC-025", "phase": "P4", "severity": "P2", "env": "node", "verify": { "kind": "vitest-tag", "tag": "AC-025", "min_tests": 1 } },
-    { "id": "AC-026", "phase": "P1", "severity": "P1", "env": "node", "verify": { "kind": "vitest-tag", "tag": "AC-026", "min_tests": 1 } },
-    { "id": "AC-027", "phase": "P1", "severity": "P1", "env": "node", "verify": { "kind": "vitest-tag", "tag": "AC-027", "min_tests": 1 } },
-    { "id": "AC-030", "phase": "P1", "severity": "P1", "env": "browser", "verify": { "kind": "vitest-tag", "tag": "AC-030", "min_tests": 1 } },
-    { "id": "AC-031", "phase": "P2", "severity": "P2", "env": "node", "verify": { "kind": "vitest-tag", "tag": "AC-031", "min_tests": 1 } },
-    { "id": "AC-032", "phase": "P2", "severity": "P2", "env": "node", "verify": { "kind": "vitest-tag", "tag": "AC-032", "min_tests": 1 } },
-    { "id": "AC-033", "phase": "P2", "severity": "P3", "env": "node", "verify": { "kind": "vitest-tag", "tag": "AC-033", "min_tests": 1 } },
-    { "id": "AC-034", "phase": "P2", "severity": "P1", "env": "node", "verify": { "kind": "vitest-tag", "tag": "AC-034", "min_tests": 1 } },
-    { "id": "AC-035", "phase": "P2", "severity": "P2", "env": "node", "verify": { "kind": "vitest-tag", "tag": "AC-035", "min_tests": 1 } },
-    { "id": "AC-036", "phase": "P2", "severity": "P1", "env": "node", "verify": { "kind": "vitest-tag", "tag": "AC-036", "min_tests": 1 } },
-    { "id": "AC-037", "phase": "P2", "severity": "P2", "env": "node", "verify": { "kind": "vitest-tag", "tag": "AC-037", "min_tests": 1 } },
-    { "id": "AC-038", "phase": "P3", "severity": "P1", "env": "node", "verify": { "kind": "vitest-tag", "tag": "AC-038", "min_tests": 1 } },
-    { "id": "AC-039", "phase": "P4", "severity": "P2", "env": "node", "verify": { "kind": "vitest-tag", "tag": "AC-039", "min_tests": 1 } },
-    { "id": "AC-040", "phase": "P2", "severity": "P2", "env": "node", "verify": { "kind": "vitest-tag", "tag": "AC-040", "min_tests": 1 } },
-    { "id": "AC-041", "phase": "P2", "severity": "P1", "env": "node", "verify": { "kind": "vitest-tag", "tag": "AC-041", "min_tests": 1 } },
-    { "id": "AC-042", "phase": "P4", "severity": "P2", "env": "node", "verify": { "kind": "vitest-tag", "tag": "AC-042", "min_tests": 1 } },
-    { "id": "AC-043", "phase": "P2", "severity": "P2", "env": "node", "verify": { "kind": "vitest-tag", "tag": "AC-043", "min_tests": 1 } },
-    { "id": "AC-050", "phase": "P3", "severity": "P0", "env": "node", "verify": { "kind": "vitest-tag", "tag": "AC-050", "min_tests": 1 } },
-    { "id": "AC-051", "phase": "P3", "severity": "P1", "env": "node", "verify": { "kind": "vitest-tag", "tag": "AC-051", "min_tests": 1 } },
-    { "id": "AC-052", "phase": "P3", "severity": "P0", "env": "node", "verify": { "kind": "vitest-tag", "tag": "AC-052", "min_tests": 1 } },
-    { "id": "AC-053", "phase": "P3", "severity": "P1", "env": "node", "verify": { "kind": "vitest-tag", "tag": "AC-053", "min_tests": 1 } },
-    { "id": "AC-054", "phase": "P3", "severity": "P2", "env": "node", "verify": { "kind": "vitest-tag", "tag": "AC-054", "min_tests": 1 } },
-    { "id": "AC-060", "phase": "P4", "severity": "P2", "env": "node", "verify": { "kind": "vitest-tag", "tag": "AC-060", "min_tests": 1 } },
-    { "id": "AC-061", "phase": "P4", "severity": "P3", "env": "browser", "verify": { "kind": "manual", "note": "cross-origin iframe — needs two real origins" } },
-    { "id": "AC-062", "phase": "P4", "severity": "P3", "env": "node", "verify": { "kind": "vitest-tag", "tag": "AC-062", "min_tests": 1 } },
-    { "id": "AC-063", "phase": "P4", "severity": "P3", "env": "browser", "verify": { "kind": "manual", "note": "@media print rendering — needs a browser print engine" } },
-    { "id": "AC-064", "phase": "P4", "severity": "P2", "env": "node", "verify": { "kind": "vitest-tag", "tag": "AC-064", "min_tests": 1 } },
-    { "id": "AC-065", "phase": "P4", "severity": "P2", "env": "node", "verify": { "kind": "vitest-tag", "tag": "AC-065", "min_tests": 1 } },
-    { "id": "AC-070", "phase": "P1", "severity": "P1", "env": "node", "verify": { "kind": "vitest-tag", "tag": "AC-070", "min_tests": 1 } },
-    { "id": "AC-071", "phase": "P1", "severity": "P0", "env": "node", "verify": { "kind": "vitest-tag", "tag": "AC-071", "min_tests": 1 } },
-    { "id": "AC-072", "phase": "P3", "severity": "P1", "env": "node", "verify": { "kind": "vitest-tag", "tag": "AC-072", "min_tests": 1 } },
-    { "id": "AC-073", "phase": "P1", "severity": "P0", "env": "node", "verify": { "kind": "command", "cmd": "cd pinscope && npm run size", "expect_exit": 0 } },
-    { "id": "AC-074", "phase": "P1", "severity": "P0", "env": "node", "verify": { "kind": "build-grep", "build_cmd": "cd examples/vite-react && npx vite build", "build_cwd": "pinscope", "grep": { "pattern": "data-pin|PinScope|pinscope", "path": "pinscope/examples/vite-react/dist", "expect_count": 0 } } },
-    { "id": "AC-075", "phase": "P4", "severity": "P2", "env": "node", "verify": { "kind": "vitest-tag", "tag": "AC-075", "min_tests": 1 } },
-    { "id": "AC-076", "phase": "P4", "severity": "P2", "env": "node", "verify": { "kind": "vitest-tag", "tag": "AC-076", "min_tests": 1 } },
-    { "id": "AC-080", "phase": "P1", "severity": "P1", "env": "node", "verify": { "kind": "vitest-tag", "tag": "AC-080", "min_tests": 1 } },
-    { "id": "AC-081", "phase": "P3", "severity": "P1", "env": "node", "verify": { "kind": "vitest-tag", "tag": "AC-081", "min_tests": 1 } },
-    { "id": "AC-082", "phase": "P2", "severity": "P1", "env": "browser", "verify": { "kind": "manual", "note": "Playwright integration suite — browser binary unavailable" } },
-    { "id": "AC-083", "phase": "P4", "severity": "P3", "env": "browser", "verify": { "kind": "manual", "note": "visual-regression screenshots — needs a browser" } },
-    { "id": "AC-084", "phase": "P1", "severity": "P2", "env": "node", "verify": { "kind": "command", "cmd": "cd pinscope && npm run typecheck", "expect_exit": 0 } },
-    { "id": "AC-090", "phase": "P3", "severity": "P1", "env": "node", "verify": { "kind": "vitest-tag", "tag": "AC-090", "min_tests": 1 } },
-    { "id": "AC-091", "phase": "P1", "severity": "P1", "env": "node", "verify": { "kind": "vitest-tag", "tag": "AC-091", "min_tests": 1 } },
-    { "id": "AC-092", "phase": "P4", "severity": "P2", "env": "node", "verify": { "kind": "vitest-tag", "tag": "AC-092", "min_tests": 1 } },
-    { "id": "AC-100", "phase": "P5", "severity": "P1", "env": "node", "verify": { "kind": "grep", "pattern": "^## (Conventions|Anti-Patterns|Common Patterns|Testing|Common Gotchas)", "paths": ["framework/apex-skills/pinscope.md"], "min_count": 5 } },
-    { "id": "AC-101", "phase": "P5", "severity": "P1", "env": "node", "verify": { "kind": "command", "cmd": "bash framework/scripts/sync-to-claude.sh --dry-run | grep -q 'apex-skills/pinscope.md'", "expect_exit": 0 } },
-    { "id": "AC-102", "phase": "P5", "severity": "P1", "env": "node", "verify": { "kind": "grep", "pattern": "PINSCOPE INSTRUMENTATION", "paths": ["framework/commands/apex/ui-phase.md"], "min_count": 1 } },
-    { "id": "AC-103", "phase": "P5", "severity": "P2", "env": "node", "verify": { "kind": "grep", "pattern": "PINSCOPE EVIDENCE", "paths": ["framework/commands/apex/ui-review.md"], "min_count": 1 } },
-    { "id": "AC-104", "phase": "P5", "severity": "P2", "env": "node", "verify": { "kind": "grep", "pattern": "pinscope", "paths": ["framework/agents/architect.md", "framework/modules/apex-frontend/agent.md"], "min_count": 2 } },
-    { "id": "AC-105", "phase": "P5", "severity": "P1", "env": "node", "verify": { "kind": "grep", "pattern": "PinScope", "paths": ["apex-spec.md"], "min_count": 1 } },
-    { "id": "AC-106", "phase": "P5", "severity": "P2", "env": "apex-install", "verify": { "kind": "manual", "note": "/apex:health-check needs APEX synced to ~/.claude/" } },
-    { "id": "AC-107", "phase": "P5", "severity": "P3", "env": "node", "verify": { "kind": "vitest-tag", "tag": "AC-107", "min_tests": 1 } }
-  ]
+    {
+      "id": "AC-001",
+      "phase": "P1",
+      "severity": "P0",
+      "env": "node",
+      "verify": {
+        "kind": "vitest-tag",
+        "tag": "AC-001",
+        "min_tests": 9
+      },
+      "note": "R25 W5 R-25-16 — elevated via parent describe ; min_tests locks current 9 inherited tests."
+    },
+    {
+      "id": "AC-002",
+      "phase": "P1",
+      "severity": "P0",
+      "env": "node",
+      "verify": {
+        "kind": "vitest-tag",
+        "tag": "AC-002",
+        "min_tests": 1
+      }
+    },
+    {
+      "id": "AC-003",
+      "phase": "P1",
+      "severity": "P2",
+      "env": "node",
+      "verify": {
+        "kind": "vitest-tag",
+        "tag": "AC-003",
+        "min_tests": 1
+      }
+    },
+    {
+      "id": "AC-004",
+      "phase": "P1",
+      "severity": "P1",
+      "env": "node",
+      "verify": {
+        "kind": "vitest-tag",
+        "tag": "AC-004",
+        "min_tests": 8
+      },
+      "note": "R25 W2 R-25-05 — +3 opt-out rules tests (excludeTags, data-pin-ignore, sibling sanity); min_tests locks current 8."
+    },
+    {
+      "id": "AC-005",
+      "phase": "P1",
+      "severity": "P0",
+      "env": "node",
+      "verify": {
+        "kind": "vitest-tag",
+        "tag": "AC-005",
+        "min_tests": 1
+      }
+    },
+    {
+      "id": "AC-006",
+      "phase": "P1",
+      "severity": "P1",
+      "env": "node",
+      "verify": {
+        "kind": "vitest-tag",
+        "tag": "AC-006",
+        "min_tests": 7
+      },
+      "note": "R25 W1 R-25-01 — new pin-map-schema spec (3 cases) + inheritance from PinMap describe; min_tests locks current 7."
+    },
+    {
+      "id": "AC-007",
+      "phase": "P1",
+      "severity": "P1",
+      "env": "node",
+      "verify": {
+        "kind": "vitest-tag",
+        "tag": "AC-007",
+        "min_tests": 8
+      },
+      "note": "R25 W2 R-25-06 — +3 monotonicity invariants (reuse, sequential, soft-delete); min_tests locks current 8."
+    },
+    {
+      "id": "AC-008",
+      "phase": "P1",
+      "severity": "P2",
+      "env": "node",
+      "verify": {
+        "kind": "vitest-tag",
+        "tag": "AC-008",
+        "min_tests": 1
+      }
+    },
+    {
+      "id": "AC-009",
+      "phase": "P1",
+      "severity": "P0",
+      "env": "node",
+      "verify": {
+        "kind": "vitest-tag",
+        "tag": "AC-009",
+        "min_tests": 14
+      },
+      "note": "R25 W5 R-25-16 — elevated via parent describe inheritance; min_tests locks current 14."
+    },
+    {
+      "id": "AC-010",
+      "phase": "P1",
+      "severity": "P0",
+      "env": "node",
+      "verify": {
+        "kind": "build-grep",
+        "build_cmd": "cd examples/vite-react && npx vite build",
+        "build_cwd": "pinscope",
+        "grep": {
+          "pattern": "data-pin|PinScope|pinscope",
+          "path": "pinscope/examples/vite-react/dist",
+          "expect_count": 0
+        }
+      }
+    },
+    {
+      "id": "AC-011",
+      "phase": "P1",
+      "severity": "P2",
+      "env": "node",
+      "verify": {
+        "kind": "vitest-tag",
+        "tag": "AC-011",
+        "min_tests": 1
+      }
+    },
+    {
+      "id": "AC-012",
+      "phase": "P1",
+      "severity": "P2",
+      "env": "node",
+      "verify": {
+        "kind": "vitest-tag",
+        "tag": "AC-012",
+        "min_tests": 1
+      }
+    },
+    {
+      "id": "AC-013",
+      "phase": "P1",
+      "severity": "P1",
+      "env": "node",
+      "verify": {
+        "kind": "vitest-tag",
+        "tag": "AC-013",
+        "min_tests": 13
+      },
+      "note": "R25 W5 R-25-16 — elevated via parent describe inheritance; min_tests locks current 13."
+    },
+    {
+      "id": "AC-020",
+      "phase": "P1",
+      "severity": "P0",
+      "env": "node",
+      "verify": {
+        "kind": "vitest-tag",
+        "tag": "AC-020",
+        "min_tests": 1
+      }
+    },
+    {
+      "id": "AC-021",
+      "phase": "P1",
+      "severity": "P1",
+      "env": "node",
+      "verify": {
+        "kind": "vitest-tag",
+        "tag": "AC-021",
+        "min_tests": 5
+      },
+      "note": "R25 W2 R-25-08 — +2 kill-switch tests (enabled=false + NODE_ENV=production); min_tests locks current 5."
+    },
+    {
+      "id": "AC-022",
+      "phase": "P1",
+      "severity": "P1",
+      "env": "node",
+      "verify": {
+        "kind": "vitest-tag",
+        "tag": "AC-022",
+        "min_tests": 5
+      },
+      "note": "R25 W2 R-25-08 — +2 portal-target tests (exact count + escape from local container); min_tests locks current 5."
+    },
+    {
+      "id": "AC-023",
+      "phase": "P1",
+      "severity": "P0",
+      "env": "browser",
+      "verify": {
+        "kind": "vitest-tag",
+        "tag": "AC-023",
+        "min_tests": 1
+      }
+    },
+    {
+      "id": "AC-024",
+      "phase": "P4",
+      "severity": "P2",
+      "env": "node",
+      "verify": {
+        "kind": "vitest-tag",
+        "tag": "AC-024",
+        "min_tests": 6
+      },
+      "note": "R25 W4 R-25-13 — +2 integration tests (multi-tag + non-void sanity); min_tests locks current 6. NF-25-01 candidate: post-mount VoidBadges reactivity gap deferred."
+    },
+    {
+      "id": "AC-025",
+      "phase": "P4",
+      "severity": "P2",
+      "env": "node",
+      "verify": {
+        "kind": "vitest-tag",
+        "tag": "AC-025",
+        "min_tests": 5
+      },
+      "note": "R25 W4 R-25-14 — +1 nested-subtree integration test; min_tests locks current 5."
+    },
+    {
+      "id": "AC-026",
+      "phase": "P1",
+      "severity": "P1",
+      "env": "node",
+      "verify": {
+        "kind": "vitest-tag",
+        "tag": "AC-026",
+        "min_tests": 14
+      },
+      "note": "R25 W1 R-25-02 — +5 hook-level integration tests; min_tests locks current 14."
+    },
+    {
+      "id": "AC-027",
+      "phase": "P1",
+      "severity": "P1",
+      "env": "node",
+      "verify": {
+        "kind": "vitest-tag",
+        "tag": "AC-027",
+        "min_tests": 10
+      },
+      "note": "R25 W1 R-25-03 — +3 HUD-filter tests; min_tests locks current 10."
+    },
+    {
+      "id": "AC-030",
+      "phase": "P1",
+      "severity": "P1",
+      "env": "browser",
+      "verify": {
+        "kind": "vitest-tag",
+        "tag": "AC-030",
+        "min_tests": 1
+      }
+    },
+    {
+      "id": "AC-031",
+      "phase": "P2",
+      "severity": "P2",
+      "env": "node",
+      "verify": {
+        "kind": "vitest-tag",
+        "tag": "AC-031",
+        "min_tests": 1
+      }
+    },
+    {
+      "id": "AC-032",
+      "phase": "P2",
+      "severity": "P2",
+      "env": "node",
+      "verify": {
+        "kind": "vitest-tag",
+        "tag": "AC-032",
+        "min_tests": 1
+      }
+    },
+    {
+      "id": "AC-033",
+      "phase": "P2",
+      "severity": "P3",
+      "env": "node",
+      "verify": {
+        "kind": "vitest-tag",
+        "tag": "AC-033",
+        "min_tests": 1
+      }
+    },
+    {
+      "id": "AC-034",
+      "phase": "P2",
+      "severity": "P1",
+      "env": "node",
+      "verify": {
+        "kind": "vitest-tag",
+        "tag": "AC-034",
+        "min_tests": 1
+      }
+    },
+    {
+      "id": "AC-035",
+      "phase": "P2",
+      "severity": "P2",
+      "env": "node",
+      "verify": {
+        "kind": "vitest-tag",
+        "tag": "AC-035",
+        "min_tests": 1
+      }
+    },
+    {
+      "id": "AC-036",
+      "phase": "P2",
+      "severity": "P1",
+      "env": "node",
+      "verify": {
+        "kind": "vitest-tag",
+        "tag": "AC-036",
+        "min_tests": 1
+      }
+    },
+    {
+      "id": "AC-037",
+      "phase": "P2",
+      "severity": "P2",
+      "env": "node",
+      "verify": {
+        "kind": "vitest-tag",
+        "tag": "AC-037",
+        "min_tests": 1
+      }
+    },
+    {
+      "id": "AC-038",
+      "phase": "P3",
+      "severity": "P1",
+      "env": "node",
+      "verify": {
+        "kind": "vitest-tag",
+        "tag": "AC-038",
+        "min_tests": 1
+      }
+    },
+    {
+      "id": "AC-039",
+      "phase": "P4",
+      "severity": "P2",
+      "env": "node",
+      "verify": {
+        "kind": "vitest-tag",
+        "tag": "AC-039",
+        "min_tests": 1
+      }
+    },
+    {
+      "id": "AC-040",
+      "phase": "P2",
+      "severity": "P2",
+      "env": "node",
+      "verify": {
+        "kind": "vitest-tag",
+        "tag": "AC-040",
+        "min_tests": 1
+      }
+    },
+    {
+      "id": "AC-041",
+      "phase": "P2",
+      "severity": "P1",
+      "env": "node",
+      "verify": {
+        "kind": "vitest-tag",
+        "tag": "AC-041",
+        "min_tests": 5
+      },
+      "note": "R25 W1 R-25-04 — discovery: existing 5 AC-041 tagged tests in selection.test.tsx already cover the strengthen plan; e2e stub redundant (integration spec line 45 covers reload-restore)."
+    },
+    {
+      "id": "AC-042",
+      "phase": "P4",
+      "severity": "P2",
+      "env": "node",
+      "verify": {
+        "kind": "vitest-tag",
+        "tag": "AC-042",
+        "min_tests": 1
+      }
+    },
+    {
+      "id": "AC-043",
+      "phase": "P2",
+      "severity": "P2",
+      "env": "node",
+      "verify": {
+        "kind": "vitest-tag",
+        "tag": "AC-043",
+        "min_tests": 1
+      }
+    },
+    {
+      "id": "AC-050",
+      "phase": "P3",
+      "severity": "P0",
+      "env": "node",
+      "verify": {
+        "kind": "vitest-tag",
+        "tag": "AC-050",
+        "min_tests": 1
+      }
+    },
+    {
+      "id": "AC-051",
+      "phase": "P3",
+      "severity": "P1",
+      "env": "node",
+      "verify": {
+        "kind": "vitest-tag",
+        "tag": "AC-051",
+        "min_tests": 54
+      },
+      "note": "R25 W3 R-25-09 — +21 source-driven + pipeline tests; min_tests locks current 54. R-25-FIX-01 deferred: SPEC §11 promises 32 shortcuts, source has 10 — production fix requires SPEC consultation."
+    },
+    {
+      "id": "AC-052",
+      "phase": "P3",
+      "severity": "P0",
+      "env": "node",
+      "verify": {
+        "kind": "vitest-tag",
+        "tag": "AC-052",
+        "min_tests": 1
+      }
+    },
+    {
+      "id": "AC-053",
+      "phase": "P3",
+      "severity": "P1",
+      "env": "node",
+      "verify": {
+        "kind": "vitest-tag",
+        "tag": "AC-053",
+        "min_tests": 4
+      },
+      "note": "R25 W3 R-25-10 — +2 parse-failure cases (gibberish + missing-value); min_tests locks current 4."
+    },
+    {
+      "id": "AC-054",
+      "phase": "P3",
+      "severity": "P2",
+      "env": "node",
+      "verify": {
+        "kind": "vitest-tag",
+        "tag": "AC-054",
+        "min_tests": 1
+      }
+    },
+    {
+      "id": "AC-060",
+      "phase": "P4",
+      "severity": "P2",
+      "env": "node",
+      "verify": {
+        "kind": "vitest-tag",
+        "tag": "AC-060",
+        "min_tests": 1
+      }
+    },
+    {
+      "id": "AC-061",
+      "phase": "P4",
+      "severity": "P3",
+      "env": "browser",
+      "verify": {
+        "kind": "manual",
+        "note": "cross-origin iframe — needs two real origins"
+      }
+    },
+    {
+      "id": "AC-062",
+      "phase": "P4",
+      "severity": "P3",
+      "env": "node",
+      "verify": {
+        "kind": "vitest-tag",
+        "tag": "AC-062",
+        "min_tests": 1
+      }
+    },
+    {
+      "id": "AC-063",
+      "phase": "P4",
+      "severity": "P3",
+      "env": "browser",
+      "verify": {
+        "kind": "manual",
+        "note": "@media print rendering — needs a browser print engine"
+      }
+    },
+    {
+      "id": "AC-064",
+      "phase": "P4",
+      "severity": "P2",
+      "env": "node",
+      "verify": {
+        "kind": "vitest-tag",
+        "tag": "AC-064",
+        "min_tests": 1
+      }
+    },
+    {
+      "id": "AC-065",
+      "phase": "P4",
+      "severity": "P2",
+      "env": "node",
+      "verify": {
+        "kind": "vitest-tag",
+        "tag": "AC-065",
+        "min_tests": 1
+      }
+    },
+    {
+      "id": "AC-070",
+      "phase": "P1",
+      "severity": "P1",
+      "env": "node",
+      "verify": {
+        "kind": "vitest-tag",
+        "tag": "AC-070",
+        "min_tests": 1
+      },
+      "note": "R25 W7 — NOT bumped (R3 carve-out: median-of-3 is internal rigor; happy-dom perf flake risk forbids multiplying absolute-threshold tests)."
+    },
+    {
+      "id": "AC-071",
+      "phase": "P1",
+      "severity": "P0",
+      "env": "node",
+      "verify": {
+        "kind": "vitest-tag",
+        "tag": "AC-071",
+        "min_tests": 1
+      }
+    },
+    {
+      "id": "AC-072",
+      "phase": "P3",
+      "severity": "P1",
+      "env": "node",
+      "verify": {
+        "kind": "vitest-tag",
+        "tag": "AC-072",
+        "min_tests": 1
+      }
+    },
+    {
+      "id": "AC-073",
+      "phase": "P1",
+      "severity": "P0",
+      "env": "node",
+      "verify": {
+        "kind": "command",
+        "cmd": "cd pinscope && npm run size",
+        "expect_exit": 0
+      }
+    },
+    {
+      "id": "AC-074",
+      "phase": "P1",
+      "severity": "P0",
+      "env": "node",
+      "verify": {
+        "kind": "build-grep",
+        "build_cmd": "cd examples/vite-react && npx vite build",
+        "build_cwd": "pinscope",
+        "grep": {
+          "pattern": "data-pin|PinScope|pinscope",
+          "path": "pinscope/examples/vite-react/dist",
+          "expect_count": 0
+        }
+      }
+    },
+    {
+      "id": "AC-075",
+      "phase": "P4",
+      "severity": "P2",
+      "env": "node",
+      "verify": {
+        "kind": "vitest-tag",
+        "tag": "AC-075",
+        "min_tests": 1
+      }
+    },
+    {
+      "id": "AC-076",
+      "phase": "P4",
+      "severity": "P2",
+      "env": "node",
+      "verify": {
+        "kind": "vitest-tag",
+        "tag": "AC-076",
+        "min_tests": 1
+      }
+    },
+    {
+      "id": "AC-080",
+      "phase": "P1",
+      "severity": "P1",
+      "env": "node",
+      "verify": {
+        "kind": "vitest-tag",
+        "tag": "AC-080",
+        "min_tests": 58
+      },
+      "note": "R25 pre-W7 — added (AC-080) to fixture-cases describe so 56 it.each cases inherit the tag; min_tests locks current 58."
+    },
+    {
+      "id": "AC-081",
+      "phase": "P3",
+      "severity": "P1",
+      "env": "node",
+      "verify": {
+        "kind": "vitest-tag",
+        "tag": "AC-081",
+        "min_tests": 1
+      }
+    },
+    {
+      "id": "AC-082",
+      "phase": "P2",
+      "severity": "P1",
+      "env": "browser",
+      "verify": {
+        "kind": "manual",
+        "note": "Playwright integration suite — browser binary unavailable"
+      }
+    },
+    {
+      "id": "AC-083",
+      "phase": "P4",
+      "severity": "P3",
+      "env": "browser",
+      "verify": {
+        "kind": "manual",
+        "note": "visual-regression screenshots — needs a browser"
+      }
+    },
+    {
+      "id": "AC-084",
+      "phase": "P1",
+      "severity": "P2",
+      "env": "node",
+      "verify": {
+        "kind": "command",
+        "cmd": "cd pinscope && npm run typecheck",
+        "expect_exit": 0
+      }
+    },
+    {
+      "id": "AC-090",
+      "phase": "P3",
+      "severity": "P1",
+      "env": "node",
+      "verify": {
+        "kind": "vitest-tag",
+        "tag": "AC-090",
+        "min_tests": 1
+      }
+    },
+    {
+      "id": "AC-091",
+      "phase": "P1",
+      "severity": "P1",
+      "env": "node",
+      "verify": {
+        "kind": "vitest-tag",
+        "tag": "AC-091",
+        "min_tests": 5
+      },
+      "note": "R25 pre-W7 — +1 documented-surface inventory test (closes accidental private-leakage gap); min_tests locks current 5."
+    },
+    {
+      "id": "AC-092",
+      "phase": "P4",
+      "severity": "P2",
+      "env": "node",
+      "verify": {
+        "kind": "vitest-tag",
+        "tag": "AC-092",
+        "min_tests": 1
+      }
+    },
+    {
+      "id": "AC-100",
+      "phase": "P5",
+      "severity": "P1",
+      "env": "node",
+      "verify": {
+        "kind": "command",
+        "cmd": "node pinscope/scripts/validate-apex-skill.mjs framework/apex-skills/pinscope.md",
+        "expect_exit": 0
+      },
+      "note": "R25 W6 R-25-17 — verify.kind grep → command; new validate-apex-skill.mjs requires 5 section headers + ≥3 content lines per section."
+    },
+    {
+      "id": "AC-101",
+      "phase": "P5",
+      "severity": "P1",
+      "env": "node",
+      "verify": {
+        "kind": "command",
+        "cmd": "bash framework/scripts/sync-to-claude.sh --dry-run | grep -q 'apex-skills/pinscope.md'",
+        "expect_exit": 0
+      }
+    },
+    {
+      "id": "AC-102",
+      "phase": "P5",
+      "severity": "P1",
+      "env": "node",
+      "verify": {
+        "kind": "command",
+        "cmd": "node pinscope/scripts/simulate-apex-ui-phase.mjs",
+        "expect_exit": 0
+      },
+      "note": "R25 W6 R-25-18 — verify.kind grep → command; new simulate-apex-ui-phase.mjs requires plugin import + runtime mount + dev-only contract."
+    },
+    {
+      "id": "AC-103",
+      "phase": "P5",
+      "severity": "P2",
+      "env": "node",
+      "verify": {
+        "kind": "command",
+        "cmd": "node pinscope/scripts/simulate-apex-ui-review.mjs",
+        "expect_exit": 0
+      },
+      "note": "R25 W6 R-25-19 — verify.kind grep → command; new simulate-apex-ui-review.mjs requires Snapshot + pending Operations + per-artifact review value."
+    },
+    {
+      "id": "AC-104",
+      "phase": "P5",
+      "severity": "P2",
+      "env": "node",
+      "verify": {
+        "kind": "command",
+        "cmd": "node pinscope/scripts/validate-architect-mentions.mjs",
+        "expect_exit": 0
+      },
+      "note": "R25 W6 R-25-20a — verify.kind grep → command; new validate-architect-mentions.mjs requires stack-skill / apex-skills/pinscope qualification."
+    },
+    {
+      "id": "AC-105",
+      "phase": "P5",
+      "severity": "P1",
+      "env": "node",
+      "verify": {
+        "kind": "command",
+        "cmd": "node pinscope/scripts/validate-apex-spec-pinscope.mjs",
+        "expect_exit": 0
+      },
+      "note": "R25 W6 R-25-20b — verify.kind grep → command; new validate-apex-spec-pinscope.mjs requires dedicated PinScope section header + scope + source-of-truth + dev-only invariant."
+    },
+    {
+      "id": "AC-106",
+      "phase": "P5",
+      "severity": "P2",
+      "env": "apex-install",
+      "verify": {
+        "kind": "manual",
+        "note": "/apex:health-check needs APEX synced to ~/.claude/"
+      }
+    },
+    {
+      "id": "AC-107",
+      "phase": "P5",
+      "severity": "P3",
+      "env": "node",
+      "verify": {
+        "kind": "vitest-tag",
+        "tag": "AC-107",
+        "min_tests": 1
+      }
+    }
+  ],
+  "last_updated": "2026-05-25T17:30:00Z",
+  "last_round": 25,
+  "last_round_note": "R25 W7 — full F7 matrix-rigor sweep (Option Y); 18 min_tests bumps to actual-count locks, 5 grep→command swaps, 23 traceability notes."
 }
