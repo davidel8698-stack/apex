@@ -15,7 +15,14 @@ if [ -f "$(dirname "$0")/_fix-plan-emit.sh" ]; then
   source "$(dirname "$0")/_fix-plan-emit.sh"
 fi
 
-FILE="${1:-}"
+# Phase 8 R-P8-C10: canonical input extraction via shared helper.
+# Closes F-010 (stdin-envelope bypass — auditor axis-13.e discovery).
+# shellcheck source=/dev/null
+if [ -f "$(dirname "$0")/_hook-input.sh" ]; then
+  source "$(dirname "$0")/_hook-input.sh"
+fi
+
+FILE=$(apex_hook_input_filepath "$@" 2>/dev/null || printf '%s' "${1:-}")
 
 # Only validate known .apex/ JSON state files
 case "$FILE" in

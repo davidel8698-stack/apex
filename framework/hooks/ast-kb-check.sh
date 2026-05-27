@@ -8,7 +8,14 @@ set -u
 # Validates that imported modules exist in the project or installed packages.
 # 19.7% of AI-generated imports reference non-existent modules (USENIX research).
 
-FILE="${1:-}"
+# Phase 8 R-P8-C9: canonical input extraction via shared helper.
+# Closes F-009 (stdin-envelope bypass — auditor axis-13.e discovery).
+# shellcheck source=/dev/null
+if [ -f "$(dirname "$0")/_hook-input.sh" ]; then
+  source "$(dirname "$0")/_hook-input.sh"
+fi
+
+FILE=$(apex_hook_input_filepath "$@" 2>/dev/null || printf '%s' "${1:-}")
 
 # No file provided or file doesn't exist — pass through
 [ -z "$FILE" ] && exit 0

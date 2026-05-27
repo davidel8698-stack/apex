@@ -845,8 +845,59 @@ if [ -f "$HOOKS_DIR/_hook-input.sh" ]; then
   else
     nope "H-G17: parity broken (argv=$HG17_ARGV_EXIT, stdin=$HG17_STDIN_EXIT)"
   fi
+
+  # H-G18..H-G22: Wave 2 (R-P8-C6..C10) per-hook helper-sourcing verification.
+  # Verifies each broken Write/Edit + PostToolUse hook now sources _hook-input.sh.
+  for HG_PAIR in "H-G18:path-guard.sh" "H-G19:quarantine-guard.sh" \
+                 "H-G20:post-write.sh" "H-G21:ast-kb-check.sh" \
+                 "H-G22:schema-drift.sh"; do
+    HG_ID="${HG_PAIR%%:*}"
+    HG_HOOK="${HG_PAIR#*:}"
+    if grep -q "source.*_hook-input.sh" "$HOOKS_DIR/$HG_HOOK" 2>/dev/null; then
+      ok "$HG_ID: $HG_HOOK sources _hook-input.sh"
+    else
+      nope "$HG_ID: $HG_HOOK missing _hook-input.sh source"
+    fi
+  done
+
+  # H-G23: path-guard.sh argv+stdin parity probe (Wave 2 functional gate).
+  # Confirms F-003 closure: argv_exit == stdin_exit for .env.production.
+  HG23_ARGV_EXIT=$( bash "$HOOKS_DIR/path-guard.sh" ".env.production" </dev/null >/dev/null 2>&1; echo $? )
+  HG23_STDIN_EXIT=$( echo '{"tool_input":{"file_path":".env.production"}}' | bash "$HOOKS_DIR/path-guard.sh" >/dev/null 2>&1; echo $? )
+  if [ "$HG23_ARGV_EXIT" = "2" ] && [ "$HG23_STDIN_EXIT" = "2" ]; then
+    ok "H-G23: path-guard.sh argv+stdin parity (both exit 2 on .env.production)"
+  else
+    nope "H-G23: parity broken (argv=$HG23_ARGV_EXIT, stdin=$HG23_STDIN_EXIT)"
+  fi
+
+  # H-G24: post-write.sh argv+stdin parity probe (hardcoded secret detection).
+  # Confirms F-008 closure: argv_exit == stdin_exit on a file with secret.
+  HG24_TMP=$(mktemp)
+  printf 'const password = "abcdef1234567890XYZ"\n' > "$HG24_TMP"
+  HG24_ARGV_EXIT=$( bash "$HOOKS_DIR/post-write.sh" "$HG24_TMP" </dev/null >/dev/null 2>&1; echo $? )
+  HG24_STDIN_EXIT=$( echo "{\"tool_input\":{\"file_path\":\"$HG24_TMP\"}}" | bash "$HOOKS_DIR/post-write.sh" >/dev/null 2>&1; echo $? )
+  rm -f "$HG24_TMP"
+  if [ "$HG24_ARGV_EXIT" = "2" ] && [ "$HG24_STDIN_EXIT" = "2" ]; then
+    ok "H-G24: post-write.sh argv+stdin parity (both exit 2 on hardcoded secret)"
+  else
+    nope "H-G24: parity broken (argv=$HG24_ARGV_EXIT, stdin=$HG24_STDIN_EXIT)"
+  fi
+
+  # H-G25: schema-drift.sh argv+stdin parity probe (invalid JSON STATE.json).
+  # Confirms F-010 closure: argv_exit == stdin_exit on .apex/STATE.json with invalid JSON.
+  HG25_DIR=$(mktemp -d)
+  mkdir -p "$HG25_DIR/.apex"
+  printf 'not-valid-json{\n' > "$HG25_DIR/.apex/STATE.json"
+  HG25_ARGV_EXIT=$( bash "$HOOKS_DIR/schema-drift.sh" "$HG25_DIR/.apex/STATE.json" </dev/null >/dev/null 2>&1; echo $? )
+  HG25_STDIN_EXIT=$( echo "{\"tool_input\":{\"file_path\":\"$HG25_DIR/.apex/STATE.json\"}}" | bash "$HOOKS_DIR/schema-drift.sh" >/dev/null 2>&1; echo $? )
+  rm -rf "$HG25_DIR"
+  if [ "$HG25_ARGV_EXIT" = "2" ] && [ "$HG25_STDIN_EXIT" = "2" ]; then
+    ok "H-G25: schema-drift.sh argv+stdin parity (both exit 2 on invalid JSON)"
+  else
+    nope "H-G25: parity broken (argv=$HG25_ARGV_EXIT, stdin=$HG25_STDIN_EXIT)"
+  fi
 else
-  skip "H-G0..H-G17: _hook-input.sh helper not installed (R-P8-A not landed)"
+  skip "H-G0..H-G25: _hook-input.sh helper not installed (R-P8-A not landed)"
 fi
 
 # ----- summary ------------------------------------------------------------

@@ -24,8 +24,32 @@ if [ "$ACTIVE_AGENT" != "auditor" ]; then
   exit 0
 fi
 
-# Auditor is active — enforce quarantine
-INPUT="${1:-}"
+# Auditor is active — enforce quarantine.
+# Phase 8 R-P8-C7: canonical input extraction via shared helper.
+# Closes F-004 (stdin-envelope bypass — auditor axis-13.e discovery).
+# quarantine-guard is registered for BOTH Read AND Bash matchers, so the
+# envelope may carry either .tool_input.file_path OR .tool_input.command.
+# Strategy: use raw extractor, then either parse JSON envelope (stdin path)
+# or fall back to argv literal (test path) — single string in either case.
+# shellcheck source=/dev/null
+if [ -f "$(dirname "$0")/_hook-input.sh" ]; then
+  source "$(dirname "$0")/_hook-input.sh"
+fi
+
+INPUT=""
+if [ -n "${1:-}" ]; then
+  # Argv-first (legacy test contract preserved verbatim).
+  INPUT="$1"
+elif command -v apex_hook_input_raw >/dev/null 2>&1; then
+  RAW=$(apex_hook_input_raw 2>/dev/null || true)
+  if [ -n "$RAW" ] && command -v jq >/dev/null 2>&1 \
+      && printf '%s' "$RAW" | jq -e . >/dev/null 2>&1; then
+    INPUT=$(printf '%s' "$RAW" \
+      | jq -r '.tool_input.file_path // .tool_input.command // empty' 2>/dev/null)
+  else
+    INPUT="$RAW"
+  fi
+fi
 
 # Allow empty input (shouldn't happen, but safe)
 [ -z "$INPUT" ] && exit 0

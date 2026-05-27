@@ -13,7 +13,14 @@ if [ -f "$(dirname "$0")/_fix-plan-emit.sh" ]; then
   source "$(dirname "$0")/_fix-plan-emit.sh"
 fi
 
-FILEPATH="${1:-}"
+# Phase 8 R-P8-C6: canonical input extraction via shared helper.
+# Closes F-003 (stdin-envelope bypass — auditor axis-13.e discovery).
+# shellcheck source=/dev/null
+if [ -f "$(dirname "$0")/_hook-input.sh" ]; then
+  source "$(dirname "$0")/_hook-input.sh"
+fi
+
+FILEPATH=$(apex_hook_input_filepath "$@" 2>/dev/null || printf '%s' "${1:-}")
 
 block() {
   echo "APEX PATH GUARD: BLOCKED" >&2

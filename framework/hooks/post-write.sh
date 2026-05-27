@@ -8,7 +8,14 @@ if [ -f "$(dirname "$0")/_fix-plan-emit.sh" ]; then
   source "$(dirname "$0")/_fix-plan-emit.sh"
 fi
 
-FILE="${1:-}"
+# Phase 8 R-P8-C8: canonical input extraction via shared helper.
+# Closes F-008 (stdin-envelope bypass — auditor axis-13.e discovery).
+# shellcheck source=/dev/null
+if [ -f "$(dirname "$0")/_hook-input.sh" ]; then
+  source "$(dirname "$0")/_hook-input.sh"
+fi
+
+FILE=$(apex_hook_input_filepath "$@" 2>/dev/null || printf '%s' "${1:-}")
 
 # BLOCKING: secret detection (all source files — not gated on file type)
 if grep -E "(password|secret|token|key|api_key|credential|private_key|bearer)\s*[:=]\s*['\"][a-zA-Z0-9_/+=-]{8,}" "$FILE" 2>/dev/null; then
