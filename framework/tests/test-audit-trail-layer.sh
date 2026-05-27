@@ -720,6 +720,93 @@ else
   skip "H-D0..H-D7 / H-E1..H-E4: mutation-class-probes.json fixture missing (R-AT-C-02 not installed)"
 fi
 
+# ----- H-G Phase-8 R-P8-A: shared input-extraction helper _hook-input.sh --
+# Closes F-001 family (stdin-envelope-bypass) by providing canonical
+# argv→stdin→empty fallback chain. Reference design:
+# audit-trail-review/PHASE-8-R-P8-A-DESIGN-R2.md
+if [ -f "$HOOKS_DIR/_hook-input.sh" ]; then
+  # H-G0: helper file present
+  if [ -f "$HOOKS_DIR/_hook-input.sh" ]; then
+    ok "H-G0: _hook-input.sh present at \$HOOKS_DIR"
+  else
+    nope "H-G0: _hook-input.sh missing"
+  fi
+  # H-G1: sourcing exposes 4 public functions
+  HG1_FN_COUNT=$( (source "$HOOKS_DIR/_hook-input.sh" 2>/dev/null </dev/null
+    for fn in apex_hook_input_command apex_hook_input_filepath apex_hook_input_tool_name apex_hook_input_raw; do
+      if [ "$(type -t "$fn" 2>/dev/null)" = "function" ]; then echo "ok"; fi
+    done) | wc -l | tr -d ' ' )
+  if [ "$HG1_FN_COUNT" = "4" ]; then
+    ok "H-G1: sourcing helper exposes 4 public functions"
+  else
+    nope "H-G1: expected 4 public functions, got $HG1_FN_COUNT"
+  fi
+  # H-G2: helper does NOT execute standalone (no side effects, exit 0)
+  HG2_OUT=$(bash "$HOOKS_DIR/_hook-input.sh" </dev/null 2>/dev/null)
+  HG2_EXIT=$?
+  if [ "$HG2_EXIT" = "0" ] && [ -z "$HG2_OUT" ]; then
+    ok "H-G2: standalone invocation is no-op (exit 0, empty stdout)"
+  else
+    nope "H-G2: standalone invocation has side effects (exit=$HG2_EXIT, out='$HG2_OUT')"
+  fi
+  # H-G3: argv path — apex_hook_input_command "rm -rf /" echoes "rm -rf /"
+  HG3_OUT=$( (source "$HOOKS_DIR/_hook-input.sh"; apex_hook_input_command "rm -rf /") </dev/null 2>/dev/null )
+  if [ "$HG3_OUT" = "rm -rf /" ]; then
+    ok "H-G3: argv path returns argv value"
+  else
+    nope "H-G3: argv path failed (got '$HG3_OUT')"
+  fi
+  # H-G4: empty stdin + no argv → empty
+  HG4_OUT=$( (source "$HOOKS_DIR/_hook-input.sh"; apex_hook_input_command) </dev/null 2>/dev/null )
+  if [ -z "$HG4_OUT" ]; then
+    ok "H-G4: empty/empty input returns empty"
+  else
+    nope "H-G4: expected empty, got '$HG4_OUT'"
+  fi
+  # H-G5: malformed JSON stdin → empty
+  HG5_OUT=$( (source "$HOOKS_DIR/_hook-input.sh"; apex_hook_input_command) <<<'not-json{' 2>/dev/null )
+  if [ -z "$HG5_OUT" ]; then
+    ok "H-G5: malformed JSON returns empty"
+  else
+    nope "H-G5: malformed JSON should return empty, got '$HG5_OUT'"
+  fi
+  # H-G6: stdin path — {"tool_input":{"command":"abc"}} → "abc"
+  HG6_OUT=$( (source "$HOOKS_DIR/_hook-input.sh"; apex_hook_input_command) <<<'{"tool_input":{"command":"abc"}}' 2>/dev/null )
+  if [ "$HG6_OUT" = "abc" ]; then
+    ok "H-G6: stdin path returns extracted .tool_input.command"
+  else
+    nope "H-G6: stdin path failed (got '$HG6_OUT')"
+  fi
+  # H-G7: argv priority when both present
+  HG7_OUT=$( (source "$HOOKS_DIR/_hook-input.sh"; apex_hook_input_command "FROM_ARGV") <<<'{"tool_input":{"command":"FROM_STDIN"}}' 2>/dev/null )
+  if [ "$HG7_OUT" = "FROM_ARGV" ]; then
+    ok "H-G7: argv-priority wins when both argv + stdin present"
+  else
+    nope "H-G7: argv-priority broken (got '$HG7_OUT')"
+  fi
+  # H-G8: multi-field via _raw (the documented pattern for hooks needing
+  # both .tool_name AND .tool_input, e.g., test-deletion-guard)
+  HG8_OUT=$( (source "$HOOKS_DIR/_hook-input.sh"
+    PAYLOAD=$(apex_hook_input_raw)
+    TN=$(echo "$PAYLOAD" | jq -r '.tool_name // empty' 2>/dev/null)
+    CMD=$(echo "$PAYLOAD" | jq -r '.tool_input.command // empty' 2>/dev/null)
+    echo "$TN:$CMD") <<<'{"tool_name":"Bash","tool_input":{"command":"ls"}}' 2>/dev/null )
+  if [ "$HG8_OUT" = "Bash:ls" ]; then
+    ok "H-G8: multi-field via _raw extracts tool_name + tool_input correctly"
+  else
+    nope "H-G8: multi-field _raw pattern failed (got '$HG8_OUT')"
+  fi
+  # H-G9: filepath extraction from stdin envelope
+  HG9_OUT=$( (source "$HOOKS_DIR/_hook-input.sh"; apex_hook_input_filepath) <<<'{"tool_input":{"file_path":"/tmp/x.txt"}}' 2>/dev/null )
+  if [ "$HG9_OUT" = "/tmp/x.txt" ]; then
+    ok "H-G9: apex_hook_input_filepath extracts .tool_input.file_path"
+  else
+    nope "H-G9: filepath extraction failed (got '$HG9_OUT')"
+  fi
+else
+  skip "H-G0..H-G9: _hook-input.sh helper not installed (R-P8-A not landed)"
+fi
+
 # ----- summary ------------------------------------------------------------
 TOTAL=$((LOCAL_PASS + LOCAL_FAIL))
 echo "── $LOCAL_PASS/$TOTAL passed (skipped: $LOCAL_SKIP)"
