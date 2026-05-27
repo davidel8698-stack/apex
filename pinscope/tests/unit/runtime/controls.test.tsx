@@ -301,6 +301,58 @@ describe('CommandBar §8.6 — focus-expand / Tab autocomplete / history (R-15-0
     );
   });
 
+  /**
+   * R-25-10 — AC-053 strengthen: failure-on-parse path appends as local-only.
+   *
+   * SPEC §11/§8.6 — a command that fails to parse must still be recorded
+   * for recall (else ArrowUp loses unparseable user history). The
+   * CommandBar's `isLocalOnlyCommand` wraps `parseCommand` in try/catch
+   * and returns true on throw; the resulting history entry carries
+   * `parsed: null` and `result: 'applied'`. Two cases prove the path:
+   *   1. Pure gibberish that no grammar rule could match.
+   *   2. Almost-valid input (an operator but no value) — still throws.
+   */
+  it('AC-053 — gibberish that fails to parse is appended as local-only (parsed: null, result: applied)', () => {
+    const history = new HistoryManager(new MemoryHistoryStore());
+    const appendSpy = vi.spyOn(history, 'append');
+    const { container } = render(<CommandBar history={history} />);
+    const input = container.querySelector(
+      '[data-pinscope-command]',
+    ) as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'this is not a valid command' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    expect(appendSpy).toHaveBeenCalledTimes(1);
+    const entry = appendSpy.mock.calls[0]?.[0];
+    expect(entry?.raw_input).toBe('this is not a valid command');
+    expect(entry?.parsed).toBe(null);
+    expect(entry?.result).toBe('applied');
+    // The user can recall it with ArrowUp even though it never reached Claude.
+    expect(history.list().map((e) => e.raw_input)).toContain(
+      'this is not a valid command',
+    );
+  });
+
+  it('AC-053 — almost-valid input with missing value still appends as local-only', () => {
+    const history = new HistoryManager(new MemoryHistoryStore());
+    const appendSpy = vi.spyOn(history, 'append');
+    const { container } = render(<CommandBar history={history} />);
+    const input = container.querySelector(
+      '[data-pinscope-command]',
+    ) as HTMLInputElement;
+    // `e_1.bg →` has the pin + property + operator but no value — RE_OPERATION
+    // requires a non-empty value, so parseCommand throws. The catch in
+    // isLocalOnlyCommand makes it local-only.
+    fireEvent.change(input, { target: { value: 'e_1.bg →' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    expect(appendSpy).toHaveBeenCalledTimes(1);
+    const entry = appendSpy.mock.calls[0]?.[0];
+    expect(entry?.raw_input).toBe('e_1.bg →');
+    expect(entry?.parsed).toBe(null);
+    expect(entry?.result).toBe('applied');
+  });
+
   it('navigates the HistoryManager store with ArrowUp', () => {
     // R-18-01 — recall via the CommandBar's own append covers local-only kinds.
     const history = new HistoryManager(new MemoryHistoryStore());
