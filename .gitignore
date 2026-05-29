@@ -16,6 +16,9 @@
 # Claude Code local settings (contains personal machine paths)
 .claude/settings.local.json
 .claude/scheduled_tasks.lock
+.claude/worktrees/
+.claude/jobs/
+~/.claude/security/
 
 # Internal audit artifacts (not for public)
 apex-audit-findings-*.md
