@@ -132,6 +132,30 @@ for cmd_pair in "thread:threads" "plant-seed:seeds" "add-backlog:backlog" "_deba
   assert_contains "$COMMANDS_DIR/${cmd}.md" "mkdir -p .apex/${dir}" "R3-012: ${cmd}.md has defensive mkdir -p .apex/${dir}"
 done
 
+# R-005: no-orphan-hook regression guard
+# Every active hook in $HOOKS_DIR must be either wired in settings.json or
+# classified in HOOK-CLASSIFICATION.md. A hook that is neither is silent dead
+# weight — the spec depends on it but nothing fires it. Catches the gap that
+# Wave 1 surfaced.
+SETTINGS_JSON="$HOME/.claude/settings.json"
+CLASSIFICATION_MD="$(cd "$TEST_DIR/.." && pwd)/HOOK-CLASSIFICATION.md"
+
+if [ -f "$SETTINGS_JSON" ] && [ -f "$CLASSIFICATION_MD" ]; then
+  ORPHANS=""
+  for hook_path in "$HOOKS_DIR"/*.sh "$HOOKS_DIR"/*.py; do
+    [ -e "$hook_path" ] || continue
+    hook_name="$(basename "$hook_path")"
+    case "$hook_name" in _*) continue ;; esac
+    if grep -qF "$hook_name" "$SETTINGS_JSON" 2>/dev/null; then continue; fi
+    if grep -qF "$hook_name" "$CLASSIFICATION_MD" 2>/dev/null; then continue; fi
+    ORPHANS="$ORPHANS $hook_name"
+  done
+  [ -z "$ORPHANS" ]
+  assert_exit 0 $? "R-005: no orphan hooks (must be wired or classified) — orphans:$ORPHANS"
+else
+  echo "  (skip R-005 orphan-hook check — settings.json or HOOK-CLASSIFICATION.md missing)"
+fi
+
 # R4-004: standalone-mode cleanup (only fires when this test file was invoked directly)
 if [ "${STANDALONE:-0}" = "1" ]; then
   harness_teardown
